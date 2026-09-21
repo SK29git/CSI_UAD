@@ -7,7 +7,7 @@ import SalesPage from './pages/SalesPage';
 
 export default function App() {
   return (
-    <Router basename="/CSI_UAD">
+    <Router>
       <Routes>
         <Route path="/" element={<ComplaintsDashboardPage />} />
         <Route path="/complaints" element={<ComplaintsDashboardPage />} />
