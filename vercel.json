@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/CSI_UAD/(.*)", "destination": "/CSI_UAD/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
