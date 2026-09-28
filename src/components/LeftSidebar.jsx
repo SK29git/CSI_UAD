@@ -1,4 +1,6 @@
 import React from 'react';
+import { useCustomer } from '../context/CustomerContext';
+import CustomerAvatar from './CustomerAvatar';
 import { 
   FaPhoneAlt, 
   FaWhatsapp, 
@@ -11,50 +13,145 @@ import {
   FaCheckCircle,
   FaInfoCircle,
   FaChevronRight,
-  FaExclamationTriangle
+  FaChevronLeft,
+  FaExclamationTriangle,
+  FaUser,
+  FaStickyNote,
+  FaCrown,
+  FaSpinner
 } from 'react-icons/fa';
 
-export default function LeftSidebar() {
-  return (
-    <div className="w-full lg:w-[310px] xl:w-[330px] flex-shrink-0 flex flex-col gap-4">
-      {/* 1. Profile Overview Card */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="relative">
-            <img 
-              src="/profile.jpg" 
-              alt="Sumedh Kamble" 
-              className="w-14 h-14 rounded-full object-cover border-2 border-purple-200 shadow-sm"
-            />
-            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white rounded-full"></span>
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-bold text-gray-900 text-lg leading-tight">Sumedh Kamble</h2>
-              <span className="bg-purple-700 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
-                Platinum
-              </span>
-            </div>
-            <div className="mt-1 space-y-1 text-xs text-gray-600">
-              <div className="flex items-center gap-1.5">
-                <FaPhoneAlt className="text-gray-400 text-[11px]" />
-                <span className="font-medium">+971 50 123 4567</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <FaEnvelope className="text-gray-400 text-[11px]" />
-                <span className="truncate max-w-[190px]">sumedh.kamble@email.com</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <FaMapMarkerAlt className="text-gray-400 text-[11px]" />
-                <span>Dubai, UAE</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <FaGlobe className="text-gray-400 text-[11px]" />
-                <span>English (Preferred)</span>
-              </div>
-            </div>
-          </div>
+export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
+  const { 
+    customer, 
+    customerList, 
+    selectedIndex, 
+    selectCustomer, 
+    loading, 
+    getFormattedName, 
+    getFormattedDate, 
+    getFormattedLocation, 
+    getBranchName, 
+    getLoyaltyTier,
+    getConsentsDisplay
+  } = useCustomer();
+
+  const customerName = getFormattedName();
+  const loyaltyTier = getLoyaltyTier();
+  const customerSince = getFormattedDate(customer.customerSince);
+  const locationStr = getFormattedLocation();
+  const branchName = getBranchName();
+  const customerId = customer.customerNumber || customer.id || 'CUS-94245';
+
+  if (isCollapsed) {
+    return (
+      <div 
+        onClick={onToggleCollapse}
+        className="w-14 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-2 flex flex-col items-center gap-4 cursor-pointer hover:border-blue-300 transition-all duration-300 group py-4"
+        title="Click to expand Left Panel"
+      >
+        {/* Expand Toggle Button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleCollapse && onToggleCollapse(); }}
+          className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-2xs"
+          title="Expand Left Panel"
+        >
+          <FaChevronRight className="text-sm" />
+        </button>
+
+        <div className="w-full h-[1px] bg-gray-100 my-1" />
+
+        {/* Avatar badge */}
+        <div className="group-hover:scale-110 transition-transform">
+          <CustomerAvatar customer={customer} size="w-10 h-10" />
         </div>
+
+        {/* VIP / Loyalty Indicator */}
+        <span className={`${customer.vip ? 'bg-amber-500' : 'bg-purple-700'} text-white text-[9px] font-bold px-1 py-0.5 rounded uppercase tracking-wider`}>
+          {customer.vip ? 'VIP' : loyaltyTier.slice(0, 4).toUpperCase()}
+        </span>
+
+        {/* Call Icon */}
+        <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
+          <FaPhoneAlt className="text-xs" />
+        </div>
+
+        {/* Verified Badge */}
+        <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center" title="Verified Customer">
+          <FaCheckCircle className="text-xs" />
+        </div>
+
+        {/* Risk Warning */}
+        <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center" title="High Escalation Risk">
+          <FaExclamationTriangle className="text-xs" />
+        </div>
+
+        {/* Notes Icon */}
+        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center" title="Customer Notes">
+          <FaStickyNote className="text-xs" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full lg:w-[310px] xl:w-[330px] flex-shrink-0 flex flex-col gap-4 transition-all duration-300">
+      {/* 1. Profile Overview Card */}
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 relative">
+        {/* Collapse Toggle Button */}
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-gray-100 text-gray-500 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-2xs z-10"
+            title="Collapse Left Panel"
+          >
+            <FaChevronLeft className="text-xs" />
+          </button>
+        )}
+
+        {loading ? (
+          <div className="py-6 flex flex-col items-center justify-center gap-2 text-gray-500 text-xs">
+            <FaSpinner className="animate-spin text-blue-600 text-lg" />
+            <span>Fetching Customer Details...</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 mb-3">
+            <CustomerAvatar customer={customer} size="w-14 h-14" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="font-bold text-gray-900 text-base leading-tight truncate">{customerName}</h2>
+                {customer.vip === true && (
+                  <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 shadow-xs">
+                    <FaCrown className="text-[9px]" /> VIP
+                  </span>
+                )}
+                {loyaltyTier !== 'N/A' && (
+                  <span className="bg-purple-700 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                    {loyaltyTier}
+                  </span>
+                )}
+              </div>
+              <div className="mt-1 space-y-1 text-xs text-gray-600">
+                <div className="flex items-center gap-1.5">
+                  <FaPhoneAlt className="text-gray-400 text-[11px]" />
+                  <span className="font-medium">{customer.mobile || customer.mobileRaw || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <FaEnvelope className="text-gray-400 text-[11px]" />
+                  <span className="truncate max-w-[190px]">{customer.email || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <FaMapMarkerAlt className="text-gray-400 text-[11px]" />
+                  <span className="truncate max-w-[190px]">{locationStr}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <FaGlobe className="text-gray-400 text-[11px]" />
+                  <span>{customer.language || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Action Buttons Row */}
         <div className="flex items-center justify-between pt-3 border-t border-gray-100">
@@ -102,43 +199,51 @@ export default function LeftSidebar() {
         <div className="grid grid-cols-2 gap-y-3 gap-x-2">
           <div>
             <span className="text-gray-400 block text-[11px]">Customer Since</span>
-            <span className="font-semibold text-gray-800">Jan 2021</span>
+            <span className="font-semibold text-gray-800">{customerSince}</span>
           </div>
           <div>
             <span className="text-gray-400 block text-[11px]">Customer ID</span>
-            <span className="font-semibold text-gray-800">CUS-1002456</span>
+            <span className="font-semibold text-gray-800">{customerId}</span>
           </div>
 
           <div>
-            <span className="text-gray-400 block text-[11px]">ID Type</span>
-            <span className="font-semibold text-gray-800">Emirates ID</span>
+            <span className="text-gray-400 block text-[11px]">Group / Brand</span>
+            <span className="font-semibold text-gray-800">{customer.keyloopGroup || 'BMW'}</span>
           </div>
           <div>
-            <span className="text-gray-400 block text-[11px]">ID Number</span>
-            <span className="font-semibold text-gray-800">784-1990-1234567-1</span>
+            <span className="text-gray-400 block text-[11px]">Last Updated</span>
+            <span className="font-semibold text-gray-800">{getFormattedDate(customer.lastUpdated)}</span>
           </div>
 
           <div>
             <span className="text-gray-400 block text-[11px]">Loyalty Tier</span>
-            <span className="font-semibold text-gray-800">Platinum</span>
+            <span className="font-semibold text-gray-800">{loyaltyTier}</span>
           </div>
           <div>
-            <span className="text-gray-400 block text-[11px]">Lifetime Value</span>
-            <span className="font-bold text-gray-900">AED 45,750</span>
+            <span className="text-gray-400 block text-[11px]">Nationality</span>
+            <span className="font-semibold text-gray-800">{customer.nationality || 'N/A'}</span>
           </div>
 
+          {customer.dateOfBirth && (
+            <div>
+              <span className="text-gray-400 block text-[11px]">Date of Birth</span>
+              <span className="font-semibold text-gray-800">{getFormattedDate(customer.dateOfBirth)}</span>
+            </div>
+          )}
           <div className="col-span-2 pt-1 border-t border-gray-50">
-            <span className="text-gray-400 block text-[11px]">Preferred Branch</span>
-            <span className="font-semibold text-gray-800">Sheikh Zayed Road</span>
+            <span className="text-gray-400 block text-[11px]">Branch Code / Preferred</span>
+            <span className="font-semibold text-gray-800">{branchName}</span>
           </div>
 
           <div>
-            <span className="text-gray-400 block text-[11px]">Open Cases</span>
-            <span className="font-bold text-blue-600 text-sm">4</span>
+            <span className="text-gray-400 block text-[11px]">Do Not Contact</span>
+            <span className={`font-semibold ${customer.doNotContact ? 'text-rose-600' : 'text-emerald-600'}`}>
+              {customer.doNotContact ? 'Yes' : 'No'}
+            </span>
           </div>
           <div>
-            <span className="text-gray-400 block text-[11px]">Communication Preference</span>
-            <span className="font-medium text-gray-700">Phone, WhatsApp, Email</span>
+            <span className="text-gray-400 block text-[11px]">Consents</span>
+            <span className="font-medium text-gray-700">{getConsentsDisplay()}</span>
           </div>
         </div>
       </div>

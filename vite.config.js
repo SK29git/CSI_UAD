@@ -9,4 +9,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://ccaas.agmcgroup.ae',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
+  }
 })

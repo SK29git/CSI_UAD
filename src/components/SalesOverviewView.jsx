@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useCustomer } from '../context/CustomerContext';
 import { 
   FaCar, 
   FaCheckCircle, 
@@ -12,10 +13,151 @@ import {
   FaEnvelope, 
   FaCalendarAlt, 
   FaChevronDown,
-  FaArrowRight
+  FaSpinner,
+  FaRedo
 } from 'react-icons/fa';
 
 export default function SalesOverviewView() {
+  const { customer } = useCustomer();
+  const group = customer?.keyloopGroup || "BMW";
+  const customerNumber = customer?.customerNumber || customer?.id || "94245";
+
+  const [vehicles, setVehicles] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  const fetchVehicles = async () => {
+    setLoading(true);
+    try {
+      let response;
+      const apiUrl = `/api/v1/customers/${group}/${customerNumber}/vehicles`;
+      const fallbackUrl = `https://ccaas.agmcgroup.ae/api/v1/customers/${group}/${customerNumber}/vehicles`;
+
+      try {
+        response = await fetch(apiUrl);
+      } catch {
+        response = await fetch(fallbackUrl);
+      }
+
+      if (response && response.ok) {
+        const data = await response.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setVehicles(data);
+          setSelectedIndex(0);
+          return;
+        }
+      }
+
+      // Fallback matching exact API response format
+      setVehicles([
+        {
+          "vin": "WBA31HC04SFT82888",
+          "registrationNumber": "66164-CC-DXB",
+          "registrationDate": "2024-12-19",
+          "brand": "BMW",
+          "model": "G26",
+          "variant": "31HCA",
+          "description": "G26 430i Gran Coupe M Sport",
+          "modelYear": 2025,
+          "fuelType": "Unleaded",
+          "colourCode": "0C4P",
+          "colour": "Brooklyn Grey metallic",
+          "mileageKm": 2,
+          "deliveryDate": "2024-12-20",
+          "stockProgress": "Closed",
+          "nextServiceDate": "2025-02-20",
+          "nextServiceOdometerKm": 1000,
+          "purchaseEnquiryNumber": "463442",
+          "linkedVia": ["OWNER", "AFTERSALES", "DRIVER", "INVOICED_ENQUIRY"]
+        },
+        {
+          "vin": "WBA68FF04R8E45580",
+          "registrationNumber": "28391-AA-DXB",
+          "registrationDate": "2024-06-21",
+          "brand": "BMW",
+          "model": "G20",
+          "variant": "68FFA",
+          "description": "G20 330i Sedan M Sport",
+          "modelYear": 2024,
+          "fuelType": "Unleaded",
+          "colourCode": "0A96",
+          "colour": "Mineral White metalic",
+          "mileageKm": 3865,
+          "stockProgress": "Available/Instock",
+          "nextServiceDate": "2024-08-20",
+          "nextServiceOdometerKm": 1000,
+          "purchaseEnquiryNumber": "405738",
+          "linkedVia": ["INVOICED_ENQUIRY"]
+        }
+      ]);
+    } catch (err) {
+      console.warn("Failed to fetch customer vehicles:", err);
+      setVehicles([
+        {
+          "vin": "WBA31HC04SFT82888",
+          "registrationNumber": "66164-CC-DXB",
+          "registrationDate": "2024-12-19",
+          "brand": "BMW",
+          "model": "G26",
+          "variant": "31HCA",
+          "description": "G26 430i Gran Coupe M Sport",
+          "modelYear": 2025,
+          "fuelType": "Unleaded",
+          "colourCode": "0C4P",
+          "colour": "Brooklyn Grey metallic",
+          "mileageKm": 2,
+          "deliveryDate": "2024-12-20",
+          "stockProgress": "Closed",
+          "nextServiceDate": "2025-02-20",
+          "nextServiceOdometerKm": 1000,
+          "purchaseEnquiryNumber": "463442",
+          "linkedVia": ["OWNER", "AFTERSALES", "DRIVER", "INVOICED_ENQUIRY"]
+        },
+        {
+          "vin": "WBA68FF04R8E45580",
+          "registrationNumber": "28391-AA-DXB",
+          "registrationDate": "2024-06-21",
+          "brand": "BMW",
+          "model": "G20",
+          "variant": "68FFA",
+          "description": "G20 330i Sedan M Sport",
+          "modelYear": 2024,
+          "fuelType": "Unleaded",
+          "colourCode": "0A96",
+          "colour": "Mineral White metalic",
+          "mileageKm": 3865,
+          "stockProgress": "Available/Instock",
+          "nextServiceDate": "2024-08-20",
+          "nextServiceOdometerKm": 1000,
+          "purchaseEnquiryNumber": "405738",
+          "linkedVia": ["INVOICED_ENQUIRY"]
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVehicles();
+  }, [group, customerNumber]);
+
+  const activeVehicle = vehicles[selectedIndex] || {
+    vin: "WBA31HC04SFT82888",
+    registrationNumber: "66164-CC-DXB",
+    registrationDate: "2024-12-19",
+    brand: "BMW",
+    model: "G26",
+    variant: "31HCA",
+    description: "G26 430i Gran Coupe M Sport",
+    modelYear: 2025,
+    fuelType: "Unleaded",
+    colour: "Brooklyn Grey metallic",
+    mileageKm: 2,
+    stockProgress: "Closed",
+    nextServiceDate: "2025-02-20"
+  };
+
   const salesActivities = [
     {
       id: 1,
@@ -64,103 +206,145 @@ export default function SalesOverviewView() {
       
       {/* 1. Vehicle Details Card */}
       <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100">
-        <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 mb-4">
           <div className="flex items-center gap-2">
             <h2 className="font-bold text-gray-900 text-base">Vehicle Details</h2>
             <span className="bg-emerald-50 text-emerald-700 font-bold text-xs px-2.5 py-0.5 rounded-full border border-emerald-200">
-              Primary Vehicle
+              {selectedIndex === 0 ? 'Primary Vehicle' : `Vehicle ${selectedIndex + 1}`}
             </span>
           </div>
 
-          <span className="text-emerald-600 font-bold text-xs flex items-center gap-1">
-            <FaCheckCircle className="text-xs" /> VIN Verified
-          </span>
-        </div>
+          <div className="flex items-center gap-3">
+            {/* Vehicle Selector Pills */}
+            {vehicles.length > 1 && (
+              <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg">
+                {vehicles.map((v, idx) => (
+                  <button
+                    key={v.vin || idx}
+                    onClick={() => setSelectedIndex(idx)}
+                    className={`px-2.5 py-0.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                      selectedIndex === idx
+                        ? 'bg-blue-600 text-white shadow-2xs'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    {v.brand || 'Vehicle'} {v.model || idx + 1}
+                  </button>
+                ))}
+              </div>
+            )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
-          
-          {/* Car Image (Left 4 Cols) */}
-          <div className="lg:col-span-4 flex flex-col items-center justify-center p-2 bg-gray-50/60 rounded-xl border border-gray-100">
-            <img 
-              src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=600" 
-              alt="BMW X5 xDrive40i" 
-              className="w-full h-36 object-contain rounded-lg"
-            />
-            <div className="mt-2 text-center">
-              <h3 className="font-extrabold text-gray-900 text-base leading-tight">BMW X5 xDrive40i</h3>
-              <span className="text-xs text-gray-500 font-semibold">2024 Model</span>
-            </div>
-          </div>
-
-          {/* Vehicle Specs Grid (Middle 8 Cols) */}
-          <div className="lg:col-span-8 flex flex-col justify-between gap-3">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-4 text-xs">
-              <div>
-                <span className="text-gray-400 block text-[10px]">VIN Number</span>
-                <span className="font-mono font-bold text-gray-800 text-[11px]">WBAXXXXXXXXXXXXXXXXX12345</span>
-              </div>
-              <div>
-                <span className="text-gray-400 block text-[10px]">Registration No.</span>
-                <span className="font-bold text-gray-900">Dubai A 12345</span>
-              </div>
-              <div>
-                <span className="text-gray-400 block text-[10px]">Mileage</span>
-                <span className="font-black text-gray-900 text-sm">38,200 KM</span>
-              </div>
-
-              <div>
-                <span className="text-gray-400 block text-[10px]">Fuel Type</span>
-                <span className="font-semibold text-gray-800">Petrol</span>
-              </div>
-              <div>
-                <span className="text-gray-400 block text-[10px]">Engine</span>
-                <span className="font-semibold text-gray-800">3.0L 6-Cylinder</span>
-              </div>
-              <div>
-                <span className="text-gray-400 block text-[10px]">Transmission</span>
-                <span className="font-semibold text-gray-800">Automatic</span>
-              </div>
-
-              <div>
-                <span className="text-gray-400 block text-[10px]">Color</span>
-                <span className="font-semibold text-gray-800">Alpine White</span>
-              </div>
-              <div>
-                <span className="text-gray-400 block text-[10px]">First Registration</span>
-                <span className="font-semibold text-gray-800">14 Feb 2024</span>
-              </div>
-              <div>
-                <span className="text-gray-400 block text-[10px]">Warranty Status</span>
-                <span className="text-emerald-600 font-bold text-[11px]">Active <span className="text-gray-400 text-[9px] font-normal">(Expires 12 Feb 2027)</span></span>
-              </div>
-            </div>
-
-            <button className="w-full mt-2 py-2 border border-blue-600 text-blue-600 font-bold text-xs rounded-lg hover:bg-blue-50 transition-colors shadow-2xs">
-              View Full Vehicle Profile
+            <button 
+              onClick={fetchVehicles} 
+              className="text-gray-400 hover:text-gray-600 cursor-pointer p-1"
+              title="Refresh Vehicle Data"
+            >
+              <FaRedo className={`text-xs ${loading ? 'animate-spin' : ''}`} />
             </button>
-          </div>
 
+            <span className="text-emerald-600 font-bold text-xs flex items-center gap-1">
+              <FaCheckCircle className="text-xs" /> VIN Verified
+            </span>
+          </div>
         </div>
+
+        {loading ? (
+          <div className="py-10 flex flex-col items-center justify-center text-gray-400 gap-2">
+            <FaSpinner className="animate-spin text-xl text-blue-600" />
+            <span className="text-xs font-medium">Fetching customer vehicle data...</span>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+            
+            {/* Car Image & Model Info (Left 4 Cols) */}
+            <div className="lg:col-span-4 flex flex-col items-center justify-center p-3 bg-gray-50/60 rounded-xl border border-gray-100">
+              <img 
+                src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=600" 
+                alt={activeVehicle.description || activeVehicle.brand} 
+                className="w-full h-36 object-contain rounded-lg"
+              />
+              <div className="mt-2 text-center">
+                <h3 className="font-extrabold text-gray-900 text-sm leading-tight">
+                  {activeVehicle.description || `${activeVehicle.brand} ${activeVehicle.model}`}
+                </h3>
+                <span className="text-xs text-gray-500 font-semibold block mt-0.5">
+                  {activeVehicle.modelYear ? `${activeVehicle.modelYear} Model` : ''} • {activeVehicle.colour || ''}
+                </span>
+              </div>
+            </div>
+
+            {/* Vehicle Specs Grid (Middle 8 Cols) */}
+            <div className="lg:col-span-8 flex flex-col justify-between gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-4 text-xs">
+                <div>
+                  <span className="text-gray-400 block text-[10px]">VIN Number</span>
+                  <span className="font-mono font-bold text-gray-800 text-[11px]">{activeVehicle.vin || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Registration No.</span>
+                  <span className="font-bold text-gray-900">{activeVehicle.registrationNumber || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Mileage</span>
+                  <span className="font-black text-gray-900 text-sm">
+                    {typeof activeVehicle.mileageKm === 'number' ? `${activeVehicle.mileageKm.toLocaleString()} KM` : 'N/A'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Fuel Type</span>
+                  <span className="font-semibold text-gray-800">{activeVehicle.fuelType || 'Unleaded'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Variant / Model</span>
+                  <span className="font-semibold text-gray-800">{activeVehicle.variant || activeVehicle.model || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Stock Progress</span>
+                  <span className="font-bold text-blue-600">{activeVehicle.stockProgress || 'Closed'}</span>
+                </div>
+
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Color</span>
+                  <span className="font-semibold text-gray-800">{activeVehicle.colour || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[10px]">First Registration</span>
+                  <span className="font-semibold text-gray-800">{activeVehicle.registrationDate || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Next Service Date</span>
+                  <span className="text-emerald-600 font-bold text-[11px]">{activeVehicle.nextServiceDate || 'N/A'}</span>
+                </div>
+              </div>
+
+              <button className="w-full mt-2 py-2 border border-blue-600 text-blue-600 font-bold text-xs rounded-lg hover:bg-blue-50 transition-colors shadow-2xs cursor-pointer">
+                View Full Vehicle Profile
+              </button>
+            </div>
+
+          </div>
+        )}
 
         {/* 5 Quick Action Pill Buttons Row */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-4 mt-4 border-t border-gray-100 text-xs">
-          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors">
+          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
             <FaCalculator className="text-gray-500" />
             <span>Finance Details</span>
           </button>
-          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors">
+          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
             <FaShieldAlt className="text-gray-500" />
             <span>Insurance Details</span>
           </button>
-          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors">
+          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
             <FaExchangeAlt className="text-gray-500" />
             <span>Trade-in History</span>
           </button>
-          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors">
+          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
             <FaFileAlt className="text-gray-500" />
             <span>Documents</span>
           </button>
-          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors">
+          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
             <FaTag className="text-gray-500" />
             <span>Accessories</span>
           </button>
@@ -190,13 +374,15 @@ export default function SalesOverviewView() {
             </div>
 
             <div>
-              <span className="text-gray-400 block text-[10px] font-semibold">Vehicle Age</span>
-              <span className="font-bold text-gray-900 text-xs">2 Years 4 Months</span>
+              <span className="text-gray-400 block text-[10px] font-semibold">Model Year</span>
+              <span className="font-bold text-gray-900 text-xs">{activeVehicle.modelYear || '2025'}</span>
             </div>
 
             <div>
               <span className="text-gray-400 block text-[10px] font-semibold">Mileage</span>
-              <span className="font-black text-gray-900 text-xs">38,200 KM</span>
+              <span className="font-black text-gray-900 text-xs">
+                {typeof activeVehicle.mileageKm === 'number' ? `${activeVehicle.mileageKm.toLocaleString()} KM` : '38,200 KM'}
+              </span>
             </div>
           </div>
 
@@ -253,7 +439,7 @@ export default function SalesOverviewView() {
 
           <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center col-span-2 sm:col-span-1">
             <span className="text-gray-400 block text-[10px] font-semibold">Last Purchase</span>
-            <span className="text-base font-black text-gray-900 mt-2 block">14 Feb 2024</span>
+            <span className="text-base font-black text-gray-900 mt-2 block">{activeVehicle.deliveryDate || '14 Feb 2024'}</span>
           </div>
         </div>
       </div>
@@ -262,7 +448,7 @@ export default function SalesOverviewView() {
       <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100 text-xs">
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
           <h3 className="font-bold text-gray-900 text-sm">Recent Sales Activities</h3>
-          <button className="text-blue-600 font-bold text-xs hover:underline">View All</button>
+          <button className="text-blue-600 font-bold text-xs hover:underline cursor-pointer">View All</button>
         </div>
 
         <div className="space-y-3">
@@ -291,7 +477,7 @@ export default function SalesOverviewView() {
           ))}
         </div>
 
-        <button className="w-full mt-4 py-2 border border-gray-200 text-gray-700 font-bold text-xs rounded-lg hover:bg-gray-50 flex items-center justify-center gap-1 transition-colors">
+        <button className="w-full mt-4 py-2 border border-gray-200 text-gray-700 font-bold text-xs rounded-lg hover:bg-gray-50 flex items-center justify-center gap-1 transition-colors cursor-pointer">
           <span>Load More Activities</span>
           <FaChevronDown className="text-[10px]" />
         </button>

@@ -1,4 +1,6 @@
 import React from 'react';
+import { useCustomer } from '../context/CustomerContext';
+import CustomerAvatar from './CustomerAvatar';
 import { 
   FaPhoneAlt, 
   FaWhatsapp, 
@@ -11,15 +13,69 @@ import {
   FaCheckCircle,
   FaEdit,
   FaCar,
-  FaExternalLinkAlt
+  FaExternalLinkAlt,
+  FaChevronRight,
+  FaChevronLeft
 } from 'react-icons/fa';
 
-export default function ServiceCustomerVehicleCard() {
+export default function ServiceCustomerVehicleCard({ isCollapsed = false, onToggleCollapse }) {
+  const { 
+    customer, 
+    getFormattedName, 
+    getFormattedLocation, 
+    getLoyaltyTier 
+  } = useCustomer();
+
+  const customerName = getFormattedName();
+  const loyaltyTier = getLoyaltyTier();
+  const locationStr = getFormattedLocation();
+
+  if (isCollapsed) {
+    return (
+      <div 
+        onClick={onToggleCollapse}
+        className="w-14 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-2 flex flex-col items-center gap-4 cursor-pointer hover:border-blue-300 transition-all duration-300 group py-4"
+        title="Click to expand Customer & Vehicle Details"
+      >
+        {/* Expand Toggle Button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleCollapse && onToggleCollapse(); }}
+          className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-2xs"
+          title="Expand Left Panel"
+        >
+          <FaChevronRight className="text-sm" />
+        </button>
+
+        <div className="w-full h-[1px] bg-gray-100 my-1" />
+
+        {/* Avatar badge */}
+        <div className="group-hover:scale-110 transition-transform">
+          <CustomerAvatar customer={customer} size="w-10 h-10" />
+        </div>
+
+        {/* BMW Badge Icon */}
+        <div className="w-8 h-8 rounded-lg bg-gray-900 text-white font-bold flex items-center justify-center text-[10px] shadow-xs" title="BMW X5 xDrive40i">
+          BMW
+        </div>
+
+        {/* Verified Badge */}
+        <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center" title="Verified Customer">
+          <FaCheckCircle className="text-xs" />
+        </div>
+
+        {/* Trade-in Icon */}
+        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center" title="Trade-in Eligible">
+          <FaCar className="text-xs" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full lg:w-[310px] xl:w-[330px] flex-shrink-0 flex flex-col gap-3.5">
+    <div className="w-full lg:w-[310px] xl:w-[330px] flex-shrink-0 flex flex-col gap-3.5 transition-all duration-300">
       
       {/* 1. Customer Details 360 Card */}
-      <div className="bg-white rounded-xl p-3.5 shadow-xs border border-gray-100 text-xs">
+      <div className="bg-white rounded-xl p-3.5 shadow-xs border border-gray-100 text-xs relative">
         <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-gray-100">
           <div className="flex items-center gap-1.5">
             <span className="font-bold text-gray-900 text-sm">Customer Details</span>
@@ -27,43 +83,47 @@ export default function ServiceCustomerVehicleCard() {
               360°
             </span>
           </div>
-          <button className="text-gray-400 hover:text-gray-600">
-            <FaEdit className="text-xs" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button className="text-gray-400 hover:text-gray-600 p-1">
+              <FaEdit className="text-xs" />
+            </button>
+            {onToggleCollapse && (
+              <button
+                onClick={onToggleCollapse}
+                className="w-6 h-6 rounded bg-gray-100 text-gray-500 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-2xs ml-1"
+                title="Collapse Left Panel"
+              >
+                <FaChevronLeft className="text-xs" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center gap-3 mb-3">
-          <div className="relative">
-            <img 
-              src="/profile.jpg" 
-              alt="Sumedh Kamble" 
-              className="w-13 h-13 rounded-full object-cover border-2 border-purple-200 shadow-xs"
-            />
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <h3 className="font-bold text-gray-900 text-base leading-tight">Sumedh Kamble</h3>
+          <CustomerAvatar customer={customer} size="w-13 h-13" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{customerName}</h3>
               <span className="bg-purple-700 text-white text-[9px] font-bold px-1.5 py-0.2 rounded uppercase">
-                Platinum
+                {loyaltyTier}
               </span>
             </div>
             <div className="mt-1 space-y-0.5 text-[11px] text-gray-600">
               <div className="flex items-center gap-1.5">
                 <FaPhoneAlt className="text-gray-400 text-[10px]" />
-                <span>+971 50 123 4567</span>
+                <span>{customer.mobile || customer.mobileRaw || '+971 50 123 4567'}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <FaEnvelope className="text-gray-400 text-[10px]" />
-                <span className="truncate max-w-[170px]">sumedh.kamble@email.com</span>
+                <span className="truncate max-w-[170px]">{customer.email || 'N/A'}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <FaGlobe className="text-gray-400 text-[10px]" />
-                <span>English (Preferred)</span>
+                <span>{customer.language || 'English (Preferred)'}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <FaMapMarkerAlt className="text-gray-400 text-[10px]" />
-                <span>Dubai, UAE</span>
+                <span className="truncate max-w-[170px]">{locationStr}</span>
               </div>
             </div>
           </div>

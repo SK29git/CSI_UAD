@@ -8,6 +8,8 @@ import RightSidebar from '../components/RightSidebar';
 export default function FeedbackPage() {
   const [activeSubTab, setActiveSubTab] = useState('Overview');
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
+  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
 
   return (
     <div className="min-h-screen bg-[#f3f4f6] text-gray-800 flex flex-col font-sans">
@@ -21,7 +23,7 @@ export default function FeedbackPage() {
         <aside className={`
           fixed lg:sticky lg:top-[70px] inset-y-0 left-0 z-40 lg:z-10 bg-white lg:bg-transparent p-4 lg:p-0 
           transform ${mobileLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} 
-          transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none overflow-y-auto max-h-screen lg:max-h-none
+          transition-all duration-300 ease-in-out shadow-2xl lg:shadow-none overflow-y-auto max-h-screen lg:max-h-none
         `}>
           <div className="flex justify-between items-center lg:hidden pb-3 mb-2 border-b border-gray-100">
             <span className="font-bold text-gray-900">Customer Profile</span>
@@ -32,7 +34,10 @@ export default function FeedbackPage() {
               ✕ Close
             </button>
           </div>
-          <LeftSidebar />
+          <LeftSidebar 
+            isCollapsed={isLeftCollapsed}
+            onToggleCollapse={() => setIsLeftCollapsed(!isLeftCollapsed)}
+          />
         </aside>
 
         {/* Backdrop overlay for mobile sidebar */}
@@ -44,11 +49,15 @@ export default function FeedbackPage() {
         )}
 
         {/* CENTER COLUMN: Navigation Div & Feedback Analytics Dashboard */}
-        <main className="flex-1 w-full min-w-0 flex flex-col z-0">
+        <main className="flex-1 w-full min-w-0 flex flex-col z-0 transition-all duration-300">
           <CenterNavTabs 
             activeModule="Feedback" 
             activeSubTab={activeSubTab} 
             setActiveSubTab={setActiveSubTab} 
+            isLeftCollapsed={isLeftCollapsed}
+            onToggleLeft={() => setIsLeftCollapsed(!isLeftCollapsed)}
+            isRightCollapsed={isRightCollapsed}
+            onToggleRight={() => setIsRightCollapsed(!isRightCollapsed)}
           />
 
           <div className="transition-all duration-200">
@@ -57,8 +66,11 @@ export default function FeedbackPage() {
         </main>
 
         {/* RIGHT COLUMN: Activity Log Timeline */}
-        <aside className="w-full lg:w-auto flex-shrink-0 lg:sticky lg:top-[70px] z-10">
-          <RightSidebar />
+        <aside className="w-full lg:w-auto flex-shrink-0 lg:sticky lg:top-[70px] z-10 transition-all duration-300">
+          <RightSidebar 
+            isCollapsed={isRightCollapsed}
+            onToggleCollapse={() => setIsRightCollapsed(!isRightCollapsed)}
+          />
         </aside>
 
       </div>

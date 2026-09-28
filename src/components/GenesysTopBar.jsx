@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCustomer } from '../context/CustomerContext';
 import { 
   FaPause, 
   FaMicrophoneSlash, 
@@ -13,6 +14,10 @@ import {
 
 export default function GenesysTopBar() {
   const navigate = useNavigate();
+  const { customer, getFormattedName } = useCustomer();
+
+  const customerName = getFormattedName();
+  const customerMobile = customer.mobile || customer.mobileRaw || '+971 50 123 4567';
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 py-2.5 px-4 shadow-2xs">
@@ -55,9 +60,9 @@ export default function GenesysTopBar() {
           <div className="h-6 w-[1px] bg-gray-200"></div>
 
           <div className="flex items-center gap-2">
-            <span className="font-bold text-gray-900 text-xs">Sumedh Kamble</span>
+            <span className="font-bold text-gray-900 text-xs">{customerName}</span>
             <FaPaperclip className="text-gray-400 text-[11px]" />
-            <span className="text-gray-500 text-xs">+971 50 123 4567</span>
+            <span className="text-gray-500 text-xs">{customerMobile}</span>
           </div>
 
           <div className="h-6 w-[1px] bg-gray-200"></div>

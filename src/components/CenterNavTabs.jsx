@@ -1,18 +1,34 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useCustomer } from '../context/CustomerContext';
 import { 
   FaShoppingBag, 
   FaCar, 
   FaStar, 
-  FaShieldAlt 
+  FaShieldAlt,
+  FaChevronLeft,
+  FaChevronRight,
+  FaColumns
 } from 'react-icons/fa';
 
-export default function CenterNavTabs({ activeModule, activeSubTab, setActiveSubTab }) {
+export default function CenterNavTabs({ 
+  activeModule, 
+  activeSubTab, 
+  setActiveSubTab,
+  isLeftCollapsed,
+  onToggleLeft,
+  isRightCollapsed,
+  onToggleRight
+}) {
   const navigate = useNavigate();
+  const { openComplaintsCount } = useCustomer();
+
+  const countVal = typeof openComplaintsCount === 'number' ? openComplaintsCount : 3;
 
   const complaintSubTabs = [
     { id: 'Overview', label: 'Overview' },
-    { id: 'Open Complaints', label: 'Open Complaints', count: 8 },
+    { id: 'Create Complaint', label: 'Create Complaint' },
+    { id: 'Open Complaints', label: 'Open Complaints', count: countVal },
     { id: 'Escalations', label: 'Escalations', count: 3 },
     { id: 'SLA Breaches', label: 'SLA Breaches', count: 2 },
     { id: 'Root Cause', label: 'Root Cause' },
@@ -53,12 +69,12 @@ export default function CenterNavTabs({ activeModule, activeSubTab, setActiveSub
   if (activeModule === 'Sales') currentSubTabs = salesSubTabs;
 
   return (
-    <div className="bg-white rounded-xl shadow-xs border border-gray-100 p-3 mb-4 flex flex-col gap-2.5">
+    <div className="bg-white rounded-xl shadow-xs border border-gray-100 p-2.5 mb-3 flex flex-col gap-2">
       {/* ROW 1: Module Switcher Tabs */}
-      <div className="flex items-center justify-center gap-8 text-xs border-b border-gray-100 pb-2">
+      <div className="flex items-center justify-center gap-6 sm:gap-8 text-xs border-b border-gray-100 pb-2">
         <button 
           onClick={() => navigate('/sales')}
-          className={`pb-1 flex items-center gap-2 cursor-pointer transition-colors ${
+          className={`pb-1 flex items-center gap-1.5 cursor-pointer transition-colors ${
             activeModule === 'Sales' ? 'text-blue-600 font-bold border-b-2 border-blue-600' : 'text-gray-600 font-semibold hover:text-gray-900'
           }`}
         >
@@ -68,7 +84,7 @@ export default function CenterNavTabs({ activeModule, activeSubTab, setActiveSub
 
         <button 
           onClick={() => navigate('/service')}
-          className={`pb-1 flex items-center gap-2 cursor-pointer transition-colors ${
+          className={`pb-1 flex items-center gap-1.5 cursor-pointer transition-colors ${
             activeModule === 'Service' ? 'text-blue-600 font-bold border-b-2 border-blue-600' : 'text-gray-600 font-semibold hover:text-gray-900'
           }`}
         >
@@ -88,7 +104,7 @@ export default function CenterNavTabs({ activeModule, activeSubTab, setActiveSub
 
         <button 
           onClick={() => navigate('/')}
-          className={`pb-1 flex items-center gap-2 cursor-pointer transition-colors ${
+          className={`pb-1 flex items-center gap-1.5 cursor-pointer transition-colors ${
             activeModule === 'Complaints Manager' ? 'text-blue-600 font-bold border-b-2 border-blue-600' : 'text-gray-600 font-semibold hover:text-gray-900'
           }`}
         >

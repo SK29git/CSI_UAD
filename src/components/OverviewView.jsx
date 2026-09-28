@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useCustomer } from '../context/CustomerContext';
 import { 
   FaFolderOpen, 
   FaUserShield, 
@@ -15,8 +16,48 @@ import {
 } from 'react-icons/fa';
 
 export default function OverviewView() {
+  const { customer, openComplaintsCount } = useCustomer();
   const [escalationStep, setEscalationStep] = useState(3);
   const [showEscalatedModal, setShowEscalatedModal] = useState(false);
+
+  const [summaryData, setSummaryData] = useState({
+    keyloopGroup: "BMW",
+    branch: "10",
+    openComplaints: 4,
+    resolvedToday: 0,
+    slaBreaches: 0
+  });
+  const [summaryLoading, setSummaryLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchSummary = async () => {
+      const g = customer?.keyloopGroup || 'BMW';
+      const b = customer?.branchCode || '10';
+      setSummaryLoading(true);
+      try {
+        let res;
+        const apiUrl = `/api/v1/complaints/summary?group=${g}&branch=${b}`;
+        const fallbackUrl = `https://ccaas.agmcgroup.ae/api/v1/complaints/summary?group=${g}&branch=${b}`;
+        try {
+          res = await fetch(apiUrl);
+        } catch {
+          res = await fetch(fallbackUrl);
+        }
+        if (res && res.ok) {
+          const data = await res.json();
+          if (data && typeof data === 'object') {
+            setSummaryData(data);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch complaint summary:", err);
+      } finally {
+        setSummaryLoading(false);
+      }
+    };
+
+    fetchSummary();
+  }, [customer]);
 
   const handleEscalateNow = () => {
     if (escalationStep < 4) {
@@ -39,7 +80,7 @@ export default function OverviewView() {
             <span className="text-xs font-semibold text-gray-500">Open Complaints</span>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-2xl font-black text-gray-900">8</span>
+            <span className="text-2xl font-black text-gray-900">{typeof openComplaintsCount === 'number' ? openComplaintsCount : 3}</span>
             <button className="text-blue-600 text-xs font-bold hover:underline">View All</button>
           </div>
         </div>
@@ -359,37 +400,37 @@ export default function OverviewView() {
         </div>
       </div>
 
-      {/* 4. Footer Row: Complaint Summary (This Month) */}
+      {/* 4. Footer Row: Complaint Summary */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
-          <h3 className="font-bold text-gray-900 text-base">Complaint Summary <span className="text-gray-400 font-normal">(This Month)</span></h3>
-          <button className="text-blue-600 text-xs font-semibold hover:underline">View Report</button>
+          <h3 className="font-bold text-gray-900 text-base">Complaint Summary</h3>
+          <button className="text-blue-600 text-xs font-semibold hover:underline cursor-pointer">View Report</button>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 text-xs">
           <div>
-            <span className="text-gray-400 block text-[11px]">Total Complaints</span>
-            <span className="text-xl font-black text-gray-900 mt-1 block">36</span>
+            <span className="text-gray-400 block text-[11px]">Keyloop Group</span>
+            <span className="text-xl font-black text-gray-900 mt-1 block">{summaryData.keyloopGroup || 'BMW'}</span>
           </div>
 
           <div>
-            <span className="text-gray-400 block text-[11px]">Escalation Rate</span>
-            <span className="text-xl font-black text-gray-900 mt-1 block">22%</span>
+            <span className="text-gray-400 block text-[11px]">Branch Code</span>
+            <span className="text-xl font-black text-gray-900 mt-1 block">{summaryData.branch || '10'}</span>
           </div>
 
           <div>
-            <span className="text-gray-400 block text-[11px]">SLA Compliance</span>
-            <span className="text-xl font-black text-gray-900 mt-1 block">88%</span>
+            <span className="text-gray-400 block text-[11px]">Open Complaints</span>
+            <span className="text-xl font-black text-blue-600 mt-1 block">{summaryData.openComplaints ?? 4}</span>
           </div>
 
           <div>
-            <span className="text-gray-400 block text-[11px]">Repeat Complaint Rate</span>
-            <span className="text-xl font-black text-gray-900 mt-1 block">18%</span>
+            <span className="text-gray-400 block text-[11px]">Resolved Today</span>
+            <span className="text-xl font-black text-emerald-600 mt-1 block">{summaryData.resolvedToday ?? 0}</span>
           </div>
 
           <div>
-            <span className="text-gray-400 block text-[11px]">Compensation Cost</span>
-            <span className="text-xl font-black text-gray-900 mt-1 block">AED 12,450</span>
+            <span className="text-gray-400 block text-[11px]">SLA Breaches</span>
+            <span className="text-xl font-black text-rose-600 mt-1 block">{summaryData.slaBreaches || '0'}</span>
           </div>
         </div>
       </div>

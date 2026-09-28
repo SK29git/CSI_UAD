@@ -9,24 +9,79 @@ import {
   FaStar, 
   FaPaperclip, 
   FaWrench,
-  FaFileAlt
+  FaFileAlt,
+  FaChevronRight,
+  FaChevronLeft,
+  FaHistory
 } from 'react-icons/fa';
 
-export default function ServiceActivityRightSidebar() {
+export default function ServiceActivityRightSidebar({ isCollapsed = false, onToggleCollapse }) {
   const [activeTab, setActiveTab] = useState('All');
 
   const filterTabs = ['All', 'Calls', 'Chats', 'Emails', 'Service', 'Notes'];
 
+  if (isCollapsed) {
+    return (
+      <div 
+        onClick={onToggleCollapse}
+        className="w-14 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-2 flex flex-col items-center gap-4 cursor-pointer hover:border-blue-300 transition-all duration-300 group py-4"
+        title="Click to expand Customer Activity"
+      >
+        {/* Expand Toggle Button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleCollapse && onToggleCollapse(); }}
+          className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-2xs"
+          title="Expand Right Panel"
+        >
+          <FaChevronLeft className="text-sm" />
+        </button>
+
+        <div className="w-full h-[1px] bg-gray-100 my-1" />
+
+        {/* Activity Icon */}
+        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform" title="Customer Activity">
+          <FaHistory className="text-xs" />
+        </div>
+
+        {/* WhatsApp Icon */}
+        <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center" title="WhatsApp Message History">
+          <FaWhatsapp className="text-xs" />
+        </div>
+
+        {/* Service Wrench Icon */}
+        <div className="w-8 h-8 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center" title="Repair & Service Updates">
+          <FaWrench className="text-xs" />
+        </div>
+
+        {/* CSI Star Rating Icon */}
+        <div className="w-8 h-8 rounded-full bg-amber-50 text-amber-500 flex items-center justify-center" title="CSI Feedback 4.7/5">
+          <FaStar className="text-xs" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full lg:w-[310px] xl:w-[330px] flex-shrink-0 flex flex-col gap-4">
+    <div className="w-full lg:w-[310px] xl:w-[330px] flex-shrink-0 flex flex-col gap-4 transition-all duration-300">
       <div className="bg-white rounded-xl p-3.5 shadow-xs border border-gray-100 flex flex-col">
         
         {/* Header */}
         <div className="flex items-center justify-between pb-2.5 border-b border-gray-100">
           <h3 className="font-bold text-gray-900 text-xs">Customer Activity</h3>
-          <button className="text-gray-400 hover:text-gray-600 p-1">
-            <FaFilter className="text-[10px]" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button className="text-gray-400 hover:text-gray-600 p-1">
+              <FaFilter className="text-[10px]" />
+            </button>
+            {onToggleCollapse && (
+              <button
+                onClick={onToggleCollapse}
+                className="w-6 h-6 rounded bg-gray-100 text-gray-500 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-2xs ml-1"
+                title="Collapse Right Panel"
+              >
+                <FaChevronRight className="text-xs" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filter Tabs */}

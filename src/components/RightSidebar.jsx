@@ -9,10 +9,13 @@ import {
   FaClock, 
   FaFrown,
   FaArrowUp,
-  FaRobot
+  FaRobot,
+  FaChevronLeft,
+  FaChevronRight,
+  FaHistory
 } from 'react-icons/fa';
 
-export default function RightSidebar() {
+export default function RightSidebar({ isCollapsed = false, onToggleCollapse }) {
   const [activeFilter, setActiveFilter] = useState('All');
   
   // Real-time animated SLA countdown state (starting at 04 hrs 12 mins 36 secs)
@@ -89,15 +92,68 @@ export default function RightSidebar() {
     ? timelineEvents 
     : timelineEvents.filter(e => e.type === activeFilter);
 
+  if (isCollapsed) {
+    return (
+      <div 
+        onClick={onToggleCollapse}
+        className="w-14 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-2 flex flex-col items-center gap-4 cursor-pointer hover:border-blue-300 transition-all duration-300 group py-4"
+        title="Click to expand Right Panel"
+      >
+        {/* Expand Toggle Button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleCollapse && onToggleCollapse(); }}
+          className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-2xs"
+          title="Expand Right Panel"
+        >
+          <FaChevronLeft className="text-sm" />
+        </button>
+
+        <div className="w-full h-[1px] bg-gray-100 my-1" />
+
+        {/* Timeline Icon */}
+        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform" title="Activity Timeline">
+          <FaHistory className="text-xs" />
+        </div>
+
+        {/* SLA Timer Indicator */}
+        <div className="w-8 h-8 rounded-full bg-red-50 text-rose-600 flex items-center justify-center relative" title="SLA Countdown: 04:12:36">
+          <FaClock className="text-xs" />
+          <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-rose-500 rounded-full border border-white animate-ping"></span>
+        </div>
+
+        {/* Sentiment Icon */}
+        <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center" title="Customer Sentiment: Negative (Improving)">
+          <FaFrown className="text-xs" />
+        </div>
+
+        {/* AI Assistant Badge */}
+        <div className="w-8 h-8 rounded-lg bg-purple-700 text-white font-bold text-[10px] flex items-center justify-center shadow-xs" title="AI Assistant Active">
+          AI
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full lg:w-[320px] xl:w-[340px] flex-shrink-0 flex flex-col gap-4">
+    <div className="w-full lg:w-[320px] xl:w-[340px] flex-shrink-0 flex flex-col gap-4 transition-all duration-300">
       {/* 1. Complaint Activity Timeline Card */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex flex-col">
         <div className="flex items-center justify-between pb-3 border-b border-gray-100">
           <h3 className="font-bold text-gray-900 text-sm">Complaint Activity Timeline</h3>
-          <button className="text-gray-400 hover:text-gray-600 p-1">
-            <FaFilter className="text-xs" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button className="text-gray-400 hover:text-gray-600 p-1">
+              <FaFilter className="text-xs" />
+            </button>
+            {onToggleCollapse && (
+              <button
+                onClick={onToggleCollapse}
+                className="w-6 h-6 rounded bg-gray-100 text-gray-500 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-2xs ml-1"
+                title="Collapse Right Panel"
+              >
+                <FaChevronRight className="text-xs" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Filter Tabs */}
