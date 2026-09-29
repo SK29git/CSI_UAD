@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
+import { apiFetch } from '../utils/api';
 import { 
   FaSearch, 
   FaFilter, 
@@ -28,25 +29,12 @@ export default function OpenComplaintsView() {
     setLoading(true);
     setError(null);
     try {
-      let response;
       const apiUrl = `/api/v1/complaints?group=${group}&customerNumber=${customerNumber}&status=open`;
-      const fallbackUrl = `https://ccaas.agmcgroup.ae/api/v1/complaints?group=${group}&customerNumber=${customerNumber}&status=open`;
+      const res = await apiFetch(apiUrl);
 
-      try {
-        response = await fetch(apiUrl);
-      } catch {
-        response = await fetch(fallbackUrl);
-      }
-
-      if (response && response.ok) {
-        const data = await response.json();
-        if (Array.isArray(data)) {
-          setComplaints(data);
-          if (setOpenComplaintsCount) setOpenComplaintsCount(data.length);
-        } else {
-          setComplaints([]);
-          if (setOpenComplaintsCount) setOpenComplaintsCount(0);
-        }
+      if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
+        setComplaints(res.data);
+        if (setOpenComplaintsCount) setOpenComplaintsCount(res.data.length);
       } else {
         // Fallback matching exact API curl schema
         const fallbackList = [

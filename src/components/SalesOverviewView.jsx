@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
+import { apiFetch } from '../utils/api';
 import { 
   FaCar, 
   FaCheckCircle, 
@@ -29,23 +30,13 @@ export default function SalesOverviewView() {
   const fetchVehicles = async () => {
     setLoading(true);
     try {
-      let response;
       const apiUrl = `/api/v1/customers/${group}/${customerNumber}/vehicles`;
-      const fallbackUrl = `https://ccaas.agmcgroup.ae/api/v1/customers/${group}/${customerNumber}/vehicles`;
+      const res = await apiFetch(apiUrl);
 
-      try {
-        response = await fetch(apiUrl);
-      } catch {
-        response = await fetch(fallbackUrl);
-      }
-
-      if (response && response.ok) {
-        const data = await response.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setVehicles(data);
-          setSelectedIndex(0);
-          return;
-        }
+      if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
+        setVehicles(res.data);
+        setSelectedIndex(0);
+        return;
       }
 
       // Fallback matching exact API response format

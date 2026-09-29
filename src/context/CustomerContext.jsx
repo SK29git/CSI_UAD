@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { apiFetch } from '../utils/api';
 
 const CustomerContext = createContext(null);
 
@@ -117,19 +118,10 @@ export function CustomerProvider({ children }) {
       const g = group || customer?.keyloopGroup || "BMW";
       const c = custNo || customer?.customerNumber || customer?.id || "80496";
       const apiUrl = `/api/v1/complaints?group=${g}&customerNumber=${c}&status=open`;
-      const fallbackUrl = `https://ccaas.agmcgroup.ae/api/v1/complaints?group=${g}&customerNumber=${c}&status=open`;
       
-      let res;
-      try {
-        res = await fetch(apiUrl);
-      } catch {
-        res = await fetch(fallbackUrl);
-      }
-      if (res && res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setOpenComplaintsCount(data.length);
-        }
+      const res = await apiFetch(apiUrl);
+      if (res && res.ok && Array.isArray(res.data)) {
+        setOpenComplaintsCount(res.data.length);
       }
     } catch (err) {
       console.warn("Failed to fetch open complaints count:", err);
@@ -141,21 +133,13 @@ export function CustomerProvider({ children }) {
     setError(null);
     try {
       const profileUrl = `/api/v1/customers/${group}/${custNo}/profile`;
-      let res;
-      try {
-        res = await fetch(profileUrl);
-      } catch {
-        res = await fetch(`https://ccaas.agmcgroup.ae${profileUrl}`);
-      }
+      const res = await apiFetch(profileUrl);
 
-      if (res && res.ok) {
-        const profileData = await res.json();
-        if (profileData && typeof profileData === 'object') {
-          setCustomer(profileData);
-          localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(profileData));
-          fetchOpenComplaintsCount(group, custNo);
-          return;
-        }
+      if (res && res.ok && res.data && typeof res.data === 'object') {
+        setCustomer(res.data);
+        localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(res.data));
+        fetchOpenComplaintsCount(group, custNo);
+        return;
       }
       throw new Error(`Profile fetch status: ${res ? res.status : 'failed'}`);
     } catch (err) {
@@ -189,18 +173,11 @@ export function CustomerProvider({ children }) {
         localStorage.setItem(prefix + 'cached_mobile', cleanedMobile);
       }
 
-      let response;
       const searchUrl = `/api/v1/customers?mobile=${cleanedMobile}`;
-      const fallbackSearchUrl = `https://ccaas.agmcgroup.ae/api/v1/customers?mobile=${cleanedMobile}`;
-
-      try {
-        response = await fetch(searchUrl);
-      } catch {
-        response = await fetch(fallbackSearchUrl);
-      }
+      const res = await apiFetch(searchUrl);
       
-      if (response && response.ok) {
-        const data = await response.json();
+      if (res && res.ok && res.data) {
+        const data = res.data;
         // Save customer search response array to localStorage with prefix
         localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(data));
 
