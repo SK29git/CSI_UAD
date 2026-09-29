@@ -14,7 +14,7 @@ import {
 } from 'react-icons/fa';
 
 export default function CreateComplaintView() {
-  const { customer, getFormattedName } = useCustomer();
+  const { customer, getFormattedName, agentId } = useCustomer();
 
   const customerName = getFormattedName();
   const initialCustomerNo = customer?.customerNumber || customer?.id || "80496";
@@ -27,8 +27,7 @@ export default function CreateComplaintView() {
   const [branch, setBranch] = useState("10");
   const [priority, setPriority] = useState("HIGH");
   
-  // Agent ID is handled automatically / fetched backend
-  const createdBy = "agent.42";
+  const createdBy = agentId || "agent.42";
 
   const [submitting, setSubmitting] = useState(false);
   const [successResponse, setSuccessResponse] = useState(null);
@@ -81,7 +80,8 @@ export default function CreateComplaintView() {
       description,
       branch,
       priority,
-      createdBy
+      createdBy: createdBy,
+      agentId: createdBy
     };
 
     try {

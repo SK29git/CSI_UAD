@@ -304,7 +304,42 @@ export default function OverviewView() {
         </div>
       </div>
 
-      {/* 3. Bottom Split Row: Root Cause Analysis & Recovery Actions */}
+      {/* 3. Complaint Summary */}
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
+          <h3 className="font-bold text-gray-900 text-base">Complaint Summary</h3>
+          <button className="text-blue-600 text-xs font-semibold hover:underline cursor-pointer">View Report</button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 text-xs">
+          <div>
+            <span className="text-gray-400 block text-[11px]">Keyloop Group</span>
+            <span className="text-xl font-black text-gray-900 mt-1 block">{summaryData.keyloopGroup || 'BMW'}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[11px]">Branch Code</span>
+            <span className="text-xl font-black text-gray-900 mt-1 block">{summaryData.branch || '10'}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[11px]">Open Complaints</span>
+            <span className="text-xl font-black text-blue-600 mt-1 block">{summaryData.openComplaints ?? 4}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[11px]">Resolved Today</span>
+            <span className="text-xl font-black text-emerald-600 mt-1 block">{summaryData.resolvedToday ?? 0}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[11px]">SLA Breaches</span>
+            <span className="text-xl font-black text-rose-600 mt-1 block">{summaryData.slaBreaches || '0'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Bottom Split Row: Root Cause Analysis & Recovery Actions */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
         {/* Left Side: Root Cause Analysis Card */}
         <div className="xl:col-span-6 bg-white rounded-xl p-4 shadow-sm border border-gray-100">
@@ -396,41 +431,6 @@ export default function OverviewView() {
                 <span className="font-bold text-emerald-600 text-[11px]">Approved</span>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Footer Row: Complaint Summary */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
-          <h3 className="font-bold text-gray-900 text-base">Complaint Summary</h3>
-          <button className="text-blue-600 text-xs font-semibold hover:underline cursor-pointer">View Report</button>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 text-xs">
-          <div>
-            <span className="text-gray-400 block text-[11px]">Keyloop Group</span>
-            <span className="text-xl font-black text-gray-900 mt-1 block">{summaryData.keyloopGroup || 'BMW'}</span>
-          </div>
-
-          <div>
-            <span className="text-gray-400 block text-[11px]">Branch Code</span>
-            <span className="text-xl font-black text-gray-900 mt-1 block">{summaryData.branch || '10'}</span>
-          </div>
-
-          <div>
-            <span className="text-gray-400 block text-[11px]">Open Complaints</span>
-            <span className="text-xl font-black text-blue-600 mt-1 block">{summaryData.openComplaints ?? 4}</span>
-          </div>
-
-          <div>
-            <span className="text-gray-400 block text-[11px]">Resolved Today</span>
-            <span className="text-xl font-black text-emerald-600 mt-1 block">{summaryData.resolvedToday ?? 0}</span>
-          </div>
-
-          <div>
-            <span className="text-gray-400 block text-[11px]">SLA Breaches</span>
-            <span className="text-xl font-black text-rose-600 mt-1 block">{summaryData.slaBreaches || '0'}</span>
           </div>
         </div>
       </div>

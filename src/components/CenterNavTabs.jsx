@@ -21,7 +21,54 @@ export default function CenterNavTabs({
   onToggleRight
 }) {
   const navigate = useNavigate();
-  const { openComplaintsCount } = useCustomer();
+  const { openComplaintsCount, currentMobile, customer, agentId } = useCustomer();
+
+  const handleNavigateModule = (targetModule) => {
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    const complaintVal = searchParams.get('Complaint') || searchParams.get('complaint');
+    const salesVal = searchParams.get('Sales') || searchParams.get('sales');
+    const mobileVal = complaintVal || salesVal || searchParams.get('mobile') || searchParams.get('phone') || currentMobile || customer?.mobileRaw;
+    const agentVal = searchParams.get('Agentid') || searchParams.get('agentId') || searchParams.get('agentid') || searchParams.get('agent_id') || searchParams.get('agent') || agentId;
+    const customerNoVal = searchParams.get('customerNumber') || searchParams.get('customerNo') || searchParams.get('id') || searchParams.get('customer_id');
+    const groupVal = searchParams.get('keyloopGroup') || searchParams.get('group') || searchParams.get('brand');
+
+    const newParams = new URLSearchParams();
+
+    if (mobileVal) {
+      const cleanMobile = String(mobileVal).replace(/[^0-9]/g, '');
+      const finalMobile = cleanMobile || mobileVal;
+      if (targetModule === 'Sales') {
+        newParams.set('Sales', finalMobile);
+      } else if (targetModule === 'Complaints Manager') {
+        newParams.set('Complaint', finalMobile);
+      } else {
+        newParams.set('mobile', finalMobile);
+      }
+    }
+
+    if (agentVal) {
+      newParams.set('agentId', agentVal);
+    }
+    if (customerNoVal) {
+      newParams.set('customerNumber', customerNoVal);
+    }
+    if (groupVal) {
+      newParams.set('group', groupVal);
+    }
+
+    const queryString = newParams.toString();
+    
+    if (targetModule === 'Sales') {
+      navigate(`/sales${queryString ? '?' + queryString : ''}`);
+    } else if (targetModule === 'Service') {
+      navigate(`/service${queryString ? '?' + queryString : ''}`);
+    } else if (targetModule === 'Feedback') {
+      navigate(`/feedback${queryString ? '?' + queryString : ''}`);
+    } else {
+      navigate(`/${queryString ? '?' + queryString : ''}`);
+    }
+  };
 
   const countVal = typeof openComplaintsCount === 'number' ? openComplaintsCount : 3;
 
@@ -73,7 +120,7 @@ export default function CenterNavTabs({
       {/* ROW 1: Module Switcher Tabs */}
       <div className="flex items-center justify-center gap-6 sm:gap-8 text-xs border-b border-gray-100 pb-2">
         <button 
-          onClick={() => navigate('/sales')}
+          onClick={() => handleNavigateModule('Sales')}
           className={`pb-1 flex items-center gap-1.5 cursor-pointer transition-colors ${
             activeModule === 'Sales' ? 'text-blue-600 font-bold border-b-2 border-blue-600' : 'text-gray-600 font-semibold hover:text-gray-900'
           }`}
@@ -83,7 +130,7 @@ export default function CenterNavTabs({
         </button>
 
         <button 
-          onClick={() => navigate('/service')}
+          onClick={() => handleNavigateModule('Service')}
           className={`pb-1 flex items-center gap-1.5 cursor-pointer transition-colors ${
             activeModule === 'Service' ? 'text-blue-600 font-bold border-b-2 border-blue-600' : 'text-gray-600 font-semibold hover:text-gray-900'
           }`}
@@ -93,7 +140,7 @@ export default function CenterNavTabs({
         </button>
 
         <button 
-          onClick={() => navigate('/feedback')}
+          onClick={() => handleNavigateModule('Feedback')}
           className={`pb-1 flex items-center gap-2 cursor-pointer transition-colors ${
             activeModule === 'Feedback' ? 'text-blue-600 font-bold border-b-2 border-blue-600' : 'text-gray-600 font-semibold hover:text-gray-900'
           }`}
@@ -103,7 +150,7 @@ export default function CenterNavTabs({
         </button>
 
         <button 
-          onClick={() => navigate('/')}
+          onClick={() => handleNavigateModule('Complaints Manager')}
           className={`pb-1 flex items-center gap-1.5 cursor-pointer transition-colors ${
             activeModule === 'Complaints Manager' ? 'text-blue-600 font-bold border-b-2 border-blue-600' : 'text-gray-600 font-semibold hover:text-gray-900'
           }`}

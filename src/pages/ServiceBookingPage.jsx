@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import GenesysTopBar from '../components/GenesysTopBar';
 import CenterNavTabs from '../components/CenterNavTabs';
 import ServiceCustomerVehicleCard from '../components/ServiceCustomerVehicleCard';
 import ServiceBookingMainPanel from '../components/ServiceBookingMainPanel';
@@ -25,15 +24,12 @@ export default function ServiceBookingPage() {
 
   return (
     <div className="min-h-screen bg-[#f3f4f6] text-gray-800 flex flex-col font-sans">
-      {/* Global Telephony Header */}
-      <GenesysTopBar />
-
       {/* Main 3-Column Layout */}
       <div className="max-w-[1600px] w-full mx-auto p-3 sm:p-4 lg:p-5 flex-1 flex flex-col lg:flex-row gap-4 items-start relative">
         
         {/* LEFT COLUMN: Customer 360 & Vehicle Summary */}
         <aside className={`
-          fixed lg:sticky lg:top-[70px] inset-y-0 left-0 z-40 lg:z-10 bg-white lg:bg-transparent p-4 lg:p-0 
+          fixed lg:sticky lg:top-5 inset-y-0 left-0 z-40 lg:z-10 bg-white lg:bg-transparent p-4 lg:p-0 
           transform ${mobileLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} 
           transition-all duration-300 ease-in-out shadow-2xl lg:shadow-none overflow-y-auto max-h-screen lg:max-h-none
         `}>
@@ -78,7 +74,7 @@ export default function ServiceBookingPage() {
         </main>
 
         {/* RIGHT COLUMN: Activity Log Timeline */}
-        <aside className="w-full lg:w-auto flex-shrink-0 lg:sticky lg:top-[70px] z-10 transition-all duration-300">
+        <aside className="w-full lg:w-auto flex-shrink-0 lg:sticky lg:top-5 z-10 transition-all duration-300">
           <ServiceActivityRightSidebar 
             isCollapsed={isRightCollapsed}
             onToggleCollapse={() => setIsRightCollapsed(!isRightCollapsed)}

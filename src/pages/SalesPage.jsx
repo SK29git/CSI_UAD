@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import GenesysTopBar from '../components/GenesysTopBar';
 import CenterNavTabs from '../components/CenterNavTabs';
 import LeftSidebar from '../components/LeftSidebar';
 import SalesOverviewView from '../components/SalesOverviewView';
@@ -14,6 +13,14 @@ export default function SalesPage() {
 
   useEffect(() => {
     const search = window.location.search || '';
+    const params = new URLSearchParams(search);
+    const complaintVal = params.get('Complaint') || params.get('complaint');
+    if (complaintVal && !params.get('Sales') && !params.get('sales')) {
+      params.set('Sales', complaintVal.replace(/[^0-9]/g, '') || complaintVal);
+      params.delete('Complaint');
+      params.delete('complaint');
+      window.history.replaceState(null, '', `/sales?${params.toString()}`);
+    }
     if (search.toLowerCase().includes('salesnewlead')) {
       setActiveSubTab('New Lead');
     }
@@ -32,15 +39,12 @@ export default function SalesPage() {
 
   return (
     <div className="min-h-screen bg-[#f3f4f6] text-gray-800 flex flex-col font-sans">
-      {/* Global Telephony Header */}
-      <GenesysTopBar />
-
       {/* Main 3-Column Layout */}
       <div className="max-w-[1600px] w-full mx-auto p-3 sm:p-4 lg:p-5 flex-1 flex flex-col lg:flex-row gap-4 items-start relative">
         
         {/* LEFT COLUMN: Customer Profile & Risk Overview & Notes */}
         <aside className={`
-          fixed lg:sticky lg:top-[70px] inset-y-0 left-0 z-40 lg:z-10 bg-white lg:bg-transparent p-4 lg:p-0 
+          fixed lg:sticky lg:top-5 inset-y-0 left-0 z-40 lg:z-10 bg-white lg:bg-transparent p-4 lg:p-0 
           transform ${mobileLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} 
           transition-all duration-300 ease-in-out shadow-2xl lg:shadow-none overflow-y-auto max-h-screen lg:max-h-none
         `}>
@@ -85,7 +89,7 @@ export default function SalesPage() {
         </main>
 
         {/* RIGHT COLUMN: Activity Log Timeline */}
-        <aside className="w-full lg:w-auto flex-shrink-0 lg:sticky lg:top-[70px] z-10 transition-all duration-300">
+        <aside className="w-full lg:w-auto flex-shrink-0 lg:sticky lg:top-5 z-10 transition-all duration-300">
           <RightSidebar 
             isCollapsed={isRightCollapsed}
             onToggleCollapse={() => setIsRightCollapsed(!isRightCollapsed)}

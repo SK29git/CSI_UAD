@@ -44,29 +44,54 @@ export const PROFILE_DEMO_DATA = {
 
 export function CustomerProvider({ children }) {
   const [customer, setCustomer] = useState(PROFILE_DEMO_DATA);
+  const [customerList, setCustomerList] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [currentMobile, setCurrentMobile] = useState("");
   const [currentCustomerNumber, setCurrentCustomerNumber] = useState("");
+  const [agentId, setAgentId] = useState("agent.42");
   const [openComplaintsCount, setOpenComplaintsCount] = useState(3);
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    const salesMobileParam = searchParams.get('Sales') || searchParams.get('sales');
-    const customerNoParam = searchParams.get('customerNumber') || searchParams.get('customerNo') || searchParams.get('id') || searchParams.get('customer_id');
-    const mobileParam = salesMobileParam || searchParams.get('Complaint') || searchParams.get('mobile') || searchParams.get('phone');
-    const groupParam = searchParams.get('keyloopGroup') || searchParams.get('group') || searchParams.get('brand') || 'BMW';
+    // Clear localStorage when window/tab is closed
+    const handleTabClose = () => {
+      localStorage.removeItem('complaint_cached_mobile');
+      localStorage.removeItem('complaint_customer_search_data');
+      localStorage.removeItem('complaint_customer_profile_data');
+      localStorage.removeItem('complaint_selected_index');
+      localStorage.removeItem('sales_cached_mobile');
+      localStorage.removeItem('sales_customer_search_data');
+      localStorage.removeItem('sales_customer_profile_data');
+      localStorage.removeItem('sales_selected_index');
+    };
+    window.addEventListener('beforeunload', handleTabClose);
 
-    if (salesMobileParam || mobileParam) {
-      const activeMobile = salesMobileParam || mobileParam;
+    const searchParams = new URLSearchParams(window.location.search);
+    const complaintMobileParam = searchParams.get('Complaint') || searchParams.get('complaint');
+    const salesMobileParam = searchParams.get('Sales') || searchParams.get('sales');
+    const generalMobileParam = searchParams.get('mobile') || searchParams.get('phone');
+    const customerNoParam = searchParams.get('customerNumber') || searchParams.get('customerNo') || searchParams.get('id') || searchParams.get('customer_id');
+    const groupParam = searchParams.get('keyloopGroup') || searchParams.get('group') || searchParams.get('brand') || 'BMW';
+    const agentParam = searchParams.get('Agentid') || searchParams.get('agentId') || searchParams.get('agentid') || searchParams.get('agent_id') || searchParams.get('agent');
+
+    if (agentParam) {
+      setAgentId(agentParam);
+    }
+
+    const activeMobile = complaintMobileParam || salesMobileParam || generalMobileParam;
+    const isSales = Boolean(salesMobileParam);
+    const prefix = isSales ? 'sales_' : 'complaint_';
+
+    if (activeMobile) {
       setCurrentMobile(activeMobile);
-      fetchCustomerByMobile(activeMobile, groupParam);
+      fetchCustomerByMobile(activeMobile, groupParam, prefix);
     } else if (customerNoParam) {
       setCurrentCustomerNumber(customerNoParam);
-      fetchProfileByCustomerNumber(groupParam, customerNoParam);
+      fetchProfileByCustomerNumber(groupParam, customerNoParam, prefix);
     } else {
       // Check if localStorage has cached profile data
-      const cachedProfileStr = localStorage.getItem('sales_customer_profile_data');
+      const cachedProfileStr = localStorage.getItem(prefix + 'customer_profile_data');
       if (cachedProfileStr) {
         try {
           const cachedProfile = JSON.parse(cachedProfileStr);
@@ -79,8 +104,12 @@ export function CustomerProvider({ children }) {
           console.warn("Cached profile parse error:", e);
         }
       }
-      fetchProfileByCustomerNumber('BMW', '80496');
+      fetchProfileByCustomerNumber('BMW', '80496', prefix);
     }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleTabClose);
+    };
   }, []);
 
   const fetchOpenComplaintsCount = async (group, custNo) => {
@@ -107,7 +136,7 @@ export function CustomerProvider({ children }) {
     }
   };
 
-  const fetchProfileByCustomerNumber = async (group, custNo) => {
+  const fetchProfileByCustomerNumber = async (group, custNo, prefix = 'complaint_') => {
     setLoading(true);
     setError(null);
     try {
@@ -123,7 +152,7 @@ export function CustomerProvider({ children }) {
         const profileData = await res.json();
         if (profileData && typeof profileData === 'object') {
           setCustomer(profileData);
-          localStorage.setItem('sales_customer_profile_data', JSON.stringify(profileData));
+          localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(profileData));
           fetchOpenComplaintsCount(group, custNo);
           return;
         }
@@ -138,25 +167,26 @@ export function CustomerProvider({ children }) {
         keyloopGroup: group || PROFILE_DEMO_DATA.keyloopGroup
       };
       setCustomer(fallbackProfile);
-      localStorage.setItem('sales_customer_profile_data', JSON.stringify(fallbackProfile));
+      localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(fallbackProfile));
       fetchOpenComplaintsCount(group, custNo);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCustomerByMobile = async (mobileNum, group = 'BMW') => {
+  const fetchCustomerByMobile = async (mobileNum, group = 'BMW', prefix = 'complaint_') => {
     setLoading(true);
     setError(null);
     try {
       const cleanedMobile = mobileNum.replace(/[^0-9]/g, '');
       
       // Manage localStorage clearing when a new mobile number is passed
-      const cachedMobile = localStorage.getItem('sales_cached_mobile');
+      const cachedMobile = localStorage.getItem(prefix + 'cached_mobile');
       if (cachedMobile !== cleanedMobile) {
-        localStorage.removeItem('sales_customer_search_data');
-        localStorage.removeItem('sales_customer_profile_data');
-        localStorage.setItem('sales_cached_mobile', cleanedMobile);
+        localStorage.removeItem(prefix + 'customer_search_data');
+        localStorage.removeItem(prefix + 'customer_profile_data');
+        localStorage.removeItem(prefix + 'selected_index');
+        localStorage.setItem(prefix + 'cached_mobile', cleanedMobile);
       }
 
       let response;
@@ -171,19 +201,30 @@ export function CustomerProvider({ children }) {
       
       if (response && response.ok) {
         const data = await response.json();
-        // Save customer search response array to localStorage
-        localStorage.setItem('sales_customer_search_data', JSON.stringify(data));
+        // Save customer search response array to localStorage with prefix
+        localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(data));
 
         let targetItem = null;
+        let storedIdx = 0;
+        const savedIdxStr = localStorage.getItem(prefix + 'selected_index');
+        if (savedIdxStr !== null && !isNaN(Number(savedIdxStr))) {
+          storedIdx = Number(savedIdxStr);
+        }
+
         if (Array.isArray(data) && data.length > 0) {
-          targetItem = data[0];
+          setCustomerList(data);
+          const validIdx = storedIdx < data.length ? storedIdx : 0;
+          setSelectedIndex(validIdx);
+          targetItem = data[validIdx];
         } else if (typeof data === 'object' && data !== null) {
+          setCustomerList([data]);
+          setSelectedIndex(0);
           targetItem = data;
         }
 
         if (targetItem && targetItem.customerNumber) {
           const targetGroup = targetItem.keyloopGroup || group;
-          await fetchProfileByCustomerNumber(targetGroup, targetItem.customerNumber);
+          await fetchProfileByCustomerNumber(targetGroup, targetItem.customerNumber, prefix);
           return;
         }
       }
@@ -198,6 +239,23 @@ export function CustomerProvider({ children }) {
       fetchOpenComplaintsCount(group, '80496');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const selectCustomer = (idx) => {
+    if (customerList && customerList[idx]) {
+      setSelectedIndex(idx);
+      const searchParams = new URLSearchParams(window.location.search);
+      const isSales = Boolean(searchParams.get('Sales') || searchParams.get('sales'));
+      const prefix = isSales ? 'sales_' : 'complaint_';
+      localStorage.setItem(prefix + 'selected_index', String(idx));
+      
+      const target = customerList[idx];
+      const g = target.keyloopGroup || customer?.keyloopGroup || 'BMW';
+      const c = target.customerNumber;
+      if (c) {
+        fetchProfileByCustomerNumber(g, c, prefix);
+      }
     }
   };
 
@@ -261,10 +319,15 @@ export function CustomerProvider({ children }) {
   return (
     <CustomerContext.Provider value={{
       customer,
+      customerList,
+      selectedIndex,
+      selectCustomer,
       loading,
       error,
       currentMobile,
       currentCustomerNumber,
+      agentId,
+      setAgentId,
       openComplaintsCount,
       setOpenComplaintsCount,
       fetchOpenComplaintsCount,

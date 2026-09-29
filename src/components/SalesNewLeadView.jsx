@@ -48,7 +48,10 @@ export default function SalesNewLeadView() {
 
   useEffect(() => {
     if (customer) {
-      if (customer.salutation) setTitle(customer.salutation);
+      if (customer.salutation) {
+        const cleanSal = customer.salutation.replace(/\.$/, '').trim();
+        setTitle(cleanSal || customer.salutation);
+      }
       if (customer.firstName) setFirstname(customer.firstName);
       if (customer.surname) setSurname(customer.surname);
       if (customer.email) setEmail(customer.email);
@@ -215,12 +218,9 @@ export default function SalesNewLeadView() {
         </div>
       )}
 
-      {/* 1. Create New Lead Form & Lead Summary Split */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-        
-        {/* Left Form: Create New Lead (8 Cols) */}
-        <div className="xl:col-span-8 bg-white rounded-xl p-4 shadow-xs border border-gray-100">
-          <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
+      {/* 1. Create New Lead Form */}
+      <div className="w-full bg-white rounded-xl p-4 shadow-xs border border-gray-100">
+        <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center font-bold">
                 <FaUserPlus className="text-xs" />
@@ -296,6 +296,11 @@ export default function SalesNewLeadView() {
                   <option value="Mrs">Mrs</option>
                   <option value="Messrs">Messrs</option>
                   <option value="Dr">Dr</option>
+                  <option value="Prof">Prof</option>
+                  <option value="Eng">Eng</option>
+                  {!["Mr", "Ms", "Mrs", "Messrs", "Dr", "Prof", "Eng"].includes(title) && (
+                    <option value={title}>{title}</option>
+                  )}
                 </select>
               </div>
 
@@ -413,74 +418,6 @@ export default function SalesNewLeadView() {
             </div>
           </form>
         </div>
-
-        {/* Right Card: Lead Summary (4 Cols) */}
-        <div className="xl:col-span-4 bg-white rounded-xl p-4 shadow-xs border border-gray-100 text-xs flex flex-col justify-between">
-          <div>
-            <h3 className="font-bold text-gray-900 text-sm pb-2 border-b border-gray-100 mb-3">
-              Lead Summary
-            </h3>
-
-            {/* Score Box */}
-            <div className="flex items-center gap-3 p-3 bg-emerald-50/60 rounded-xl border border-emerald-100 mb-3">
-              <div className="w-11 h-11 rounded-full bg-emerald-500 text-white font-black text-base flex items-center justify-center shadow-2xs">
-                85
-              </div>
-              <div>
-                <span className="font-bold text-emerald-700 text-sm block leading-tight">High Potential</span>
-                <span className="text-[10px] text-gray-500 font-medium">Verified Intent & Budget</span>
-              </div>
-            </div>
-
-            {/* Lead Attributes Grid */}
-            <div className="grid grid-cols-2 gap-y-2.5 gap-x-3 text-xs p-3 bg-gray-50/60 rounded-xl border border-gray-100">
-              <div>
-                <span className="text-gray-400 block text-[10px]">Interest</span>
-                <span className="font-bold text-gray-900">High</span>
-              </div>
-              <div>
-                <span className="text-gray-400 block text-[10px]">Budget Range / Timeline</span>
-                <span className="font-bold text-gray-900">1 - 3 Months</span>
-              </div>
-
-              <div>
-                <span className="text-gray-400 block text-[10px]">Buying Power</span>
-                <span className="font-black text-gray-900">AED 250K - 350K</span>
-              </div>
-              <div>
-                <span className="text-gray-400 block text-[10px]">Test Drive - Deferred</span>
-                <span className="font-bold text-gray-900">Yes</span>
-              </div>
-
-              <div>
-                <span className="text-gray-400 block text-[10px]">Trade-in</span>
-                <span className="font-bold text-emerald-600">Yes</span>
-              </div>
-            </div>
-
-            {/* Car Preview Image */}
-            <div className="mt-3 flex flex-col items-center justify-center p-2 bg-gray-50/40 rounded-xl border border-gray-100">
-              <img 
-                src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=400" 
-                alt="BMW X5 xDrive40i" 
-                className="w-full h-24 object-contain rounded-lg"
-              />
-            </div>
-          </div>
-
-          {/* Recommended Next Step Box */}
-          <div className="mt-3 p-3 rounded-xl bg-blue-50/60 border border-blue-100 text-xs">
-            <div className="flex items-center gap-2 mb-1">
-              <FaCalendarCheck className="text-blue-600 text-xs" />
-              <span className="font-bold text-blue-900 text-xs">Schedule test drive</span>
-            </div>
-            <p className="text-gray-600 text-[10px] leading-tight">
-              Increase engagement by scheduling a test drive.
-            </p>
-          </div>
-        </div>
-
-      </div>
 
       {/* 2. Follow Up Table Card */}
       <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100 text-xs">

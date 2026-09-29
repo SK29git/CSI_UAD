@@ -254,16 +254,10 @@ export default function SalesOverviewView() {
             <span className="text-xs font-medium">Fetching customer vehicle data...</span>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
-            
-            {/* Car Image & Model Info (Left 4 Cols) */}
-            <div className="lg:col-span-4 flex flex-col items-center justify-center p-3 bg-gray-50/60 rounded-xl border border-gray-100">
-              <img 
-                src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=600" 
-                alt={activeVehicle.description || activeVehicle.brand} 
-                className="w-full h-36 object-contain rounded-lg"
-              />
-              <div className="mt-2 text-center">
+          <div className="w-full">
+            {/* Vehicle Specs Grid */}
+            <div className="flex flex-col justify-between gap-3">
+              <div className="mb-1">
                 <h3 className="font-extrabold text-gray-900 text-sm leading-tight">
                   {activeVehicle.description || `${activeVehicle.brand} ${activeVehicle.model}`}
                 </h3>
@@ -271,11 +265,7 @@ export default function SalesOverviewView() {
                   {activeVehicle.modelYear ? `${activeVehicle.modelYear} Model` : ''} • {activeVehicle.colour || ''}
                 </span>
               </div>
-            </div>
-
-            {/* Vehicle Specs Grid (Middle 8 Cols) */}
-            <div className="lg:col-span-8 flex flex-col justify-between gap-3">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-4 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-3 gap-x-4 text-xs">
                 <div>
                   <span className="text-gray-400 block text-[10px]">VIN Number</span>
                   <span className="font-mono font-bold text-gray-800 text-[11px]">{activeVehicle.vin || 'N/A'}</span>

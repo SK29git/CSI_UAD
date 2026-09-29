@@ -1,6 +1,5 @@
 import React from 'react';
 import { useCustomer } from '../context/CustomerContext';
-import CustomerAvatar from './CustomerAvatar';
 import { 
   FaPhoneAlt, 
   FaWhatsapp, 
@@ -20,7 +19,10 @@ import {
 
 export default function ServiceCustomerVehicleCard({ isCollapsed = false, onToggleCollapse }) {
   const { 
-    customer, 
+    customer,
+    customerList,
+    selectedIndex,
+    selectCustomer, 
     getFormattedName, 
     getFormattedLocation, 
     getLoyaltyTier 
@@ -47,11 +49,6 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
         </button>
 
         <div className="w-full h-[1px] bg-gray-100 my-1" />
-
-        {/* Avatar badge */}
-        <div className="group-hover:scale-110 transition-transform">
-          <CustomerAvatar customer={customer} size="w-10 h-10" />
-        </div>
 
         {/* BMW Badge Icon */}
         <div className="w-8 h-8 rounded-lg bg-gray-900 text-white font-bold flex items-center justify-center text-[10px] shadow-xs" title="BMW X5 xDrive40i">
@@ -99,8 +96,32 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
           </div>
         </div>
 
+        {/* Multi-Customer Account Selector Dropdown */}
+        {customerList && customerList.length > 1 && (
+          <div className="p-2 bg-blue-50/80 border border-blue-200 rounded-lg text-xs mb-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider">
+                Select Account ({customerList.length} Found)
+              </span>
+              <span className="text-[9px] font-bold bg-blue-600 text-white px-1.5 py-0.2 rounded">
+                Active: #{customer.customerNumber || 'CUS-94245'}
+              </span>
+            </div>
+            <select
+              value={selectedIndex}
+              onChange={(e) => selectCustomer(Number(e.target.value))}
+              className="w-full p-1 bg-white border border-blue-300 rounded font-bold text-gray-900 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs text-xs"
+            >
+              {customerList.map((item, idx) => (
+                <option key={item.customerNumber || idx} value={idx}>
+                  {item.fullName || `${item.firstName || ''} ${item.surname || ''}`.trim() || 'Customer'} (Cust ID: {item.customerNumber})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="flex items-center gap-3 mb-3">
-          <CustomerAvatar customer={customer} size="w-13 h-13" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 flex-wrap">
               <h3 className="font-bold text-gray-900 text-base leading-tight truncate">{customerName}</h3>

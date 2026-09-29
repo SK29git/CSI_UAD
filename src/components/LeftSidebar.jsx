@@ -1,6 +1,5 @@
 import React from 'react';
 import { useCustomer } from '../context/CustomerContext';
-import CustomerAvatar from './CustomerAvatar';
 import { 
   FaPhoneAlt, 
   FaWhatsapp, 
@@ -61,11 +60,6 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
 
         <div className="w-full h-[1px] bg-gray-100 my-1" />
 
-        {/* Avatar badge */}
-        <div className="group-hover:scale-110 transition-transform">
-          <CustomerAvatar customer={customer} size="w-10 h-10" />
-        </div>
-
         {/* VIP / Loyalty Indicator */}
         <span className={`${customer.vip ? 'bg-amber-500' : 'bg-purple-700'} text-white text-[9px] font-bold px-1 py-0.5 rounded uppercase tracking-wider`}>
           {customer.vip ? 'VIP' : loyaltyTier.slice(0, 4).toUpperCase()}
@@ -115,38 +109,64 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
             <span>Fetching Customer Details...</span>
           </div>
         ) : (
-          <div className="flex items-center gap-3 mb-3">
-            <CustomerAvatar customer={customer} size="w-14 h-14" />
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h2 className="font-bold text-gray-900 text-base leading-tight truncate">{customerName}</h2>
-                {customer.vip === true && (
-                  <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 shadow-xs">
-                    <FaCrown className="text-[9px]" /> VIP
+          <div className="flex flex-col gap-2.5 mb-3">
+            {/* Multi-Customer Account Selector Dropdown */}
+            {customerList && customerList.length > 1 && (
+              <div className="p-2 bg-blue-50/80 border border-blue-200 rounded-lg text-xs mb-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider">
+                    Select Account ({customerList.length} Found)
                   </span>
-                )}
-                {loyaltyTier !== 'N/A' && (
-                  <span className="bg-purple-700 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
-                    {loyaltyTier}
+                  <span className="text-[9px] font-bold bg-blue-600 text-white px-1.5 py-0.2 rounded">
+                    Active: #{customer.customerNumber || customerId}
                   </span>
-                )}
+                </div>
+                <select
+                  value={selectedIndex}
+                  onChange={(e) => selectCustomer(Number(e.target.value))}
+                  className="w-full p-1.5 bg-white border border-blue-300 rounded font-bold text-gray-900 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs text-xs"
+                >
+                  {customerList.map((item, idx) => (
+                    <option key={item.customerNumber || idx} value={idx}>
+                      {item.fullName || `${item.firstName || ''} ${item.surname || ''}`.trim() || 'Customer'} (Cust ID: {item.customerNumber})
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="mt-1 space-y-1 text-xs text-gray-600">
-                <div className="flex items-center gap-1.5">
-                  <FaPhoneAlt className="text-gray-400 text-[11px]" />
-                  <span className="font-medium">{customer.mobile || customer.mobileRaw || 'N/A'}</span>
+            )}
+
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h2 className="font-bold text-gray-900 text-base leading-tight truncate">{customerName}</h2>
+                  {customer.vip === true && (
+                    <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 shadow-xs">
+                      <FaCrown className="text-[9px]" /> VIP
+                    </span>
+                  )}
+                  {loyaltyTier !== 'N/A' && (
+                    <span className="bg-purple-700 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                      {loyaltyTier}
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <FaEnvelope className="text-gray-400 text-[11px]" />
-                  <span className="truncate max-w-[190px]">{customer.email || 'N/A'}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <FaMapMarkerAlt className="text-gray-400 text-[11px]" />
-                  <span className="truncate max-w-[190px]">{locationStr}</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <FaGlobe className="text-gray-400 text-[11px]" />
-                  <span>{customer.language || 'N/A'}</span>
+                <div className="mt-1 space-y-1 text-xs text-gray-600">
+                  <div className="flex items-center gap-1.5">
+                    <FaPhoneAlt className="text-gray-400 text-[11px]" />
+                    <span className="font-medium">{customer.mobile || customer.mobileRaw || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <FaEnvelope className="text-gray-400 text-[11px]" />
+                    <span className="truncate max-w-[190px]">{customer.email || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <FaMapMarkerAlt className="text-gray-400 text-[11px]" />
+                    <span className="truncate max-w-[190px]">{locationStr}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <FaGlobe className="text-gray-400 text-[11px]" />
+                    <span>{customer.language || 'N/A'}</span>
+                  </div>
                 </div>
               </div>
             </div>

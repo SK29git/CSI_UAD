@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import GenesysTopBar from '../components/GenesysTopBar';
 import CenterNavTabs from '../components/CenterNavTabs';
 import LeftSidebar from '../components/LeftSidebar';
 import RightSidebar from '../components/RightSidebar';
@@ -22,10 +21,15 @@ export default function ComplaintsDashboardPage() {
 
   useEffect(() => {
     const search = window.location.search || '';
-    if (search.toLowerCase().includes('salesnewlead') || search.toLowerCase().includes('sales=')) {
-      navigate(`/sales${search}`, { replace: true });
+    const params = new URLSearchParams(search);
+    const salesVal = params.get('Sales') || params.get('sales');
+    if (salesVal && !params.get('Complaint') && !params.get('complaint')) {
+      params.set('Complaint', salesVal.replace(/[^0-9]/g, '') || salesVal);
+      params.delete('Sales');
+      params.delete('sales');
+      window.history.replaceState(null, '', `/?${params.toString()}`);
     }
-  }, [navigate]);
+  }, []);
 
   const renderMainTabContent = () => {
     switch (activeTab) {
@@ -52,15 +56,12 @@ export default function ComplaintsDashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#f3f4f6] text-gray-800 flex flex-col font-sans">
-      {/* Global Telephony Header */}
-      <GenesysTopBar />
-
       {/* Main 3-Column Layout */}
       <div className="max-w-[1600px] w-full mx-auto p-3 sm:p-4 lg:p-5 flex-1 flex flex-col lg:flex-row gap-4 items-start relative">
         
         {/* LEFT COLUMN: Customer Profile & Risk Overview */}
         <aside className={`
-          fixed lg:sticky lg:top-[70px] inset-y-0 left-0 z-40 lg:z-10 bg-white lg:bg-transparent p-4 lg:p-0 
+          fixed lg:sticky lg:top-5 inset-y-0 left-0 z-40 lg:z-10 bg-white lg:bg-transparent p-4 lg:p-0 
           transform ${mobileLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} 
           transition-all duration-300 ease-in-out shadow-2xl lg:shadow-none overflow-y-auto max-h-screen lg:max-h-none
         `}>
@@ -105,7 +106,7 @@ export default function ComplaintsDashboardPage() {
         </main>
 
         {/* RIGHT COLUMN: Complaint Activity Timeline */}
-        <aside className="w-full lg:w-auto flex-shrink-0 lg:sticky lg:top-[70px] z-10 transition-all duration-300">
+        <aside className="w-full lg:w-auto flex-shrink-0 lg:sticky lg:top-5 z-10 transition-all duration-300">
           <RightSidebar 
             isCollapsed={isRightCollapsed}
             onToggleCollapse={() => setIsRightCollapsed(!isRightCollapsed)}

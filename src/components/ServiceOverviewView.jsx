@@ -30,23 +30,10 @@ export default function ServiceOverviewView() {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           
-          {/* Car Image (Left 4 Cols) */}
-          <div className="lg:col-span-4 flex flex-col items-center justify-center p-2 bg-gray-50/60 rounded-xl border border-gray-100">
-            <img 
-              src="https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=600" 
-              alt="BMW X5 xDrive40i" 
-              className="w-full h-36 object-contain rounded-lg"
-            />
-            <div className="mt-2 text-center">
-              <h3 className="font-extrabold text-gray-900 text-base leading-tight">BMW X5 xDrive40i</h3>
-              <span className="text-xs text-gray-500 font-semibold">2024 Model</span>
-            </div>
-          </div>
-
-          {/* Vehicle Specs Grid (Middle 5 Cols) */}
-          <div className="lg:col-span-5 grid grid-cols-2 gap-y-3 gap-x-4 text-xs">
+          {/* Vehicle Specs Grid (8 Cols) */}
+          <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-4 text-xs">
             <div>
               <span className="text-gray-400 block text-[10px]">VIN</span>
               <span className="font-mono font-bold text-gray-800 text-[11px]">WBAXXXXXXXXXXXXXXXXX12345</span>
@@ -97,8 +84,8 @@ export default function ServiceOverviewView() {
             </div>
           </div>
 
-          {/* Quick Status Widgets (Right 3 Cols) */}
-          <div className="lg:col-span-3 flex flex-col gap-3">
+          {/* Quick Status Widgets (Right 4 Cols) */}
+          <div className="lg:col-span-4 flex flex-col gap-3">
             
             {/* Service Next Due */}
             <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-100 text-xs">
