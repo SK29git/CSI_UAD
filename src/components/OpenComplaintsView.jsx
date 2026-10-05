@@ -170,7 +170,7 @@ export default function OpenComplaintsView() {
       {loading ? (
         <div className="py-12 flex flex-col items-center justify-center text-gray-400 gap-2">
           <FaSpinner className="animate-spin text-xl text-blue-600" />
-          <span className="text-xs font-medium">Fetching open complaints from CCaaS API...</span>
+          <span className="text-xs font-medium">Loading open complaints...</span>
         </div>
       ) : filtered.length === 0 ? (
         <div className="py-10 text-center text-gray-500 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">

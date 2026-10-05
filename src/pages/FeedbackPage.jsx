@@ -57,7 +57,7 @@ export default function FeedbackPage() {
           />
 
           <div className="transition-all duration-200">
-            <FeedbackOverviewView />
+            <FeedbackOverviewView activeSubTab={activeSubTab} />
           </div>
         </main>
 

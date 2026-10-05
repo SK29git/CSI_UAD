@@ -83,12 +83,10 @@ export default function CenterNavTabs({
   const serviceSubTabs = [
     { id: 'Overview', label: 'Overview' },
     { id: 'Book Service', label: 'Book Service' },
-    { id: 'Service History', label: 'Service History' },
     { id: 'Open Bookings', label: 'Open Bookings' },
-    { id: 'Cancelled Bookings', label: 'Cancelled Bookings' },
-    { id: 'Roadside Assistance', label: 'Roadside Assistance' },
-    { id: 'Warranty', label: 'Warranty' },
-    { id: 'Documents', label: 'Documents' },
+    { id: 'Service History', label: 'Service History' },
+    { id: 'Warranty Claims', label: 'Warranty Claims' },
+    { id: 'Service Feedback', label: 'Service Feedback' },
   ];
 
   const feedbackSubTabs = [
@@ -103,8 +101,10 @@ export default function CenterNavTabs({
   const salesSubTabs = [
     { id: 'Overview', label: 'Overview' },
     { id: 'New Lead', label: 'New Lead' },
-    { id: 'Follow Up', label: 'Follow Up' },
-    { id: 'All Activities', label: 'All Activities' },
+    { id: 'Test Drive', label: 'Test Drive' },
+    { id: 'Vehicle Orders', label: 'Vehicle Orders' },
+    { id: 'Customer Segments', label: 'Customer Segments' },
+    { id: 'After-Sales & Follow Up', label: 'After-Sales & Follow Up' },
   ];
 
   let currentSubTabs = complaintSubTabs;

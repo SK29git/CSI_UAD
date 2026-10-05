@@ -3,6 +3,10 @@ import CenterNavTabs from '../components/CenterNavTabs';
 import ServiceCustomerVehicleCard from '../components/ServiceCustomerVehicleCard';
 import ServiceBookingMainPanel from '../components/ServiceBookingMainPanel';
 import ServiceOverviewView from '../components/ServiceOverviewView';
+import ServiceOpenBookingsView from '../components/ServiceOpenBookingsView';
+import ServiceHistoryView from '../components/ServiceHistoryView';
+import ServiceWarrantyClaimsView from '../components/ServiceWarrantyClaimsView';
+import ServiceFeedbackView from '../components/ServiceFeedbackView';
 import ServiceActivityRightSidebar from '../components/ServiceActivityRightSidebar';
 
 export default function ServiceBookingPage() {
@@ -17,6 +21,14 @@ export default function ServiceBookingPage() {
         return <ServiceOverviewView />;
       case 'Book Service':
         return <ServiceBookingMainPanel />;
+      case 'Open Bookings':
+        return <ServiceOpenBookingsView />;
+      case 'Service History':
+        return <ServiceHistoryView />;
+      case 'Warranty Claims':
+        return <ServiceWarrantyClaimsView />;
+      case 'Service Feedback':
+        return <ServiceFeedbackView />;
       default:
         return <ServiceOverviewView />;
     }

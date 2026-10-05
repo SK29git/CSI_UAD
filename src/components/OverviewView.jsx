@@ -150,7 +150,7 @@ export default function OverviewView() {
         {complaintsLoading ? (
           <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
             <FaSpinner className="animate-spin text-xl text-blue-600" />
-            <span className="text-xs font-medium">Fetching complaints from API...</span>
+            <span className="text-xs font-medium">Loading complaints...</span>
           </div>
         ) : openComplaints.length === 0 ? (
           <div className="py-8 text-center text-gray-500 bg-gray-50/50 rounded-xl border border-dashed border-gray-200 text-xs">

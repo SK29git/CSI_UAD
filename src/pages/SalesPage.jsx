@@ -3,6 +3,10 @@ import CenterNavTabs from '../components/CenterNavTabs';
 import LeftSidebar from '../components/LeftSidebar';
 import SalesOverviewView from '../components/SalesOverviewView';
 import SalesNewLeadView from '../components/SalesNewLeadView';
+import SalesTestDriveView from '../components/SalesTestDriveView';
+import SalesVehicleOrdersView from '../components/SalesVehicleOrdersView';
+import SalesSegmentsView from '../components/SalesSegmentsView';
+import SalesAfterSalesView from '../components/SalesAfterSalesView';
 import RightSidebar from '../components/RightSidebar';
 
 export default function SalesPage() {
@@ -32,6 +36,14 @@ export default function SalesPage() {
         return <SalesOverviewView />;
       case 'New Lead':
         return <SalesNewLeadView />;
+      case 'Test Drive':
+        return <SalesTestDriveView />;
+      case 'Vehicle Orders':
+        return <SalesVehicleOrdersView />;
+      case 'Customer Segments':
+        return <SalesSegmentsView />;
+      case 'After-Sales & Follow Up':
+        return <SalesAfterSalesView />;
       default:
         return <SalesNewLeadView />;
     }

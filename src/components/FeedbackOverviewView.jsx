@@ -14,10 +14,12 @@ import {
   FaChartPie,
   FaSpinner,
   FaPlus,
-  FaPaperPlane
+  FaPaperPlane,
+  FaExclamationTriangle,
+  FaTag
 } from 'react-icons/fa';
 
-export default function FeedbackOverviewView() {
+export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
   const { customer, getFormattedName } = useCustomer();
   const customerName = getFormattedName();
   const group = customer?.keyloopGroup || "BMW";
@@ -40,7 +42,7 @@ export default function FeedbackOverviewView() {
   const fetchFeedbackData = async () => {
     setLoading(true);
     try {
-      // 1. CSI Score
+      // 1. CSI Score: GET /api/v1/feedback/csi-score?group={group}&customerNumber={customerNumber}
       const scoreRes = await apiFetch(`/api/v1/feedback/csi-score?group=${group}&customerNumber=${customerNumber}`);
       if (scoreRes && scoreRes.ok && scoreRes.data) {
         setCsiScore(scoreRes.data);
@@ -48,13 +50,18 @@ export default function FeedbackOverviewView() {
         setCsiScore({ csiScore: 4.2, totalResponses: 8, maxScore: 5 });
       }
 
-      // 2. CSI Responses
+      // 2. CSI Responses: GET /api/v1/customers/{group}/{customerNumber}/csi-responses
       const respRes = await apiFetch(`/api/v1/customers/${group}/${customerNumber}/csi-responses`);
       if (respRes && respRes.ok && Array.isArray(respRes.data)) {
         setCsiResponses(respRes.data);
+      } else {
+        setCsiResponses([
+          { surveyId: "CSI-101", date: "2026-09-20", score: "5/5", comments: "Great experience" },
+          { surveyId: "CSI-102", date: "2026-09-18", score: "4/5", comments: "Service advisor was helpful" }
+        ]);
       }
 
-      // 3. Recent Feedback
+      // 3. Recent Feedback: GET /api/v1/customers/{group}/{customerNumber}/feedback
       const feedbackRes = await apiFetch(`/api/v1/customers/${group}/${customerNumber}/feedback?from=2026-01-01&to=2027-12-31`);
       if (feedbackRes && feedbackRes.ok && Array.isArray(feedbackRes.data) && feedbackRes.data.length > 0) {
         setRecentFeedback(feedbackRes.data);
@@ -66,23 +73,32 @@ export default function FeedbackOverviewView() {
         ]);
       }
 
-      // 4. Lost Sales Reasons & Details
+      // 4. Lost Sales Reasons: GET /api/v1/lost-sales/reasons?group={group}&branch={branchCode}
       const reasonsRes = await apiFetch(`/api/v1/lost-sales/reasons?group=${group}&branch=${customer?.branchCode || '10'}`);
-      if (reasonsRes && reasonsRes.ok && Array.isArray(reasonsRes.data)) {
+      if (reasonsRes && reasonsRes.ok && Array.isArray(reasonsRes.data) && reasonsRes.data.length > 0) {
         setLostSalesReasons(reasonsRes.data);
+      } else {
+        setLostSalesReasons([
+          { code: "PRICE", description: "Competitor lower price offer", percentage: "42%" },
+          { code: "STOCK", description: "Model color / stock not available", percentage: "25%" },
+          { code: "FINANCE", description: "Loan terms rejection", percentage: "18%" },
+          { code: "OTHER", description: "Other personal reasons", percentage: "15%" }
+        ]);
       }
 
+      // 5. Lost Sales Details: GET /api/v1/lost-sales?group={group}&customerNumber={customerNumber}
       const lostDetailsRes = await apiFetch(`/api/v1/lost-sales?group=${group}&customerNumber=${customerNumber}`);
-      if (lostDetailsRes && lostDetailsRes.ok && Array.isArray(lostDetailsRes.data)) {
+      if (lostDetailsRes && lostDetailsRes.ok && Array.isArray(lostDetailsRes.data) && lostDetailsRes.data.length > 0) {
         setLostSalesDetails(lostDetailsRes.data);
+      } else {
+        setLostSalesDetails([
+          { enquiryNumber: "ENQ-9012", model: "BMW X5 xDrive40i", date: "2026-08-15", reason: "Competitor lower price offer", status: "LOST" },
+          { enquiryNumber: "ENQ-8841", model: "BMW 330i Sedan", date: "2026-06-10", reason: "Model color / stock not available", status: "LOST" }
+        ]);
       }
     } catch (err) {
       console.warn("Failed to fetch feedback endpoints:", err);
       setCsiScore({ csiScore: 4.2, totalResponses: 8, maxScore: 5 });
-      setRecentFeedback([
-        { type: 'CSI', ref: 'JOB-784512', score: '4 / 5', isGood: true, comments: 'Service advisor was helpful.', submittedDate: '2026-09-20', channel: 'SMS', status: 'Completed' },
-        { type: 'NPS', ref: 'NPS-10234', score: '9 / 10', isGood: true, comments: 'Very satisfied with the service experience.', submittedDate: '2026-09-18', channel: 'WhatsApp', status: 'Completed' }
-      ]);
     } finally {
       setLoading(false);
     }
@@ -149,13 +165,21 @@ export default function FeedbackOverviewView() {
   const displayScore = csiScore?.csiScore || csiScore?.score || 4.2;
   const displayTotal = csiScore?.totalResponses || csiScore?.count || 8;
 
+  const displayedFeedback = recentFeedback.filter(f => {
+    if (activeSubTab === 'CSI') return f.type === 'CSI';
+    if (activeSubTab === 'NPS') return f.type === 'NPS';
+    return true;
+  });
+
   return (
     <div className="flex flex-col gap-4">
       
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white rounded-xl p-4 shadow-xs border border-gray-100">
         <div>
-          <h2 className="text-base font-bold text-gray-900">Customer Feedback & CSI Score</h2>
+          <h2 className="text-base font-bold text-gray-900">
+            Customer Feedback & CSI Score {activeSubTab !== 'Overview' && `(${activeSubTab})`}
+          </h2>
           <p className="text-[11px] text-gray-500">
             Customer experience metrics for <span className="font-semibold text-gray-800">{customerName}</span> (Cust #{customerNumber})
           </p>
@@ -244,12 +268,10 @@ export default function FeedbackOverviewView() {
         </div>
       )}
 
-      {/* 1. Top Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
-        
-        {/* CSI Score Card */}
+      {/* Top Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="bg-white rounded-xl p-3.5 shadow-xs border border-gray-100 flex flex-col justify-between">
-          <span className="text-gray-400 font-bold text-[10px] uppercase tracking-wider block">CSI Score (API)</span>
+          <span className="text-gray-400 font-bold text-[10px] uppercase tracking-wider block">CSI Score</span>
           <div className="mt-2 flex items-baseline gap-2">
             <span className="text-2xl font-black text-gray-900">{displayScore}</span>
             <span className="text-gray-400 font-bold text-xs">/ 5</span>
@@ -260,7 +282,6 @@ export default function FeedbackOverviewView() {
           <span className="text-[10px] text-gray-400 font-medium">Based on {displayTotal} responses</span>
         </div>
 
-        {/* NPS Score Card */}
         <div className="bg-white rounded-xl p-3.5 shadow-xs border border-gray-100 flex flex-col justify-between">
           <span className="text-gray-400 font-bold text-[10px] uppercase tracking-wider block">NPS Score</span>
           <div className="mt-1 text-2xl font-black text-emerald-600">+35</div>
@@ -270,94 +291,127 @@ export default function FeedbackOverviewView() {
           </div>
         </div>
 
-        {/* Lost Sales Card */}
         <div className="bg-white rounded-xl p-3.5 shadow-xs border border-gray-100 flex flex-col justify-between">
           <span className="text-gray-400 font-bold text-[10px] uppercase tracking-wider block">Lost Sales</span>
-          <div className="mt-2 text-2xl font-black text-gray-900">{lostSalesDetails.length || 12}</div>
+          <div className="mt-2 text-2xl font-black text-gray-900">{lostSalesDetails.length}</div>
           <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
-            <FaArrowDown className="text-[9px]" /> 8% vs Last Month
+            Tracked Records
           </span>
         </div>
 
-        {/* Open Bookings Card */}
-        <div className="bg-white rounded-xl p-3.5 shadow-xs border border-gray-100 flex flex-col justify-between">
-          <span className="text-gray-400 font-bold text-[10px] uppercase tracking-wider block">CSI Responses</span>
-          <div className="mt-2 text-2xl font-black text-blue-600">{csiResponses.length || 3}</div>
-          <span className="text-[10px] text-blue-600 font-bold flex items-center gap-1 mt-1">
-            Registered Responses
-          </span>
-        </div>
-
-        {/* Total Feedback Items */}
         <div className="bg-white rounded-xl p-3.5 shadow-xs border border-gray-100 flex flex-col justify-between">
           <span className="text-gray-400 font-bold text-[10px] uppercase tracking-wider block">Total Feedbacks</span>
-          <div className="mt-2 text-2xl font-black text-gray-900">{recentFeedback.length}</div>
+          <div className="mt-2 text-2xl font-black text-blue-600">{recentFeedback.length}</div>
           <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1 mt-1">
             <FaCheckCircle className="text-[9px]" /> Synced
           </span>
         </div>
-
       </div>
 
-      {/* 2. Middle Row: Recent Feedback Table */}
-      <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100 flex flex-col justify-between">
-        <div>
-          <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-3">
-            <h3 className="font-bold text-gray-900 text-sm">Recent Feedback Payload List</h3>
-            <span className="text-xs text-gray-400 font-semibold">{recentFeedback.length} Records</span>
+      {/* View: Lost Sales Analysis */}
+      {activeSubTab === 'Lost Sales Analysis' ? (
+        <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100 space-y-4 text-xs">
+          <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+            <h3 className="font-bold text-gray-900 text-sm">Lost Sales Analysis & Reasons</h3>
+            <span className="text-xs text-gray-500 font-semibold">{lostSalesDetails.length} Records</span>
           </div>
 
-          {loading ? (
-            <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
-              <FaSpinner className="animate-spin text-xl text-blue-600" />
-              <span className="text-xs font-medium">Fetching feedback details from API...</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Reasons List */}
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+              <span className="font-bold text-gray-900 block text-xs mb-1">Lost Sales Reasons</span>
+              {lostSalesReasons.map((r, idx) => (
+                <div key={idx} className="flex justify-between items-center bg-white p-2 rounded border border-gray-200 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded text-[10px]">{r.code || 'REASON'}</span>
+                    <span className="text-gray-800 font-medium">{r.description || r.reason}</span>
+                  </div>
+                  {r.percentage && <span className="font-bold text-gray-900 text-xs">{r.percentage}</span>}
+                </div>
+              ))}
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[9px] border-b border-gray-100">
-                  <tr>
-                    <th className="py-2.5 px-2">Type</th>
-                    <th className="py-2.5 px-2">Reference / Survey ID</th>
-                    <th className="py-2.5 px-2">Score</th>
-                    <th className="py-2.5 px-2">Feedback / Comments</th>
-                    <th className="py-2.5 px-2">Date</th>
-                    <th className="py-2.5 px-2">Channel</th>
-                    <th className="py-2.5 px-2">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
-                  {recentFeedback.map((f, i) => (
-                    <tr key={i} className="hover:bg-gray-50">
-                      <td className="py-2.5 px-2">
-                        <span className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
-                          f.type === 'CSI' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
-                        }`}>
-                          {f.type || 'CSI'}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-2 font-mono font-bold text-gray-800">{f.surveyId || f.ref || 'CSI-2026'}</td>
-                      <td className="py-2.5 px-2 font-black">
-                        <span className={f.isGood !== false ? 'text-emerald-600' : 'text-rose-500'}>
-                          {f.score || '4 / 5'}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-2 text-gray-600 max-w-[250px] truncate">{f.comments || f.comment || 'N/A'}</td>
-                      <td className="py-2.5 px-2 text-gray-400 text-[10px] font-mono">{f.submittedDate || f.date || 'N/A'}</td>
-                      <td className="py-2.5 px-2 text-gray-500">{f.channel || 'SMS'}</td>
-                      <td className="py-2.5 px-2">
-                        <span className="bg-emerald-100 text-emerald-700 font-bold text-[10px] px-1.5 py-0.2 rounded uppercase">
-                          {f.status || 'COMPLETED'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            {/* Customer Lost Sales Table */}
+            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+              <span className="font-bold text-gray-900 block text-xs mb-1">Customer Lost Opportunities</span>
+              {lostSalesDetails.map((det, idx) => (
+                <div key={idx} className="bg-white p-2.5 rounded border border-gray-200 text-xs space-y-1">
+                  <div className="flex justify-between items-center font-bold">
+                    <span className="text-blue-600 font-mono">{det.enquiryNumber || `ENQ-${idx+100}`}</span>
+                    <span className="bg-rose-100 text-rose-700 text-[10px] px-1.5 py-0.2 rounded">LOST</span>
+                  </div>
+                  <div className="text-gray-900 font-semibold">{det.model || 'BMW Vehicle'}</div>
+                  <div className="text-gray-500 text-[10px]">Reason: {det.reason || 'Price / Competitor'}</div>
+                </div>
+              ))}
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      ) : (
+        /* View: Default / CSI / NPS Feedback Table */
+        <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100 flex flex-col justify-between text-xs">
+          <div>
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-3">
+              <h3 className="font-bold text-gray-900 text-sm">Feedback Payload List ({activeSubTab})</h3>
+              <span className="text-xs text-gray-400 font-semibold">{displayedFeedback.length} Records</span>
+            </div>
+
+            {loading ? (
+              <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
+                <FaSpinner className="animate-spin text-xl text-blue-600" />
+                <span className="text-xs font-medium">Loading feedback details...</span>
+              </div>
+            ) : displayedFeedback.length === 0 ? (
+              <div className="py-8 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                No feedback records found for filter: {activeSubTab}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[9px] border-b border-gray-100">
+                    <tr>
+                      <th className="py-2.5 px-2">Type</th>
+                      <th className="py-2.5 px-2">Reference / Survey ID</th>
+                      <th className="py-2.5 px-2">Score</th>
+                      <th className="py-2.5 px-2">Feedback / Comments</th>
+                      <th className="py-2.5 px-2">Date</th>
+                      <th className="py-2.5 px-2">Channel</th>
+                      <th className="py-2.5 px-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
+                    {displayedFeedback.map((f, i) => (
+                      <tr key={i} className="hover:bg-gray-50">
+                        <td className="py-2.5 px-2">
+                          <span className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
+                            f.type === 'CSI' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            {f.type || 'CSI'}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-2 font-mono font-bold text-gray-800">{f.surveyId || f.ref || 'CSI-2026'}</td>
+                        <td className="py-2.5 px-2 font-black">
+                          <span className={f.isGood !== false ? 'text-emerald-600' : 'text-rose-500'}>
+                            {f.score || '4 / 5'}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-2 text-gray-600 max-w-[250px] truncate">{f.comments || f.comment || 'N/A'}</td>
+                        <td className="py-2.5 px-2 text-gray-400 text-[10px] font-mono">{f.submittedDate || f.date || 'N/A'}</td>
+                        <td className="py-2.5 px-2 text-gray-500">{f.channel || 'SMS'}</td>
+                        <td className="py-2.5 px-2">
+                          <span className="bg-emerald-100 text-emerald-700 font-bold text-[10px] px-1.5 py-0.2 rounded uppercase">
+                            {f.status || 'COMPLETED'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );
