@@ -5,6 +5,7 @@ import ComplaintsDashboardPage from './pages/ComplaintsDashboardPage';
 import ServiceBookingPage from './pages/ServiceBookingPage';
 import FeedbackPage from './pages/FeedbackPage';
 import SalesPage from './pages/SalesPage';
+import IMEITrackerPage from './pages/IMEITrackerPage';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/service-booking" element={<ServiceBookingPage />} />
           <Route path="/feedback" element={<FeedbackPage />} />
           <Route path="/sales" element={<SalesPage />} />
+          <Route path="/tracker" element={<IMEITrackerPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

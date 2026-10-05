@@ -39,12 +39,6 @@ export default function ComplaintsDashboardPage() {
         return <CreateComplaintView />;
       case 'Open Complaints':
         return <OpenComplaintsView />;
-      case 'Escalations':
-        return <EscalationsView />;
-      case 'SLA Breaches':
-        return <SlaBreachesView />;
-      case 'Root Cause':
-        return <RootCauseView />;
       case 'Recovery Actions':
         return <RecoveryActionsView />;
       case 'Reports':

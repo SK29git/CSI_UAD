@@ -43,6 +43,125 @@ export const PROFILE_DEMO_DATA = {
     "communicationPreference": ""
 };
 
+export const DEMO_VEHICLES = [
+  {
+    "keyloopGroup": "BMW",
+    "vin": "WBA31HC04SFT82888",
+    "customerNumber": "80496",
+    "registrationNumber": "66164-CC-DXB",
+    "registrationDate": "2024-12-19",
+    "brand": "BMW",
+    "model": "G26",
+    "variant": "31HCA",
+    "description": "G26 430i Gran Coupe M Sport",
+    "modelYear": 2025,
+    "fuelType": "Unleaded",
+    "colour": "Brooklyn Grey metallic",
+    "mileageKm": 2,
+    "deliveryDate": "2024-12-20",
+    "stockProgress": "Closed",
+    "nextServiceDate": "2025-02-20",
+    "nextServiceOdometerKm": 1000,
+    "insurance": [],
+    "warranty": {
+      "status": "ACTIVE",
+      "provider": "BMW Extended Warranty 3y/200,000 km",
+      "contractType": "A7CG",
+      "expiryDate": "2027-12-18"
+    },
+    "serviceContract": {
+      "status": "EXPIRED",
+      "provider": "BMW Service Inclusive",
+      "contractType": "SERVICEINCL",
+      "expiryDate": "2024-07-10"
+    },
+    "serviceType": "",
+    "package": "",
+    "price": "",
+    "eligibility": ""
+  },
+  {
+    "keyloopGroup": "BMW",
+    "vin": "WBA68FF04R8E45580",
+    "customerNumber": "80496",
+    "registrationNumber": "28391-AA-DXB",
+    "registrationDate": "2024-06-21",
+    "brand": "BMW",
+    "model": "G20",
+    "variant": "68FFA",
+    "description": "G20 330i Sedan M Sport",
+    "modelYear": 2024,
+    "fuelType": "Unleaded",
+    "colour": "Mineral White metalic",
+    "mileageKm": 3865,
+    "stockProgress": "Available/Instock",
+    "nextServiceDate": "2024-08-20",
+    "nextServiceOdometerKm": 1000,
+    "insurance": [],
+    "warranty": {
+      "status": "ACTIVE",
+      "provider": "BMW Extended Warranty 3y/200,000 km",
+      "contractType": "A7CG",
+      "expiryDate": "2027-06-19"
+    },
+    "serviceContract": {
+      "status": "NONE"
+    },
+    "eligibility": "",
+    "offer": "",
+    "messageId": "",
+    "deliveryStatus": ""
+  }
+];
+
+export const DEMO_INSURANCE = [
+  {
+    provider: "Sukoon Insurance (Oman Insurance)",
+    policyNumber: "POL-984215",
+    contractType: "COMPREHENSIVE",
+    startDate: "2024-12-19",
+    expiryDate: "2025-12-18",
+    status: "ACTIVE",
+    premium: "AED 3,450"
+  }
+];
+
+export const DEMO_FINANCE = [
+  {
+    institution: "Emirates NBD Auto Finance",
+    accountNumber: "FIN-774910",
+    financeType: "Auto Loan",
+    monthlyInstallment: "AED 2,850",
+    tenureMonths: 48,
+    remainingMonths: 28,
+    status: "ACTIVE"
+  }
+];
+
+export const DEMO_TRADE_IN = [
+  {
+    tradeInId: "TRD-4412",
+    vehicle: "2021 BMW 330i Sedan",
+    vin: "WBA330I2021EX123",
+    appraisedValue: "AED 95,000",
+    tradeInDate: "2024-06-20",
+    status: "COMPLETED"
+  }
+];
+
+export const DEMO_RISK_OVERVIEW = {
+  riskTier: "LOW",
+  score: 95,
+  flags: [],
+  notes: "Good payment history & active warranty"
+};
+
+export const DEMO_VERIFICATION = {
+  status: "VERIFIED",
+  lastVerifiedOn: "2026-09-28, 02:14 PM",
+  verifiedBy: "Sara Ahmed"
+};
+
 export function CustomerProvider({ children }) {
   const [customer, setCustomer] = useState(PROFILE_DEMO_DATA);
   const [customerList, setCustomerList] = useState([]);
@@ -53,6 +172,19 @@ export function CustomerProvider({ children }) {
   const [currentCustomerNumber, setCurrentCustomerNumber] = useState("");
   const [agentId, setAgentId] = useState("agent.42");
   const [openComplaintsCount, setOpenComplaintsCount] = useState(3);
+
+  // Vehicle summary state from API
+  const [vehicles, setVehicles] = useState(DEMO_VEHICLES);
+  const [selectedVin, setSelectedVin] = useState("WBA31HC04SFT82888");
+  const [vehicleDetails, setVehicleDetails] = useState(DEMO_VEHICLES[0]);
+  const [vehiclesLoading, setVehiclesLoading] = useState(false);
+
+  // Extra customer detail state
+  const [insurance, setInsurance] = useState(DEMO_INSURANCE);
+  const [finance, setFinance] = useState(DEMO_FINANCE);
+  const [tradeInHistory, setTradeInHistory] = useState(DEMO_TRADE_IN);
+  const [riskOverview, setRiskOverview] = useState(DEMO_RISK_OVERVIEW);
+  const [verificationStatus, setVerificationStatus] = useState(DEMO_VERIFICATION);
 
   useEffect(() => {
     // Clear localStorage when window/tab is closed
@@ -113,6 +245,102 @@ export function CustomerProvider({ children }) {
     };
   }, []);
 
+  const fetchVehiclesByCustomer = async (group, custNo) => {
+    setVehiclesLoading(true);
+    const g = group || customer?.keyloopGroup || 'BMW';
+    const c = custNo || customer?.customerNumber || '80496';
+    try {
+      // 1. Fetch vehicle list for customer: GET /api/v1/vehicles?group={group}&customerNumber={customerNumber}
+      const listUrl = `/api/v1/vehicles?group=${g}&customerNumber=${c}`;
+      const res = await apiFetch(listUrl);
+      let list = [];
+      if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
+        list = res.data;
+      } else {
+        list = DEMO_VEHICLES;
+      }
+      setVehicles(list);
+      
+      const targetVin = list[0]?.vin;
+      if (targetVin) {
+        setSelectedVin(targetVin);
+        await fetchSingleVehicleDetails(g, targetVin, list[0]);
+      } else {
+        setVehicleDetails(null);
+      }
+    } catch (err) {
+      console.warn("Error fetching vehicles list, using fallback:", err);
+      setVehicles(DEMO_VEHICLES);
+      setSelectedVin(DEMO_VEHICLES[0].vin);
+      setVehicleDetails(DEMO_VEHICLES[0]);
+    } finally {
+      setVehiclesLoading(false);
+    }
+  };
+
+  const fetchSingleVehicleDetails = async (group, vin, fallbackObj = null) => {
+    try {
+      const g = group || customer?.keyloopGroup || 'BMW';
+      const singleUrl = `/api/v1/vehicles/${g}/${vin}`;
+      const res = await apiFetch(singleUrl);
+      if (res && res.ok && res.data && typeof res.data === 'object') {
+        setVehicleDetails(res.data);
+        return;
+      }
+      if (fallbackObj) setVehicleDetails(fallbackObj);
+    } catch (err) {
+      console.warn("Error fetching single vehicle details:", err);
+      if (fallbackObj) setVehicleDetails(fallbackObj);
+    }
+  };
+
+  const selectVehicleByVin = (vin) => {
+    setSelectedVin(vin);
+    const found = vehicles.find(v => v.vin === vin);
+    const g = customer?.keyloopGroup || 'BMW';
+    fetchSingleVehicleDetails(g, vin, found);
+  };
+
+  const fetchCustomerExtraDetails = async (group, custNo) => {
+    const g = group || customer?.keyloopGroup || 'BMW';
+    const c = custNo || customer?.customerNumber || '80496';
+
+    // 1. Insurance Details
+    apiFetch(`/api/v1/customers/${g}/${c}/insurance`).then(res => {
+      if (res && res.ok && res.data) {
+        setInsurance(Array.isArray(res.data) ? res.data : [res.data]);
+      }
+    }).catch(e => console.warn("Insurance fetch fallback:", e));
+
+    // 2. Finance Details
+    apiFetch(`/api/v1/customers/${g}/${c}/finance`).then(res => {
+      if (res && res.ok && res.data) {
+        setFinance(Array.isArray(res.data) ? res.data : [res.data]);
+      }
+    }).catch(e => console.warn("Finance fetch fallback:", e));
+
+    // 3. Trade-in History
+    apiFetch(`/api/v1/customers/${g}/${c}/trade-in-history`).then(res => {
+      if (res && res.ok && res.data) {
+        setTradeInHistory(Array.isArray(res.data) ? res.data : [res.data]);
+      }
+    }).catch(e => console.warn("Trade-in history fetch fallback:", e));
+
+    // 4. Risk Overview
+    apiFetch(`/api/v1/customers/${g}/${c}/risk-overview`).then(res => {
+      if (res && res.ok && res.data && typeof res.data === 'object') {
+        setRiskOverview(res.data);
+      }
+    }).catch(e => console.warn("Risk overview fetch fallback:", e));
+
+    // 5. Verification Status
+    apiFetch(`/api/v1/customers/${g}/${c}/verification`).then(res => {
+      if (res && res.ok && res.data && typeof res.data === 'object') {
+        setVerificationStatus(res.data);
+      }
+    }).catch(e => console.warn("Verification fetch fallback:", e));
+  };
+
   const fetchOpenComplaintsCount = async (group, custNo) => {
     try {
       const g = group || customer?.keyloopGroup || "BMW";
@@ -139,6 +367,8 @@ export function CustomerProvider({ children }) {
         setCustomer(res.data);
         localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(res.data));
         fetchOpenComplaintsCount(group, custNo);
+        fetchVehiclesByCustomer(group, custNo);
+        fetchCustomerExtraDetails(group, custNo);
         return;
       }
       throw new Error(`Profile fetch status: ${res ? res.status : 'failed'}`);
@@ -153,6 +383,8 @@ export function CustomerProvider({ children }) {
       setCustomer(fallbackProfile);
       localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(fallbackProfile));
       fetchOpenComplaintsCount(group, custNo);
+      fetchVehiclesByCustomer(group, custNo);
+      fetchCustomerExtraDetails(group, custNo);
     } finally {
       setLoading(false);
     }
@@ -315,7 +547,19 @@ export function CustomerProvider({ children }) {
       getFormattedLocation,
       getBranchName,
       getLoyaltyTier,
-      getConsentsDisplay
+      getConsentsDisplay,
+      vehicles,
+      selectedVin,
+      vehicleDetails,
+      vehiclesLoading,
+      selectVehicleByVin,
+      fetchVehiclesByCustomer,
+      insurance,
+      finance,
+      tradeInHistory,
+      riskOverview,
+      verificationStatus,
+      fetchCustomerExtraDetails
     }}>
       {children}
     </CustomerContext.Provider>

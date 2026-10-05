@@ -1,0 +1,392 @@
+{
+  "devices": [
+    {
+      "id": 1,
+      "imei": "354789201234567",
+      "name": "iPhone 15 Pro",
+      "owner": "Ahmed Al-Maktoum",
+      "phone": "+971501234567",
+      "model": "Apple iPhone 15 Pro",
+      "createdAt": "2026-09-28T09:30:12.404Z"
+    },
+    {
+      "id": 2,
+      "imei": "867530012345678",
+      "name": "Galaxy S24 Ultra",
+      "owner": "Fatima Al-Rashid",
+      "phone": "+971552345678",
+      "model": "Samsung Galaxy S24 Ultra",
+      "createdAt": "2026-09-28T09:30:12.404Z"
+    },
+    {
+      "id": 3,
+      "imei": "490154203237518",
+      "name": "Pixel 8 Pro",
+      "owner": "Omar Hassan",
+      "phone": "+971503456789",
+      "model": "Google Pixel 8 Pro",
+      "createdAt": "2026-09-28T09:30:12.404Z"
+    },
+    {
+      "id": 4,
+      "imei": "353456789012345",
+      "name": "OnePlus 12",
+      "owner": "Sara Al-Khouri",
+      "phone": "+971504567890",
+      "model": "OnePlus 12",
+      "createdAt": "2026-09-28T09:30:12.404Z"
+    },
+    {
+      "id": 5,
+      "imei": "862345678901234",
+      "name": "Huawei P60",
+      "owner": "Khalid Ibrahim",
+      "phone": "+971505678901",
+      "model": "Huawei P60 Pro",
+      "createdAt": "2026-09-28T09:30:12.404Z"
+    },
+    {
+      "id": 6,
+      "imei": "354774861993550",
+      "name": "iphone17",
+      "owner": "Sumedh kamble",
+      "phone": "7977754941",
+      "model": "Unknown Device",
+      "createdAt": "2026-09-29T09:39:13.184Z"
+    }
+  ],
+  "locations": [
+    {
+      "id": 1,
+      "deviceId": 1,
+      "latitude": 25.2048,
+      "longitude": 55.2708,
+      "accuracy": 12.093255753561259,
+      "battery": 100,
+      "signal": 5,
+      "address": "Burj Khalifa, Downtown Dubai, Dubai, UAE",
+      "timestamp": "2026-09-29T09:30:12.404Z"
+    },
+    {
+      "id": 2,
+      "deviceId": 1,
+      "latitude": 25.2069078348607,
+      "longitude": 55.2729078348607,
+      "accuracy": 13.400716433818761,
+      "battery": 95,
+      "signal": 5,
+      "address": "Burj Khalifa, Downtown Dubai, Dubai, UAE",
+      "timestamp": "2026-09-29T09:25:12.404Z"
+    },
+    {
+      "id": 3,
+      "deviceId": 1,
+      "latitude": 25.206255044322823,
+      "longitude": 55.272255044322826,
+      "accuracy": 12.128405522342135,
+      "battery": 90,
+      "signal": 4,
+      "address": "Burj Khalifa, Downtown Dubai, Dubai, UAE",
+      "timestamp": "2026-09-29T09:15:12.404Z"
+    },
+    {
+      "id": 4,
+      "deviceId": 1,
+      "latitude": 25.20558815235083,
+      "longitude": 55.27158815235083,
+      "accuracy": 11.594549781198014,
+      "battery": 85,
+      "signal": 4,
+      "address": "Burj Khalifa, Downtown Dubai, Dubai, UAE",
+      "timestamp": "2026-09-29T09:00:12.404Z"
+    },
+    {
+      "id": 5,
+      "deviceId": 1,
+      "latitude": 25.20410412925878,
+      "longitude": 55.27010412925878,
+      "accuracy": 16.73957733852763,
+      "battery": 80,
+      "signal": 3,
+      "address": "Burj Khalifa, Downtown Dubai, Dubai, UAE",
+      "timestamp": "2026-09-29T08:30:12.404Z"
+    },
+    {
+      "id": 6,
+      "deviceId": 1,
+      "latitude": 25.205847468482812,
+      "longitude": 55.27184746848281,
+      "accuracy": 22.769967918936743,
+      "battery": 75,
+      "signal": 3,
+      "address": "Burj Khalifa, Downtown Dubai, Dubai, UAE",
+      "timestamp": "2026-09-29T06:30:12.404Z"
+    },
+    {
+      "id": 7,
+      "deviceId": 2,
+      "latitude": 25.1972,
+      "longitude": 55.2744,
+      "accuracy": 20.942064773812362,
+      "battery": 85,
+      "signal": 5,
+      "address": "Dubai Mall, Financial Center Road, Dubai, UAE",
+      "timestamp": "2026-09-29T09:30:12.404Z"
+    },
+    {
+      "id": 8,
+      "deviceId": 2,
+      "latitude": 25.199501665457507,
+      "longitude": 55.27670166545751,
+      "accuracy": 9.596838979065057,
+      "battery": 80,
+      "signal": 5,
+      "address": "Dubai Mall, Financial Center Road, Dubai, UAE",
+      "timestamp": "2026-09-29T09:25:12.404Z"
+    },
+    {
+      "id": 9,
+      "deviceId": 2,
+      "latitude": 25.195580145360996,
+      "longitude": 55.272780145361,
+      "accuracy": 10.87772932816713,
+      "battery": 75,
+      "signal": 4,
+      "address": "Dubai Mall, Financial Center Road, Dubai, UAE",
+      "timestamp": "2026-09-29T09:15:12.404Z"
+    },
+    {
+      "id": 10,
+      "deviceId": 2,
+      "latitude": 25.197314334756424,
+      "longitude": 55.274514334756425,
+      "accuracy": 13.931750624518504,
+      "battery": 70,
+      "signal": 4,
+      "address": "Dubai Mall, Financial Center Road, Dubai, UAE",
+      "timestamp": "2026-09-29T09:00:12.404Z"
+    },
+    {
+      "id": 11,
+      "deviceId": 2,
+      "latitude": 25.195053231964657,
+      "longitude": 55.27225323196466,
+      "accuracy": 14.16126032380827,
+      "battery": 65,
+      "signal": 3,
+      "address": "Dubai Mall, Financial Center Road, Dubai, UAE",
+      "timestamp": "2026-09-29T08:30:12.404Z"
+    },
+    {
+      "id": 12,
+      "deviceId": 2,
+      "latitude": 25.196260756062966,
+      "longitude": 55.27346075606297,
+      "accuracy": 5.480847922627172,
+      "battery": 60,
+      "signal": 3,
+      "address": "Dubai Mall, Financial Center Road, Dubai, UAE",
+      "timestamp": "2026-09-29T06:30:12.404Z"
+    },
+    {
+      "id": 13,
+      "deviceId": 3,
+      "latitude": 25.2532,
+      "longitude": 55.3317,
+      "accuracy": 7.46750912029432,
+      "battery": 70,
+      "signal": 5,
+      "address": "Dubai International Airport, Terminal 3, Dubai, UAE",
+      "timestamp": "2026-09-29T09:30:12.404Z"
+    },
+    {
+      "id": 14,
+      "deviceId": 3,
+      "latitude": 25.252859823456667,
+      "longitude": 55.331359823456665,
+      "accuracy": 19.02791681285199,
+      "battery": 65,
+      "signal": 5,
+      "address": "Dubai International Airport, Terminal 3, Dubai, UAE",
+      "timestamp": "2026-09-29T09:25:12.404Z"
+    },
+    {
+      "id": 15,
+      "deviceId": 3,
+      "latitude": 25.252987875805562,
+      "longitude": 55.33148787580556,
+      "accuracy": 13.575519727643378,
+      "battery": 60,
+      "signal": 4,
+      "address": "Dubai International Airport, Terminal 3, Dubai, UAE",
+      "timestamp": "2026-09-29T09:15:12.404Z"
+    },
+    {
+      "id": 16,
+      "deviceId": 3,
+      "latitude": 25.255533930692625,
+      "longitude": 55.33403393069263,
+      "accuracy": 12.259482800167573,
+      "battery": 55,
+      "signal": 4,
+      "address": "Dubai International Airport, Terminal 3, Dubai, UAE",
+      "timestamp": "2026-09-29T09:00:12.404Z"
+    },
+    {
+      "id": 17,
+      "deviceId": 3,
+      "latitude": 25.2539696062628,
+      "longitude": 55.3324696062628,
+      "accuracy": 10.124067609223609,
+      "battery": 50,
+      "signal": 3,
+      "address": "Dubai International Airport, Terminal 3, Dubai, UAE",
+      "timestamp": "2026-09-29T08:30:12.404Z"
+    },
+    {
+      "id": 18,
+      "deviceId": 3,
+      "latitude": 25.254148668323435,
+      "longitude": 55.332648668323436,
+      "accuracy": 12.564758228277572,
+      "battery": 45,
+      "signal": 3,
+      "address": "Dubai International Airport, Terminal 3, Dubai, UAE",
+      "timestamp": "2026-09-29T06:30:12.404Z"
+    },
+    {
+      "id": 19,
+      "deviceId": 4,
+      "latitude": 25.0657,
+      "longitude": 55.1713,
+      "accuracy": 21.247110661959358,
+      "battery": 55,
+      "signal": 5,
+      "address": "Palm Jumeirah, Atlantis, Dubai, UAE",
+      "timestamp": "2026-09-29T09:30:12.404Z"
+    },
+    {
+      "id": 20,
+      "deviceId": 4,
+      "latitude": 25.064870094119915,
+      "longitude": 55.17047009411992,
+      "accuracy": 9.367953963680653,
+      "battery": 50,
+      "signal": 5,
+      "address": "Palm Jumeirah, Atlantis, Dubai, UAE",
+      "timestamp": "2026-09-29T09:25:12.404Z"
+    },
+    {
+      "id": 21,
+      "deviceId": 4,
+      "latitude": 25.066320794886803,
+      "longitude": 55.17192079488681,
+      "accuracy": 22.6244933318111,
+      "battery": 45,
+      "signal": 4,
+      "address": "Palm Jumeirah, Atlantis, Dubai, UAE",
+      "timestamp": "2026-09-29T09:15:12.404Z"
+    },
+    {
+      "id": 22,
+      "deviceId": 4,
+      "latitude": 25.06583750909207,
+      "longitude": 55.17143750909207,
+      "accuracy": 20.266276951481537,
+      "battery": 40,
+      "signal": 4,
+      "address": "Palm Jumeirah, Atlantis, Dubai, UAE",
+      "timestamp": "2026-09-29T09:00:12.404Z"
+    },
+    {
+      "id": 23,
+      "deviceId": 4,
+      "latitude": 25.067981697803848,
+      "longitude": 55.173581697803854,
+      "accuracy": 14.919305530408643,
+      "battery": 35,
+      "signal": 3,
+      "address": "Palm Jumeirah, Atlantis, Dubai, UAE",
+      "timestamp": "2026-09-29T08:30:12.404Z"
+    },
+    {
+      "id": 24,
+      "deviceId": 4,
+      "latitude": 25.063898414244463,
+      "longitude": 55.169498414244465,
+      "accuracy": 23.760358514993246,
+      "battery": 30,
+      "signal": 3,
+      "address": "Palm Jumeirah, Atlantis, Dubai, UAE",
+      "timestamp": "2026-09-29T06:30:12.404Z"
+    },
+    {
+      "id": 25,
+      "deviceId": 5,
+      "latitude": 25.2285,
+      "longitude": 55.2867,
+      "accuracy": 14.237412566981014,
+      "battery": 40,
+      "signal": 5,
+      "address": "DIFC Gate Building, Sheikh Zayed Road, Dubai, UAE",
+      "timestamp": "2026-09-29T09:30:12.404Z"
+    },
+    {
+      "id": 26,
+      "deviceId": 5,
+      "latitude": 25.228400876872566,
+      "longitude": 55.28660087687257,
+      "accuracy": 15.762904929653104,
+      "battery": 35,
+      "signal": 5,
+      "address": "DIFC Gate Building, Sheikh Zayed Road, Dubai, UAE",
+      "timestamp": "2026-09-29T09:25:12.404Z"
+    },
+    {
+      "id": 27,
+      "deviceId": 5,
+      "latitude": 25.227118022673924,
+      "longitude": 55.28531802267393,
+      "accuracy": 20.017276860490092,
+      "battery": 30,
+      "signal": 4,
+      "address": "DIFC Gate Building, Sheikh Zayed Road, Dubai, UAE",
+      "timestamp": "2026-09-29T09:15:12.404Z"
+    },
+    {
+      "id": 28,
+      "deviceId": 5,
+      "latitude": 25.227921415094755,
+      "longitude": 55.286121415094755,
+      "accuracy": 8.57154026568139,
+      "battery": 25,
+      "signal": 4,
+      "address": "DIFC Gate Building, Sheikh Zayed Road, Dubai, UAE",
+      "timestamp": "2026-09-29T09:00:12.404Z"
+    },
+    {
+      "id": 29,
+      "deviceId": 5,
+      "latitude": 25.228637645473835,
+      "longitude": 55.28683764547384,
+      "accuracy": 16.99058342499364,
+      "battery": 20,
+      "signal": 3,
+      "address": "DIFC Gate Building, Sheikh Zayed Road, Dubai, UAE",
+      "timestamp": "2026-09-29T08:30:12.404Z"
+    },
+    {
+      "id": 30,
+      "deviceId": 5,
+      "latitude": 25.226299370924817,
+      "longitude": 55.28449937092482,
+      "accuracy": 12.617187419341567,
+      "battery": 15,
+      "signal": 3,
+      "address": "DIFC Gate Building, Sheikh Zayed Road, Dubai, UAE",
+      "timestamp": "2026-09-29T06:30:12.404Z"
+    }
+  ],
+  "nextDeviceId": 7,
+  "nextLocationId": 31
+}

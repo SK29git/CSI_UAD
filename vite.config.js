@@ -10,6 +10,7 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
+    port: 5175,
     proxy: {
       '/api': {
         target: 'https://ccaas.agmcgroup.ae',

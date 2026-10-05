@@ -1,272 +1,282 @@
 import React from 'react';
+import { useCustomer } from '../context/CustomerContext';
 import { 
   FaCar, 
   FaCalendarAlt, 
   FaTachometerAlt, 
   FaCheckCircle, 
   FaExclamationCircle, 
-  FaClock, 
-  FaWrench, 
-  FaGasPump, 
-  FaCogs, 
   FaShieldAlt,
   FaFileAlt,
-  FaPhoneVolume,
-  FaInfoCircle
+  FaInfoCircle,
+  FaWrench,
+  FaTag
 } from 'react-icons/fa';
 
 export default function ServiceOverviewView() {
+  const { 
+    vehicles, 
+    selectedVin, 
+    vehicleDetails, 
+    vehiclesLoading, 
+    selectVehicleByVin 
+  } = useCustomer();
+
+  const currentVehicle = vehicleDetails || (vehicles && vehicles.length > 0 ? vehicles[0] : null);
+
+  if (vehiclesLoading && !currentVehicle) {
+    return (
+      <div className="bg-white rounded-xl p-6 shadow-xs border border-gray-100 flex items-center justify-center min-h-[300px]">
+        <div className="flex items-center gap-2 text-blue-600 font-bold text-sm">
+          <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Loading vehicle details...
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentVehicle) {
+    return (
+      <div className="bg-white rounded-xl p-6 shadow-xs border border-gray-100 text-center">
+        <p className="text-gray-500 font-medium">No vehicle information found for this customer.</p>
+      </div>
+    );
+  }
+
+  const {
+    keyloopGroup,
+    vin,
+    customerNumber,
+    registrationNumber,
+    registrationDate,
+    brand,
+    model,
+    variant,
+    description,
+    modelYear,
+    fuelType,
+    colour,
+    mileageKm,
+    deliveryDate,
+    stockProgress,
+    nextServiceDate,
+    nextServiceOdometerKm,
+    warranty,
+    serviceContract,
+    eligibility,
+    offer,
+    serviceType,
+    package: servicePackage,
+    price
+  } = currentVehicle;
+
+  const isWarrantyActive = warranty?.status === 'ACTIVE';
+  const isServiceContractActive = serviceContract?.status === 'ACTIVE';
+
   return (
     <div className="flex flex-col gap-4">
       
-      {/* 1. Vehicle Summary Card */}
-      <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100">
-        <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
-          <h2 className="font-bold text-gray-900 text-base flex items-center gap-2">
-            <FaCar className="text-blue-600" /> Vehicle Summary
-          </h2>
-          <span className="bg-blue-50 text-blue-700 font-bold text-xs px-2.5 py-0.5 rounded-full border border-blue-200">
-            Primary Vehicle
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          
-          {/* Vehicle Specs Grid (8 Cols) */}
-          <div className="lg:col-span-8 grid grid-cols-2 sm:grid-cols-3 gap-y-3 gap-x-4 text-xs">
-            <div>
-              <span className="text-gray-400 block text-[10px]">VIN</span>
-              <span className="font-mono font-bold text-gray-800 text-[11px]">WBAXXXXXXXXXXXXXXXXX12345</span>
-            </div>
-            <div>
-              <span className="text-gray-400 block text-[10px]">Registration No.</span>
-              <span className="font-bold text-gray-900">Dubai A 12345</span>
-            </div>
-
-            <div>
-              <span className="text-gray-400 block text-[10px]">Mileage</span>
-              <span className="font-black text-gray-900 text-sm">38,200 KM</span>
-            </div>
-            <div>
-              <span className="text-gray-400 block text-[10px]">Fuel Type</span>
-              <span className="font-semibold text-gray-800">Petrol</span>
-            </div>
-
-            <div>
-              <span className="text-gray-400 block text-[10px]">Engine</span>
-              <span className="font-semibold text-gray-800">3.0L 6-Cylinder</span>
-            </div>
-            <div>
-              <span className="text-gray-400 block text-[10px]">Transmission</span>
-              <span className="font-semibold text-gray-800">Automatic</span>
-            </div>
-
-            <div>
-              <span className="text-gray-400 block text-[10px]">Color</span>
-              <span className="font-semibold text-gray-800">Alpine White</span>
-            </div>
-            <div>
-              <span className="text-gray-400 block text-[10px]">First Registration</span>
-              <span className="font-semibold text-gray-800">14 Feb 2024</span>
-            </div>
-
-            <div>
-              <span className="text-gray-400 block text-[10px]">Warranty Status</span>
-              <span className="text-emerald-600 font-bold text-[11px] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active <span className="text-gray-400 font-normal text-[9px]">(Expires 12 Feb 2027)</span>
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-400 block text-[10px]">Service Contract</span>
-              <span className="text-emerald-600 font-bold text-[11px] flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active <span className="text-gray-400 font-normal text-[9px]">(Expires 12 Feb 2027)</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Quick Status Widgets (Right 4 Cols) */}
-          <div className="lg:col-span-4 flex flex-col gap-3">
-            
-            {/* Service Next Due */}
-            <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-100 text-xs">
-              <div className="flex items-center gap-2 mb-1 text-blue-700 font-bold">
-                <FaInfoCircle className="text-xs" />
-                <span>Service Next Due</span>
-              </div>
-              <div className="font-black text-gray-900 text-sm">12 Feb 2025 / 48,000 KM</div>
-              <span className="text-[10px] font-semibold text-blue-600 block mt-0.5">(in 265 Days / 9,800 KM)</span>
-            </div>
-
-            {/* Last Service */}
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200 text-xs">
-              <div className="flex items-center gap-2 mb-1 text-gray-700 font-bold">
-                <FaCheckCircle className="text-xs text-emerald-600" />
-                <span>Last Service</span>
-              </div>
-              <div className="font-black text-gray-900 text-sm">12 Jan 2024 / 28,500 KM</div>
-              <span className="text-[10px] font-medium text-gray-500 block mt-0.5">Sheikh Zayed Road Branch</span>
-            </div>
-
-          </div>
-
-        </div>
-      </div>
-
-      {/* 2. Middle Row: Open Bookings & Active Cases / Roadside Assistance */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+      {/* 1. Primary Vehicle Summary Card */}
+      <div className="bg-white rounded-xl p-4 sm:p-5 shadow-xs border border-gray-100">
         
-        {/* Open Bookings Table (Left 7 Cols) */}
-        <div className="xl:col-span-7 bg-white rounded-xl p-4 shadow-xs border border-gray-100 flex flex-col justify-between">
+        {/* Header & Multi-Vehicle Selector */}
+        <div className="flex flex-wrap items-center justify-between pb-3 border-b border-gray-100 mb-4 gap-2">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+              <FaCar className="text-base" />
+            </div>
+            <div>
+              <h2 className="font-bold text-gray-900 text-base leading-tight">
+                {brand} {description || `${model} ${variant}`}
+              </h2>
+              <span className="text-[10px] text-gray-400 font-mono">
+                Keyloop Group: {keyloopGroup || 'BMW'} | Customer #{customerNumber || 'N/A'}
+              </span>
+            </div>
+          </div>
+
+          {vehicles && vehicles.length > 1 && (
+            <div className="flex items-center gap-2 bg-blue-50/60 p-1.5 rounded-lg border border-blue-100">
+              <span className="text-[11px] font-bold text-blue-900 uppercase">Select Vehicle:</span>
+              <select
+                value={selectedVin || vin}
+                onChange={(e) => selectVehicleByVin(e.target.value)}
+                className="bg-white text-xs font-bold text-gray-900 border border-blue-300 rounded px-2.5 py-1 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs"
+              >
+                {vehicles.map((v) => (
+                  <option key={v.vin} value={v.vin}>
+                    {v.description || `${v.brand} ${v.model}`} ({v.vin})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Dynamic Vehicle Specifications Grid (Only fields from API response) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-y-3.5 gap-x-4 text-xs mb-5">
           <div>
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-3">
-              <h3 className="font-bold text-gray-900 text-sm">Open Bookings</h3>
-              <button className="text-blue-600 font-bold text-xs hover:underline">View All</button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[9px] border-b border-gray-100">
-                  <tr>
-                    <th className="py-2 px-2">Booking ID</th>
-                    <th className="py-2 px-2">Service Type</th>
-                    <th className="py-2 px-2">Preferred Date & Time</th>
-                    <th className="py-2 px-2">Branch</th>
-                    <th className="py-2 px-2">Status</th>
-                    <th className="py-2 px-2">Loan Car</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 text-[11px] font-medium text-gray-800">
-                  <tr>
-                    <td className="py-3 px-2 font-bold text-blue-600">BK-634512</td>
-                    <td className="py-3 px-2 font-bold text-gray-900">40K Service</td>
-                    <td className="py-3 px-2">20 May 2024, 10:00 AM</td>
-                    <td className="py-3 px-2">Sheikh Zayed Road</td>
-                    <td className="py-3 px-2">
-                      <span className="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded text-[10px]">
-                        Confirmed
-                      </span>
-                    </td>
-                    <td className="py-3 px-2 font-bold text-gray-800">Yes</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">VIN</span>
+            <span className="font-mono font-bold text-gray-900 text-[11px]">{vin || 'N/A'}</span>
           </div>
+
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Registration Number</span>
+            <span className="font-bold text-gray-900">{registrationNumber || 'N/A'}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Registration Date</span>
+            <span className="font-medium text-gray-800">{registrationDate || 'N/A'}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Brand / Model / Variant</span>
+            <span className="font-bold text-gray-900">{brand || 'N/A'} {model || ''} ({variant || 'N/A'})</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Description</span>
+            <span className="font-medium text-gray-800">{description || 'N/A'}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Model Year</span>
+            <span className="font-bold text-gray-900">{modelYear || 'N/A'}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Fuel Type</span>
+            <span className="font-semibold text-gray-800">{fuelType || 'N/A'}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Colour</span>
+            <span className="font-semibold text-gray-800">{colour || 'N/A'}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Mileage</span>
+            <span className="font-black text-gray-900 text-sm">
+              {mileageKm !== undefined && mileageKm !== null ? `${mileageKm.toLocaleString()} KM` : 'N/A'}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Delivery Date</span>
+            <span className="font-medium text-gray-800">{deliveryDate || 'N/A'}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Stock Progress</span>
+            <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 inline-block">
+              {stockProgress || 'N/A'}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Next Service Date</span>
+            <span className="font-bold text-gray-900">{nextServiceDate || 'N/A'}</span>
+          </div>
+
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Next Service Odometer</span>
+            <span className="font-bold text-gray-900">
+              {nextServiceOdometerKm !== undefined && nextServiceOdometerKm !== null ? `${nextServiceOdometerKm.toLocaleString()} KM` : 'N/A'}
+            </span>
+          </div>
+
+          {eligibility && (
+            <div>
+              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Eligibility</span>
+              <span className="font-bold text-emerald-700">{eligibility}</span>
+            </div>
+          )}
+
+          {offer && (
+            <div>
+              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">Offer</span>
+              <span className="font-bold text-purple-700">{offer}</span>
+            </div>
+          )}
         </div>
 
-        {/* Right Stack: Active Service Cases & Roadside Assistance (Right 5 Cols) */}
-        <div className="xl:col-span-5 flex flex-col gap-4">
+        {/* 2. Warranty & Service Contract Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-100 text-xs">
           
-          {/* Active Service Cases */}
-          <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100 text-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-3">
-              <h3 className="font-bold text-gray-900 text-sm">Active Service Cases</h3>
-              <button className="text-blue-600 font-bold text-xs hover:underline">View All</button>
+          {/* Warranty Details */}
+          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 mb-2.5">
+              <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs">
+                <FaShieldAlt className="text-blue-600" /> Warranty Information
+              </span>
+              {warranty?.status && (
+                <span className={`font-bold text-[10px] px-2 py-0.5 rounded flex items-center gap-1 ${
+                  isWarrantyActive 
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                    : 'bg-amber-100 text-amber-800 border border-amber-300'
+                }`}>
+                  {isWarrantyActive ? <FaCheckCircle className="text-[9px]" /> : <FaExclamationCircle className="text-[9px]" />}
+                  {warranty.status}
+                </span>
+              )}
             </div>
 
-            <div className="space-y-2 text-[11px]">
-              <div className="p-2.5 rounded-lg border border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-[9px]">
-                    !
-                  </div>
-                  <div>
-                    <span className="font-bold text-gray-900 text-xs block">CAS-784512</span>
-                    <span className="text-gray-500 text-[10px]">AC Not Cooling • Raised 10 May 2024</span>
-                  </div>
-                </div>
-                <span className="bg-blue-100 text-blue-700 font-bold px-2 py-0.5 rounded text-[10px]">Open</span>
+            <div className="space-y-1.5 text-[11px]">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Provider:</span>
+                <span className="font-semibold text-gray-900 text-right">{warranty?.provider || 'N/A'}</span>
               </div>
-
-              <div className="p-2.5 rounded-lg border border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-[9px]">
-                    !
-                  </div>
-                  <div>
-                    <span className="font-bold text-gray-900 text-xs block">CAS-784498</span>
-                    <span className="text-gray-500 text-[10px]">Oil Leak Issue • Raised 08 May 2024</span>
-                  </div>
-                </div>
-                <span className="bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded text-[10px]">In Progress</span>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Contract Type:</span>
+                <span className="font-mono font-bold text-gray-800">{warranty?.contractType || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Expiry Date:</span>
+                <span className="font-bold text-gray-900">{warranty?.expiryDate || 'N/A'}</span>
               </div>
             </div>
           </div>
 
-          {/* Roadside Assistance */}
-          <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100 text-xs">
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-2">
-              <h3 className="font-bold text-gray-900 text-sm">Roadside Assistance</h3>
-              <button className="text-blue-600 font-bold text-xs hover:underline">View All</button>
+          {/* Service Contract Details */}
+          <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-200 mb-2.5">
+              <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs">
+                <FaFileAlt className="text-purple-600" /> Service Contract Information
+              </span>
+              {serviceContract?.status && (
+                <span className={`font-bold text-[10px] px-2 py-0.5 rounded flex items-center gap-1 ${
+                  isServiceContractActive 
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                    : 'bg-rose-100 text-rose-800 border border-rose-300'
+                }`}>
+                  {isServiceContractActive ? <FaCheckCircle className="text-[9px]" /> : <FaExclamationCircle className="text-[9px]" />}
+                  {serviceContract.status}
+                </span>
+              )}
             </div>
 
-            <div className="p-2.5 rounded-lg border border-gray-100 bg-gray-50/50 flex justify-between items-center text-[11px]">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-[9px]">
-                  ✓
-                </div>
-                <div>
-                  <span className="font-bold text-gray-900 text-xs block">RA-12345</span>
-                  <span className="text-gray-500 text-[10px]">Battery Jump Start</span>
-                </div>
+            <div className="space-y-1.5 text-[11px]">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Provider:</span>
+                <span className="font-semibold text-gray-900 text-right">{serviceContract?.provider || 'N/A'}</span>
               </div>
-              <div className="text-right">
-                <span className="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded text-[10px]">Completed</span>
-                <span className="text-[9px] text-gray-400 block mt-0.5">15 Apr 2024, 08:30 PM</span>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Contract Type:</span>
+                <span className="font-mono font-bold text-gray-800">{serviceContract?.contractType || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Expiry Date:</span>
+                <span className="font-bold text-gray-900">{serviceContract?.expiryDate || 'N/A'}</span>
               </div>
             </div>
           </div>
 
         </div>
 
-      </div>
-
-      {/* 3. Bottom Row: Service History Table */}
-      <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100 text-xs">
-        <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-3">
-          <h3 className="font-bold text-gray-900 text-base">Service History</h3>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[9px] border-b border-gray-100">
-              <tr>
-                <th className="py-2.5 px-3">Date</th>
-                <th className="py-2.5 px-3">Mileage</th>
-                <th className="py-2.5 px-3">Service Type</th>
-                <th className="py-2.5 px-3">Branch</th>
-                <th className="py-2.5 px-3">Advisor</th>
-                <th className="py-2.5 px-3 text-right">Amount</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
-              <tr className="hover:bg-gray-50">
-                <td className="py-3 px-3 font-semibold text-gray-900">12 Jan 2024</td>
-                <td className="py-3 px-3 font-bold text-gray-900">28,500 KM</td>
-                <td className="py-3 px-3 font-semibold text-gray-800">30K Service</td>
-                <td className="py-3 px-3 text-gray-600">Sheikh Zayed Road</td>
-                <td className="py-3 px-3 text-gray-800">Omar Hassan</td>
-                <td className="py-3 px-3 text-right font-black text-gray-900">AED 1,250</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-3 px-3 font-semibold text-gray-900">14 Oct 2023</td>
-                <td className="py-3 px-3 font-bold text-gray-900">18,300 KM</td>
-                <td className="py-3 px-3 font-semibold text-gray-800">20K Service</td>
-                <td className="py-3 px-3 text-gray-600">Sheikh Zayed Road</td>
-                <td className="py-3 px-3 text-gray-800">Omar Hassan</td>
-                <td className="py-3 px-3 text-right font-black text-gray-900">AED 1,150</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-3 px-3 font-semibold text-gray-900">20 Apr 2023</td>
-                <td className="py-3 px-3 font-bold text-gray-900">8,500 KM</td>
-                <td className="py-3 px-3 font-semibold text-gray-800">5K Service</td>
-                <td className="py-3 px-3 text-gray-600">Sheikh Zayed Road</td>
-                <td className="py-3 px-3 text-gray-800">Omar Hassan</td>
-                <td className="py-3 px-3 text-right font-black text-gray-900">AED 950</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </div>
 
     </div>

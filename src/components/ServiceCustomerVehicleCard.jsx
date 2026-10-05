@@ -25,12 +25,17 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
     selectCustomer, 
     getFormattedName, 
     getFormattedLocation, 
-    getLoyaltyTier 
+    getLoyaltyTier,
+    vehicles,
+    selectedVin,
+    vehicleDetails,
+    selectVehicleByVin
   } = useCustomer();
 
   const customerName = getFormattedName();
   const loyaltyTier = getLoyaltyTier();
   const locationStr = getFormattedLocation();
+  const currentVehicle = vehicleDetails || (vehicles && vehicles.length > 0 ? vehicles[0] : null);
 
   if (isCollapsed) {
     return (
@@ -192,47 +197,78 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
       </div>
 
       {/* 2. Vehicle Summary Card */}
-      <div className="bg-white rounded-xl p-3.5 shadow-xs border border-gray-100 text-xs space-y-3">
-        <div className="pb-2 border-b border-gray-100">
-          <h4 className="font-bold text-gray-900 text-xs">Vehicle Summary</h4>
+      {currentVehicle && (
+        <div className="bg-white rounded-xl p-3.5 shadow-xs border border-gray-100 text-xs space-y-3">
+          <div className="pb-2 border-b border-gray-100 flex items-center justify-between">
+            <h4 className="font-bold text-gray-900 text-xs">Vehicle Summary</h4>
+            {vehicles && vehicles.length > 1 && (
+              <select
+                value={selectedVin || currentVehicle.vin}
+                onChange={(e) => selectVehicleByVin(e.target.value)}
+                className="bg-blue-50 text-blue-900 text-[10px] font-bold border border-blue-200 rounded px-1.5 py-0.5 focus:outline-none"
+              >
+                {vehicles.map((v) => (
+                  <option key={v.vin} value={v.vin}>
+                    {v.description || `${v.brand} ${v.model}`}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg bg-gray-900 text-white font-bold flex items-center justify-center text-xs shadow-xs uppercase">
+              {currentVehicle.brand || 'BMW'}
+            </div>
+            <div>
+              <h5 className="font-black text-gray-900 text-sm leading-tight">
+                {currentVehicle.brand} {currentVehicle.description || `${currentVehicle.model || ''} ${currentVehicle.variant || ''}`}
+              </h5>
+              <span className="text-[10px] text-gray-400 font-mono block">
+                VIN: {currentVehicle.vin || 'N/A'}
+              </span>
+              <span className="text-[10px] text-gray-500 font-medium">
+                Year: {currentVehicle.modelYear || 'N/A'} | Color: {currentVehicle.colour || 'N/A'}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-y-2.5 gap-x-2 pt-2 border-t border-gray-100">
+            <div>
+              <span className="text-gray-400 block text-[10px]">Mileage</span>
+              <span className="font-bold text-gray-900 text-sm">
+                {currentVehicle.mileageKm !== undefined && currentVehicle.mileageKm !== null ? `${currentVehicle.mileageKm.toLocaleString()} KM` : 'N/A'}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[10px]">Warranty Status</span>
+              <span className={`font-bold text-xs ${currentVehicle.warranty?.status === 'ACTIVE' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {currentVehicle.warranty?.status || 'N/A'}
+              </span>
+            </div>
+
+            <div>
+              <span className="text-gray-400 block text-[10px]">Warranty Expiry</span>
+              <span className="font-semibold text-gray-800">
+                {currentVehicle.warranty?.expiryDate || 'N/A'}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[10px]">Service Contract</span>
+              <span className="font-bold text-gray-900">
+                {currentVehicle.serviceContract?.provider || currentVehicle.serviceContract?.status || 'N/A'}
+              </span>
+            </div>
+
+            <div className="col-span-2 pt-1 border-t border-gray-50">
+              <span className="text-gray-400 block text-[10px]">Next Service Due</span>
+              <span className="font-bold text-gray-900 text-xs">
+                {currentVehicle.nextServiceDate ? `${currentVehicle.nextServiceDate} (${currentVehicle.nextServiceOdometerKm !== undefined ? currentVehicle.nextServiceOdometerKm + ' KM' : ''})` : 'N/A'}
+              </span>
+            </div>
+          </div>
         </div>
-
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-lg bg-gray-900 text-white font-bold flex items-center justify-center text-xs shadow-xs">
-            BMW
-          </div>
-          <div>
-            <h5 className="font-black text-gray-900 text-sm leading-tight">BMW X5 xDrive40i</h5>
-            <span className="text-[10px] text-gray-400 font-mono block">VIN: WBAXU710X0LK12345</span>
-            <span className="text-[10px] text-gray-500 font-medium">Year: 2023 | Color: Black Sapphire</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-y-2.5 gap-x-2 pt-2 border-t border-gray-100">
-          <div>
-            <span className="text-gray-400 block text-[10px]">Mileage</span>
-            <span className="font-bold text-gray-900 text-sm">64,250 KM</span>
-          </div>
-          <div>
-            <span className="text-gray-400 block text-[10px]">Warranty Status</span>
-            <span className="font-bold text-emerald-600 text-xs">Active</span>
-          </div>
-
-          <div>
-            <span className="text-gray-400 block text-[10px]">Warranty Expiry</span>
-            <span className="font-semibold text-gray-800">15 Nov 2026</span>
-          </div>
-          <div>
-            <span className="text-gray-400 block text-[10px]">Service Contract</span>
-            <span className="font-bold text-gray-900">Premium Plus</span>
-          </div>
-
-          <div className="col-span-2 pt-1 border-t border-gray-50">
-            <span className="text-gray-400 block text-[10px]">Next Service Due</span>
-            <span className="font-bold text-gray-900 text-xs">12,500 KM / 15 Aug 2026</span>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* 3. Trade-in Eligibility Card */}
       <div className="bg-white rounded-xl p-3.5 shadow-xs border border-gray-100 text-xs space-y-2">

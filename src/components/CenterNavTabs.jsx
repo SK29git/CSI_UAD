@@ -76,9 +76,6 @@ export default function CenterNavTabs({
     { id: 'Overview', label: 'Overview' },
     { id: 'Create Complaint', label: 'Create Complaint' },
     { id: 'Open Complaints', label: 'Open Complaints', count: countVal },
-    { id: 'Escalations', label: 'Escalations', count: 3 },
-    { id: 'SLA Breaches', label: 'SLA Breaches', count: 2 },
-    { id: 'Root Cause', label: 'Root Cause' },
     { id: 'Recovery Actions', label: 'Recovery Actions' },
     { id: 'Reports', label: 'Reports' },
   ];
