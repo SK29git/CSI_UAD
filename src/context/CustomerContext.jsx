@@ -183,8 +183,9 @@ export function CustomerProvider({ children }) {
   const [insurance, setInsurance] = useState(DEMO_INSURANCE);
   const [finance, setFinance] = useState(DEMO_FINANCE);
   const [tradeInHistory, setTradeInHistory] = useState(DEMO_TRADE_IN);
-  const [riskOverview, setRiskOverview] = useState(DEMO_RISK_OVERVIEW);
-  const [verificationStatus, setVerificationStatus] = useState(DEMO_VERIFICATION);
+  const [riskOverview, setRiskOverview] = useState(null);
+  const [salesSummary, setSalesSummary] = useState(null);
+  const [verificationStatus, setVerificationStatus] = useState(null);
 
   useEffect(() => {
     // Clear localStorage when window/tab is closed
@@ -305,6 +306,20 @@ export function CustomerProvider({ children }) {
     const g = group || customer?.keyloopGroup || 'BMW';
     const c = custNo || customer?.customerNumber || '80496';
 
+    // 0. Primary Composite API: GET /api/v1/customers/{group}/{customerNumber}/sales-screen
+    apiFetch(`/api/v1/customers/${g}/${c}/sales-screen`).then(res => {
+      if (res && res.ok && res.data && typeof res.data === 'object') {
+        const d = res.data;
+        if (d.profile && typeof d.profile === 'object') setCustomer(d.profile);
+        if (Array.isArray(d.vehicles)) setVehicles(d.vehicles);
+        if (Array.isArray(d.insurance)) setInsurance(d.insurance);
+        if (Array.isArray(d.finance)) setFinance(d.finance);
+        if (Array.isArray(d.tradeInHistory)) setTradeInHistory(d.tradeInHistory);
+        if (d.riskOverview && typeof d.riskOverview === 'object') setRiskOverview(d.riskOverview);
+        if (d.salesSummary && typeof d.salesSummary === 'object') setSalesSummary(d.salesSummary);
+      }
+    }).catch(e => console.warn("sales-screen composite API fetch fallback:", e));
+
     // 1. Insurance Details
     apiFetch(`/api/v1/customers/${g}/${c}/insurance`).then(res => {
       if (res && res.ok && res.data) {
@@ -330,15 +345,25 @@ export function CustomerProvider({ children }) {
     apiFetch(`/api/v1/customers/${g}/${c}/risk-overview`).then(res => {
       if (res && res.ok && res.data && typeof res.data === 'object') {
         setRiskOverview(res.data);
+      } else {
+        setRiskOverview(null);
       }
-    }).catch(e => console.warn("Risk overview fetch fallback:", e));
+    }).catch(e => {
+      console.warn("Risk overview fetch fallback:", e);
+      setRiskOverview(null);
+    });
 
     // 5. Verification Status
     apiFetch(`/api/v1/customers/${g}/${c}/verification`).then(res => {
       if (res && res.ok && res.data && typeof res.data === 'object') {
         setVerificationStatus(res.data);
+      } else {
+        setVerificationStatus(null);
       }
-    }).catch(e => console.warn("Verification fetch fallback:", e));
+    }).catch(e => {
+      console.warn("Verification fetch fallback:", e);
+      setVerificationStatus(null);
+    });
   };
 
   const fetchOpenComplaintsCount = async (group, custNo) => {
@@ -558,6 +583,7 @@ export function CustomerProvider({ children }) {
       finance,
       tradeInHistory,
       riskOverview,
+      salesSummary,
       verificationStatus,
       fetchCustomerExtraDetails
     }}>

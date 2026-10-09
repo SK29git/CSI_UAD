@@ -31,45 +31,10 @@ export default function RightSidebar({ isCollapsed = false, onToggleCollapse }) 
       const apiUrl = `/api/v1/customers/${group}/${customerNumber}/complaints?limit=50`;
       const res = await apiFetch(apiUrl);
 
-      if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.ok && Array.isArray(res.data)) {
         setComplaintActivities(res.data);
       } else {
-        // Fallback matching API collection schema
-        setComplaintActivities([
-          {
-            complaintId: "AGMC-3",
-            origin: "DESKTOP",
-            customerNumber: customerNumber,
-            category: "Delay in Parts Delivery",
-            priority: "MEDIUM",
-            openDate: "2026-09-28",
-            status: "OPEN",
-            slaDue: "2026-09-30",
-            description: "Customer called regarding delay in parts"
-          },
-          {
-            complaintId: "AGMC-2",
-            origin: "DESKTOP",
-            customerNumber: customerNumber,
-            category: "Customer Handling Skills",
-            priority: "HIGH",
-            openDate: "2026-09-28",
-            status: "OPEN",
-            slaDue: "2026-09-29",
-            description: "Escalated to Branch Manager"
-          },
-          {
-            complaintId: "AGMC-1",
-            origin: "DESKTOP",
-            customerNumber: customerNumber,
-            category: "Customer Handling Skills",
-            priority: "HIGH",
-            openDate: "2026-09-27",
-            status: "OPEN",
-            slaDue: "2026-09-28",
-            description: "Goodwill voucher offered"
-          }
-        ]);
+        setComplaintActivities([]);
       }
     } catch (err) {
       console.warn("Failed to fetch complaint timeline:", err);
@@ -92,6 +57,10 @@ export default function RightSidebar({ isCollapsed = false, onToggleCollapse }) 
     : activeFilter === 'Medium Priority'
     ? complaintActivities.filter(e => e.priority === 'MEDIUM')
     : complaintActivities.filter(e => e.origin === 'DESKTOP');
+
+  if (loading || !complaintActivities || complaintActivities.length === 0) {
+    return null;
+  }
 
   if (isCollapsed) {
     return (

@@ -32,7 +32,9 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     getFormattedLocation, 
     getBranchName, 
     getLoyaltyTier,
-    getConsentsDisplay
+    getConsentsDisplay,
+    riskOverview,
+    verificationStatus
   } = useCustomer();
 
   const customerName = getFormattedName();
@@ -41,6 +43,32 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
   const locationStr = getFormattedLocation();
   const branchName = getBranchName();
   const customerId = customer.customerNumber || customer.id || 'CUS-94245';
+
+  const hasRiskData = Boolean(
+    riskOverview &&
+    typeof riskOverview === 'object' &&
+    (
+      (riskOverview.riskLevel && String(riskOverview.riskLevel).trim() !== "") ||
+      (riskOverview.riskScore !== null && riskOverview.riskScore !== undefined && String(riskOverview.riskScore).trim() !== "") ||
+      (riskOverview.repeatComplaintCount !== null && riskOverview.repeatComplaintCount !== undefined && String(riskOverview.repeatComplaintCount).trim() !== "") ||
+      (Array.isArray(riskOverview.repeatComplaints) ? riskOverview.repeatComplaints.length > 0 : Boolean(riskOverview.repeatComplaints && String(riskOverview.repeatComplaints).trim() !== ""))
+    )
+  );
+
+  const hasVerificationData = Boolean(
+    verificationStatus &&
+    typeof verificationStatus === 'object' &&
+    (
+      verificationStatus.status ||
+      verificationStatus.lastVerifiedBy ||
+      verificationStatus.verifiedBy ||
+      verificationStatus.lastVerifiedOn ||
+      verificationStatus.lastEditedBy ||
+      verificationStatus.lastEditedOn
+    )
+  );
+
+  const hasNotesData = Boolean(customer?.notes && String(customer.notes).trim() !== "");
 
   if (isCollapsed) {
     return (
@@ -268,119 +296,136 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
         </div>
       </div>
 
-      {/* 3. Verification Status Card */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-xs">
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
-          <span className="font-bold text-gray-800 flex items-center gap-1.5">
-            Verification Status
-          </span>
-          <div className="flex items-center gap-1 text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full text-[11px]">
-            <FaCheckCircle className="text-xs" />
-            <span>Verified</span>
-            <FaInfoCircle className="text-gray-400 ml-1 text-[10px]" />
-          </div>
-        </div>
-
-        <div className="space-y-1.5 text-gray-600">
-          <div className="flex justify-between">
-            <span className="text-gray-400">Last Verified By</span>
-            <span className="font-medium text-gray-800">Sara Ahmed</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Last Verified On</span>
-            <span className="font-medium text-gray-800">18 May 2026, 02:14 PM</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Last Edited By</span>
-            <span className="font-medium text-gray-800">Sara Ahmed</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-400">Last Edited On</span>
-            <span className="font-medium text-gray-800">18 May 2026, 02:14 PM</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Customer Risk Overview Card */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-xs">
-        <div className="flex items-center justify-between pb-2 mb-3 border-b border-gray-100">
-          <span className="font-bold text-gray-900 text-sm">Customer Risk Overview</span>
-          <FaChevronRight className="text-gray-400 text-xs cursor-pointer hover:text-gray-600" />
-        </div>
-
-        <div className="space-y-3">
-          {/* Escalation Risk */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded bg-red-100 text-red-600 flex items-center justify-center font-bold text-[10px]">
-                !
-              </span>
-              <span className="font-medium text-gray-700">Escalation Risk</span>
-            </div>
-            <span className="bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded text-[11px]">
-              High
+      {/* 3. Verification Status Card (Rendered strictly from GET /api/v1/customers/{group}/{customerNumber}/verification) */}
+      {hasVerificationData && (
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-xs">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
+            <span className="font-bold text-gray-800 flex items-center gap-1.5">
+              Verification Status
             </span>
+            <div className="flex items-center gap-1 text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full text-[11px]">
+              <FaCheckCircle className="text-xs" />
+              <span>{verificationStatus.status || 'Verified'}</span>
+              <FaInfoCircle className="text-gray-400 ml-1 text-[10px]" />
+            </div>
           </div>
 
-          {/* Repeat Complaints */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-[10px]">
-                ↻
-              </span>
-              <span className="font-medium text-gray-700">Repeat Complaints</span>
-            </div>
-            <span className="font-bold text-gray-900">4 Cases</span>
-          </div>
-
-          {/* Last Complaint */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-[10px]">
-                🕒
-              </span>
-              <span className="font-medium text-gray-700">Last Complaint</span>
-            </div>
-            <span className="font-bold text-gray-900">3 Days Ago</span>
-          </div>
-
-          {/* CES Score */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-[10px]">
-                ✓
-              </span>
-              <span className="font-medium text-gray-700">CES Score <span className="text-gray-400 text-[10px]">(Last 30 Days)</span></span>
-            </div>
-            <span className="font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">2.1 / 5</span>
-          </div>
-
-          {/* NPS Risk */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-5 h-5 rounded bg-red-100 text-red-600 flex items-center justify-center font-bold text-[10px]">
-                ⚠️
-              </span>
-              <span className="font-medium text-gray-700">NPS Risk</span>
-            </div>
-            <span className="bg-rose-100 text-rose-700 font-bold px-2 py-0.5 rounded text-[11px]">
-              At Risk
-            </span>
+          <div className="space-y-1.5 text-gray-600">
+            {(verificationStatus.lastVerifiedBy || verificationStatus.verifiedBy) && (
+              <div className="flex justify-between">
+                <span className="text-gray-400">Last Verified By</span>
+                <span className="font-medium text-gray-800">{verificationStatus.lastVerifiedBy || verificationStatus.verifiedBy}</span>
+              </div>
+            )}
+            {verificationStatus.lastVerifiedOn && (
+              <div className="flex justify-between">
+                <span className="text-gray-400">Last Verified On</span>
+                <span className="font-medium text-gray-800">{verificationStatus.lastVerifiedOn}</span>
+              </div>
+            )}
+            {verificationStatus.lastEditedBy && (
+              <div className="flex justify-between">
+                <span className="text-gray-400">Last Edited By</span>
+                <span className="font-medium text-gray-800">{verificationStatus.lastEditedBy}</span>
+              </div>
+            )}
+            {verificationStatus.lastEditedOn && (
+              <div className="flex justify-between">
+                <span className="text-gray-400">Last Edited On</span>
+                <span className="font-medium text-gray-800">{verificationStatus.lastEditedOn}</span>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* 5. Notes Card */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-xs">
-        <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
-          <span className="font-bold text-gray-900 text-sm">Notes</span>
-          <button className="text-blue-600 font-bold text-xs hover:underline">Edit</button>
+      {/* 4. Customer Risk Overview Card (Rendered strictly from GET /api/v1/customers/{group}/{customerNumber}/risk-overview API payload) */}
+      {hasRiskData && (
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-xs">
+          <div className="flex items-center justify-between pb-2 mb-3 border-b border-gray-100">
+            <span className="font-bold text-gray-900 text-sm">Customer Risk Overview</span>
+            <FaChevronRight className="text-gray-400 text-xs cursor-pointer hover:text-gray-600" />
+          </div>
+
+          <div className="space-y-3">
+            {/* Risk Level */}
+            {riskOverview.riskLevel && String(riskOverview.riskLevel).trim() !== "" && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded bg-red-100 text-red-600 flex items-center justify-center font-bold text-[10px]">
+                    !
+                  </span>
+                  <span className="font-medium text-gray-700">Risk Level</span>
+                </div>
+                <span className={`font-bold px-2 py-0.5 rounded text-[11px] ${
+                  String(riskOverview.riskLevel).toUpperCase() === 'HIGH' ? 'bg-rose-100 text-rose-700' :
+                  String(riskOverview.riskLevel).toUpperCase() === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
+                  'bg-emerald-100 text-emerald-700'
+                }`}>
+                  {riskOverview.riskLevel}
+                </span>
+              </div>
+            )}
+
+            {/* Risk Score */}
+            {riskOverview.riskScore !== null && riskOverview.riskScore !== undefined && String(riskOverview.riskScore).trim() !== "" && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-[10px]">
+                    📊
+                  </span>
+                  <span className="font-medium text-gray-700">Risk Score</span>
+                </div>
+                <span className="font-bold text-gray-900">{riskOverview.riskScore}</span>
+              </div>
+            )}
+
+            {/* Repeat Complaints Count */}
+            {riskOverview.repeatComplaintCount !== null && riskOverview.repeatComplaintCount !== undefined && String(riskOverview.repeatComplaintCount).trim() !== "" && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-5 h-5 rounded bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-[10px]">
+                    ↻
+                  </span>
+                  <span className="font-medium text-gray-700">Repeat Complaints</span>
+                </div>
+                <span className="font-bold text-gray-900">{riskOverview.repeatComplaintCount} Cases</span>
+              </div>
+            )}
+
+            {/* Repeat Complaints Details */}
+            {(Array.isArray(riskOverview.repeatComplaints) ? riskOverview.repeatComplaints.length > 0 : Boolean(riskOverview.repeatComplaints && String(riskOverview.repeatComplaints).trim() !== "")) && (
+              <div className="flex flex-col gap-1 pt-2 border-t border-gray-100">
+                <span className="font-medium text-gray-700">Repeat Complaint Details</span>
+                <div className="text-[11px] text-gray-600 space-y-1">
+                  {Array.isArray(riskOverview.repeatComplaints) ? (
+                    riskOverview.repeatComplaints.map((item, idx) => (
+                      <div key={idx} className="bg-gray-50 p-1.5 rounded border border-gray-200">
+                        {typeof item === 'object' ? (item.description || item.subject || JSON.stringify(item)) : String(item)}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="bg-gray-50 p-1.5 rounded border border-gray-200">{String(riskOverview.repeatComplaints)}</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-        <div className="space-y-1 text-gray-700 text-[11px] leading-relaxed">
-          <p>Prefers communication in English/Arabic.</p>
-          <p className="font-semibold text-gray-900">High value customer.</p>
+      )}
+
+      {/* 5. Notes Card (Rendered strictly if notes exist in customer profile payload) */}
+      {hasNotesData && (
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-xs">
+          <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
+            <span className="font-bold text-gray-900 text-sm">Notes</span>
+            <button className="text-blue-600 font-bold text-xs hover:underline">Edit</button>
+          </div>
+          <div className="space-y-1 text-gray-700 text-[11px] leading-relaxed">
+            <p>{customer.notes}</p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

@@ -7,190 +7,125 @@ import {
   FaCalculator, 
   FaShieldAlt, 
   FaExchangeAlt, 
-  FaFileAlt, 
-  FaTag, 
   FaCheck, 
   FaPhoneAlt, 
   FaEnvelope, 
   FaCalendarAlt, 
   FaChevronDown,
   FaSpinner,
-  FaRedo
+  FaRedo,
+  FaTimes
 } from 'react-icons/fa';
 
 export default function SalesOverviewView() {
-  const { customer } = useCustomer();
+  const { customer, salesSummary: contextSalesSummary } = useCustomer();
   const group = customer?.keyloopGroup || "BMW";
-  const customerNumber = customer?.customerNumber || customer?.id || "94245";
+  const customerNumber = customer?.customerNumber || customer?.id || "";
 
   const [vehicles, setVehicles] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  const fetchVehicles = async () => {
+  // Active detail section state
+  const [activeDetailTab, setActiveDetailTab] = useState(null); // 'finance' | 'insurance' | 'tradein' | null
+  const [financeData, setFinanceData] = useState([]);
+  const [insuranceData, setInsuranceData] = useState([]);
+  const [tradeInData, setTradeInData] = useState([]);
+  const [salesSummary, setSalesSummary] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+
+  const fetchSalesData = async () => {
+    if (!customerNumber) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
-      const apiUrl = `/api/v1/customers/${group}/${customerNumber}/vehicles`;
-      const res = await apiFetch(apiUrl);
+      // Primary composite API: GET /api/v1/customers/{group}/{customerNumber}/sales-screen
+      const salesScreenUrl = `/api/v1/customers/${group}/${customerNumber}/sales-screen`;
+      const res = await apiFetch(salesScreenUrl);
 
-      if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
-        setVehicles(res.data);
+      if (res && res.ok && res.data && typeof res.data === 'object') {
+        const d = res.data;
+        if (Array.isArray(d.vehicles)) setVehicles(d.vehicles);
+        if (Array.isArray(d.finance)) setFinanceData(d.finance);
+        if (Array.isArray(d.insurance)) setInsuranceData(d.insurance);
+        if (Array.isArray(d.tradeInHistory)) setTradeInData(d.tradeInHistory);
+        if (d.salesSummary && typeof d.salesSummary === 'object') setSalesSummary(d.salesSummary);
         setSelectedIndex(0);
         return;
       }
 
-      // Fallback matching exact API response format
-      setVehicles([
-        {
-          "vin": "WBA31HC04SFT82888",
-          "registrationNumber": "66164-CC-DXB",
-          "registrationDate": "2024-12-19",
-          "brand": "BMW",
-          "model": "G26",
-          "variant": "31HCA",
-          "description": "G26 430i Gran Coupe M Sport",
-          "modelYear": 2025,
-          "fuelType": "Unleaded",
-          "colourCode": "0C4P",
-          "colour": "Brooklyn Grey metallic",
-          "mileageKm": 2,
-          "deliveryDate": "2024-12-20",
-          "stockProgress": "Closed",
-          "nextServiceDate": "2025-02-20",
-          "nextServiceOdometerKm": 1000,
-          "purchaseEnquiryNumber": "463442",
-          "linkedVia": ["OWNER", "AFTERSALES", "DRIVER", "INVOICED_ENQUIRY"]
-        },
-        {
-          "vin": "WBA68FF04R8E45580",
-          "registrationNumber": "28391-AA-DXB",
-          "registrationDate": "2024-06-21",
-          "brand": "BMW",
-          "model": "G20",
-          "variant": "68FFA",
-          "description": "G20 330i Sedan M Sport",
-          "modelYear": 2024,
-          "fuelType": "Unleaded",
-          "colourCode": "0A96",
-          "colour": "Mineral White metalic",
-          "mileageKm": 3865,
-          "stockProgress": "Available/Instock",
-          "nextServiceDate": "2024-08-20",
-          "nextServiceOdometerKm": 1000,
-          "purchaseEnquiryNumber": "405738",
-          "linkedVia": ["INVOICED_ENQUIRY"]
-        }
-      ]);
+      // Individual API fallbacks if sales-screen is unavailable
+      const vehRes = await apiFetch(`/api/v1/customers/${group}/${customerNumber}/vehicles`);
+      if (vehRes && vehRes.ok && Array.isArray(vehRes.data)) {
+        setVehicles(vehRes.data);
+      } else {
+        setVehicles([]);
+      }
+
+      const finRes = await apiFetch(`/api/v1/customers/${group}/${customerNumber}/finance`);
+      if (finRes && finRes.ok && Array.isArray(finRes.data)) {
+        setFinanceData(finRes.data);
+      } else {
+        setFinanceData([]);
+      }
+
+      const insRes = await apiFetch(`/api/v1/customers/${group}/${customerNumber}/insurance`);
+      if (insRes && insRes.ok && Array.isArray(insRes.data)) {
+        setInsuranceData(insRes.data);
+      } else {
+        setInsuranceData([]);
+      }
+
+      const trdRes = await apiFetch(`/api/v1/customers/${group}/${customerNumber}/trade-in-history`);
+      if (trdRes && trdRes.ok && Array.isArray(trdRes.data)) {
+        setTradeInData(trdRes.data);
+      } else {
+        setTradeInData([]);
+      }
     } catch (err) {
-      console.warn("Failed to fetch customer vehicles:", err);
-      setVehicles([
-        {
-          "vin": "WBA31HC04SFT82888",
-          "registrationNumber": "66164-CC-DXB",
-          "registrationDate": "2024-12-19",
-          "brand": "BMW",
-          "model": "G26",
-          "variant": "31HCA",
-          "description": "G26 430i Gran Coupe M Sport",
-          "modelYear": 2025,
-          "fuelType": "Unleaded",
-          "colourCode": "0C4P",
-          "colour": "Brooklyn Grey metallic",
-          "mileageKm": 2,
-          "deliveryDate": "2024-12-20",
-          "stockProgress": "Closed",
-          "nextServiceDate": "2025-02-20",
-          "nextServiceOdometerKm": 1000,
-          "purchaseEnquiryNumber": "463442",
-          "linkedVia": ["OWNER", "AFTERSALES", "DRIVER", "INVOICED_ENQUIRY"]
-        },
-        {
-          "vin": "WBA68FF04R8E45580",
-          "registrationNumber": "28391-AA-DXB",
-          "registrationDate": "2024-06-21",
-          "brand": "BMW",
-          "model": "G20",
-          "variant": "68FFA",
-          "description": "G20 330i Sedan M Sport",
-          "modelYear": 2024,
-          "fuelType": "Unleaded",
-          "colourCode": "0A96",
-          "colour": "Mineral White metalic",
-          "mileageKm": 3865,
-          "stockProgress": "Available/Instock",
-          "nextServiceDate": "2024-08-20",
-          "nextServiceOdometerKm": 1000,
-          "purchaseEnquiryNumber": "405738",
-          "linkedVia": ["INVOICED_ENQUIRY"]
-        }
-      ]);
+      console.warn("Failed to fetch customer sales data:", err);
+      setVehicles([]);
+      setFinanceData([]);
+      setInsuranceData([]);
+      setTradeInData([]);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchVehicles();
-  }, [group, customerNumber]);
-
-  const activeVehicle = vehicles[selectedIndex] || {
-    vin: "WBA31HC04SFT82888",
-    registrationNumber: "66164-CC-DXB",
-    registrationDate: "2024-12-19",
-    brand: "BMW",
-    model: "G26",
-    variant: "31HCA",
-    description: "G26 430i Gran Coupe M Sport",
-    modelYear: 2025,
-    fuelType: "Unleaded",
-    colour: "Brooklyn Grey metallic",
-    mileageKm: 2,
-    stockProgress: "Closed",
-    nextServiceDate: "2025-02-20"
+  const toggleDetailTab = (tabName) => {
+    if (activeDetailTab === tabName) {
+      setActiveDetailTab(null);
+    } else {
+      setActiveDetailTab(tabName);
+    }
   };
 
-  const salesActivities = [
-    {
-      id: 1,
-      date: 'Today, 09:15 AM',
-      type: 'Outbound Call',
-      desc: 'Follow up on X5 upgrade offer',
-      author: 'Sara Ahmed',
-      status: 'Completed',
-      statusColor: 'text-emerald-600 bg-emerald-50',
-      icon: <FaPhoneAlt className="text-emerald-600 text-xs" />
-    },
-    {
-      id: 2,
-      date: 'Yesterday, 04:20 PM',
-      type: 'Email Sent',
-      desc: 'Sent exclusive offer for BMW X6',
-      author: 'Sara Ahmed',
-      status: 'Opened',
-      statusColor: 'text-blue-600 bg-blue-50',
-      icon: <FaEnvelope className="text-amber-500 text-xs" />
-    },
-    {
-      id: 3,
-      date: '2 Days Ago, 11:00 AM',
-      type: 'Test Drive Booked',
-      desc: 'Test drive for BMW X7',
-      author: 'Online Booking',
-      status: 'Completed',
-      statusColor: 'text-emerald-600 bg-emerald-50',
-      icon: <FaCalendarAlt className="text-blue-600 text-xs" />
-    },
-    {
-      id: 4,
-      date: '1 Week Ago, 03:30 PM',
-      type: 'Lead Created',
-      desc: 'Interested in new SUV',
-      author: 'Website',
-      status: 'Converted',
-      statusColor: 'text-emerald-600 bg-emerald-50',
-      icon: <FaTag className="text-purple-600 text-xs" />
-    }
-  ];
+  useEffect(() => {
+    fetchSalesData();
+  }, [group, customerNumber]);
+
+  const activeVehicle = vehicles[selectedIndex] || (vehicles && vehicles.length > 0 ? vehicles[0] : null);
+
+  const hasFinance = Array.isArray(financeData) && financeData.length > 0;
+  const hasInsurance = Array.isArray(insuranceData) && insuranceData.length > 0;
+  const hasTradeIn = Array.isArray(tradeInData) && tradeInData.length > 0;
+  const hasAnyDetailTab = hasFinance || hasInsurance || hasTradeIn;
+
+  const currentSalesSummary = salesSummary || contextSalesSummary;
+  const hasSalesSummary = Boolean(
+    currentSalesSummary &&
+    typeof currentSalesSummary === 'object' &&
+    (
+      currentSalesSummary.totalLeads !== undefined ||
+      currentSalesSummary.openLeads !== undefined ||
+      currentSalesSummary.wonDeals !== undefined ||
+      currentSalesSummary.lostDeals !== undefined ||
+      currentSalesSummary.lastPurchaseDate
+    )
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -200,9 +135,11 @@ export default function SalesOverviewView() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 mb-4">
           <div className="flex items-center gap-2">
             <h2 className="font-bold text-gray-900 text-base">Vehicle Details</h2>
-            <span className="bg-emerald-50 text-emerald-700 font-bold text-xs px-2.5 py-0.5 rounded-full border border-emerald-200">
-              {selectedIndex === 0 ? 'Primary Vehicle' : `Vehicle ${selectedIndex + 1}`}
-            </span>
+            {vehicles.length > 0 && (
+              <span className="bg-emerald-50 text-emerald-700 font-bold text-xs px-2.5 py-0.5 rounded-full border border-emerald-200">
+                {selectedIndex === 0 ? 'Primary Vehicle' : `Vehicle ${selectedIndex + 1}`}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
@@ -226,34 +163,45 @@ export default function SalesOverviewView() {
             )}
 
             <button 
-              onClick={fetchVehicles} 
+              onClick={fetchSalesData} 
               className="text-gray-400 hover:text-gray-600 cursor-pointer p-1"
               title="Refresh Vehicle Data"
             >
               <FaRedo className={`text-xs ${loading ? 'animate-spin' : ''}`} />
             </button>
 
-            <span className="text-emerald-600 font-bold text-xs flex items-center gap-1">
-              <FaCheckCircle className="text-xs" /> VIN Verified
-            </span>
+            {activeVehicle?.vin && (
+              <span className="text-emerald-600 font-bold text-xs flex items-center gap-1">
+                <FaCheckCircle className="text-xs" /> VIN Verified
+              </span>
+            )}
           </div>
         </div>
 
         {loading ? (
           <div className="py-10 flex flex-col items-center justify-center text-gray-400 gap-2">
             <FaSpinner className="animate-spin text-xl text-blue-600" />
-            <span className="text-xs font-medium">Fetching customer vehicle data...</span>
+            <span className="text-xs font-medium">Loading customer vehicle data...</span>
+          </div>
+        ) : !activeVehicle ? (
+          <div className="py-6 text-center text-gray-400 text-xs">
+            No vehicle records found for this customer.
           </div>
         ) : (
           <div className="w-full">
             {/* Vehicle Specs Grid */}
             <div className="flex flex-col justify-between gap-3">
               <div className="mb-1">
-                <h3 className="font-extrabold text-gray-900 text-sm leading-tight">
-                  {activeVehicle.description || `${activeVehicle.brand} ${activeVehicle.model}`}
+                <h3 className="font-extrabold text-gray-900 text-sm leading-tight flex items-center gap-2">
+                  <span>{activeVehicle.description || `${activeVehicle.brand || ''} ${activeVehicle.model || ''}`}</span>
+                  {activeVehicle.modelYear && (
+                    <span className="text-xs text-gray-500 font-semibold">
+                      ({activeVehicle.modelYear})
+                    </span>
+                  )}
                 </h3>
                 <span className="text-xs text-gray-500 font-semibold block mt-0.5">
-                  {activeVehicle.modelYear ? `${activeVehicle.modelYear} Model` : ''} • {activeVehicle.colour || ''}
+                  {activeVehicle.colour ? `${activeVehicle.colour}${activeVehicle.colourCode ? ` (${activeVehicle.colourCode})` : ''}` : ''}
                 </span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-3 gap-x-4 text-xs">
@@ -274,7 +222,7 @@ export default function SalesOverviewView() {
 
                 <div>
                   <span className="text-gray-400 block text-[10px]">Fuel Type</span>
-                  <span className="font-semibold text-gray-800">{activeVehicle.fuelType || 'Unleaded'}</span>
+                  <span className="font-semibold text-gray-800">{activeVehicle.fuelType || 'N/A'}</span>
                 </div>
                 <div>
                   <span className="text-gray-400 block text-[10px]">Variant / Model</span>
@@ -282,7 +230,7 @@ export default function SalesOverviewView() {
                 </div>
                 <div>
                   <span className="text-gray-400 block text-[10px]">Stock Progress</span>
-                  <span className="font-bold text-blue-600">{activeVehicle.stockProgress || 'Closed'}</span>
+                  <span className="font-bold text-blue-600">{activeVehicle.stockProgress || 'N/A'}</span>
                 </div>
 
                 <div>
@@ -297,172 +245,228 @@ export default function SalesOverviewView() {
                   <span className="text-gray-400 block text-[10px]">Next Service Date</span>
                   <span className="text-emerald-600 font-bold text-[11px]">{activeVehicle.nextServiceDate || 'N/A'}</span>
                 </div>
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Next Service Odometer</span>
+                  <span className="text-emerald-600 font-bold text-[11px]">
+                    {activeVehicle.nextServiceOdometerKm !== undefined && activeVehicle.nextServiceOdometerKm !== null ? `${activeVehicle.nextServiceOdometerKm.toLocaleString()} KM` : 'N/A'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Purchase Enquiry No.</span>
+                  <span className="font-mono font-bold text-gray-900">{activeVehicle.purchaseEnquiryNumber || 'N/A'}</span>
+                </div>
+
+                {Array.isArray(activeVehicle.linkedVia) && activeVehicle.linkedVia.length > 0 && (
+                  <div className="col-span-2 sm:col-span-4 mt-1 pt-1 border-t border-gray-100">
+                    <span className="text-gray-400 block text-[10px] mb-1">Linked Via</span>
+                    <div className="flex flex-wrap gap-1">
+                      {activeVehicle.linkedVia.map((link, idx) => (
+                        <span key={idx} className="bg-blue-50 text-blue-700 font-bold text-[9px] px-2 py-0.5 rounded border border-blue-200">
+                          {link}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-
-              <button className="w-full mt-2 py-2 border border-blue-600 text-blue-600 font-bold text-xs rounded-lg hover:bg-blue-50 transition-colors shadow-2xs cursor-pointer">
-                View Full Vehicle Profile
-              </button>
             </div>
-
           </div>
         )}
 
-        {/* 5 Quick Action Pill Buttons Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 pt-4 mt-4 border-t border-gray-100 text-xs">
-          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
-            <FaCalculator className="text-gray-500" />
-            <span>Finance Details</span>
-          </button>
-          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
-            <FaShieldAlt className="text-gray-500" />
-            <span>Insurance Details</span>
-          </button>
-          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
-            <FaExchangeAlt className="text-gray-500" />
-            <span>Trade-in History</span>
-          </button>
-          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
-            <FaFileAlt className="text-gray-500" />
-            <span>Documents</span>
-          </button>
-          <button className="p-2 bg-gray-50 border border-gray-200 rounded-lg font-bold text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer">
-            <FaTag className="text-gray-500" />
-            <span>Accessories</span>
-          </button>
-        </div>
-      </div>
+        {/* API-Backed Action Pill Buttons (Finance, Insurance, Trade-in) - Shown ONLY if data exists in API */}
+        {hasAnyDetailTab && (
+          <div className="flex flex-wrap items-center gap-2.5 pt-4 mt-4 border-t border-gray-100 text-xs">
+            {hasFinance && (
+              <button 
+                onClick={() => toggleDetailTab('finance')}
+                className={`flex-1 min-w-[120px] p-2 border rounded-lg font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  activeDetailTab === 'finance'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <FaCalculator className={activeDetailTab === 'finance' ? 'text-white' : 'text-gray-500'} />
+                <span>Finance Details ({financeData.length})</span>
+              </button>
+            )}
 
-      {/* 2. Trade-in Eligibility Card */}
-      <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100 text-xs">
-        <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
-          <div className="flex items-center gap-2">
-            <h3 className="font-bold text-gray-900 text-sm">Trade-in Eligibility</h3>
-            <span className="bg-emerald-100 text-emerald-800 font-bold text-[10px] px-2 py-0.5 rounded">
-              Eligible
-            </span>
+            {hasInsurance && (
+              <button 
+                onClick={() => toggleDetailTab('insurance')}
+                className={`flex-1 min-w-[120px] p-2 border rounded-lg font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  activeDetailTab === 'insurance'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <FaShieldAlt className={activeDetailTab === 'insurance' ? 'text-white' : 'text-gray-500'} />
+                <span>Insurance Details ({insuranceData.length})</span>
+              </button>
+            )}
+
+            {hasTradeIn && (
+              <button 
+                onClick={() => toggleDetailTab('tradein')}
+                className={`flex-1 min-w-[120px] p-2 border rounded-lg font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
+                  activeDetailTab === 'tradein'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                    : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <FaExchangeAlt className={activeDetailTab === 'tradein' ? 'text-white' : 'text-gray-500'} />
+                <span>Trade-in History ({tradeInData.length})</span>
+              </button>
+            )}
           </div>
+        )}
 
-          <span className="text-gray-400 font-semibold text-[11px]">Eligibility Criteria</span>
-        </div>
+        {/* Expandable Live API Details Container */}
+        {activeDetailTab && (
+          <div className="mt-3 p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 animate-fade-in text-xs">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+              <h4 className="font-bold text-gray-900 text-xs flex items-center gap-2">
+                {activeDetailTab === 'finance' && <><FaCalculator className="text-blue-600" /> Finance Details Response</>}
+                {activeDetailTab === 'insurance' && <><FaShieldAlt className="text-emerald-600" /> Insurance Details Response</>}
+                {activeDetailTab === 'tradein' && <><FaExchangeAlt className="text-purple-600" /> Trade-in History Response</>}
+              </h4>
+              <button 
+                onClick={() => setActiveDetailTab(null)}
+                className="text-gray-400 hover:text-gray-700 font-bold text-xs p-1"
+              >
+                <FaTimes />
+              </button>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-          
-          {/* Left Values (7 Cols) */}
-          <div className="md:col-span-7 grid grid-cols-3 gap-3 bg-emerald-50/40 p-3 rounded-xl border border-emerald-100">
+            {/* Content Data */}
             <div>
-              <span className="text-gray-400 block text-[10px] font-semibold">Eligibility Rule</span>
-              <span className="font-bold text-emerald-700 text-xs">Meets criteria</span>
-            </div>
-
-            <div>
-              <span className="text-gray-400 block text-[10px] font-semibold">Model Year</span>
-              <span className="font-bold text-gray-900 text-xs">{activeVehicle.modelYear || '2025'}</span>
-            </div>
-
-            <div>
-              <span className="text-gray-400 block text-[10px] font-semibold">Mileage</span>
-              <span className="font-black text-gray-900 text-xs">
-                {typeof activeVehicle.mileageKm === 'number' ? `${activeVehicle.mileageKm.toLocaleString()} KM` : '38,200 KM'}
-              </span>
-            </div>
-          </div>
-
-          {/* Right Criteria Checklist (5 Cols) */}
-          <div className="md:col-span-5 flex items-center justify-between pl-2">
-            <div className="space-y-1 text-[11px]">
-              <div className="flex items-center gap-2 text-gray-700">
-                <FaCheck className="text-emerald-500 text-[10px]" />
-                <span>Above 3 years</span>
-                <span className="font-bold text-gray-900 ml-auto">No</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-700">
-                <FaCheck className="text-emerald-500 text-[10px]" />
-                <span>Exceeds 60,000 KMS</span>
-                <span className="font-bold text-gray-900 ml-auto">No</span>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center justify-center text-center pl-3">
-              <div className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-                <FaCheck className="text-base" />
-              </div>
-              <span className="text-[10px] font-bold text-emerald-600 mt-1">Meets Trade-in Criteria</span>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      {/* 3. Sales Summary Card */}
-      <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100 text-xs">
-        <h3 className="font-bold text-gray-900 text-sm pb-2 border-b border-gray-100 mb-3">Sales Summary</h3>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
-            <span className="text-gray-400 block text-[10px] font-semibold">Total Leads</span>
-            <span className="text-2xl font-black text-gray-900 mt-1 block">8</span>
-          </div>
-
-          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
-            <span className="text-gray-400 block text-[10px] font-semibold">Open Leads</span>
-            <span className="text-2xl font-black text-blue-600 mt-1 block">2</span>
-          </div>
-
-          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
-            <span className="text-gray-400 block text-[10px] font-semibold">Won Deals</span>
-            <span className="text-2xl font-black text-emerald-600 mt-1 block">3</span>
-          </div>
-
-          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
-            <span className="text-gray-400 block text-[10px] font-semibold">Lost Deals</span>
-            <span className="text-2xl font-black text-rose-600 mt-1 block">2</span>
-          </div>
-
-          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center col-span-2 sm:col-span-1">
-            <span className="text-gray-400 block text-[10px] font-semibold">Last Purchase</span>
-            <span className="text-base font-black text-gray-900 mt-2 block">{activeVehicle.deliveryDate || '14 Feb 2024'}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Recent Sales Activities Card */}
-      <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100 text-xs">
-        <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
-          <h3 className="font-bold text-gray-900 text-sm">Recent Sales Activities</h3>
-          <button className="text-blue-600 font-bold text-xs hover:underline cursor-pointer">View All</button>
-        </div>
-
-        <div className="space-y-3">
-          {salesActivities.map((act) => (
-            <div key={act.id} className="p-3 rounded-xl border border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-gray-50 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white border border-gray-200 flex items-center justify-center shadow-2xs flex-shrink-0">
-                  {act.icon}
+              {/* 1. Finance Details Card */}
+              {activeDetailTab === 'finance' && hasFinance && (
+                <div className="space-y-3">
+                  {financeData.map((fin, idx) => (
+                    <div key={fin.enquiryNumber || idx} className="bg-white p-3.5 rounded-lg border border-gray-200 space-y-2">
+                      <div className="flex flex-wrap justify-between items-center border-b border-gray-100 pb-2">
+                        <span className="font-bold text-gray-900 text-xs">{fin.provider || 'Finance Provider'}</span>
+                        {fin.status && (
+                          <span className="bg-emerald-100 text-emerald-800 font-extrabold text-[10px] px-2 py-0.5 rounded uppercase">
+                            Status: {fin.status}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs text-gray-700">
+                        {fin.enquiryNumber && <div>Enquiry #: <strong className="font-mono text-blue-600">{fin.enquiryNumber}</strong></div>}
+                        {fin.vehicleNumber && <div>Vehicle #: <strong className="font-mono text-gray-900">{fin.vehicleNumber}</strong></div>}
+                        {fin.vin && <div>VIN: <strong className="font-mono text-gray-900">{fin.vin}</strong></div>}
+                        {fin.vehicle && <div>Vehicle: <strong>{typeof fin.vehicle === 'object' ? (fin.vehicle.description || fin.vehicle.model || JSON.stringify(fin.vehicle)) : String(fin.vehicle)}</strong></div>}
+                        {fin.salesOrderType && <div>Order Type: <strong>{fin.salesOrderType}</strong></div>}
+                        {fin.loanAmount !== undefined && fin.loanAmount !== null && fin.loanAmount !== "" && (
+                          <div>Loan Amount: <strong className="text-gray-900 font-extrabold">AED {Number(fin.loanAmount).toLocaleString()}</strong></div>
+                        )}
+                        {fin.monthlyPayment !== undefined && fin.monthlyPayment !== null && fin.monthlyPayment !== "" && (
+                          <div>Monthly Payment: <strong className="text-emerald-700 font-extrabold">AED {Number(fin.monthlyPayment).toLocaleString()}</strong></div>
+                        )}
+                        {fin.numberOfPayments && <div>No. of Payments: <strong>{fin.numberOfPayments}</strong></div>}
+                        {fin.tenureMonths && <div>Tenure: <strong>{fin.tenureMonths} Months</strong></div>}
+                        {fin.invoiceDate && <div>Invoice Date: <span>{fin.invoiceDate}</span></div>}
+                        {fin.startDate && <div>Start Date: <span>{fin.startDate}</span></div>}
+                        {fin.expiryDate && <div>Expiry Date: <span>{fin.expiryDate}</span></div>}
+                        {fin.financed !== undefined && <div>Financed: <strong>{fin.financed ? 'Yes' : 'No'}</strong></div>}
+                        {fin.outstandingAmount && <div>Outstanding: <strong>AED {fin.outstandingAmount}</strong></div>}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-gray-900 text-xs">{act.type}</span>
-                    <span className="text-gray-400 text-[10px] font-medium">{act.date}</span>
-                  </div>
-                  <p className="text-gray-600 text-[11px] leading-tight my-0.5">{act.desc}</p>
+              )}
+
+              {/* 2. Insurance Details Card */}
+              {activeDetailTab === 'insurance' && hasInsurance && (
+                <div className="space-y-3">
+                  {insuranceData.map((ins, idx) => (
+                    <div key={ins.policyNumber || idx} className="bg-white p-3.5 rounded-lg border border-gray-200 space-y-2">
+                      <div className="flex flex-wrap justify-between items-center border-b border-gray-100 pb-2">
+                        <span className="font-bold text-gray-900 text-xs">{ins.provider || 'Insurance Provider'}</span>
+                        {ins.status && (
+                          <span className="bg-emerald-100 text-emerald-800 font-extrabold text-[10px] px-2 py-0.5 rounded uppercase">
+                            {ins.status}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs text-gray-700">
+                        {ins.policyNumber && <div>Policy Number: <strong className="font-mono text-blue-600">{ins.policyNumber}</strong></div>}
+                        {ins.contractType && <div>Contract Type: <strong>{ins.contractType}</strong></div>}
+                        {ins.startDate && <div>Start Date: <span>{ins.startDate}</span></div>}
+                        {ins.expiryDate && <div>Expiry Date: <span>{ins.expiryDate}</span></div>}
+                        {ins.premium && <div>Premium: <strong className="text-emerald-700 font-extrabold">{ins.premium}</strong></div>}
+                        {ins.vin && <div>VIN: <strong className="font-mono">{ins.vin}</strong></div>}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-center justify-between sm:justify-end gap-3 text-[11px]">
-                <span className="text-gray-400 font-medium">{act.author}</span>
-                <span className={`font-bold px-2 py-0.5 rounded text-[10px] ${act.statusColor}`}>
-                  {act.status}
-                </span>
-              </div>
+              {/* 3. Trade-in History Card */}
+              {activeDetailTab === 'tradein' && hasTradeIn && (
+                <div className="space-y-3">
+                  {tradeInData.map((trd, idx) => (
+                    <div key={trd.tradeInId || idx} className="bg-white p-3.5 rounded-lg border border-gray-200 space-y-2">
+                      <div className="flex flex-wrap justify-between items-center border-b border-gray-100 pb-2">
+                        <span className="font-mono font-bold text-purple-700 text-xs">{trd.tradeInId || `TRD-${idx+1}`}</span>
+                        {trd.status && (
+                          <span className="bg-blue-100 text-blue-800 font-extrabold text-[10px] px-2 py-0.5 rounded uppercase">
+                            {trd.status}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs text-gray-700">
+                        {trd.vehicle && <div>Evaluated Vehicle: <strong>{typeof trd.vehicle === 'object' ? (trd.vehicle.description || trd.vehicle.model || JSON.stringify(trd.vehicle)) : String(trd.vehicle)}</strong></div>}
+                        {trd.vin && <div>VIN: <strong className="font-mono">{trd.vin}</strong></div>}
+                        {trd.appraisedValue && <div>Appraised Value: <strong className="text-emerald-700 font-extrabold">{trd.appraisedValue}</strong></div>}
+                        {trd.tradeInDate && <div>Trade Date: <span>{trd.tradeInDate}</span></div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
 
-        <button className="w-full mt-4 py-2 border border-gray-200 text-gray-700 font-bold text-xs rounded-lg hover:bg-gray-50 flex items-center justify-center gap-1 transition-colors cursor-pointer">
-          <span>Load More Activities</span>
-          <FaChevronDown className="text-[10px]" />
-        </button>
       </div>
+
+      {/* 2. Sales Summary Card - Rendered strictly if present in API payload */}
+      {hasSalesSummary && (
+        <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100 text-xs">
+          <h3 className="font-bold text-gray-900 text-sm pb-2 border-b border-gray-100 mb-3">Sales Summary</h3>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+              <span className="text-gray-400 block text-[10px] font-semibold">Total Leads</span>
+              <span className="text-2xl font-black text-gray-900 mt-1 block">{currentSalesSummary.totalLeads ?? 0}</span>
+            </div>
+
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+              <span className="text-gray-400 block text-[10px] font-semibold">Open Leads</span>
+              <span className="text-2xl font-black text-blue-600 mt-1 block">{currentSalesSummary.openLeads ?? 0}</span>
+            </div>
+
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+              <span className="text-gray-400 block text-[10px] font-semibold">Won Deals</span>
+              <span className="text-2xl font-black text-emerald-600 mt-1 block">{currentSalesSummary.wonDeals ?? 0}</span>
+            </div>
+
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center">
+              <span className="text-gray-400 block text-[10px] font-semibold">Lost Deals</span>
+              <span className="text-2xl font-black text-rose-600 mt-1 block">{currentSalesSummary.lostDeals ?? 0}</span>
+            </div>
+
+            <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-center col-span-2 sm:col-span-1">
+              <span className="text-gray-400 block text-[10px] font-semibold">Last Purchase</span>
+              <span className="text-base font-black text-gray-900 mt-2 block">{currentSalesSummary.lastPurchaseDate || activeVehicle?.deliveryDate || 'N/A'}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

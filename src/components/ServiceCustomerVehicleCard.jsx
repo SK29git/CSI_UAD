@@ -260,11 +260,19 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
               </span>
             </div>
 
-            <div className="col-span-2 pt-1 border-t border-gray-50">
-              <span className="text-gray-400 block text-[10px]">Next Service Due</span>
-              <span className="font-bold text-gray-900 text-xs">
-                {currentVehicle.nextServiceDate ? `${currentVehicle.nextServiceDate} (${currentVehicle.nextServiceOdometerKm !== undefined ? currentVehicle.nextServiceOdometerKm + ' KM' : ''})` : 'N/A'}
-              </span>
+            <div className="col-span-2 pt-1 border-t border-gray-50 flex justify-between">
+              <div>
+                <span className="text-gray-400 block text-[10px]">Next Service Due</span>
+                <span className="font-bold text-gray-900 text-xs">
+                  {currentVehicle.nextServiceDate ? `${currentVehicle.nextServiceDate} (${currentVehicle.nextServiceOdometerKm !== undefined ? currentVehicle.nextServiceOdometerKm.toLocaleString() + ' KM' : ''})` : 'N/A'}
+                </span>
+              </div>
+              {currentVehicle.purchaseEnquiryNumber && (
+                <div className="text-right">
+                  <span className="text-gray-400 block text-[10px]">Purchase Enquiry #</span>
+                  <span className="font-mono font-bold text-blue-600 text-xs">{currentVehicle.purchaseEnquiryNumber}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
