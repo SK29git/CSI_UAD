@@ -9,81 +9,52 @@ import {
   FaCheckCircle, 
   FaClock, 
   FaFilter,
-  FaWrench
+  FaWrench,
+  FaInfoCircle
 } from 'react-icons/fa';
 
 export default function ServiceOpenBookingsView() {
   const { customer, selectedVin, vehicleDetails, vehicles } = useCustomer();
   const group = customer?.keyloopGroup || "BMW";
-  const customerNumber = customer?.customerNumber || "80496";
-  const vin = selectedVin || vehicleDetails?.vin || (vehicles && vehicles[0]?.vin) || "WBA31HC04SFT82888";
+  const customerNumber = customer?.customerNumber || customer?.id || "";
+  const vin = selectedVin || vehicleDetails?.vin || (vehicles && vehicles[0]?.vin) || "";
 
   const [openBookings, setOpenBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchMode, setFetchMode] = useState('customer'); // 'customer' or 'vehicle'
 
+  const formatDisplayVal = (val, fallback = 'N/A') => {
+    if (val === null || val === undefined || val === '') return fallback;
+    if (typeof val === 'object') {
+      if (val.name) return val.name;
+      if (val.description) return val.description;
+      return JSON.stringify(val);
+    }
+    return String(val);
+  };
+
   const fetchOpenBookings = async () => {
     setLoading(true);
+    setOpenBookings([]);
     try {
       let apiUrl = `/api/v1/customers/${group}/${customerNumber}/service-bookings`;
       if (fetchMode === 'vehicle' && vin) {
         apiUrl = `/api/v1/vehicles/${group}/${vin}/service-bookings`;
+      } else if (!customerNumber) {
+        setOpenBookings([]);
+        setLoading(false);
+        return;
       }
 
       const res = await apiFetch(apiUrl);
-      if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.ok && Array.isArray(res.data)) {
         setOpenBookings(res.data);
       } else {
-        // Fallback matching API collection schema
-        setOpenBookings([
-          {
-            wipNumber: "WIP-634512",
-            bookingId: "BK-634512",
-            keyloopGroup: group,
-            customerNumber: customerNumber,
-            vin: vin,
-            serviceType: "40K Interval Service + Brake Pads",
-            dateTime: "2026-10-12, 10:00 AM",
-            branch: "Sheikh Zayed Road Branch",
-            advisor: "Omar Hassan",
-            status: "CONFIRMED",
-            loanCar: "Yes",
-            createdBy: "agent.42"
-          },
-          {
-            wipNumber: "WIP-634599",
-            bookingId: "BK-634599",
-            keyloopGroup: group,
-            customerNumber: customerNumber,
-            vin: vin,
-            serviceType: "AC Inspection & Microfilter Replacement",
-            dateTime: "2026-10-18, 02:30 PM",
-            branch: "Sheikh Zayed Road Branch",
-            advisor: "Sara Ahmed",
-            status: "OPEN",
-            loanCar: "No",
-            createdBy: "agent.42"
-          }
-        ]);
+        setOpenBookings([]);
       }
     } catch (err) {
       console.warn("Failed to fetch open service bookings:", err);
-      setOpenBookings([
-        {
-          wipNumber: "WIP-634512",
-          bookingId: "BK-634512",
-          keyloopGroup: group,
-          customerNumber: customerNumber,
-          vin: vin,
-          serviceType: "40K Interval Service + Brake Pads",
-          dateTime: "2026-10-12, 10:00 AM",
-          branch: "Sheikh Zayed Road Branch",
-          advisor: "Omar Hassan",
-          status: "CONFIRMED",
-          loanCar: "Yes",
-          createdBy: "agent.42"
-        }
-      ]);
+      setOpenBookings([]);
     } finally {
       setLoading(false);
     }
@@ -106,7 +77,7 @@ export default function ServiceOpenBookingsView() {
             <div>
               <h2 className="text-base font-bold text-gray-900 leading-tight">Open Workshop Bookings</h2>
               <span className="text-[10px] text-gray-400 font-mono">
-                Keyloop Group: {group} | Customer #{customerNumber} | VIN: {vin}
+                Keyloop Group: {group} {customerNumber ? `| Customer #${customerNumber}` : ''} {vin ? `| VIN: ${vin}` : ''}
               </span>
             </div>
           </div>
@@ -125,11 +96,12 @@ export default function ServiceOpenBookingsView() {
             </button>
             <button
               onClick={() => setFetchMode('vehicle')}
-              className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
+              disabled={!vin}
+              className={`px-2.5 py-1 rounded text-[11px] font-bold transition-all cursor-pointer disabled:opacity-40 ${
                 fetchMode === 'vehicle' ? 'bg-blue-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              By VIN ({vin.slice(-6)})
+              By VIN {vin ? `(${vin.slice(-6)})` : ''}
             </button>
           </div>
 
@@ -150,13 +122,13 @@ export default function ServiceOpenBookingsView() {
           <span className="text-xs font-medium">Loading open workshop bookings...</span>
         </div>
       ) : openBookings.length === 0 ? (
-        <div className="py-10 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-          <FaCalendarCheck className="mx-auto text-gray-400 mb-2 text-base" />
-          <p className="font-semibold text-xs text-gray-700">No Open Workshop Bookings Found</p>
-          <p className="text-[11px] text-gray-400">There are no active upcoming bookings for this customer or vehicle.</p>
+        <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-1">
+          <FaInfoCircle className="mx-auto text-xl text-gray-300 mb-1" />
+          <p className="font-bold text-gray-700 text-xs">No Open Workshop Bookings Found</p>
+          <p className="text-[11px] text-gray-400">There are currently no active upcoming bookings returned from the API.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto border border-gray-100 rounded-xl">
           <table className="w-full text-left">
             <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[9px] border-b border-gray-100">
               <tr>
@@ -173,29 +145,29 @@ export default function ServiceOpenBookingsView() {
               {openBookings.map((b, idx) => (
                 <tr key={b.wipNumber || b.bookingId || idx} className="hover:bg-blue-50/40 transition-colors">
                   <td className="py-3 px-3 font-mono font-bold text-blue-600">
-                    {b.wipNumber || b.bookingId || `BK-${idx + 101}`}
+                    {formatDisplayVal(b.wipNumber || b.bookingId)}
                   </td>
                   <td className="py-3 px-3 font-bold text-gray-900">
                     <div className="flex items-center gap-1.5">
                       <FaWrench className="text-gray-400 text-[10px]" />
-                      <span>{b.serviceType || 'Standard Maintenance'}</span>
+                      <span>{formatDisplayVal(b.serviceType || b.description)}</span>
                     </div>
                   </td>
                   <td className="py-3 px-3 text-gray-800 font-mono">
-                    {b.dateTime || b.createdDate || 'N/A'}
+                    {formatDisplayVal(b.dateTime || b.createdDate || b.date)}
                   </td>
-                  <td className="py-3 px-3 text-gray-600">{b.branch || 'Sheikh Zayed Road'}</td>
-                  <td className="py-3 px-3 font-semibold text-gray-800">{b.advisor || 'Assigned Advisor'}</td>
+                  <td className="py-3 px-3 text-gray-600">{formatDisplayVal(b.branch)}</td>
+                  <td className="py-3 px-3 font-semibold text-gray-800">{formatDisplayVal(b.advisor || b.bookedBy)}</td>
                   <td className="py-3 px-3">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                       b.status === 'CONFIRMED' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                      b.status === 'OPEN' ? 'bg-blue-100 text-blue-800 border border-blue-300' : 'bg-amber-100 text-amber-800'
+                      b.status === 'OPEN' ? 'bg-blue-100 text-blue-800 border border-blue-300' : 'bg-amber-100 text-amber-800 border border-amber-300'
                     }`}>
-                      {b.status || 'OPEN'}
+                      {formatDisplayVal(b.status)}
                     </span>
                   </td>
                   <td className="py-3 px-3 font-bold text-gray-800">
-                    {b.loanCar || 'No'}
+                    {formatDisplayVal(b.loanCar)}
                   </td>
                 </tr>
               ))}

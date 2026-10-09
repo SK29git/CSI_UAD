@@ -3,73 +3,49 @@ import { useCustomer } from '../context/CustomerContext';
 import { apiFetch } from '../utils/api';
 import { 
   FaShieldAlt, 
-  FaCar, 
   FaSpinner, 
   FaRedo, 
-  FaCheckCircle, 
-  FaClock, 
-  FaExclamationCircle,
-  FaFileInvoice
+  FaInfoCircle
 } from 'react-icons/fa';
 
 export default function ServiceWarrantyClaimsView() {
   const { customer, selectedVin, vehicleDetails, vehicles } = useCustomer();
   const group = customer?.keyloopGroup || "BMW";
-  const customerNumber = customer?.customerNumber || "80496";
-  const vin = selectedVin || vehicleDetails?.vin || (vehicles && vehicles[0]?.vin) || "WBA31HC04SFT82888";
+  const customerNumber = customer?.customerNumber || customer?.id || "";
+  const vin = selectedVin || vehicleDetails?.vin || (vehicles && vehicles[0]?.vin) || "";
 
   const [claims, setClaims] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const formatDisplayVal = (val, fallback = 'N/A') => {
+    if (val === null || val === undefined || val === '') return fallback;
+    if (typeof val === 'object') {
+      if (val.name) return val.name;
+      if (val.description) return val.description;
+      return JSON.stringify(val);
+    }
+    return String(val);
+  };
+
   const fetchWarrantyClaims = async () => {
+    if (!vin) {
+      setClaims([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    setClaims([]);
     try {
       const apiUrl = `/api/v1/vehicles/${group}/${vin}/warranty-claims`;
       const res = await apiFetch(apiUrl);
-      if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.ok && Array.isArray(res.data)) {
         setClaims(res.data);
       } else {
-        // Fallback matching API collection schema
-        setClaims([
-          {
-            claimId: "CLM-90124",
-            vin: vin,
-            claimDate: "2026-08-14",
-            claimType: "BMW Extended Warranty",
-            contractType: "A7CG",
-            description: "Air Conditioning Compressor Replacement",
-            status: "APPROVED",
-            approvedAmount: "AED 4,850",
-            advisor: "Omar Hassan"
-          },
-          {
-            claimId: "CLM-88410",
-            vin: vin,
-            claimDate: "2025-11-20",
-            claimType: "BMW Extended Warranty",
-            contractType: "A7CG",
-            description: "Electronic Control Unit (ECU) Software Flash",
-            status: "PAID",
-            approvedAmount: "AED 1,200",
-            advisor: "Sara Ahmed"
-          }
-        ]);
+        setClaims([]);
       }
     } catch (err) {
       console.warn("Failed to fetch warranty claims:", err);
-      setClaims([
-        {
-          claimId: "CLM-90124",
-          vin: vin,
-          claimDate: "2026-08-14",
-          claimType: "BMW Extended Warranty",
-          contractType: "A7CG",
-          description: "Air Conditioning Compressor Replacement",
-          status: "APPROVED",
-          approvedAmount: "AED 4,850",
-          advisor: "Omar Hassan"
-        }
-      ]);
+      setClaims([]);
     } finally {
       setLoading(false);
     }
@@ -91,7 +67,7 @@ export default function ServiceWarrantyClaimsView() {
           <div>
             <h2 className="text-base font-bold text-gray-900 leading-tight">Warranty Claims & History</h2>
             <span className="text-[10px] text-gray-400 font-mono">
-              Keyloop Group: {group} | Customer #{customerNumber} | VIN: {vin}
+              Keyloop Group: {group} {customerNumber ? `| Customer #${customerNumber}` : ''} {vin ? `| VIN: ${vin}` : ''}
             </span>
           </div>
         </div>
@@ -112,12 +88,13 @@ export default function ServiceWarrantyClaimsView() {
           <span className="text-xs font-medium">Loading warranty claims...</span>
         </div>
       ) : claims.length === 0 ? (
-        <div className="py-10 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+        <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-1">
+          <FaInfoCircle className="mx-auto text-xl text-gray-300 mb-1" />
           <p className="font-semibold text-xs text-gray-700">No Warranty Claims Found</p>
-          <p className="text-[11px] text-gray-400">There are no warranty claim records filed for this vehicle.</p>
+          <p className="text-[11px] text-gray-400">There are no warranty claim records returned from the API for this vehicle.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto border border-gray-100 rounded-xl">
           <table className="w-full text-left">
             <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[9px] border-b border-gray-100">
               <tr>
@@ -133,21 +110,21 @@ export default function ServiceWarrantyClaimsView() {
             <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
               {claims.map((row, idx) => (
                 <tr key={row.claimId || idx} className="hover:bg-blue-50/40 transition-colors">
-                  <td className="py-3 px-3 font-mono font-bold text-blue-600">{row.claimId || `CLM-${idx+100}`}</td>
-                  <td className="py-3 px-3 font-mono text-gray-600">{row.claimDate || row.date || 'N/A'}</td>
-                  <td className="py-3 px-3 font-bold text-gray-900">{row.claimType || 'BMW Extended Warranty'}</td>
-                  <td className="py-3 px-3 font-mono text-gray-700 font-bold">{row.contractType || 'A7CG'}</td>
-                  <td className="py-3 px-3 font-semibold text-gray-800">{row.description || 'Component replacement'}</td>
+                  <td className="py-3 px-3 font-mono font-bold text-blue-600">{formatDisplayVal(row.claimId)}</td>
+                  <td className="py-3 px-3 font-mono text-gray-600">{formatDisplayVal(row.claimDate || row.date)}</td>
+                  <td className="py-3 px-3 font-bold text-gray-900">{formatDisplayVal(row.claimType)}</td>
+                  <td className="py-3 px-3 font-mono text-gray-700 font-bold">{formatDisplayVal(row.contractType)}</td>
+                  <td className="py-3 px-3 font-semibold text-gray-800">{formatDisplayVal(row.description)}</td>
                   <td className="py-3 px-3">
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                       row.status === 'APPROVED' || row.status === 'PAID'
                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                         : 'bg-amber-100 text-amber-800 border border-amber-300'
                     }`}>
-                      {row.status || 'APPROVED'}
+                      {formatDisplayVal(row.status)}
                     </span>
                   </td>
-                  <td className="py-3 px-3 text-right font-black text-gray-900">{row.approvedAmount || row.amount || 'AED 0'}</td>
+                  <td className="py-3 px-3 text-right font-black text-gray-900">{formatDisplayVal(row.approvedAmount || row.amount)}</td>
                 </tr>
               ))}
             </tbody>

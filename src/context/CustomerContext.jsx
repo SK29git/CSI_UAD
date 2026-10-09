@@ -174,15 +174,15 @@ export function CustomerProvider({ children }) {
   const [openComplaintsCount, setOpenComplaintsCount] = useState(3);
 
   // Vehicle summary state from API
-  const [vehicles, setVehicles] = useState(DEMO_VEHICLES);
-  const [selectedVin, setSelectedVin] = useState("WBA31HC04SFT82888");
-  const [vehicleDetails, setVehicleDetails] = useState(DEMO_VEHICLES[0]);
+  const [vehicles, setVehicles] = useState([]);
+  const [selectedVin, setSelectedVin] = useState("");
+  const [vehicleDetails, setVehicleDetails] = useState(null);
   const [vehiclesLoading, setVehiclesLoading] = useState(false);
 
   // Extra customer detail state
-  const [insurance, setInsurance] = useState(DEMO_INSURANCE);
-  const [finance, setFinance] = useState(DEMO_FINANCE);
-  const [tradeInHistory, setTradeInHistory] = useState(DEMO_TRADE_IN);
+  const [insurance, setInsurance] = useState([]);
+  const [finance, setFinance] = useState([]);
+  const [tradeInHistory, setTradeInHistory] = useState([]);
   const [riskOverview, setRiskOverview] = useState(null);
   const [salesSummary, setSalesSummary] = useState(null);
   const [verificationStatus, setVerificationStatus] = useState(null);
@@ -232,6 +232,8 @@ export function CustomerProvider({ children }) {
           if (cachedProfile && cachedProfile.customerNumber) {
             setCustomer(cachedProfile);
             fetchOpenComplaintsCount(cachedProfile.keyloopGroup || 'BMW', cachedProfile.customerNumber);
+            fetchVehiclesByCustomer(cachedProfile.keyloopGroup || 'BMW', cachedProfile.customerNumber);
+            fetchCustomerExtraDetails(cachedProfile.keyloopGroup || 'BMW', cachedProfile.customerNumber);
             return;
           }
         } catch (e) {
@@ -255,31 +257,48 @@ export function CustomerProvider({ children }) {
       const listUrl = `/api/v1/vehicles?group=${g}&customerNumber=${c}`;
       const res = await apiFetch(listUrl);
       let list = [];
-      if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
-        list = res.data;
-      } else {
-        list = DEMO_VEHICLES;
+      if (res && res.ok && res.data) {
+        if (Array.isArray(res.data)) {
+          list = res.data;
+        } else if (Array.isArray(res.data.vehicles)) {
+          list = res.data.vehicles;
+        } else if (Array.isArray(res.data.data)) {
+          list = res.data.data;
+        } else if (typeof res.data === 'object' && (res.data.vin || res.data.chassisNumber)) {
+          list = [res.data];
+        }
       }
-      setVehicles(list);
       
-      const targetVin = list[0]?.vin;
-      if (targetVin) {
-        setSelectedVin(targetVin);
-        await fetchSingleVehicleDetails(g, targetVin, list[0]);
+      if (list.length > 0) {
+        setVehicles(list);
+        const targetVin = list[0]?.vin || list[0]?.chassisNumber;
+        if (targetVin) {
+          setSelectedVin(targetVin);
+          await fetchSingleVehicleDetails(g, targetVin, list[0]);
+        } else {
+          setSelectedVin("");
+          setVehicleDetails(null);
+        }
       } else {
+        setVehicles([]);
+        setSelectedVin("");
         setVehicleDetails(null);
       }
     } catch (err) {
-      console.warn("Error fetching vehicles list, using fallback:", err);
-      setVehicles(DEMO_VEHICLES);
-      setSelectedVin(DEMO_VEHICLES[0].vin);
-      setVehicleDetails(DEMO_VEHICLES[0]);
+      console.warn("Error fetching vehicles list:", err);
+      setVehicles([]);
+      setSelectedVin("");
+      setVehicleDetails(null);
     } finally {
       setVehiclesLoading(false);
     }
   };
 
   const fetchSingleVehicleDetails = async (group, vin, fallbackObj = null) => {
+    if (!vin) {
+      setVehicleDetails(null);
+      return;
+    }
     try {
       const g = group || customer?.keyloopGroup || 'BMW';
       const singleUrl = `/api/v1/vehicles/${g}/${vin}`;
@@ -289,9 +308,11 @@ export function CustomerProvider({ children }) {
         return;
       }
       if (fallbackObj) setVehicleDetails(fallbackObj);
+      else setVehicleDetails(null);
     } catch (err) {
       console.warn("Error fetching single vehicle details:", err);
       if (fallbackObj) setVehicleDetails(fallbackObj);
+      else setVehicleDetails(null);
     }
   };
 
@@ -389,24 +410,32 @@ export function CustomerProvider({ children }) {
       const res = await apiFetch(profileUrl);
 
       if (res && res.ok && res.data && typeof res.data === 'object') {
-        setCustomer(res.data);
-        localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(res.data));
+        const prof = res.data;
+        setCustomer(prof);
+        localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(prof));
         fetchOpenComplaintsCount(group, custNo);
-        fetchVehiclesByCustomer(group, custNo);
+
+        if (Array.isArray(prof.vehicles) && prof.vehicles.length > 0) {
+          setVehicles(prof.vehicles);
+          const vin = prof.vehicles[0].vin || prof.vehicles[0].chassisNumber;
+          setSelectedVin(vin || "");
+          fetchSingleVehicleDetails(group, vin, prof.vehicles[0]);
+        } else if (prof.vin) {
+          const vObj = { vin: prof.vin, brand: prof.keyloopGroup || group, model: prof.model || prof.description || '' };
+          setVehicles([vObj]);
+          setSelectedVin(prof.vin);
+          fetchSingleVehicleDetails(group, prof.vin, vObj);
+        } else {
+          fetchVehiclesByCustomer(group, custNo);
+        }
+
         fetchCustomerExtraDetails(group, custNo);
         return;
       }
       throw new Error(`Profile fetch status: ${res ? res.status : 'failed'}`);
     } catch (err) {
-      console.warn("Profile API fetch error, fallback to demo profile data:", err.message);
+      console.warn("Profile API fetch error:", err.message);
       setError(err.message);
-      const fallbackProfile = {
-        ...PROFILE_DEMO_DATA,
-        customerNumber: custNo || PROFILE_DEMO_DATA.customerNumber,
-        keyloopGroup: group || PROFILE_DEMO_DATA.keyloopGroup
-      };
-      setCustomer(fallbackProfile);
-      localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(fallbackProfile));
       fetchOpenComplaintsCount(group, custNo);
       fetchVehiclesByCustomer(group, custNo);
       fetchCustomerExtraDetails(group, custNo);

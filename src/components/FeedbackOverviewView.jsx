@@ -47,7 +47,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
       if (scoreRes && scoreRes.ok && scoreRes.data) {
         setCsiScore(scoreRes.data);
       } else {
-        setCsiScore({ csiScore: 4.2, totalResponses: 8, maxScore: 5 });
+        setCsiScore(null);
       }
 
       // 2. CSI Responses: GET /api/v1/customers/{group}/{customerNumber}/csi-responses
@@ -55,10 +55,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
       if (respRes && respRes.ok && Array.isArray(respRes.data)) {
         setCsiResponses(respRes.data);
       } else {
-        setCsiResponses([
-          { surveyId: "CSI-101", date: "2026-09-20", score: "5/5", comments: "Great experience" },
-          { surveyId: "CSI-102", date: "2026-09-18", score: "4/5", comments: "Service advisor was helpful" }
-        ]);
+        setCsiResponses([]);
       }
 
       // 3. Recent Feedback: GET /api/v1/customers/{group}/{customerNumber}/feedback
@@ -66,11 +63,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
       if (feedbackRes && feedbackRes.ok && Array.isArray(feedbackRes.data) && feedbackRes.data.length > 0) {
         setRecentFeedback(feedbackRes.data);
       } else {
-        setRecentFeedback([
-          { type: 'CSI', ref: 'JOB-784512', score: '4 / 5', isGood: true, comments: 'Service advisor was helpful.', submittedDate: '2026-09-20', channel: 'SMS', status: 'Completed' },
-          { type: 'NPS', ref: 'NPS-10234', score: '9 / 10', isGood: true, comments: 'Very satisfied with the service experience.', submittedDate: '2026-09-18', channel: 'WhatsApp', status: 'Completed' },
-          { type: 'CSI', ref: 'JOB-784498', score: '2 / 5', isGood: false, comments: 'Issue not resolved in first visit.', submittedDate: '2026-09-10', channel: 'SMS', status: 'Completed' }
-        ]);
+        setRecentFeedback([]);
       }
 
       // 4. Lost Sales Reasons: GET /api/v1/lost-sales/reasons?group={group}&branch={branchCode}
@@ -78,12 +71,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
       if (reasonsRes && reasonsRes.ok && Array.isArray(reasonsRes.data) && reasonsRes.data.length > 0) {
         setLostSalesReasons(reasonsRes.data);
       } else {
-        setLostSalesReasons([
-          { code: "PRICE", description: "Competitor lower price offer", percentage: "42%" },
-          { code: "STOCK", description: "Model color / stock not available", percentage: "25%" },
-          { code: "FINANCE", description: "Loan terms rejection", percentage: "18%" },
-          { code: "OTHER", description: "Other personal reasons", percentage: "15%" }
-        ]);
+        setLostSalesReasons([]);
       }
 
       // 5. Lost Sales Details: GET /api/v1/lost-sales?group={group}&customerNumber={customerNumber}
@@ -91,14 +79,15 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
       if (lostDetailsRes && lostDetailsRes.ok && Array.isArray(lostDetailsRes.data) && lostDetailsRes.data.length > 0) {
         setLostSalesDetails(lostDetailsRes.data);
       } else {
-        setLostSalesDetails([
-          { enquiryNumber: "ENQ-9012", model: "BMW X5 xDrive40i", date: "2026-08-15", reason: "Competitor lower price offer", status: "LOST" },
-          { enquiryNumber: "ENQ-8841", model: "BMW 330i Sedan", date: "2026-06-10", reason: "Model color / stock not available", status: "LOST" }
-        ]);
+        setLostSalesDetails([]);
       }
     } catch (err) {
       console.warn("Failed to fetch feedback endpoints:", err);
-      setCsiScore({ csiScore: 4.2, totalResponses: 8, maxScore: 5 });
+      setCsiScore(null);
+      setCsiResponses([]);
+      setRecentFeedback([]);
+      setLostSalesReasons([]);
+      setLostSalesDetails([]);
     } finally {
       setLoading(false);
     }
@@ -129,33 +118,10 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
 
       if (res && res.ok && res.data) {
         setRecentFeedback(prev => [res.data, ...prev]);
-      } else {
-        const fallbackObj = {
-          type,
-          ref: surveyId,
-          score: '5 / 5',
-          isGood: true,
-          comments,
-          submittedDate: payload.submittedDate,
-          channel: 'Desktop Form',
-          status: 'Completed'
-        };
-        setRecentFeedback(prev => [fallbackObj, ...prev]);
       }
       setShowSubmitModal(false);
     } catch (err) {
       console.warn("Submit feedback error:", err);
-      const fallbackObj = {
-        type,
-        ref: surveyId,
-        score: '5 / 5',
-        isGood: true,
-        comments,
-        submittedDate: payload.submittedDate,
-        channel: 'Desktop Form',
-        status: 'Completed'
-      };
-      setRecentFeedback(prev => [fallbackObj, ...prev]);
       setShowSubmitModal(false);
     } finally {
       setSubmitting(false);

@@ -42,7 +42,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
   const customerSince = getFormattedDate(customer.customerSince);
   const locationStr = getFormattedLocation();
   const branchName = getBranchName();
-  const customerId = customer.customerNumber || customer.id || 'CUS-94245';
+  const customerId = customer.customerNumber || customer.id || '';
 
   const hasRiskData = Boolean(
     riskOverview &&
@@ -119,7 +119,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
   return (
     <div className="w-full lg:w-[310px] xl:w-[330px] flex-shrink-0 flex flex-col gap-4 transition-all duration-300">
       {/* 1. Profile Overview Card */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 relative">
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 relative">
         {/* Collapse Toggle Button */}
         {onToggleCollapse && (
           <button
@@ -243,7 +243,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
       </div>
 
       {/* 2. Customer Key Meta Data Table */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-xs">
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 text-xs">
         <div className="grid grid-cols-2 gap-y-3 gap-x-2">
           <div>
             <span className="text-gray-400 block text-[11px]">Customer Since</span>
@@ -298,7 +298,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
 
       {/* 3. Verification Status Card (Rendered strictly from GET /api/v1/customers/{group}/{customerNumber}/verification) */}
       {hasVerificationData && (
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-xs">
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 text-xs">
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
             <span className="font-bold text-gray-800 flex items-center gap-1.5">
               Verification Status
@@ -341,7 +341,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
 
       {/* 4. Customer Risk Overview Card (Rendered strictly from GET /api/v1/customers/{group}/{customerNumber}/risk-overview API payload) */}
       {hasRiskData && (
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-xs">
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 text-xs">
           <div className="flex items-center justify-between pb-2 mb-3 border-b border-gray-100">
             <span className="font-bold text-gray-900 text-sm">Customer Risk Overview</span>
             <FaChevronRight className="text-gray-400 text-xs cursor-pointer hover:text-gray-600" />

@@ -7,70 +7,48 @@ import {
   FaSpinner, 
   FaRedo, 
   FaWrench,
-  FaCalendarAlt
+  FaCalendarAlt,
+  FaInfoCircle
 } from 'react-icons/fa';
 
 export default function ServiceHistoryView() {
   const { customer, selectedVin, vehicleDetails, vehicles } = useCustomer();
   const group = customer?.keyloopGroup || "BMW";
-  const customerNumber = customer?.customerNumber || "80496";
-  const vin = selectedVin || vehicleDetails?.vin || (vehicles && vehicles[0]?.vin) || "WBA31HC04SFT82888";
+  const customerNumber = customer?.customerNumber || customer?.id || "";
+  const vin = selectedVin || vehicleDetails?.vin || (vehicles && vehicles[0]?.vin) || "";
 
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const formatDisplayVal = (val, fallback = 'N/A') => {
+    if (val === null || val === undefined || val === '') return fallback;
+    if (typeof val === 'object') {
+      if (val.name) return val.name;
+      if (val.description) return val.description;
+      return JSON.stringify(val);
+    }
+    return String(val);
+  };
+
   const fetchServiceHistory = async () => {
+    if (!vin) {
+      setHistory([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    setHistory([]);
     try {
       const apiUrl = `/api/v1/vehicles/${group}/${vin}/service-history?from=2025-01-01&to=2026-12-31`;
       const res = await apiFetch(apiUrl);
-      if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.ok && Array.isArray(res.data)) {
         setHistory(res.data);
       } else {
-        // Fallback matching API collection schema
-        setHistory([
-          {
-            date: "2026-01-12",
-            mileageKm: 28500,
-            serviceType: "30K Interval Service + Oil Change",
-            branch: "Sheikh Zayed Road Branch",
-            advisor: "Omar Hassan",
-            amount: "AED 1,250",
-            wipNumber: "WIP-55412"
-          },
-          {
-            date: "2025-10-14",
-            mileageKm: 18300,
-            serviceType: "20K Interval Service + Air Filter",
-            branch: "Sheikh Zayed Road Branch",
-            advisor: "Omar Hassan",
-            amount: "AED 1,150",
-            wipNumber: "WIP-49810"
-          },
-          {
-            date: "2025-04-20",
-            mileageKm: 8500,
-            serviceType: "5K Initial Running Check",
-            branch: "Sheikh Zayed Road Branch",
-            advisor: "Omar Hassan",
-            amount: "AED 950",
-            wipNumber: "WIP-41002"
-          }
-        ]);
+        setHistory([]);
       }
     } catch (err) {
       console.warn("Failed to fetch vehicle service history:", err);
-      setHistory([
-        {
-          date: "2026-01-12",
-          mileageKm: 28500,
-          serviceType: "30K Interval Service + Oil Change",
-          branch: "Sheikh Zayed Road Branch",
-          advisor: "Omar Hassan",
-          amount: "AED 1,250",
-          wipNumber: "WIP-55412"
-        }
-      ]);
+      setHistory([]);
     } finally {
       setLoading(false);
     }
@@ -92,7 +70,7 @@ export default function ServiceHistoryView() {
           <div>
             <h2 className="text-base font-bold text-gray-900 leading-tight">Vehicle Workshop Service History</h2>
             <span className="text-[10px] text-gray-400 font-mono">
-              Keyloop Group: {group} | Customer #{customerNumber} | VIN: {vin}
+              Keyloop Group: {group} {customerNumber ? `| Customer #${customerNumber}` : ''} {vin ? `| VIN: ${vin}` : ''}
             </span>
           </div>
         </div>
@@ -113,12 +91,13 @@ export default function ServiceHistoryView() {
           <span className="text-xs font-medium">Loading workshop service history...</span>
         </div>
       ) : history.length === 0 ? (
-        <div className="py-10 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-          <p className="font-semibold text-xs text-gray-700">No Service History Records Found</p>
-          <p className="text-[11px] text-gray-400">There are no historical workshop invoices for this vehicle.</p>
+        <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-1">
+          <FaInfoCircle className="mx-auto text-xl text-gray-300 mb-1" />
+          <p className="font-bold text-gray-700 text-xs">No Service History Records Found</p>
+          <p className="text-[11px] text-gray-400">There are no historical workshop invoices returned from the API for this vehicle.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto border border-gray-100 rounded-xl">
           <table className="w-full text-left">
             <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[9px] border-b border-gray-100">
               <tr>
@@ -137,22 +116,22 @@ export default function ServiceHistoryView() {
                   <td className="py-3 px-3 font-semibold text-gray-900 font-mono">
                     <div className="flex items-center gap-1.5">
                       <FaCalendarAlt className="text-gray-400 text-[10px]" />
-                      <span>{row.date || 'N/A'}</span>
+                      <span>{formatDisplayVal(row.date)}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-3 font-mono font-bold text-blue-600">{row.wipNumber || `WIP-${idx+100}`}</td>
+                  <td className="py-3 px-3 font-mono font-bold text-blue-600">{formatDisplayVal(row.wipNumber)}</td>
                   <td className="py-3 px-3 font-bold text-gray-900">
-                    {typeof row.mileageKm === 'number' ? `${row.mileageKm.toLocaleString()} KM` : (row.mileage || 'N/A')}
+                    {typeof row.mileageKm === 'number' ? `${row.mileageKm.toLocaleString()} KM` : formatDisplayVal(row.mileage)}
                   </td>
                   <td className="py-3 px-3 font-semibold text-gray-800">
                     <div className="flex items-center gap-1.5">
                       <FaWrench className="text-gray-400 text-[10px]" />
-                      <span>{row.serviceType || row.description || 'Routine Service'}</span>
+                      <span>{formatDisplayVal(row.serviceType || row.description)}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-3 text-gray-600">{row.branch || 'Sheikh Zayed Road'}</td>
-                  <td className="py-3 px-3 text-gray-800 font-medium">{row.advisor || 'Omar Hassan'}</td>
-                  <td className="py-3 px-3 text-right font-black text-gray-900">{row.amount || 'AED 1,250'}</td>
+                  <td className="py-3 px-3 text-gray-600">{formatDisplayVal(row.branch)}</td>
+                  <td className="py-3 px-3 text-gray-800 font-medium">{formatDisplayVal(row.advisor)}</td>
+                  <td className="py-3 px-3 text-right font-black text-gray-900">{formatDisplayVal(row.amount)}</td>
                 </tr>
               ))}
             </tbody>
