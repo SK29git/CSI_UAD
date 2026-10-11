@@ -14,7 +14,8 @@ import {
   FaCar,
   FaExternalLinkAlt,
   FaChevronRight,
-  FaChevronLeft
+  FaChevronLeft,
+  FaUser
 } from 'react-icons/fa';
 
 export default function ServiceCustomerVehicleCard({ isCollapsed = false, onToggleCollapse }) {
@@ -57,34 +58,33 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
     return (
       <div 
         onClick={onToggleCollapse}
-        className="w-14 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-300 p-2 flex flex-col items-center gap-4 cursor-pointer hover:border-blue-500 transition-all duration-300 group py-4"
+        className="w-14 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-300 p-2 flex flex-col items-center gap-3 cursor-pointer hover:border-blue-500 transition-all duration-300 group py-4 select-none min-h-[300px]"
         title="Click to expand Customer & Vehicle Details"
       >
         <button
           onClick={(e) => { e.stopPropagation(); onToggleCollapse && onToggleCollapse(); }}
           className="w-9 h-9 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center transition-colors shadow-2xs"
-          title="Expand Left Panel"
+          title="Expand Customer & Vehicle Details"
         >
           <FaChevronRight className="text-sm" />
         </button>
 
-        <div className="w-full h-[1px] bg-gray-200 my-1" />
+        <div className="w-7 h-[1px] bg-gray-200 my-1" />
 
-        <div className="w-8 h-8 rounded-lg bg-gray-900 text-white font-bold flex items-center justify-center text-[10px] shadow-xs uppercase">
-          {currentVehicle?.brand || 'BMW'}
+        {/* Customer Initial or Brand Avatar */}
+        <div 
+          className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shadow-xs"
+          title={customerName ? `Customer: ${customerName}` : 'Customer & Vehicle'}
+        >
+          {customerName && customerName !== 'Customer' ? customerName.charAt(0).toUpperCase() : <FaUser className="text-xs text-slate-500" />}
         </div>
 
-        {hasVerificationApi && (
-          <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center" title="Verified Customer">
-            <FaCheckCircle className="text-xs" />
-          </div>
-        )}
-
-        {hasTradeInApi && (
-          <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center" title="Trade-in Data Available">
-            <FaCar className="text-xs" />
-          </div>
-        )}
+        {/* Vertical Panel Title */}
+        <div className="flex-1 flex items-center justify-center py-6 select-none">
+          <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest [writing-mode:vertical-lr] rotate-180 group-hover:text-blue-600 transition-colors">
+            Customer & Vehicle
+          </span>
+        </div>
       </div>
     );
   }
@@ -174,28 +174,6 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
             </div>
           </div>
 
-          {/* Action Icon Row */}
-          <div className="flex items-center justify-between pt-3 border-t border-gray-200">
-            <button className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors">
-              <FaPhoneAlt className="text-[11px]" />
-            </button>
-            <button className="w-8 h-8 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors">
-              <FaWhatsapp className="text-xs" />
-            </button>
-            <button className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors">
-              <FaEnvelope className="text-[11px]" />
-            </button>
-            <button className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors">
-              <FaCommentAlt className="text-[11px]" />
-            </button>
-            <button className="w-8 h-8 rounded-full bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors">
-              <FaComments className="text-[11px]" />
-            </button>
-            <button className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors">
-              <FaEllipsisH className="text-[11px]" />
-            </button>
-          </div>
-
           {/* Verification Footer (Only rendered when verification API returns data) */}
           {hasVerificationApi && (
             <div className="pt-3 border-t border-gray-200 text-[11px] space-y-1.5">
@@ -237,7 +215,7 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
 
             <div>
               <span className="text-gray-500 block text-[11px] font-semibold">Group / Brand</span>
-              <span className="font-extrabold text-gray-900">{customer.keyloopGroup || 'BMW'}</span>
+              <span className="font-extrabold text-gray-900">{customer.keyloopGroup || ""}</span>
             </div>
             <div>
               <span className="text-gray-500 block text-[11px] font-semibold">Last Updated</span>

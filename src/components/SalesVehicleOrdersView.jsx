@@ -17,7 +17,7 @@ import {
 
 export default function SalesVehicleOrdersView() {
   const { customer } = useCustomer();
-  const group = customer?.keyloopGroup || "BMW";
+  const group = customer?.keyloopGroup || "";
   const customerNumber = customer?.customerNumber || "";
 
   const [orders, setOrders] = useState([]);
@@ -254,17 +254,17 @@ export default function SalesVehicleOrdersView() {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto border border-gray-100 rounded-xl">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[9px] border-b border-gray-100">
-              <tr>
-                <th className="py-2.5 px-3">Enquiry #</th>
-                <th className="py-2.5 px-3">Order Date</th>
-                <th className="py-2.5 px-3">Vehicle Model</th>
-                <th className="py-2.5 px-3">Production Stage</th>
-                <th className="py-2.5 px-3">Shipment Status</th>
-                <th className="py-2.5 px-3">Status</th>
-                <th className="py-2.5 px-3 text-right">Actions</th>
+        <div className="border border-gray-200 rounded-xl overflow-x-auto overflow-y-auto max-h-[460px] shadow-2xs relative bg-white">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-slate-100 text-gray-700 font-extrabold uppercase text-[9px] sticky top-0 z-10 shadow-2xs">
+              <tr className="border-b border-gray-200">
+                <th className="py-3 px-3 bg-slate-100">Enquiry #</th>
+                <th className="py-3 px-3 bg-slate-100">Order Date</th>
+                <th className="py-3 px-3 bg-slate-100">Vehicle Model</th>
+                <th className="py-3 px-3 bg-slate-100">Production Stage</th>
+                <th className="py-3 px-3 bg-slate-100">Shipment Status</th>
+                <th className="py-3 px-3 bg-slate-100">Status</th>
+                <th className="py-3 px-3 text-right bg-slate-100">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">

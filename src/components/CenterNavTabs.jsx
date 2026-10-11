@@ -77,7 +77,8 @@ export default function CenterNavTabs({
     { id: 'Create Complaint', label: 'Create Complaint' },
     { id: 'Open Complaints', label: 'Open Complaints', count: countVal },
     { id: 'Recovery Actions', label: 'Recovery Actions' },
-    { id: 'Reports', label: 'Reports' },
+    { id: 'Assign Complaint', label: 'Assign Complaint' },
+    { id: 'Resolve Complaint', label: 'Resolve Complaint' },
   ];
 
   const serviceSubTabs = [
@@ -95,12 +96,12 @@ export default function CenterNavTabs({
     { id: 'NPS', label: 'NPS' },
     { id: 'Lost Sales Analysis', label: 'Lost Sales Analysis' },
     { id: 'Open Bookings', label: 'Open Bookings' },
-    { id: 'Cancelled Bookings', label: 'Cancelled Bookings' },
   ];
 
   const salesSubTabs = [
     { id: 'Overview', label: 'Overview' },
     { id: 'New Lead', label: 'New Lead' },
+    { id: 'Enquiries', label: 'Enquiries' },
     { id: 'Test Drive', label: 'Test Drive' },
     { id: 'Vehicle Orders', label: 'Vehicle Orders' },
     { id: 'Customer Segments', label: 'Customer Segments' },

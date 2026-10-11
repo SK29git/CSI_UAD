@@ -8,9 +8,9 @@ import CreateComplaintView from '../components/CreateComplaintView';
 import OpenComplaintsView from '../components/OpenComplaintsView';
 import EscalationsView from '../components/EscalationsView';
 import SlaBreachesView from '../components/SlaBreachesView';
-import RootCauseView from '../components/RootCauseView';
 import RecoveryActionsView from '../components/RecoveryActionsView';
-import ReportsView from '../components/ReportsView';
+import AssignComplaintView from '../components/AssignComplaintView';
+import ResolveComplaintView from '../components/ResolveComplaintView';
 
 export default function ComplaintsDashboardPage() {
   const navigate = useNavigate();
@@ -41,8 +41,10 @@ export default function ComplaintsDashboardPage() {
         return <OpenComplaintsView />;
       case 'Recovery Actions':
         return <RecoveryActionsView />;
-      case 'Reports':
-        return <ReportsView />;
+      case 'Assign Complaint':
+        return <AssignComplaintView />;
+      case 'Resolve Complaint':
+        return <ResolveComplaintView />;
       default:
         return <OverviewView />;
     }

@@ -7,6 +7,7 @@ import SalesTestDriveView from '../components/SalesTestDriveView';
 import SalesVehicleOrdersView from '../components/SalesVehicleOrdersView';
 import SalesSegmentsView from '../components/SalesSegmentsView';
 import SalesAfterSalesView from '../components/SalesAfterSalesView';
+import SalesEnquiriesView from '../components/SalesEnquiriesView';
 import RightSidebar from '../components/RightSidebar';
 
 export default function SalesPage() {
@@ -36,6 +37,8 @@ export default function SalesPage() {
         return <SalesOverviewView />;
       case 'New Lead':
         return <SalesNewLeadView />;
+      case 'Enquiries':
+        return <SalesEnquiriesView />;
       case 'Test Drive':
         return <SalesTestDriveView />;
       case 'Vehicle Orders':

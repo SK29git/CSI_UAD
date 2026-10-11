@@ -14,7 +14,7 @@ import {
 export default function OverviewView() {
   const { customer, openComplaintsCount, setOpenComplaintsCount } = useCustomer();
   const customerNumber = customer?.customerNumber || customer?.id || "80496";
-  const group = customer?.keyloopGroup || "BMW";
+  const group = customer?.keyloopGroup || "";
 
   const [summaryData, setSummaryData] = useState({
     keyloopGroup: group,
@@ -29,7 +29,7 @@ export default function OverviewView() {
   const [complaintsLoading, setComplaintsLoading] = useState(true);
 
   const fetchSummary = async () => {
-    const g = customer?.keyloopGroup || 'BMW';
+    const g = customer?.keyloopGroup || "";
     const b = customer?.branchCode || '10';
     setSummaryLoading(true);
     try {
@@ -74,7 +74,7 @@ export default function OverviewView() {
     <div className="flex flex-col gap-4">
       
       {/* 1. Summary Cards (Driven strictly by GET /api/v1/complaints/summary) */}
-      <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100">
+      <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-200">
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
           <div className="flex items-center gap-2">
             <h3 className="font-bold text-gray-900 text-sm">Complaint Summary</h3>
@@ -141,7 +141,7 @@ export default function OverviewView() {
       </div>
 
       {/* 2. Customer Active Complaints Table (Driven strictly by GET /api/v1/complaints?status=open) */}
-      <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100">
+      <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-200">
         <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
           <h3 className="font-bold text-gray-900 text-sm">Customer Open Tickets</h3>
           <span className="text-xs text-gray-500 font-semibold">{openComplaints.length} Records</span>

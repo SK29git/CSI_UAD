@@ -20,7 +20,7 @@ import {
 export default function ServiceActivityRightSidebar({ isCollapsed = false, onToggleCollapse }) {
   const { customer } = useCustomer();
   const customerNumber = customer?.customerNumber || customer?.id || "80496";
-  const group = customer?.keyloopGroup || "BMW";
+  const group = customer?.keyloopGroup || "";
 
   const [activeTab, setActiveTab] = useState('All');
   const [activities, setActivities] = useState([]);

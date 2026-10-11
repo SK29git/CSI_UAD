@@ -3,7 +3,7 @@ import { FaFileDownload, FaChartLine, FaPercentage, FaMoneyBillWave, FaSmile } f
 
 export default function ReportsView() {
   return (
-    <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 flex flex-col gap-5">
+    <div className="bg-white rounded-xl p-5 sm:p-6 shadow-sm border border-gray-200 flex flex-col gap-5">
       <div className="flex items-center justify-between pb-3 border-b border-gray-100">
         <div>
           <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -12,13 +12,13 @@ export default function ReportsView() {
           <p className="text-xs text-gray-500">Monthly resolution rate, cost impact, and customer satisfaction metrics</p>
         </div>
 
-        <button className="bg-blue-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors shadow-xs flex items-center gap-1.5">
+        <button className="bg-blue-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer">
           <FaFileDownload className="text-xs" /> Export PDF / CSV
         </button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-xs">
+        <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-200 text-xs shadow-2xs">
           <span className="text-gray-400 block font-semibold text-[11px]">Monthly Total Volume</span>
           <span className="text-2xl font-black text-gray-900 mt-1 block">36 Cases</span>
           <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5 mt-1">
@@ -26,7 +26,7 @@ export default function ReportsView() {
           </span>
         </div>
 
-        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-xs">
+        <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-200 text-xs shadow-2xs">
           <span className="text-gray-400 block font-semibold text-[11px]">SLA Compliance Rate</span>
           <span className="text-2xl font-black text-emerald-600 mt-1 block">88%</span>
           <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5 mt-1">
@@ -34,13 +34,13 @@ export default function ReportsView() {
           </span>
         </div>
 
-        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-xs">
+        <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-200 text-xs shadow-2xs">
           <span className="text-gray-400 block font-semibold text-[11px]">First Contact Resolution</span>
           <span className="text-2xl font-black text-blue-600 mt-1 block">64%</span>
           <span className="text-[10px] text-gray-400 font-medium mt-1 block">Target: 70%</span>
         </div>
 
-        <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 text-xs">
+        <div className="bg-gray-50/70 p-4 rounded-xl border border-gray-200 text-xs shadow-2xs">
           <span className="text-gray-400 block font-semibold text-[11px]">Total Goodwill Paid</span>
           <span className="text-2xl font-black text-purple-700 mt-1 block">AED 12,450</span>
           <span className="text-[10px] text-gray-400 font-medium mt-1 block">Across 5 cases</span>
@@ -48,7 +48,7 @@ export default function ReportsView() {
       </div>
 
       {/* Visual Bar Chart */}
-      <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-100">
+      <div className="bg-gray-50/50 p-4 rounded-xl border border-gray-200">
         <h3 className="font-bold text-gray-800 text-xs mb-3">Complaints Trend & SLA Compliance (Jan - May 2026)</h3>
         
         <div className="h-44 flex items-end justify-between gap-4 pt-6 px-4">

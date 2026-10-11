@@ -17,8 +17,8 @@ export default function CreateComplaintView() {
   const { customer, getFormattedName, agentId } = useCustomer();
 
   const customerName = getFormattedName();
-  const initialCustomerNo = customer?.customerNumber || customer?.id || "80496";
-  const initialGroup = customer?.keyloopGroup || "BMW";
+  const initialCustomerNo = customer?.customerNumber || customer?.id || "";
+  const initialGroup = customer?.keyloopGroup || "";
 
   const [keyloopGroup, setKeyloopGroup] = useState(initialGroup);
   const [customerNumber, setCustomerNumber] = useState(initialCustomerNo);
@@ -35,8 +35,8 @@ export default function CreateComplaintView() {
 
   useEffect(() => {
     if (customer) {
-      setKeyloopGroup(customer.keyloopGroup || "BMW");
-      setCustomerNumber(customer.customerNumber || customer.id || "80496");
+      setKeyloopGroup(customer.keyloopGroup || "");
+      setCustomerNumber(customer.customerNumber || customer.id || "");
     }
   }, [customer]);
 
@@ -130,7 +130,7 @@ export default function CreateComplaintView() {
   };
 
   return (
-    <div className="flex flex-col gap-4 text-xs max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-4 text-xs w-full">
       
       {/* Toast Notification */}
       {successResponse && (
@@ -148,7 +148,7 @@ export default function CreateComplaintView() {
       )}
 
       {/* Main Complaint Form Card */}
-      <div className="bg-white rounded-xl p-5 shadow-xs border border-gray-100 flex flex-col gap-4">
+      <div className="bg-white rounded-xl p-5 sm:p-6 shadow-sm border border-gray-200 flex flex-col gap-4">
         <div className="flex items-center justify-between pb-3 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center font-bold">
@@ -175,7 +175,7 @@ export default function CreateComplaintView() {
               <select 
                 value={keyloopGroup}
                 onChange={(e) => setKeyloopGroup(e.target.value)}
-                className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
               >
                 <option value="BMW">BMW</option>
                 <option value="MINI">MINI</option>
@@ -194,7 +194,7 @@ export default function CreateComplaintView() {
                 onChange={(e) => setCustomerNumber(e.target.value)}
                 placeholder="e.g. 80496"
                 required
-                className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
           </div>
@@ -208,7 +208,7 @@ export default function CreateComplaintView() {
               <select 
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
               >
                 {categories.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
@@ -223,7 +223,7 @@ export default function CreateComplaintView() {
               <select 
                 value={branch}
                 onChange={(e) => setBranch(e.target.value)}
-                className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
               >
                 {branches.map(b => (
                   <option key={b.code} value={b.code}>{b.name}</option>
@@ -237,13 +237,13 @@ export default function CreateComplaintView() {
             <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
               <FaFlag className="text-gray-400" /> Priority Level <span className="text-rose-500">*</span>
             </label>
-            <div className="flex items-center gap-2 max-w-md">
+            <div className="flex items-center gap-2 max-w-xl">
               {['HIGH', 'MEDIUM', 'LOW', 'CRITICAL'].map((p) => (
                 <button
                   type="button"
                   key={p}
                   onClick={() => setPriority(p)}
-                  className={`flex-1 py-1.5 px-3 rounded-lg font-bold text-[11px] border transition-all cursor-pointer ${
+                  className={`flex-1 py-2 px-3 rounded-lg font-bold text-[11px] border transition-all cursor-pointer ${
                     priority === p
                       ? p === 'HIGH' || p === 'CRITICAL'
                         ? 'bg-rose-50 text-rose-700 border-rose-300 shadow-2xs'

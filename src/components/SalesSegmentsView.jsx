@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import { apiFetch } from '../utils/api';
 import { 
@@ -11,62 +11,144 @@ import {
   FaExchangeAlt,
   FaSpinner,
   FaRedo,
-  FaSyncAlt,
-  FaInfoCircle
+  FaSearch,
+  FaCar,
+  FaPhoneAlt,
+  FaEnvelope,
+  FaCalendarAlt
 } from 'react-icons/fa';
 
 export default function SalesSegmentsView() {
   const { customer } = useCustomer();
   const group = customer?.keyloopGroup || "BMW";
+  const customerNumber = customer?.customerNumber || "";
 
-  const [activeSegmentTab, setActiveSegmentTab] = useState('Upgrade');
-  const [segmentData, setSegmentData] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [segmentDataMap, setSegmentDataMap] = useState({});
+  const [activeSegmentTab, setActiveSegmentTab] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [searchFilter, setSearchFilter] = useState("");
 
   const formatDisplayVal = (val, fallback = 'N/A') => {
     if (val === null || val === undefined || val === '') return fallback;
     if (typeof val === 'object') {
       if (val.name) return val.name;
       if (val.description) return val.description;
-      return JSON.stringify(val);
+      return fallback;
     }
-    return String(val);
+    const str = String(val).trim();
+    if (str === '{}' || str === '[]' || str === '') return fallback;
+    return str;
   };
 
-  const fetchSegment = async (segmentType) => {
-    setActiveSegmentTab(segmentType);
+  // Segment definitions matching Postman Collection folder "5. Segments"
+  const segmentDefinitions = useMemo(() => [
+    {
+      id: 'upgrade',
+      label: 'Upgrade Prospects',
+      icon: FaExchangeAlt,
+      url: `/api/v1/segments/upgrade?group=${group}&minMileageKm=60000&minAgeYears=4`
+    },
+    {
+      id: 'vip',
+      label: 'VIP Customers',
+      icon: FaCrown,
+      url: `/api/v1/segments/vip-customers?group=${group}`
+    },
+    {
+      id: 'ev',
+      label: 'EV Customers',
+      icon: FaBolt,
+      url: `/api/v1/segments/ev-customers?group=${group}`
+    },
+    {
+      id: 'birthdays',
+      label: 'Birthdays',
+      icon: FaBirthdayCake,
+      url: `/api/v1/segments/birthdays?group=${group}&month=${new Date().getMonth() + 1}`
+    },
+    {
+      id: 'inactive',
+      label: 'Inactive Leads',
+      icon: FaUserClock,
+      url: `/api/v1/segments/inactive-leads?group=${group}&olderThanDays=30`
+    },
+    {
+      id: 'insurance',
+      label: 'Insurance Expiring',
+      icon: FaShieldAlt,
+      url: `/api/v1/segments/insurance-expiring?group=${group}&withinDays=30`
+    }
+  ], [group]);
+
+  const fetchAllSegments = async () => {
     setLoading(true);
-    setSegmentData([]);
+    setSegmentDataMap({});
 
     try {
-      let endpoint = `/api/v1/segments/upgrade?group=${group}&minMileageKm=60000&minAgeYears=4`;
-      if (segmentType === 'InsuranceExpiring') endpoint = `/api/v1/segments/insurance-expiring?group=${group}&withinDays=30`;
-      if (segmentType === 'Renewal') endpoint = `/api/v1/segments/insurance-expiring?group=${group}&withinDays=30`;
-      if (segmentType === 'Birthdays') {
-        const currentMonth = new Date().getMonth() + 1;
-        endpoint = `/api/v1/segments/birthdays?group=${group}&month=${currentMonth}`;
-      }
-      if (segmentType === 'EV') endpoint = `/api/v1/segments/ev-customers?group=${group}`;
-      if (segmentType === 'Inactive') endpoint = `/api/v1/segments/inactive-leads?group=${group}&olderThanDays=30`;
-      if (segmentType === 'VIP') endpoint = `/api/v1/segments/vip-customers?group=${group}`;
+      const results = await Promise.allSettled(
+        segmentDefinitions.map(async (def) => {
+          const res = await apiFetch(def.url);
+          let list = [];
+          if (res && res.ok && res.data) {
+            if (Array.isArray(res.data.members)) {
+              list = res.data.members;
+            } else if (Array.isArray(res.data)) {
+              list = res.data;
+            }
+          }
+          return { id: def.id, members: list };
+        })
+      );
 
-      const res = await apiFetch(endpoint);
-      if (res && res.ok && Array.isArray(res.data)) {
-        setSegmentData(res.data);
+      const dataMap = {};
+      results.forEach((r) => {
+        if (r.status === 'fulfilled' && r.value) {
+          dataMap[r.value.id] = r.value.members;
+        }
+      });
+
+      setSegmentDataMap(dataMap);
+
+      // Default to the first segment that actually returned data
+      const firstTabWithData = segmentDefinitions.find(
+        (def) => dataMap[def.id] && dataMap[def.id].length > 0
+      );
+
+      if (firstTabWithData) {
+        setActiveSegmentTab(firstTabWithData.id);
       } else {
-        setSegmentData([]);
+        setActiveSegmentTab(null);
       }
     } catch (err) {
-      console.warn("Failed to fetch segment data:", err);
-      setSegmentData([]);
+      console.warn("Failed to fetch customer segments:", err);
+      setSegmentDataMap({});
+      setActiveSegmentTab(null);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSegment('Upgrade');
+    fetchAllSegments();
   }, [group]);
+
+  // Only show tabs where the API returned records (removes empty tabs like Insurance Expiring)
+  const availableTabs = segmentDefinitions.filter(
+    (def) => segmentDataMap[def.id] && segmentDataMap[def.id].length > 0
+  );
+
+  const currentMembers = activeSegmentTab ? (segmentDataMap[activeSegmentTab] || []) : [];
+
+  const filteredMembers = currentMembers.filter((m) => {
+    if (!searchFilter.trim()) return true;
+    const q = searchFilter.toLowerCase();
+    const name = (m.customerName || '').toLowerCase();
+    const no = (m.customerNumber || m.leadId || '').toString().toLowerCase();
+    const veh = (m.vehicle || '').toLowerCase();
+    const reg = (m.registrationNumber || '').toLowerCase();
+    const mob = (m.mobile || '').toLowerCase();
+    return name.includes(q) || no.includes(q) || veh.includes(q) || reg.includes(q) || mob.includes(q);
+  });
 
   return (
     <div className="bg-white rounded-xl p-5 shadow-xs border border-gray-100 flex flex-col gap-4 text-xs">
@@ -79,143 +161,296 @@ export default function SalesSegmentsView() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-gray-900 leading-tight">Customer Segments & Targeting</h2>
+              <h2 className="text-base font-bold text-gray-900 leading-tight">Customer Segments</h2>
               <span className="bg-purple-50 text-purple-700 font-mono font-bold text-[10px] px-2 py-0.5 rounded border border-purple-200">
                 {group}
               </span>
             </div>
             <p className="text-[11px] text-gray-500 font-medium">
-              Dynamic customer segment extraction & opportunity targeting
+              Targeted customer cohorts from Keyloop API
             </p>
           </div>
         </div>
 
-        <button 
-          onClick={() => fetchSegment(activeSegmentTab)}
-          className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 cursor-pointer flex items-center gap-1 font-medium text-xs self-start sm:self-auto"
-          title="Refresh Segment"
-        >
-          <FaRedo className={`text-xs ${loading ? 'animate-spin' : ''}`} /> Refresh
-        </button>
-      </div>
-
-      {/* Segment Selector Tabs - Covering all 7 Postman Segment Endpoints */}
-      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-        <button
-          onClick={() => fetchSegment('Upgrade')}
-          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold whitespace-nowrap cursor-pointer transition-colors ${
-            activeSegmentTab === 'Upgrade' ? 'bg-purple-600 text-white shadow-2xs' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <FaExchangeAlt className="text-xs" /> Upgrade Prospects
-        </button>
-
-        <button
-          onClick={() => fetchSegment('InsuranceExpiring')}
-          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold whitespace-nowrap cursor-pointer transition-colors ${
-            activeSegmentTab === 'InsuranceExpiring' ? 'bg-purple-600 text-white shadow-2xs' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <FaShieldAlt className="text-xs" /> Insurance Expiring
-        </button>
-
-        <button
-          onClick={() => fetchSegment('Renewal')}
-          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold whitespace-nowrap cursor-pointer transition-colors ${
-            activeSegmentTab === 'Renewal' ? 'bg-purple-600 text-white shadow-2xs' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <FaSyncAlt className="text-xs" /> Push Renewals
-        </button>
-
-        <button
-          onClick={() => fetchSegment('Birthdays')}
-          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold whitespace-nowrap cursor-pointer transition-colors ${
-            activeSegmentTab === 'Birthdays' ? 'bg-purple-600 text-white shadow-2xs' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <FaBirthdayCake className="text-xs" /> Birthdays
-        </button>
-
-        <button
-          onClick={() => fetchSegment('EV')}
-          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold whitespace-nowrap cursor-pointer transition-colors ${
-            activeSegmentTab === 'EV' ? 'bg-purple-600 text-white shadow-2xs' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <FaBolt className="text-xs" /> EV Customers
-        </button>
-
-        <button
-          onClick={() => fetchSegment('Inactive')}
-          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold whitespace-nowrap cursor-pointer transition-colors ${
-            activeSegmentTab === 'Inactive' ? 'bg-purple-600 text-white shadow-2xs' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <FaUserClock className="text-xs" /> Inactive Leads
-        </button>
-
-        <button
-          onClick={() => fetchSegment('VIP')}
-          className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold whitespace-nowrap cursor-pointer transition-colors ${
-            activeSegmentTab === 'VIP' ? 'bg-purple-600 text-white shadow-2xs' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-          }`}
-        >
-          <FaCrown className="text-xs" /> VIP Customers
-        </button>
-      </div>
-
-      {/* Segment Data Table */}
-      {loading ? (
-        <div className="py-12 flex flex-col items-center justify-center text-gray-400 gap-2">
-          <FaSpinner className="animate-spin text-2xl text-purple-600" />
-          <span className="text-xs font-medium">Extracting customer segment data...</span>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={fetchAllSegments}
+            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 cursor-pointer flex items-center gap-1.5 font-medium text-xs transition-colors"
+            title="Refresh Segments"
+          >
+            <FaRedo className={`text-xs ${loading ? 'animate-spin' : ''}`} />
+            <span>Refresh</span>
+          </button>
         </div>
-      ) : segmentData.length === 0 ? (
+      </div>
+
+      {loading ? (
+        <div className="py-16 flex flex-col items-center justify-center text-gray-400 gap-2">
+          <FaSpinner className="animate-spin text-2xl text-purple-600" />
+          <span className="text-xs font-medium">Fetching customer segments from Keyloop...</span>
+        </div>
+      ) : availableTabs.length === 0 ? (
         <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-1">
-          <FaInfoCircle className="mx-auto text-xl text-gray-300 mb-1" />
-          <p className="font-bold text-gray-700 text-xs">No customer records returned for this segment.</p>
-          <p className="text-[11px] text-gray-400">There are currently no active records matching the selected segment criteria.</p>
+          <FaUsers className="mx-auto text-xl text-gray-400 mb-1" />
+          <p className="font-bold text-gray-700 text-xs">No active customer segments found for {group}.</p>
+          <p className="text-[11px] text-gray-400">There are no records returned from the segment endpoints for this brand.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto border border-gray-100 rounded-xl">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[9px] border-b border-gray-100">
-              <tr>
-                <th className="py-2.5 px-3">Cust #</th>
-                <th className="py-2.5 px-3">Customer Name</th>
-                <th className="py-2.5 px-3">Segment Detail / Vehicle</th>
-                <th className="py-2.5 px-3">Key Metric</th>
-                <th className="py-2.5 px-3">Targeting Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
-              {segmentData.map((row, idx) => {
-                const custNo = row.customerNumber || row.prospectNumber || row.id || `CUST-${idx+1}`;
-                const custName = row.fullName || row.name || row.customerName || 'Customer Record';
-                const detail = row.vehicle || row.description || row.model || row.policyNumber || row.lastEnquiry || 'Vehicle / Segment Info';
-                const keyMetric = row.mileageKm ? `${row.mileageKm.toLocaleString()} KM` : (row.expiryDate || row.dob || row.lastContact || row.tier || row.ageYears ? `${row.ageYears} Yrs` : 'Eligible');
-                const statusLabel = row.likelihood || row.status || row.targetingStatus || 'MATCHED';
+        <>
+          {/* Segment Selector Tabs & Search */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-2">
+            {/* Tabs (Only tabs with live data are rendered) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+              {availableTabs.map((tab) => {
+                const IconComponent = tab.icon;
+                const count = segmentDataMap[tab.id]?.length || 0;
+                const isActive = activeSegmentTab === tab.id;
 
                 return (
-                  <tr key={idx} className="hover:bg-purple-50/40 transition-colors">
-                    <td className="py-3 px-3 font-mono font-bold text-purple-700">{formatDisplayVal(custNo)}</td>
-                    <td className="py-3 px-3 font-bold text-gray-900">{formatDisplayVal(custName)}</td>
-                    <td className="py-3 px-3 text-gray-800">{formatDisplayVal(detail)}</td>
-                    <td className="py-3 px-3 font-semibold text-gray-900">{formatDisplayVal(keyMetric)}</td>
-                    <td className="py-3 px-3">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800 border border-purple-300 uppercase">
-                        {formatDisplayVal(statusLabel)}
-                      </span>
-                    </td>
-                  </tr>
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveSegmentTab(tab.id);
+                      setSearchFilter("");
+                    }}
+                    className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold whitespace-nowrap cursor-pointer transition-colors ${
+                      isActive 
+                        ? 'bg-purple-600 text-white shadow-2xs' 
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    <IconComponent className="text-xs" />
+                    <span>{tab.label}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                      isActive ? 'bg-white/30 text-white' : 'bg-purple-100 text-purple-800'
+                    }`}>
+                      {count}
+                    </span>
+                  </button>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </div>
 
+            {/* Search Filter */}
+            <div className="relative self-end sm:self-auto">
+              <FaSearch className="absolute left-2.5 top-2.5 text-gray-400 text-[10px]" />
+              <input
+                type="text"
+                value={searchFilter}
+                onChange={(e) => setSearchFilter(e.target.value)}
+                placeholder="Search name, vehicle, mobile..."
+                className="pl-7 pr-3 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs w-48 sm:w-56 focus:outline-none focus:border-purple-500"
+              />
+            </div>
+          </div>
+
+          {/* Table Container with Frozen Header (sticky top-0) and Internal Scroll */}
+          <div className="border border-gray-200 rounded-xl overflow-x-auto overflow-y-auto max-h-[460px] shadow-2xs relative bg-white">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-slate-100 text-gray-700 font-extrabold uppercase text-[9px] sticky top-0 z-10 shadow-2xs">
+                <tr className="border-b border-gray-200">
+                  <th className="py-3 px-3 bg-slate-100">Cust / Lead #</th>
+                  <th className="py-3 px-3 bg-slate-100">Customer Name</th>
+                  <th className="py-3 px-3 bg-slate-100">Contact Details</th>
+                  {activeSegmentTab === 'upgrade' && (
+                    <>
+                      <th className="py-3 px-3 bg-slate-100">Delivered Vehicle</th>
+                      <th className="py-3 px-3 bg-slate-100">Mileage</th>
+                      <th className="py-3 px-3 bg-slate-100">Next Service</th>
+                    </>
+                  )}
+                  {activeSegmentTab === 'vip' && (
+                    <>
+                      <th className="py-3 px-3 bg-slate-100">VIP Status</th>
+                      <th className="py-3 px-3 bg-slate-100">Contact Preference</th>
+                    </>
+                  )}
+                  {activeSegmentTab === 'ev' && (
+                    <>
+                      <th className="py-3 px-3 bg-slate-100">Electric Vehicle</th>
+                      <th className="py-3 px-3 bg-slate-100">Powertrain</th>
+                      <th className="py-3 px-3 bg-slate-100">Mileage</th>
+                    </>
+                  )}
+                  {activeSegmentTab === 'birthdays' && (
+                    <>
+                      <th className="py-3 px-3 bg-slate-100">Date of Birth</th>
+                      <th className="py-3 px-3 bg-slate-100">VIP Status</th>
+                      <th className="py-3 px-3 bg-slate-100">Contact Preference</th>
+                    </>
+                  )}
+                  {activeSegmentTab === 'inactive' && (
+                    <>
+                      <th className="py-3 px-3 bg-slate-100">Lead Source</th>
+                      <th className="py-3 px-3 bg-slate-100">Created Date</th>
+                    </>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
+                {filteredMembers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-gray-400">
+                      No members match the search criteria.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredMembers.map((row, idx) => {
+                    const custNo = row.customerNumber || row.leadId || `ID-${idx + 1}`;
+                    const custName = row.customerName || 'Customer Record';
+                    const mobile = row.mobile || '';
+                    const email = row.email || '';
+                    const isThisCustomer = customerNumber && String(custNo) === String(customerNumber);
+
+                    return (
+                      <tr 
+                        key={idx} 
+                        className={`transition-colors ${
+                          isThisCustomer ? 'bg-purple-50/80 font-bold' : 'hover:bg-purple-50/40'
+                        }`}
+                      >
+                        {/* Cust / Lead # */}
+                        <td className="py-3 px-3 font-mono font-bold text-purple-700 whitespace-nowrap">
+                          <span className="flex items-center gap-1">
+                            #{custNo}
+                            {isThisCustomer && (
+                              <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.2 rounded uppercase">
+                                Current
+                              </span>
+                            )}
+                          </span>
+                        </td>
+
+                        {/* Customer Name */}
+                        <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap max-w-[200px] truncate" title={custName}>
+                          {custName}
+                        </td>
+
+                        {/* Contact Details */}
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          <div className="flex flex-col gap-0.5 text-[10px]">
+                            {mobile && (
+                              <span className="font-mono text-gray-700 flex items-center gap-1">
+                                <FaPhoneAlt className="text-gray-400 text-[9px]" /> {mobile}
+                              </span>
+                            )}
+                            {email && (
+                              <span className="text-gray-500 flex items-center gap-1 truncate max-w-[180px]" title={email}>
+                                <FaEnvelope className="text-gray-400 text-[9px]" /> {email}
+                              </span>
+                            )}
+                            {!mobile && !email && (
+                              <span className="text-gray-400 italic">No contact details</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Segment-Specific Columns */}
+                        {activeSegmentTab === 'upgrade' && (
+                          <>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <span className="font-medium text-gray-800 flex items-center gap-1">
+                                <FaCar className="text-gray-400 text-[10px]" />
+                                {formatDisplayVal(row.vehicle, 'Vehicle on Record')}
+                              </span>
+                              {row.registrationNumber && (
+                                <span className="font-mono text-[10px] text-gray-500 block">
+                                  {row.registrationNumber}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                {typeof row.mileageKm === 'number' 
+                                  ? `${row.mileageKm.toLocaleString()} KM` 
+                                  : formatDisplayVal(row.mileageKm)}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap text-gray-600">
+                              {formatDisplayVal(row.nextServiceDate)}
+                            </td>
+                          </>
+                        )}
+
+                        {activeSegmentTab === 'vip' && (
+                          <>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold text-[10px] border border-amber-300">
+                                <FaCrown className="text-[9px]" /> VIP Member
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap text-gray-600">
+                              {formatDisplayVal(row.contactPreference, 'Any')}
+                            </td>
+                          </>
+                        )}
+
+                        {activeSegmentTab === 'ev' && (
+                          <>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <span className="font-medium text-gray-800 flex items-center gap-1">
+                                <FaCar className="text-gray-400 text-[10px]" />
+                                {formatDisplayVal(row.vehicle, 'Electric Vehicle')}
+                              </span>
+                              {row.vin && (
+                                <span className="font-mono text-[9px] text-gray-400 block truncate max-w-[140px]" title={row.vin}>
+                                  VIN: {row.vin}
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px] border border-emerald-300">
+                                <FaBolt className="text-[9px]" /> {formatDisplayVal(row.fuelType, 'Electric')}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap text-gray-700 font-mono">
+                              {typeof row.mileageKm === 'number' ? `${row.mileageKm.toLocaleString()} KM` : formatDisplayVal(row.mileageKm)}
+                            </td>
+                          </>
+                        )}
+
+                        {activeSegmentTab === 'birthdays' && (
+                          <>
+                            <td className="py-3 px-3 whitespace-nowrap font-medium text-gray-800">
+                              <span className="flex items-center gap-1">
+                                <FaCalendarAlt className="text-purple-400 text-[10px]" />
+                                {formatDisplayVal(row.dateOfBirth)}
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap">
+                              {row.vip ? (
+                                <span className="text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded text-[10px] font-bold">
+                                  VIP
+                                </span>
+                              ) : (
+                                <span className="text-gray-500 text-[10px]">Standard</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap text-gray-600">
+                              {formatDisplayVal(row.contactPreference, 'Phone / Email')}
+                            </td>
+                          </>
+                        )}
+
+                        {activeSegmentTab === 'inactive' && (
+                          <>
+                            <td className="py-3 px-3 whitespace-nowrap text-gray-700">
+                              {formatDisplayVal(row.source, 'Direct / Walk-in')}
+                            </td>
+                            <td className="py-3 px-3 whitespace-nowrap text-gray-600">
+                              {formatDisplayVal(row.createdAt ? row.createdAt.slice(0, 10) : null)}
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }

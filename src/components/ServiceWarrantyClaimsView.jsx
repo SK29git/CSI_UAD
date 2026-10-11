@@ -10,7 +10,7 @@ import {
 
 export default function ServiceWarrantyClaimsView() {
   const { customer, selectedVin, vehicleDetails, vehicles } = useCustomer();
-  const group = customer?.keyloopGroup || "BMW";
+  const group = customer?.keyloopGroup || "";
   const customerNumber = customer?.customerNumber || customer?.id || "";
   const vin = selectedVin || vehicleDetails?.vin || (vehicles && vehicles[0]?.vin) || "";
 

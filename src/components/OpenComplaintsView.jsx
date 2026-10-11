@@ -18,7 +18,7 @@ export default function OpenComplaintsView() {
   const customerName = getFormattedName();
   
   const customerNumber = customer?.customerNumber || customer?.id || "80496";
-  const group = customer?.keyloopGroup || "BMW";
+  const group = customer?.keyloopGroup || "";
 
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,82 +32,18 @@ export default function OpenComplaintsView() {
       const apiUrl = `/api/v1/complaints?group=${group}&customerNumber=${customerNumber}&status=open`;
       const res = await apiFetch(apiUrl);
 
-      if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
+      if (res && res.ok && Array.isArray(res.data)) {
         setComplaints(res.data);
         if (setOpenComplaintsCount) setOpenComplaintsCount(res.data.length);
       } else {
-        // Fallback matching exact API curl schema
-        const fallbackList = [
-          {
-            complaintId: "AGMC-3",
-            origin: "DESKTOP",
-            customerNumber: customerNumber,
-            category: "Delay in Parts Delivery",
-            priority: "MEDIUM",
-            openDate: "2026-09-28",
-            status: "OPEN",
-            slaDue: "2026-09-30"
-          },
-          {
-            complaintId: "AGMC-2",
-            origin: "DESKTOP",
-            customerNumber: customerNumber,
-            category: "Customer Handling Skills",
-            priority: "HIGH",
-            openDate: "2026-09-28",
-            status: "OPEN",
-            slaDue: "2026-09-29"
-          },
-          {
-            complaintId: "AGMC-1",
-            origin: "DESKTOP",
-            customerNumber: customerNumber,
-            category: "Customer Handling Skills",
-            priority: "HIGH",
-            openDate: "2026-09-27",
-            status: "OPEN",
-            slaDue: "2026-09-28"
-          }
-        ];
-        setComplaints(fallbackList);
-        if (setOpenComplaintsCount) setOpenComplaintsCount(fallbackList.length);
+        setComplaints([]);
+        if (setOpenComplaintsCount) setOpenComplaintsCount(0);
       }
     } catch (err) {
       console.warn("Failed to fetch open complaints:", err);
-      const fallbackList = [
-        {
-          complaintId: "AGMC-3",
-          origin: "DESKTOP",
-          customerNumber: customerNumber,
-          category: "Delay in Parts Delivery",
-          priority: "MEDIUM",
-          openDate: "2026-09-28",
-          status: "OPEN",
-          slaDue: "2026-09-30"
-        },
-        {
-          complaintId: "AGMC-2",
-          origin: "DESKTOP",
-          customerNumber: customerNumber,
-          category: "Customer Handling Skills",
-          priority: "HIGH",
-          openDate: "2026-09-28",
-          status: "OPEN",
-          slaDue: "2026-09-29"
-        },
-        {
-          complaintId: "AGMC-1",
-          origin: "DESKTOP",
-          customerNumber: customerNumber,
-          category: "Customer Handling Skills",
-          priority: "HIGH",
-          openDate: "2026-09-27",
-          status: "OPEN",
-          slaDue: "2026-09-28"
-        }
-      ];
-      setComplaints(fallbackList);
-      if (setOpenComplaintsCount) setOpenComplaintsCount(fallbackList.length);
+      setComplaints([]);
+      if (setOpenComplaintsCount) setOpenComplaintsCount(0);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -129,7 +65,7 @@ export default function OpenComplaintsView() {
   });
 
   return (
-    <div className="bg-white rounded-xl p-5 shadow-xs border border-gray-100 flex flex-col gap-4">
+    <div className="bg-white rounded-xl p-5 sm:p-6 shadow-sm border border-gray-200 flex flex-col gap-4">
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
         <div>

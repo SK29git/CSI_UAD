@@ -17,7 +17,7 @@ import {
 
 export default function SalesNewLeadView() {
   const { customer } = useCustomer();
-  const group = customer?.keyloopGroup || "BMW";
+  const group = customer?.keyloopGroup || "";
   const customerNumber = customer?.customerNumber || "";
   const vin = customer?.vin || (customer?.vehicles && customer.vehicles[0]?.vin) || "";
 
@@ -116,6 +116,7 @@ export default function SalesNewLeadView() {
   const [selectedComplaintRef, setSelectedComplaintRef] = useState("");
   const [complaintActionResult, setComplaintActionResult] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [actionSubTab, setActionSubTab] = useState('monitor'); // 'monitor' | 'ack' | 'satisfaction'
 
   const renderSafeVal = (val, fallback = 'N/A') => {
     if (val === null || val === undefined || val === '') return fallback;
@@ -134,7 +135,7 @@ export default function SalesNewLeadView() {
     }
     setLoadingComplaints(true);
     try {
-      const res = await apiFetch(`/api/v1/customers/${group}/${customerNumber}/complaints?limit=50`);
+      const res = await apiFetch(`/api/v1/complaints?group=${group}&customerNumber=${customerNumber}&status=all`);
       if (res && res.ok && Array.isArray(res.data)) {
         setCustomerComplaints(res.data);
       } else {
@@ -183,6 +184,8 @@ export default function SalesNewLeadView() {
         setComplaintToast({ ok: true, message: `Complaint Ticket created successfully with Reference #${newRef}` });
         setComplaintDescription("");
         fetchCustomerComplaints();
+        // Automatically fetch and show acknowledgement for the newly created complaint
+        handleTriggerComplaintAction('ack', newRef);
       } else {
         setComplaintToast({ ok: false, message: res?.statusText || "Failed to create complaint ticket" });
       }
@@ -198,6 +201,7 @@ export default function SalesNewLeadView() {
     if (!ref) return;
 
     setSelectedComplaintRef(ref);
+    setActionSubTab(actionType || 'monitor');
     setActionLoading(true);
     setComplaintActionResult(null);
 
@@ -562,114 +566,40 @@ export default function SalesNewLeadView() {
             </form>
           </div>
 
-          {/* Quick Operations & Actions Bar for Selected Complaint Reference */}
-          <div className="p-4 bg-gradient-to-r from-amber-50 via-orange-50/40 to-slate-50 rounded-xl border border-amber-200/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <span className="text-[10px] font-bold uppercase text-amber-700 tracking-wider">Complaint Actions & Operations</span>
-              <h3 className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
-                <span>Selected Complaint Ref:</span>
-                <span className="font-mono text-amber-800 bg-white px-2 py-0.5 rounded border border-amber-200 shadow-2xs">
-                  {selectedComplaintRef || searchComplaintRef || "None Selected"}
-                </span>
-              </h3>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <form onSubmit={handleLookupComplaintSubmit} className="flex items-center gap-1.5">
-                <div className="relative">
-                  <FaSearch className="absolute left-2.5 top-2.5 text-gray-400 text-[10px]" />
-                  <input
-                    type="text"
-                    value={searchComplaintRef}
-                    onChange={(e) => setSearchComplaintRef(e.target.value)}
-                    placeholder="Ref # (e.g. AGMC-1)..."
-                    className="pl-7 pr-2 py-1 bg-white border border-gray-200 rounded-lg text-xs w-36 focus:outline-none focus:border-amber-500 font-mono"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={!searchComplaintRef.trim() || actionLoading}
-                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-xs cursor-pointer flex items-center gap-1"
-                >
-                  {actionLoading ? <FaSpinner className="animate-spin text-xs" /> : 'Lookup'}
-                </button>
-              </form>
-            </div>
-          </div>
-
-          {/* Complaint Action Suite Buttons */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button
-              onClick={() => handleTriggerComplaintAction('ack')}
-              disabled={!selectedComplaintRef && !searchComplaintRef}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
-              title="GET /api/v1/complaints/{group}/{complaintReference}"
-            >
-              <FaBell className="text-xs" /> Send Acknowledgement
-            </button>
-
-            <button
-              onClick={() => handleTriggerComplaintAction('monitor')}
-              disabled={!selectedComplaintRef && !searchComplaintRef}
-              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
-              title="GET /api/v1/complaints/{group}/{complaintReference}"
-            >
-              <FaClock className="text-xs" /> Monitor Complaint Status
-            </button>
-
-            <button
-              onClick={() => handleTriggerComplaintAction('satisfaction')}
-              disabled={!selectedComplaintRef && !searchComplaintRef}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
-              title="GET /api/v1/complaints/{group}/{complaintReference}"
-            >
-              <FaStar className="text-xs" /> Trigger Satisfaction Form
-            </button>
-          </div>
-
-          {/* Action Result Details Box */}
-          {complaintActionResult && (
-            <div className={`p-4 rounded-xl text-xs space-y-2 animate-fade-in ${
-              complaintActionResult.ok 
-                ? 'bg-amber-50/80 border border-amber-200 text-amber-900' 
-                : 'bg-rose-50/80 border border-rose-200 text-rose-900'
-            }`}>
-              <div className="flex items-center justify-between pb-2 border-b border-amber-200/60">
-                <h4 className="font-extrabold text-sm flex items-center gap-2">
-                  <FaCheckCircle className={complaintActionResult.ok ? 'text-amber-600' : 'text-rose-600'} />
-                  Action '{complaintActionResult.action}' executed for Complaint #{complaintActionResult.ref}
-                </h4>
-                <span className="font-mono text-[10px] bg-white px-2 py-0.5 rounded border border-gray-200 font-bold">
-                  {complaintActionResult.ok ? 'Completed' : 'Response'}
-                </span>
-              </div>
-
-              {complaintActionResult.error ? (
-                <p className="text-xs font-medium text-rose-700">{complaintActionResult.error}</p>
-              ) : (
-                <details className="cursor-pointer text-[10px]">
-                  <summary className="font-bold text-gray-600 hover:text-gray-900">View Raw Response Data</summary>
-                  <pre className="mt-1 font-mono text-[10px] p-2.5 bg-gray-900 text-amber-400 rounded-lg overflow-x-auto max-h-48">
-                    {JSON.stringify(complaintActionResult.data, null, 2)}
-                  </pre>
-                </details>
-              )}
-            </div>
-          )}
-
           {/* Customer Active Complaints Table */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <h3 className="font-extrabold text-gray-900 text-xs flex items-center gap-1.5">
                 <FaExclamationTriangle className="text-amber-600" /> Customer Active Complaint Tickets ({customerComplaints.length})
               </h3>
-              <button 
-                onClick={fetchCustomerComplaints}
-                className="p-1 text-gray-500 hover:text-gray-800 cursor-pointer"
-                title="Refresh Complaints"
-              >
-                <FaRedo className={`text-xs ${loadingComplaints ? 'animate-spin' : ''}`} />
-              </button>
+              <div className="flex items-center gap-2">
+                <form onSubmit={handleLookupComplaintSubmit} className="flex items-center gap-1.5">
+                  <div className="relative">
+                    <FaSearch className="absolute left-2.5 top-2.5 text-gray-400 text-[10px]" />
+                    <input
+                      type="text"
+                      value={searchComplaintRef}
+                      onChange={(e) => setSearchComplaintRef(e.target.value)}
+                      placeholder="Ref # (e.g. AGMC-1)..."
+                      className="pl-7 pr-2 py-1 bg-white border border-gray-200 rounded-lg text-xs w-36 focus:outline-none focus:border-amber-500 font-mono"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={!searchComplaintRef.trim() || actionLoading}
+                    className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs cursor-pointer flex items-center gap-1"
+                  >
+                    {actionLoading ? <FaSpinner className="animate-spin text-xs" /> : 'Lookup'}
+                  </button>
+                </form>
+                <button 
+                  onClick={fetchCustomerComplaints}
+                  className="p-1 text-gray-500 hover:text-gray-800 cursor-pointer"
+                  title="Refresh Complaints"
+                >
+                  <FaRedo className={`text-xs ${loadingComplaints ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
 
             {loadingComplaints ? (
@@ -707,19 +637,36 @@ export default function SalesNewLeadView() {
                           <td className="py-3 px-3 font-mono font-bold text-amber-700">{renderSafeVal(refId)}</td>
                           <td className="py-3 px-3 font-bold text-gray-900">{renderSafeVal(item.category)}</td>
                           <td className="py-3 px-3 text-gray-800 max-w-xs truncate" title={item.description}>{renderSafeVal(item.description)}</td>
-                          <td className="py-3 px-3 font-mono text-gray-600">{renderSafeVal(item.createdDate || item.date)}</td>
+                          <td className="py-3 px-3 font-mono text-gray-600">{renderSafeVal(item.openDate || item.createdDate || item.date)}</td>
                           <td className="py-3 px-3">
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 uppercase">
                               {renderSafeVal(item.status || 'OPEN')}
                             </span>
                           </td>
-                          <td className="py-3 px-3 text-right">
-                            <button
-                              onClick={() => { setSelectedComplaintRef(refId); handleTriggerComplaintAction('monitor', refId); }}
-                              className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] font-bold cursor-pointer"
-                            >
-                              Inspect #{refId}
-                            </button>
+                          <td className="py-3 px-3 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => { setSelectedComplaintRef(refId); handleTriggerComplaintAction('monitor', refId); }}
+                                className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] font-bold cursor-pointer"
+                                title="Monitor Complaint Status"
+                              >
+                                Status
+                              </button>
+                              <button
+                                onClick={() => { setSelectedComplaintRef(refId); handleTriggerComplaintAction('ack', refId); }}
+                                className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold cursor-pointer"
+                                title="Customer Acknowledgement"
+                              >
+                                Ack
+                              </button>
+                              <button
+                                onClick={() => { setSelectedComplaintRef(refId); handleTriggerComplaintAction('satisfaction', refId); }}
+                                className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold cursor-pointer"
+                                title="Satisfaction & Resolution Survey"
+                              >
+                                Survey
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -729,6 +676,154 @@ export default function SalesNewLeadView() {
               </div>
             )}
           </div>
+
+          {/* Action Result Details Box (shown DOWN BELOW the table when a complaint is inspected or looked up) */}
+          {complaintActionResult && (
+            <div className={`p-4 rounded-xl text-xs space-y-3 animate-fade-in ${
+              complaintActionResult.ok 
+                ? 'bg-amber-50/70 border border-amber-200 text-amber-950' 
+                : 'bg-rose-50/80 border border-rose-200 text-rose-900'
+            }`}>
+              <div className="flex items-center justify-between pb-2 border-b border-amber-200/60">
+                <div className="flex items-center gap-2">
+                  <FaCheckCircle className={complaintActionResult.ok ? 'text-amber-600' : 'text-rose-600'} />
+                  <h4 className="font-extrabold text-sm text-gray-900">
+                    Complaint Ticket #{complaintActionResult.ref}
+                  </h4>
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                    (complaintActionResult.data?.complaint?.status || complaintActionResult.data?.status) === 'CLOSED'
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                      : 'bg-amber-100 text-amber-900 border border-amber-300'
+                  }`}>
+                    {complaintActionResult.data?.complaint?.status || complaintActionResult.data?.status || 'OPEN'}
+                  </span>
+                </div>
+                <button 
+                  onClick={() => setComplaintActionResult(null)} 
+                  className="text-gray-400 hover:text-gray-700 text-sm font-bold cursor-pointer p-1"
+                  title="Close"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {complaintActionResult.error ? (
+                <p className="text-xs font-medium text-rose-700">{complaintActionResult.error}</p>
+              ) : (
+                <>
+                  {/* 3 Operational Action Tabs (matching Postman 6. Complaints APIs) */}
+                  <div className="flex items-center gap-1.5 border-b border-amber-200/50 pb-2">
+                    <button
+                      onClick={() => setActionSubTab('monitor')}
+                      className={`px-3 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1 ${
+                        actionSubTab === 'monitor'
+                          ? 'bg-amber-600 text-white shadow-2xs'
+                          : 'bg-white text-gray-700 hover:bg-amber-100/60 border border-amber-200'
+                      }`}
+                    >
+                      <FaClock className="text-xs" /> Monitor Status
+                    </button>
+                    <button
+                      onClick={() => setActionSubTab('ack')}
+                      className={`px-3 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1 ${
+                        actionSubTab === 'ack'
+                          ? 'bg-blue-600 text-white shadow-2xs'
+                          : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-200'
+                      }`}
+                    >
+                      <FaBell className="text-xs" /> Customer Acknowledgement
+                    </button>
+                    <button
+                      onClick={() => setActionSubTab('satisfaction')}
+                      className={`px-3 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1 ${
+                        actionSubTab === 'satisfaction'
+                          ? 'bg-emerald-600 text-white shadow-2xs'
+                          : 'bg-white text-gray-700 hover:bg-emerald-50 border border-gray-200'
+                      }`}
+                    >
+                      <FaStar className="text-xs" /> Satisfaction & Closure
+                    </button>
+                  </div>
+
+                  {/* TAB 1: MONITOR STATUS */}
+                  {actionSubTab === 'monitor' && (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 text-[11px]">
+                      <div>
+                        <span className="text-gray-500 block text-[10px]">Category:</span>
+                        <strong>{complaintActionResult.data?.complaint?.category || complaintActionResult.data?.category || 'Sales Experience'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block text-[10px]">Department:</span>
+                        <strong>{complaintActionResult.data?.complaint?.department || complaintActionResult.data?.department || 'Sales'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block text-[10px]">Branch / Location:</span>
+                        <strong>{complaintActionResult.data?.complaint?.location || 'Branch 10'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block text-[10px]">Raised Date:</span>
+                        <strong>{(complaintActionResult.data?.complaint?.raisedDate || complaintActionResult.data?.createdAt || '').slice(0, 10) || 'Today'}</strong>
+                      </div>
+                      <div className="col-span-2 sm:col-span-4 bg-white p-2.5 rounded-lg border border-amber-200/80">
+                        <span className="text-gray-500 block text-[10px] mb-0.5">Description:</span>
+                        <p className="text-gray-800 font-medium">
+                          {complaintActionResult.data?.complaint?.description || complaintActionResult.data?.description || 'No description provided'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 2: SEND ACKNOWLEDGEMENT */}
+                  {actionSubTab === 'ack' && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1 text-[11px]">
+                      <div>
+                        <span className="text-gray-500 block text-[10px]">Customer:</span>
+                        <strong>{complaintActionResult.data?.customerName || customer?.fullName || 'Customer Record'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block text-[10px]">Mobile:</span>
+                        <strong className="font-mono">{complaintActionResult.data?.mobile || customer?.mobile || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block text-[10px]">Email:</span>
+                        <strong>{complaintActionResult.data?.email || customer?.email || 'N/A'}</strong>
+                      </div>
+                      <div className="col-span-2 sm:col-span-3 bg-white p-2.5 rounded-lg border border-blue-200">
+                        <span className="text-blue-700 block text-[10px] font-bold uppercase mb-0.5">Acknowledgement Status:</span>
+                        <p className="text-gray-700">
+                          {complaintActionResult.data?.messageStatus 
+                            ? `Status: ${complaintActionResult.data.messageStatus}` 
+                            : 'Complaint ticket acknowledged and logged to customer communication profile.'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 3: TRIGGER SATISFACTION FORM */}
+                  {actionSubTab === 'satisfaction' && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1 text-[11px]">
+                      <div>
+                        <span className="text-gray-500 block text-[10px]">Resolution State:</span>
+                        <strong className="text-amber-800">
+                          {(complaintActionResult.data?.complaint?.open ?? true) ? 'In Progress (Open)' : 'Resolved & Closed'}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block text-[10px]">Closure Date:</span>
+                        <strong>{complaintActionResult.data?.complaint?.closedDate || complaintActionResult.data?.closedAt || 'Active / Open'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block text-[10px]">Satisfaction Survey:</span>
+                        <span className="inline-block bg-emerald-100 text-emerald-900 font-bold px-2 py-0.5 rounded text-[10px]">
+                          {(complaintActionResult.data?.complaint?.open ?? true) ? 'Eligible on resolution' : 'Dispatched'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
         </div>
       )}

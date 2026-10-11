@@ -19,7 +19,7 @@ import {
 
 export default function SalesOverviewView() {
   const { customer, salesSummary: contextSalesSummary } = useCustomer();
-  const group = customer?.keyloopGroup || "BMW";
+  const group = customer?.keyloopGroup || "";
   const customerNumber = customer?.customerNumber || customer?.id || "";
 
   const [vehicles, setVehicles] = useState([]);

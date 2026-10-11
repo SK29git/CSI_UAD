@@ -17,7 +17,7 @@ import {
 
 export default function ServiceFeedbackView() {
   const { customer } = useCustomer();
-  const group = customer?.keyloopGroup || "BMW";
+  const group = customer?.keyloopGroup || "";
   const customerNumber = customer?.customerNumber || customer?.id || "";
 
   const [feedbackList, setFeedbackList] = useState([]);

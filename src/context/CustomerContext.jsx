@@ -162,6 +162,8 @@ export const DEMO_VERIFICATION = {
   verifiedBy: "Sara Ahmed"
 };
 
+export const KNOWN_GROUPS = ['BMW', 'MINI', 'GEELY', 'ROLLS-ROYCE', 'AUDI'];
+
 export function CustomerProvider({ children }) {
   const [customer, setCustomer] = useState(PROFILE_DEMO_DATA);
   const [customerList, setCustomerList] = useState([]);
@@ -171,7 +173,7 @@ export function CustomerProvider({ children }) {
   const [currentMobile, setCurrentMobile] = useState("");
   const [currentCustomerNumber, setCurrentCustomerNumber] = useState("");
   const [agentId, setAgentId] = useState("agent.42");
-  const [openComplaintsCount, setOpenComplaintsCount] = useState(3);
+  const [openComplaintsCount, setOpenComplaintsCount] = useState(0);
 
   // Vehicle summary state from API
   const [vehicles, setVehicles] = useState([]);
@@ -206,7 +208,7 @@ export function CustomerProvider({ children }) {
     const salesMobileParam = searchParams.get('Sales') || searchParams.get('sales');
     const generalMobileParam = searchParams.get('mobile') || searchParams.get('phone');
     const customerNoParam = searchParams.get('customerNumber') || searchParams.get('customerNo') || searchParams.get('id') || searchParams.get('customer_id');
-    const groupParam = searchParams.get('keyloopGroup') || searchParams.get('group') || searchParams.get('brand') || 'BMW';
+    const groupParam = searchParams.get('keyloopGroup') || searchParams.get('group') || searchParams.get('brand') || '';
     const agentParam = searchParams.get('Agentid') || searchParams.get('agentId') || searchParams.get('agentid') || searchParams.get('agent_id') || searchParams.get('agent');
 
     if (agentParam) {
@@ -222,7 +224,7 @@ export function CustomerProvider({ children }) {
       fetchCustomerByMobile(activeMobile, groupParam, prefix);
     } else if (customerNoParam) {
       setCurrentCustomerNumber(customerNoParam);
-      fetchProfileByCustomerNumber(groupParam, customerNoParam, prefix);
+      fetchCustomerByCustomerNumber(groupParam, customerNoParam, prefix);
     } else {
       // Check if localStorage has cached profile data
       const cachedProfileStr = localStorage.getItem(prefix + 'customer_profile_data');
@@ -231,16 +233,20 @@ export function CustomerProvider({ children }) {
           const cachedProfile = JSON.parse(cachedProfileStr);
           if (cachedProfile && cachedProfile.customerNumber) {
             setCustomer(cachedProfile);
-            fetchOpenComplaintsCount(cachedProfile.keyloopGroup || 'BMW', cachedProfile.customerNumber);
-            fetchVehiclesByCustomer(cachedProfile.keyloopGroup || 'BMW', cachedProfile.customerNumber);
-            fetchCustomerExtraDetails(cachedProfile.keyloopGroup || 'BMW', cachedProfile.customerNumber);
-            return;
+            const g = cachedProfile.keyloopGroup || '';
+            if (g) {
+              fetchOpenComplaintsCount(g, cachedProfile.customerNumber);
+              fetchVehiclesByCustomer(g, cachedProfile.customerNumber);
+              fetchCustomerExtraDetails(g, cachedProfile.customerNumber);
+              return;
+            }
           }
         } catch (e) {
           console.warn("Cached profile parse error:", e);
         }
       }
-      fetchProfileByCustomerNumber('BMW', '80496', prefix);
+      // Discover customer dynamically across groups without hardcoding BMW
+      fetchCustomerByCustomerNumber(groupParam, '80496', prefix);
     }
 
     return () => {
@@ -250,11 +256,18 @@ export function CustomerProvider({ children }) {
 
   const fetchVehiclesByCustomer = async (group, custNo) => {
     setVehiclesLoading(true);
-    const g = group || customer?.keyloopGroup || 'BMW';
-    const c = custNo || customer?.customerNumber || '80496';
+    const g = group || customer?.keyloopGroup || '';
+    const c = custNo || customer?.customerNumber || '';
+    if (!g || !c) {
+      setVehicles([]);
+      setSelectedVin("");
+      setVehicleDetails(null);
+      setVehiclesLoading(false);
+      return;
+    }
     try {
       // 1. Fetch vehicle list for customer: GET /api/v1/vehicles?group={group}&customerNumber={customerNumber}
-      const listUrl = `/api/v1/vehicles?group=${g}&customerNumber=${c}`;
+      const listUrl = `/api/v1/vehicles?group=${encodeURIComponent(g)}&customerNumber=${encodeURIComponent(c)}`;
       const res = await apiFetch(listUrl);
       let list = [];
       if (res && res.ok && res.data) {
@@ -299,8 +312,13 @@ export function CustomerProvider({ children }) {
       setVehicleDetails(null);
       return;
     }
+    const g = group || customer?.keyloopGroup || '';
+    if (!g) {
+      if (fallbackObj) setVehicleDetails(fallbackObj);
+      else setVehicleDetails(null);
+      return;
+    }
     try {
-      const g = group || customer?.keyloopGroup || 'BMW';
       const singleUrl = `/api/v1/vehicles/${g}/${vin}`;
       const res = await apiFetch(singleUrl);
       if (res && res.ok && res.data && typeof res.data === 'object') {
@@ -319,13 +337,14 @@ export function CustomerProvider({ children }) {
   const selectVehicleByVin = (vin) => {
     setSelectedVin(vin);
     const found = vehicles.find(v => v.vin === vin);
-    const g = customer?.keyloopGroup || 'BMW';
+    const g = customer?.keyloopGroup || '';
     fetchSingleVehicleDetails(g, vin, found);
   };
 
   const fetchCustomerExtraDetails = async (group, custNo) => {
-    const g = group || customer?.keyloopGroup || 'BMW';
-    const c = custNo || customer?.customerNumber || '80496';
+    const g = group || customer?.keyloopGroup || '';
+    const c = custNo || customer?.customerNumber || '';
+    if (!g || !c) return;
 
     // 0. Primary Composite API: GET /api/v1/customers/{group}/{customerNumber}/sales-screen
     apiFetch(`/api/v1/customers/${g}/${c}/sales-screen`).then(res => {
@@ -385,12 +404,25 @@ export function CustomerProvider({ children }) {
       console.warn("Verification fetch fallback:", e);
       setVerificationStatus(null);
     });
+
+    // 6. Sales Summary (GET /api/v1/customers/{group}/{customerNumber}/sales-summary)
+    apiFetch(`/api/v1/customers/${g}/${c}/sales-summary`).then(res => {
+      if (res && res.ok && res.data && typeof res.data === 'object') {
+        setSalesSummary(res.data);
+      } else {
+        setSalesSummary(null);
+      }
+    }).catch(e => {
+      console.warn("Sales summary fetch fallback:", e);
+      setSalesSummary(null);
+    });
   };
 
   const fetchOpenComplaintsCount = async (group, custNo) => {
+    const g = group || customer?.keyloopGroup || "";
+    const c = custNo || customer?.customerNumber || customer?.id || "";
+    if (!g || !c) return;
     try {
-      const g = group || customer?.keyloopGroup || "BMW";
-      const c = custNo || customer?.customerNumber || customer?.id || "80496";
       const apiUrl = `/api/v1/complaints?group=${g}&customerNumber=${c}&status=open`;
       
       const res = await apiFetch(apiUrl);
@@ -444,7 +476,7 @@ export function CustomerProvider({ children }) {
     }
   };
 
-  const fetchCustomerByMobile = async (mobileNum, group = 'BMW', prefix = 'complaint_') => {
+  const fetchCustomerByMobile = async (mobileNum, group = '', prefix = 'complaint_') => {
     setLoading(true);
     setError(null);
     try {
@@ -459,47 +491,95 @@ export function CustomerProvider({ children }) {
         localStorage.setItem(prefix + 'cached_mobile', cleanedMobile);
       }
 
-      const searchUrl = `/api/v1/customers?mobile=${cleanedMobile}`;
-      const res = await apiFetch(searchUrl);
-      
-      if (res && res.ok && res.data) {
-        const data = res.data;
-        // Save customer search response array to localStorage with prefix
-        localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(data));
+      let allResults = [];
 
-        let targetItem = null;
+      if (group && group.trim() !== '') {
+        const searchUrl = `/api/v1/customers?group=${encodeURIComponent(group.trim())}&mobile=${cleanedMobile}`;
+        const res = await apiFetch(searchUrl);
+        if (res && res.ok && res.data) {
+          allResults = Array.isArray(res.data) ? res.data : [res.data];
+        }
+      } else {
+        // Query known groups in parallel to discover which group the mobile belongs to dynamically
+        const groupPromises = KNOWN_GROUPS.map(g =>
+          apiFetch(`/api/v1/customers?group=${g}&mobile=${cleanedMobile}`)
+            .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
+            .catch(() => [])
+        );
+        const groupResults = await Promise.all(groupPromises);
+        allResults = groupResults.flat();
+      }
+      
+      if (allResults.length > 0) {
+        // Save customer search response array to localStorage with prefix
+        localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(allResults));
+
         let storedIdx = 0;
         const savedIdxStr = localStorage.getItem(prefix + 'selected_index');
         if (savedIdxStr !== null && !isNaN(Number(savedIdxStr))) {
           storedIdx = Number(savedIdxStr);
         }
 
-        if (Array.isArray(data) && data.length > 0) {
-          setCustomerList(data);
-          const validIdx = storedIdx < data.length ? storedIdx : 0;
-          setSelectedIndex(validIdx);
-          targetItem = data[validIdx];
-        } else if (typeof data === 'object' && data !== null) {
-          setCustomerList([data]);
-          setSelectedIndex(0);
-          targetItem = data;
-        }
+        setCustomerList(allResults);
+        const validIdx = storedIdx < allResults.length ? storedIdx : 0;
+        setSelectedIndex(validIdx);
+        const targetItem = allResults[validIdx];
 
         if (targetItem && targetItem.customerNumber) {
-          const targetGroup = targetItem.keyloopGroup || group;
-          await fetchProfileByCustomerNumber(targetGroup, targetItem.customerNumber, prefix);
+          const detectedGroup = targetItem.keyloopGroup || group || '';
+          await fetchProfileByCustomerNumber(detectedGroup, targetItem.customerNumber, prefix);
           return;
         }
       }
       
-      // Fallback profile if mobile search returned no match or error
-      setCustomer(PROFILE_DEMO_DATA);
-      fetchOpenComplaintsCount(group, '80496');
+      setCustomer(null);
+      setCustomerList([]);
     } catch (err) {
-      console.warn("Search mobile fallback to profile data:", err.message);
+      console.warn("Search mobile error:", err.message);
       setError(err.message);
-      setCustomer(PROFILE_DEMO_DATA);
-      fetchOpenComplaintsCount(group, '80496');
+      setCustomer(null);
+      setCustomerList([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCustomerByCustomerNumber = async (group = '', custNo, prefix = 'complaint_') => {
+    setLoading(true);
+    setError(null);
+    try {
+      let allResults = [];
+      if (group && group.trim() !== '') {
+        const searchUrl = `/api/v1/customers?group=${encodeURIComponent(group.trim())}&customerNumber=${custNo}`;
+        const res = await apiFetch(searchUrl);
+        if (res && res.ok && res.data) {
+          allResults = Array.isArray(res.data) ? res.data : [res.data];
+        }
+      } else {
+        // Automatically discover group across known groups
+        const groupPromises = KNOWN_GROUPS.map(g =>
+          apiFetch(`/api/v1/customers?group=${g}&customerNumber=${custNo}`)
+            .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
+            .catch(() => [])
+        );
+        const groupResults = await Promise.all(groupPromises);
+        allResults = groupResults.flat();
+      }
+
+      if (allResults.length > 0) {
+        setCustomerList(allResults);
+        setSelectedIndex(0);
+        const detectedGroup = allResults[0].keyloopGroup || group || '';
+        await fetchProfileByCustomerNumber(detectedGroup, allResults[0].customerNumber, prefix);
+        return;
+      }
+      
+      if (group && group.trim() !== '') {
+        await fetchProfileByCustomerNumber(group, custNo, prefix);
+      }
+    } catch (err) {
+      console.warn("Customer number search error:", err.message);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -514,7 +594,7 @@ export function CustomerProvider({ children }) {
       localStorage.setItem(prefix + 'selected_index', String(idx));
       
       const target = customerList[idx];
-      const g = target.keyloopGroup || customer?.keyloopGroup || 'BMW';
+      const g = target.keyloopGroup || customer?.keyloopGroup || '';
       const c = target.customerNumber;
       if (c) {
         fetchProfileByCustomerNumber(g, c, prefix);
@@ -596,6 +676,7 @@ export function CustomerProvider({ children }) {
       fetchOpenComplaintsCount,
       fetchProfileByCustomerNumber,
       fetchCustomerByMobile,
+      fetchCustomerByCustomerNumber,
       getFormattedName,
       getFormattedDate,
       getFormattedLocation,

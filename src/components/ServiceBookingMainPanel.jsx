@@ -15,7 +15,8 @@ import {
   FaFileContract,
   FaClipboardList,
   FaExclamationCircle,
-  FaRedo
+  FaRedo,
+  FaMagic
 } from 'react-icons/fa';
 
 export default function ServiceBookingMainPanel() {
@@ -23,7 +24,7 @@ export default function ServiceBookingMainPanel() {
 
   const customerName = getFormattedName();
   const initialCustomerNo = customer?.customerNumber || customer?.id || "";
-  const initialGroup = customer?.keyloopGroup || "BMW";
+  const initialGroup = customer?.keyloopGroup || "";
   const initialCreatedBy = agentId || "agent.42";
   const initialVin = selectedVin || customer?.vin || (vehicles && vehicles.length > 0 ? vehicles[0].vin : "") || "";
 
@@ -234,6 +235,28 @@ export default function ServiceBookingMainPanel() {
     }
   };
 
+  // 7. AI Service Recommendation (GET /api/v1/vehicles/{group}/{vin}/service-recommendation)
+  const [recommendationResult, setRecommendationResult] = useState(null);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
+
+  const handleCheckRecommendation = async () => {
+    if (!vin.trim()) return;
+    setRecommendationLoading(true);
+    setRecommendationResult(null);
+    try {
+      const res = await apiFetch(`/api/v1/vehicles/${keyloopGroup}/${vin.trim()}/service-recommendation`);
+      if (res && res.ok && res.data) {
+        setRecommendationResult({ ok: true, data: res.data });
+      } else {
+        setRecommendationResult({ ok: false, error: res?.statusText || "No recommendation inputs returned by API" });
+      }
+    } catch (err) {
+      setRecommendationResult({ ok: false, error: err.message || "Failed to fetch recommendation inputs" });
+    } finally {
+      setRecommendationLoading(false);
+    }
+  };
+
   // Helper component to render rich booking fields grid dynamically from API response object
   const renderBookingFieldsGrid = (data) => {
     if (!data || typeof data !== 'object') return null;
@@ -420,6 +443,18 @@ export default function ServiceBookingMainPanel() {
         >
           <FaCheckCircle className="text-xs" />
           <span>5. Confirmation & Reminder</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveToolTab('Recommendation'); setLookupResult(null); }}
+          className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap cursor-pointer transition-all ${
+            activeToolTab === 'Recommendation' 
+              ? 'bg-blue-600 text-white font-extrabold shadow-sm' 
+              : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 font-semibold'
+          }`}
+        >
+          <FaMagic className="text-xs" />
+          <span>6. AI Recommendation</span>
         </button>
       </div>
 
@@ -982,6 +1017,138 @@ export default function ServiceBookingMainPanel() {
                     {renderBookingFieldsGrid(lookupResult.data)}
                   </div>
                 )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 6. AI SERVICE RECOMMENDATION PANEL (GET /api/v1/vehicles/{group}/{vin}/service-recommendation) */}
+      {activeToolTab === 'Recommendation' && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-xs overflow-hidden text-xs">
+          <div className="px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-extrabold text-gray-900 text-sm flex items-center gap-2">
+                <FaMagic className="text-indigo-600" /> AI Service Recommendation Inputs
+              </h3>
+              <p className="text-[11px] text-gray-500 mt-0.5">
+                Inputs and machine learning recommendation features for vehicle maintenance
+              </p>
+            </div>
+
+            <button
+              onClick={handleCheckRecommendation}
+              disabled={recommendationLoading || !vin.trim()}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold rounded-lg cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 shadow-sm transition-all"
+            >
+              {recommendationLoading ? <FaSpinner className="animate-spin" /> : <FaMagic />}
+              <span>Get AI Recommendation</span>
+            </button>
+          </div>
+
+          <div className="p-5 flex flex-col gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-gray-50 p-4 rounded-xl border border-gray-200">
+              <div>
+                <label className="block text-[10px] font-extrabold text-gray-500 uppercase mb-1">Group / Brand</label>
+                <input
+                  type="text"
+                  value={keyloopGroup}
+                  onChange={(e) => setKeyloopGroup(e.target.value.toUpperCase())}
+                  className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 font-bold text-gray-800"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-extrabold text-gray-500 uppercase mb-1">Vehicle VIN</label>
+                <input
+                  type="text"
+                  value={vin}
+                  onChange={(e) => setVin(e.target.value.toUpperCase())}
+                  placeholder="Enter 17-digit VIN"
+                  className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 font-mono font-bold text-gray-800"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-extrabold text-gray-500 uppercase mb-1">Customer Number</label>
+                <input
+                  type="text"
+                  value={customerNumber}
+                  onChange={(e) => setCustomerNumber(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded px-3 py-1.5 font-bold text-gray-800"
+                />
+              </div>
+            </div>
+
+            {recommendationLoading ? (
+              <div className="py-10 flex flex-col items-center justify-center text-gray-400 gap-2">
+                <FaSpinner className="animate-spin text-2xl text-indigo-600" />
+                <span className="text-xs font-semibold">Fetching AI recommendation inputs...</span>
+              </div>
+            ) : recommendationResult ? (
+              recommendationResult.ok ? (
+                <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
+                      <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Vehicle</span>
+                      <span className="font-bold text-gray-900">{recommendationResult.data.vehicle || 'N/A'}</span>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
+                      <span className="text-[10px] font-extrabold text-gray-500 uppercase block">VIN</span>
+                      <span className="font-mono font-bold text-indigo-700">{recommendationResult.data.vin}</span>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
+                      <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Recorded Mileage</span>
+                      <span className="font-extrabold text-gray-900">
+                        {recommendationResult.data.mileageKm !== undefined && recommendationResult.data.mileageKm !== null 
+                          ? `${Number(recommendationResult.data.mileageKm).toLocaleString()} KM` 
+                          : 'N/A'}
+                      </span>
+                    </div>
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
+                      <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Customer #</span>
+                      <span className="font-bold text-gray-900">{recommendationResult.data.customerNumber || customerNumber}</span>
+                    </div>
+                  </div>
+
+                  {/* Only show Recommendation Details if the API actually returns non-empty values - no dummy data */}
+                  {(Boolean(recommendationResult.data.recommendedPackage?.trim()) || 
+                    Boolean(recommendationResult.data.recommendationReason?.trim()) || 
+                    Boolean(recommendationResult.data.recommendationType?.trim())) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      {Boolean(recommendationResult.data.recommendedPackage?.trim()) && (
+                        <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
+                          <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Recommended Package</span>
+                          <span className="font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">
+                            {recommendationResult.data.recommendedPackage}
+                          </span>
+                        </div>
+                      )}
+                      {Boolean(recommendationResult.data.recommendationReason?.trim()) && (
+                        <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
+                          <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Recommendation Reason</span>
+                          <span className="font-semibold text-gray-800">
+                            {recommendationResult.data.recommendationReason}
+                          </span>
+                        </div>
+                      )}
+                      {Boolean(recommendationResult.data.recommendationType?.trim()) && (
+                        <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
+                          <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Recommendation Type</span>
+                          <span className="font-semibold text-blue-700">
+                            {recommendationResult.data.recommendationType}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="p-4 bg-rose-50 text-rose-800 rounded-lg border border-rose-200 font-semibold">
+                  {recommendationResult.error}
+                </div>
+              )
+            ) : (
+              <div className="p-6 text-center text-gray-400 bg-gray-50/50 rounded-xl border border-dashed border-gray-200">
+                Click <strong>"Get AI Recommendation"</strong> to fetch ML recommendation inputs for this vehicle.
               </div>
             )}
           </div>

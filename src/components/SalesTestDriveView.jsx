@@ -16,15 +16,21 @@ import {
   FaPaperPlane,
   FaInfoCircle,
   FaBuilding,
-  FaCheck
+  FaCalendarAlt,
+  FaCheck,
+  FaArrowRight
 } from 'react-icons/fa';
 
 export default function SalesTestDriveView() {
   const { customer } = useCustomer();
   const group = customer?.keyloopGroup || "BMW";
   const customerNumber = customer?.customerNumber || "";
+  const prospectNumber = customer?.prospectNumber || "";
 
   const [activeTab, setActiveTab] = useState("bookings"); // "bookings" | "fleet"
+  const [filterMode, setFilterMode] = useState("customer"); // "customer" | "date"
+  const [selectedDate, setSelectedDate] = useState("");
+  
   const [testDrives, setTestDrives] = useState([]);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [fleetSearch, setFleetSearch] = useState("");
@@ -55,9 +61,12 @@ export default function SalesTestDriveView() {
     if (typeof val === 'object') {
       if (val.name) return val.name;
       if (val.description) return val.description;
-      return JSON.stringify(val);
+      if (val.code) return String(val.code);
+      return fallback;
     }
-    return String(val);
+    const str = String(val).trim();
+    if (str === '{}' || str === '[]' || str === '') return fallback;
+    return str;
   };
 
   const fetchTestDrives = async () => {
@@ -76,16 +85,32 @@ export default function SalesTestDriveView() {
         setAvailableSlots([]);
       }
 
-      // 2. Fetch customer test drive bookings if customerNumber exists
-      if (customerNumber) {
-        const listRes = await apiFetch(`/api/v1/test-drives?group=${group}&prospectNumber=${customerNumber}`);
-        if (listRes && listRes.ok && Array.isArray(listRes.data)) {
-          setTestDrives(listRes.data);
-          if (listRes.data.length > 0 && !selectedBookingNo) {
-            setSelectedBookingNo(listRes.data[0].bookingNumber || listRes.data[0].id || "");
+      // 2. Fetch customer bookings or date bookings
+      let listUrl = null;
+      if (filterMode === 'date' && selectedDate) {
+        listUrl = `/api/v1/test-drives?group=${group}&date=${selectedDate}`;
+      } else if (customerNumber) {
+        listUrl = `/api/v1/test-drives?group=${group}&customerNumber=${customerNumber}`;
+      } else if (prospectNumber) {
+        listUrl = `/api/v1/test-drives?group=${group}&prospectNumber=${prospectNumber}`;
+      }
+
+      if (listUrl) {
+        let listRes = await apiFetch(listUrl);
+        let bookings = (listRes && listRes.ok && Array.isArray(listRes.data)) ? listRes.data : [];
+
+        // If customerNumber returned 0 and prospectNumber is present, fallback
+        if (bookings.length === 0 && customerNumber && prospectNumber) {
+          const fallbackRes = await apiFetch(`/api/v1/test-drives?group=${group}&prospectNumber=${prospectNumber}`);
+          if (fallbackRes && fallbackRes.ok && Array.isArray(fallbackRes.data)) {
+            bookings = fallbackRes.data;
           }
-        } else {
-          setTestDrives([]);
+        }
+
+        setTestDrives(bookings);
+        if (bookings.length > 0 && !selectedBookingNo) {
+          const firstNo = bookings[0].bookingId || bookings[0].bookingNumber || bookings[0].id || "";
+          setSelectedBookingNo(firstNo);
         }
       } else {
         setTestDrives([]);
@@ -101,8 +126,9 @@ export default function SalesTestDriveView() {
 
   useEffect(() => {
     fetchTestDrives();
-  }, [group, customerNumber, customer?.branchCode]);
+  }, [group, customerNumber, prospectNumber, customer?.branchCode, filterMode, selectedDate]);
 
+  // Execute operations cleanly
   const handleTriggerAction = async (actionType, targetBookingNo) => {
     const bookingNo = targetBookingNo || selectedBookingNo || searchBookingInput;
     if (!bookingNo) return;
@@ -113,20 +139,58 @@ export default function SalesTestDriveView() {
 
     try {
       let endpoint = `/api/v1/test-drives/${group}/${bookingNo}`;
-      if (actionType === 'confirm') endpoint += `/confirmation`;
-      else if (actionType === 'notify') endpoint += `/advisor-notification`;
-      else if (actionType === 'feedback') endpoint += `/feedback`;
-      else if (actionType === 'feedback-response') endpoint += `/feedback-response`;
-      else if (actionType === 'confirmation-comm') endpoint += `/confirmation-communication`;
+      let actionLabel = "";
+
+      if (actionType === 'read') {
+        actionLabel = "Booking Details";
+      } else if (actionType === 'notify') {
+        endpoint += `/advisor-notification`;
+        actionLabel = "Notify Sales Advisor";
+      } else if (actionType === 'trigger-feedback') {
+        endpoint += `/feedback`;
+        actionLabel = "Trigger Feedback Survey";
+      } else if (actionType === 'receive-feedback') {
+        endpoint += `/feedback`;
+        actionLabel = "Customer Feedback";
+      } else if (actionType === 'confirmation') {
+        endpoint += `/confirmation`;
+        actionLabel = "Confirmation Communication";
+      }
 
       const res = await apiFetch(endpoint);
-      if (res && res.ok) {
-        setActionOutput({ action: actionType, bookingNo, data: res.data || res, ok: true });
+      if (res && res.ok && res.data) {
+        setActionOutput({ 
+          action: actionType, 
+          label: actionLabel,
+          bookingNo, 
+          data: res.data, 
+          ok: true 
+        });
+
+        // If booking data is returned, populate testDrives so table displays it instead of empty box
+        if (res.data.bookingId || res.data.bookingNumber) {
+          setTestDrives(prev => {
+            const bId = String(res.data.bookingId || res.data.bookingNumber);
+            const exists = prev.some(b => String(b.bookingId || b.bookingNumber || b.id) === bId);
+            return exists ? prev : [res.data, ...prev];
+          });
+        }
       } else {
-        setActionOutput({ action: actionType, bookingNo, error: res?.statusText || "No details found", ok: false });
+        setActionOutput({ 
+          action: actionType, 
+          label: actionLabel,
+          bookingNo, 
+          error: res?.data?.message || res?.statusText || "No booking records found for ID", 
+          ok: false 
+        });
       }
     } catch (err) {
-      setActionOutput({ action: actionType, bookingNo, error: err.message || "Failed to execute action", ok: false });
+      setActionOutput({ 
+        action: actionType, 
+        bookingNo, 
+        error: err.message || "Failed to execute request", 
+        ok: false 
+      });
     } finally {
       setActionLoading(false);
     }
@@ -142,9 +206,9 @@ export default function SalesTestDriveView() {
   const filteredFleet = availableSlots.filter(s => {
     if (!fleetSearch) return true;
     const q = fleetSearch.toLowerCase();
-    const desc = (s.description || s.vehicle || '').toString().toLowerCase();
-    const brand = (s.brand || '').toString().toLowerCase();
-    const reg = (s.registrationNumber || '').toString().toLowerCase();
+    const desc = (s.vehicle?.description || s.description || '').toString().toLowerCase();
+    const brand = (s.vehicle?.brand || s.brand || '').toString().toLowerCase();
+    const reg = (s.vehicle?.registrationNumber || s.registrationNumber || '').toString().toLowerCase();
     return desc.includes(q) || brand.includes(q) || reg.includes(q);
   });
 
@@ -165,13 +229,14 @@ export default function SalesTestDriveView() {
               </span>
             </div>
             <p className="text-[11px] text-gray-500 font-medium">
-              Customer: <span className="font-bold text-gray-800">{customer?.fullName || 'Walk-in Prospect'}</span> 
+              Customer: <span className="font-bold text-gray-800">{customer?.fullName || 'Active Customer'}</span> 
               {customerNumber ? ` (#${customerNumber})` : ''}
+              {prospectNumber ? ` | Prospect #${prospectNumber}` : ''}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           {/* Lookup Booking Search Bar */}
           <form onSubmit={handleLookupBookingSubmit} className="flex items-center gap-1.5">
             <div className="relative">
@@ -180,7 +245,7 @@ export default function SalesTestDriveView() {
                 type="text"
                 value={searchBookingInput}
                 onChange={(e) => setSearchBookingInput(e.target.value)}
-                placeholder="Booking # (e.g. TD-9021)..."
+                placeholder="Booking # (e.g. 148050)..."
                 className="pl-7 pr-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs w-44 focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
@@ -203,9 +268,9 @@ export default function SalesTestDriveView() {
         </div>
       </div>
 
-      {/* Main Mode Navigation Bar */}
-      <div className="flex items-center justify-between border-b border-gray-200 pb-2">
-        <div className="flex items-center gap-2">
+      {/* Main Navigation Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setActiveTab("bookings")}
             className={`px-3.5 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all ${
@@ -245,98 +310,150 @@ export default function SalesTestDriveView() {
           </button>
         </div>
 
+        {activeTab === "bookings" && (
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-gray-500 font-semibold">Filter:</span>
+            <button
+              onClick={() => { setFilterMode('customer'); setSelectedDate(''); }}
+              className={`px-2 py-1 rounded text-[11px] font-bold ${
+                filterMode === 'customer' 
+                  ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              By Customer
+            </button>
+            <button
+              onClick={() => { setFilterMode('date'); if (!selectedDate) setSelectedDate('2024-11-25'); }}
+              className={`px-2 py-1 rounded text-[11px] font-bold flex items-center gap-1 ${
+                filterMode === 'date' 
+                  ? 'bg-blue-100 text-blue-800 border border-blue-300' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              <FaCalendarAlt className="text-[10px]" /> By Date
+            </button>
+            {filterMode === 'date' && (
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="px-2 py-0.5 bg-gray-50 border border-gray-300 rounded text-xs font-mono"
+              />
+            )}
+          </div>
+        )}
+
         {activeTab === "fleet" && (
           <div className="relative">
             <input
               type="text"
               value={fleetSearch}
               onChange={(e) => setFleetSearch(e.target.value)}
-              placeholder="Search vehicle model..."
-              className="pl-3 pr-3 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs w-48 focus:outline-none focus:border-blue-500"
+              placeholder="Search demo model, reg #..."
+              className="pl-3 pr-3 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs w-52 focus:outline-none focus:border-blue-500"
             />
           </div>
         )}
       </div>
 
-      {/* TAB 1: BOOKINGS & ACTIONS VIEW */}
+      {/* TAB 1: BOOKINGS & ACTIONS */}
       {activeTab === "bookings" && (
         <div className="flex flex-col gap-4">
           
-          {/* Quick Action Controller Bar for Selected Booking */}
-          <div className="p-4 bg-gradient-to-r from-blue-50 via-indigo-50/40 to-gray-50 rounded-xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          {/* Quick Action Controller Bar */}
+          <div className="p-4 bg-gradient-to-r from-blue-50 via-indigo-50/40 to-slate-50 rounded-xl border border-blue-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <span className="text-[10px] font-bold uppercase text-blue-600 tracking-wider">Active Booking Operations</span>
-              <h3 className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
-                <span>Selected Booking:</span>
-                <span className="font-mono text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200 shadow-2xs">
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="font-extrabold text-gray-900 text-xs">Selected Booking:</span>
+                <span className="font-mono text-blue-700 bg-white px-2.5 py-0.5 rounded border border-blue-200 shadow-2xs font-bold text-xs">
                   {selectedBookingNo || searchBookingInput || "None Selected"}
                 </span>
-              </h3>
+                {!selectedBookingNo && !searchBookingInput && (
+                  <button
+                    onClick={() => {
+                      setSelectedBookingNo("148050");
+                      handleTriggerAction('read', "148050");
+                    }}
+                    className="text-[10px] text-blue-600 hover:underline font-bold bg-white px-2 py-0.5 rounded border border-blue-200"
+                  >
+                    Quick Test: #148050
+                  </button>
+                )}
+              </div>
             </div>
 
+            {/* 5 Clean Operations */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 onClick={() => handleTriggerAction('read')}
-                disabled={!selectedBookingNo && !searchBookingInput}
-                className="px-2.5 py-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1 disabled:opacity-50"
-                title="Read Booking Details"
+                disabled={(!selectedBookingNo && !searchBookingInput) || actionLoading}
+                className="px-2.5 py-1.5 bg-white hover:bg-gray-50 border border-gray-300 text-gray-800 rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1 disabled:opacity-40"
               >
-                <FaInfoCircle className="text-blue-500 text-xs" /> Read Details
+                <FaInfoCircle className="text-blue-600 text-xs" /> Read Details
               </button>
 
               <button
                 onClick={() => handleTriggerAction('notify')}
-                disabled={!selectedBookingNo && !searchBookingInput}
-                className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1 disabled:opacity-50"
-                title="Notify Sales Advisor"
+                disabled={(!selectedBookingNo && !searchBookingInput) || actionLoading}
+                className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1 disabled:opacity-40"
               >
                 <FaBell className="text-amber-300 text-xs" /> Notify Advisor
               </button>
 
               <button
-                onClick={() => handleTriggerAction('feedback')}
-                disabled={!selectedBookingNo && !searchBookingInput}
-                className="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1 disabled:opacity-50"
-                title="Trigger Feedback Survey"
+                onClick={() => handleTriggerAction('trigger-feedback')}
+                disabled={(!selectedBookingNo && !searchBookingInput) || actionLoading}
+                className="px-2.5 py-1.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1 disabled:opacity-40"
               >
                 <FaCommentAlt className="text-purple-200 text-xs" /> Trigger Feedback
               </button>
 
               <button
-                onClick={() => handleTriggerAction('feedback-response')}
-                disabled={!selectedBookingNo && !searchBookingInput}
-                className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1 disabled:opacity-50"
-                title="Get Feedback Response"
+                onClick={() => handleTriggerAction('receive-feedback')}
+                disabled={(!selectedBookingNo && !searchBookingInput) || actionLoading}
+                className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1 disabled:opacity-40"
               >
-                <FaCheckCircle className="text-emerald-300 text-xs" /> Feedback Resp
+                <FaCheckCircle className="text-emerald-300 text-xs" /> Receive Feedback
               </button>
 
               <button
-                onClick={() => handleTriggerAction('confirm')}
-                disabled={!selectedBookingNo && !searchBookingInput}
-                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1 disabled:opacity-50"
-                title="Booking Confirmation Communication"
+                onClick={() => handleTriggerAction('confirmation')}
+                disabled={(!selectedBookingNo && !searchBookingInput) || actionLoading}
+                className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-[11px] cursor-pointer shadow-2xs flex items-center gap-1 disabled:opacity-40"
               >
                 <FaPaperPlane className="text-white text-xs" /> Confirm Comm
               </button>
             </div>
           </div>
 
-          {/* Action API Output Result Card */}
+          {/* Action Output Result Card */}
           {actionOutput && (
             <div className={`p-4 rounded-xl text-xs space-y-2 animate-fade-in ${
               actionOutput.ok 
-                ? 'bg-emerald-50/80 border border-emerald-200 text-emerald-900' 
-                : 'bg-rose-50/80 border border-rose-200 text-rose-900'
+                ? 'bg-emerald-50/80 border border-emerald-300 text-emerald-950' 
+                : 'bg-rose-50/80 border border-rose-300 text-rose-950'
             }`}>
-              <div className="flex items-center justify-between pb-2 border-b border-emerald-200/60">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-200">
                 <h4 className="font-extrabold text-sm flex items-center gap-2">
                   <FaCheckCircle className={actionOutput.ok ? 'text-emerald-600' : 'text-rose-600'} />
-                  Action '{actionOutput.action}' executed for Booking #{actionOutput.bookingNo}
+                  {actionOutput.label || `Action`} for Booking #{actionOutput.bookingNo}
                 </h4>
-                <span className="font-mono text-[10px] bg-white px-2 py-0.5 rounded border border-gray-200 font-bold">
-                  {actionOutput.ok ? 'Completed' : 'Response'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] px-2.5 py-0.5 rounded font-bold ${
+                    actionOutput.ok ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'
+                  }`}>
+                    {actionOutput.ok ? 'Success' : 'Error'}
+                  </span>
+                  <button
+                    onClick={() => setActionOutput(null)}
+                    className="w-6 h-6 rounded-md bg-white hover:bg-gray-100 text-gray-500 hover:text-gray-900 border border-gray-200 flex items-center justify-center font-bold text-xs cursor-pointer transition-colors shadow-2xs"
+                    title="Close / Hide Details"
+                  >
+                    ✕
+                  </button>
+                </div>
               </div>
 
               {actionOutput.error ? (
@@ -345,39 +462,79 @@ export default function SalesTestDriveView() {
                 <div className="flex flex-col gap-2">
                   {typeof actionOutput.data === 'object' && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-1">
+                      {actionOutput.data.customerName && (
+                        <div className="bg-white p-2.5 rounded-lg border border-emerald-200">
+                          <span className="text-[10px] text-gray-400 block font-bold uppercase">Customer</span>
+                          <span className="font-bold text-gray-900 text-xs">{actionOutput.data.customerName}</span>
+                          <span className="text-[10px] text-gray-500 block">Cust #{actionOutput.data.customerNumber || 'N/A'}</span>
+                        </div>
+                      )}
+
                       {actionOutput.data.advisor && (
-                        <div className="bg-white p-2 rounded border border-emerald-200">
+                        <div className="bg-white p-2.5 rounded-lg border border-emerald-200">
                           <span className="text-[10px] text-gray-400 block font-bold uppercase">Sales Advisor</span>
-                          <span className="font-bold text-gray-800 text-xs">{renderSafeVal(actionOutput.data.advisor)}</span>
+                          <span className="font-bold text-gray-800 text-xs">{renderSafeVal(actionOutput.data.advisor?.name || actionOutput.data.advisor)}</span>
+                          {actionOutput.data.advisor?.email && (
+                            <span className="text-[10px] text-gray-500 block truncate">{actionOutput.data.advisor.email}</span>
+                          )}
                         </div>
                       )}
+
                       {actionOutput.data.status && (
-                        <div className="bg-white p-2 rounded border border-emerald-200">
-                          <span className="text-[10px] text-gray-400 block font-bold uppercase">Status</span>
+                        <div className="bg-white p-2.5 rounded-lg border border-emerald-200">
+                          <span className="text-[10px] text-gray-400 block font-bold uppercase">Booking Status</span>
                           <span className="font-bold text-emerald-700 text-xs">{renderSafeVal(actionOutput.data.status)}</span>
+                          {actionOutput.data.outcome && (
+                            <span className="text-[10px] text-gray-500 block">Outcome: {actionOutput.data.outcome}</span>
+                          )}
                         </div>
                       )}
-                      {actionOutput.data.date && (
-                        <div className="bg-white p-2 rounded border border-emerald-200">
+
+                      {actionOutput.data.slot && (
+                        <div className="bg-white p-2.5 rounded-lg border border-emerald-200">
                           <span className="text-[10px] text-gray-400 block font-bold uppercase">Slot Date & Time</span>
-                          <span className="font-mono font-bold text-gray-800 text-xs">{renderSafeVal(actionOutput.data.date)} {renderSafeVal(actionOutput.data.time, '')}</span>
+                          <span className="font-mono font-bold text-gray-800 text-xs">
+                            {actionOutput.data.slot.startDate || actionOutput.data.slot.startAt?.slice(0, 10) || 'Scheduled'}
+                          </span>
+                          <span className="text-[10px] text-gray-500 block">Location: {actionOutput.data.slot.location || 'Showroom'}</span>
                         </div>
                       )}
+
                       {actionOutput.data.vehicle && (
-                        <div className="bg-white p-2 rounded border border-emerald-200">
-                          <span className="text-[10px] text-gray-400 block font-bold uppercase">Vehicle</span>
-                          <span className="font-bold text-gray-800 text-xs truncate block">{formatVehicleDisplay(actionOutput.data.vehicle)}</span>
+                        <div className="bg-white p-2.5 rounded-lg border border-emerald-200 col-span-2">
+                          <span className="text-[10px] text-gray-400 block font-bold uppercase">Test Drive Vehicle</span>
+                          <span className="font-bold text-gray-800 text-xs block">{formatVehicleDisplay(actionOutput.data.vehicle)}</span>
+                          {actionOutput.data.vehicle?.registrationNumber && (
+                            <span className="text-[10px] font-mono text-gray-500">Reg: {actionOutput.data.vehicle.registrationNumber}</span>
+                          )}
+                        </div>
+                      )}
+
+                      {actionOutput.data.deliveryStatus !== undefined && (
+                        <div className="bg-white p-2.5 rounded-lg border border-emerald-200">
+                          <span className="text-[10px] text-gray-400 block font-bold uppercase">Advisor Delivery</span>
+                          <span className="font-bold text-blue-700 text-xs">{actionOutput.data.deliveryStatus || 'Sent / Queued'}</span>
+                          <span className="text-[10px] font-mono text-gray-400 block">Msg: {actionOutput.data.messageId || 'N/A'}</span>
+                        </div>
+                      )}
+
+                      {actionOutput.data.feedbackStatus !== undefined && (
+                        <div className="bg-white p-2.5 rounded-lg border border-emerald-200">
+                          <span className="text-[10px] text-gray-400 block font-bold uppercase">Feedback Survey</span>
+                          <span className="font-bold text-purple-700 text-xs">{actionOutput.data.feedbackStatus || 'Recorded'}</span>
+                          <span className="text-[10px] text-gray-500 block">Routing: {actionOutput.data.routingDecision || 'Standard'}</span>
+                        </div>
+                      )}
+
+                      {actionOutput.data.messageStatus !== undefined && (
+                        <div className="bg-white p-2.5 rounded-lg border border-emerald-200">
+                          <span className="text-[10px] text-gray-400 block font-bold uppercase">Confirmation Comm</span>
+                          <span className="font-bold text-emerald-700 text-xs">{actionOutput.data.messageStatus || 'Delivered'}</span>
+                          <span className="text-[10px] font-mono text-gray-400 block">Msg: {actionOutput.data.messageId || 'N/A'}</span>
                         </div>
                       )}
                     </div>
                   )}
-
-                  <details className="cursor-pointer text-[10px]">
-                    <summary className="font-bold text-gray-600 hover:text-gray-900">View Raw Response Data</summary>
-                    <pre className="mt-1 font-mono text-[10px] p-2.5 bg-gray-900 text-emerald-400 rounded-lg overflow-x-auto max-h-48">
-                      {JSON.stringify(actionOutput.data, null, 2)}
-                    </pre>
-                  </details>
                 </div>
               )}
             </div>
@@ -385,74 +542,129 @@ export default function SalesTestDriveView() {
 
           {/* Customer Test Drive Bookings Table */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <h3 className="font-extrabold text-gray-900 text-xs flex items-center gap-1.5">
-                <FaClock className="text-blue-600" /> Customer Test Drive History ({testDrives.length})
-              </h3>
-            </div>
+            {(!actionOutput || testDrives.length > 0) && (
+              <div className="flex items-center justify-between">
+                <h3 className="font-extrabold text-gray-900 text-xs flex items-center gap-1.5">
+                  <FaClock className="text-blue-600" />
+                  {filterMode === 'date' 
+                    ? `Test Drive Bookings on ${selectedDate || 'Selected Date'} (${testDrives.length})` 
+                    : `Customer Test Drive History (${testDrives.length})`}
+                </h3>
+              </div>
+            )}
 
             {loading ? (
               <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
                 <FaSpinner className="animate-spin text-xl text-blue-600" />
-                <span className="text-xs font-medium">Loading customer test drives...</span>
+                <span className="text-xs font-medium">Loading test drive bookings...</span>
               </div>
             ) : testDrives.length === 0 ? (
-              <div className="p-6 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-1">
-                <FaInfoCircle className="mx-auto text-xl text-gray-300 mb-1" />
-                <p className="font-bold text-gray-700 text-xs">No active test drive bookings found for Customer #{customerNumber || 'N/A'}.</p>
-                <p className="text-[11px] text-gray-400">
-                  You can use the search bar at the top right to lookup any existing Booking # directly (e.g. TD-9021).
-                </p>
-              </div>
+              !actionOutput && (
+                <div className="p-6 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-2">
+                  <FaInfoCircle className="mx-auto text-xl text-gray-400 mb-1" />
+                  <p className="font-bold text-gray-700 text-xs">
+                    No test drive bookings found for {filterMode === 'date' ? `date ${selectedDate}` : `Customer #${customerNumber || 'N/A'}`}.
+                  </p>
+                  <p className="text-[11px] text-gray-500 max-w-lg mx-auto">
+                    You can look up any specific Booking ID or switch filter to 
+                    <button 
+                      onClick={() => { setFilterMode('date'); setSelectedDate('2024-11-25'); }} 
+                      className="ml-1 text-blue-600 font-bold hover:underline"
+                    >
+                      Date 2024-11-25 (49 Bookings)
+                    </button>
+                    .
+                  </p>
+                  <div className="pt-2">
+                    <button
+                      onClick={() => {
+                        setSelectedBookingNo("148050");
+                        handleTriggerAction('read', "148050");
+                      }}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs cursor-pointer shadow-xs inline-flex items-center gap-1.5"
+                    >
+                      <span>Quick View Booking #148050</span>
+                      <FaArrowRight className="text-[10px]" />
+                    </button>
+                  </div>
+                </div>
+              )
             ) : (
-              <div className="overflow-x-auto border border-gray-100 rounded-xl">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[9px] border-b border-gray-100">
-                    <tr>
-                      <th className="py-2.5 px-3">Booking #</th>
-                      <th className="py-2.5 px-3">Vehicle Model</th>
-                      <th className="py-2.5 px-3">Date & Time</th>
-                      <th className="py-2.5 px-3">Showroom Branch</th>
-                      <th className="py-2.5 px-3">Sales Advisor</th>
-                      <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3 text-right">Quick Actions</th>
+              <div className="border border-gray-200 rounded-xl overflow-x-auto overflow-y-auto max-h-[460px] shadow-2xs relative bg-white">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-100 text-gray-700 font-extrabold uppercase text-[9px] sticky top-0 z-10 shadow-2xs">
+                    <tr className="border-b border-gray-200">
+                      <th className="py-3 px-3 bg-slate-100">Booking #</th>
+                      <th className="py-3 px-3 bg-slate-100">Vehicle Model</th>
+                      <th className="py-3 px-3 bg-slate-100">Slot Date & Time</th>
+                      <th className="py-3 px-3 bg-slate-100">Branch</th>
+                      <th className="py-3 px-3 bg-slate-100">Sales Advisor</th>
+                      <th className="py-3 px-3 bg-slate-100">Status</th>
+                      <th className="py-3 px-3 text-right bg-slate-100">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
                     {testDrives.map((row, idx) => {
-                      const bookingNo = row.bookingNumber || row.id || `TD-${idx+1}`;
-                      const isSelected = selectedBookingNo === bookingNo;
+                      const bookingNo = row.bookingId || row.bookingNumber || row.id || `TD-${idx+1}`;
+                      const isSelected = selectedBookingNo === String(bookingNo);
+                      const vehicleName = formatVehicleDisplay(row.vehicle || row.description || row);
+                      const slotDate = row.slot?.startDate || row.date || 'N/A';
+                      const slotTime = row.slot?.startAt ? new Date(row.slot.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (row.time || '');
+                      const branchText = row.branch?.name || row.branch?.code || (typeof row.branch === 'string' && row.branch !== '{}' ? row.branch : '') || 'Showroom';
+                      const advisorText = row.advisor?.name || row.advisor?.code || (typeof row.advisor === 'string' && row.advisor !== '{}' ? row.advisor : '') || 'Assigned Advisor';
+
                       return (
-                        <tr key={idx} className={`hover:bg-blue-50/40 transition-colors ${isSelected ? 'bg-blue-50/60 font-semibold' : ''}`}>
-                          <td className="py-3 px-3 font-mono font-bold text-blue-600">{renderSafeVal(bookingNo)}</td>
-                          <td className="py-3 px-3 font-bold text-gray-900">{formatVehicleDisplay(row.vehicle || row.description || row)}</td>
-                          <td className="py-3 px-3 font-mono text-gray-600">{renderSafeVal(row.date)} {renderSafeVal(row.time, '')}</td>
-                          <td className="py-3 px-3 text-gray-800">{renderSafeVal(row.branch || row.branchCode)}</td>
-                          <td className="py-3 px-3 text-gray-800">{renderSafeVal(row.advisor || row.salesAdvisor)}</td>
+                        <tr key={idx} className={`hover:bg-blue-50/40 transition-colors ${isSelected ? 'bg-blue-50/70 font-semibold' : ''}`}>
+                          <td className="py-3 px-3 font-mono font-bold text-blue-600">
+                            <button
+                              onClick={() => { setSelectedBookingNo(String(bookingNo)); handleTriggerAction('read', String(bookingNo)); }}
+                              className="hover:underline text-left cursor-pointer"
+                            >
+                              #{bookingNo}
+                            </button>
+                          </td>
+                          <td className="py-3 px-3 font-bold text-gray-900 max-w-[200px] truncate" title={vehicleName}>
+                            {vehicleName}
+                          </td>
+                          <td className="py-3 px-3 font-mono text-gray-600 whitespace-nowrap">
+                            {slotDate} {slotTime}
+                          </td>
+                          <td className="py-3 px-3 text-gray-800 whitespace-nowrap">{renderSafeVal(branchText)}</td>
+                          <td className="py-3 px-3 text-gray-800 whitespace-nowrap">{renderSafeVal(advisorText)}</td>
                           <td className="py-3 px-3">
                             <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              row.status === 'CONFIRMED' || row.status === 'COMPLETED'
+                              row.status === 'CONFIRMED' || row.status === 'COMPLETED' || row.outcome === 'SCHEDULED'
                                 ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                 : 'bg-amber-100 text-amber-800 border border-amber-300'
                             }`}>
-                              {renderSafeVal(row.status)}
+                              {renderSafeVal(row.status || row.outcome)}
                             </span>
                           </td>
                           <td className="py-3 px-3 text-right">
                             <div className="flex items-center justify-end gap-1">
                               <button 
-                                onClick={() => { setSelectedBookingNo(bookingNo); handleTriggerAction('notify', bookingNo); }}
+                                onClick={() => { setSelectedBookingNo(String(bookingNo)); handleTriggerAction('read', String(bookingNo)); }}
+                                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded text-[10px] font-bold cursor-pointer"
+                              >
+                                Read
+                              </button>
+                              <button 
+                                onClick={() => { setSelectedBookingNo(String(bookingNo)); handleTriggerAction('notify', String(bookingNo)); }}
                                 className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded text-[10px] font-bold cursor-pointer"
-                                title="Notify Sales Advisor"
                               >
                                 Notify
                               </button>
                               <button 
-                                onClick={() => { setSelectedBookingNo(bookingNo); handleTriggerAction('feedback', bookingNo); }}
+                                onClick={() => { setSelectedBookingNo(String(bookingNo)); handleTriggerAction('trigger-feedback', String(bookingNo)); }}
                                 className="px-2 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded text-[10px] font-bold cursor-pointer"
-                                title="Trigger Feedback"
                               >
                                 Feedback
+                              </button>
+                              <button 
+                                onClick={() => { setSelectedBookingNo(String(bookingNo)); handleTriggerAction('confirmation', String(bookingNo)); }}
+                                className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded text-[10px] font-bold cursor-pointer"
+                              >
+                                Confirm
                               </button>
                             </div>
                           </td>
@@ -480,7 +692,7 @@ export default function SalesTestDriveView() {
           {loading ? (
             <div className="py-12 flex flex-col items-center justify-center text-gray-400 gap-2">
               <FaSpinner className="animate-spin text-2xl text-blue-600" />
-              <span className="text-xs font-medium">Loading available demo vehicles...</span>
+              <span className="text-xs font-medium">Loading demo vehicles...</span>
             </div>
           ) : filteredFleet.length === 0 ? (
             <div className="p-8 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200">
@@ -488,38 +700,47 @@ export default function SalesTestDriveView() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 max-h-[550px] overflow-y-auto pr-1">
-              {filteredFleet.map((slot, idx) => (
-                <div 
-                  key={idx} 
-                  className="p-3.5 bg-white border border-gray-100 hover:border-blue-400 rounded-xl flex flex-col justify-between gap-2 hover:shadow-xs transition-all"
-                >
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between">
-                      <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-mono font-bold border border-blue-100">
-                        {slot.status || 'AVAILABLE'}
-                      </span>
-                      {slot.modelYear && (
-                        <span className="text-[10px] text-gray-400 font-bold">{slot.modelYear}</span>
+              {filteredFleet.map((slot, idx) => {
+                const veh = slot.vehicle || slot;
+                const title = formatVehicleDisplay(veh);
+                const reg = veh.registrationNumber || slot.registrationNumber;
+                const vehNo = veh.vehicleNumber || slot.vehicleNumber;
+                const branchName = slot.branch?.name || (slot.branch?.code ? `Branch ${slot.branch.code}` : 'Showroom');
+
+                return (
+                  <div 
+                    key={idx} 
+                    className="p-3.5 bg-white border border-gray-200 hover:border-blue-400 rounded-xl flex flex-col justify-between gap-2 hover:shadow-xs transition-all"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between">
+                        <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-mono font-bold border border-blue-100">
+                          {slot.status || 'AVAILABLE'}
+                        </span>
+                        {veh.brand && (
+                          <span className="text-[10px] text-gray-500 font-bold uppercase">{veh.brand}</span>
+                        )}
+                      </div>
+                      <h4 className="font-extrabold text-gray-900 text-xs leading-snug mt-1" title={title}>
+                        {title}
+                      </h4>
+                      {reg && (
+                        <span className="text-[10px] font-mono text-gray-600">Reg: {reg}</span>
                       )}
                     </div>
-                    <h4 className="font-extrabold text-gray-900 text-xs leading-snug mt-1" title={formatVehicleDisplay(slot.description || slot.vehicle || slot)}>
-                      {formatVehicleDisplay(slot.description || slot.vehicle || slot)}
-                    </h4>
-                    {slot.registrationNumber && (
-                      <span className="text-[10px] font-mono text-gray-500">Reg: {slot.registrationNumber}</span>
-                    )}
-                  </div>
 
-                  <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <FaMapMarkerAlt className="text-gray-400" /> {renderSafeVal(slot.branch || (slot.branchCode ? `Branch ${slot.branchCode}` : 'Showroom'))}
-                    </span>
-                    {slot.vehicleNumber && (
-                      <span className="font-mono text-gray-400">#{slot.vehicleNumber}</span>
-                    )}
+                    <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-500">
+                      <span className="flex items-center gap-1 truncate" title={branchName}>
+                        <FaMapMarkerAlt className="text-gray-400 flex-shrink-0" /> 
+                        <span className="truncate">{branchName}</span>
+                      </span>
+                      {vehNo && (
+                        <span className="font-mono text-gray-400 flex-shrink-0">#{vehNo}</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

@@ -19,7 +19,7 @@ import {
 export default function RightSidebar({ isCollapsed = false, onToggleCollapse }) {
   const { customer } = useCustomer();
   const customerNumber = customer?.customerNumber || customer?.id || "80496";
-  const group = customer?.keyloopGroup || "BMW";
+  const group = customer?.keyloopGroup || "";
 
   const [activeFilter, setActiveFilter] = useState('All');
   const [complaintActivities, setComplaintActivities] = useState([]);

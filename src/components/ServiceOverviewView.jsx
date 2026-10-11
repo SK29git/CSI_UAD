@@ -22,7 +22,7 @@ export default function ServiceOverviewView() {
     selectVehicleByVin 
   } = useCustomer();
 
-  const group = customer?.keyloopGroup || "BMW";
+  const group = customer?.keyloopGroup || "";
   const customerNumber = customer?.customerNumber || "";
   const currentVehicle = vehicleDetails || (vehicles && vehicles.length > 0 ? vehicles[0] : null);
   const vin = selectedVin || currentVehicle?.vin || "";

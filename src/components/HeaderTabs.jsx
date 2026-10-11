@@ -8,7 +8,8 @@ export default function HeaderTabs({ activeTab, setActiveTab }) {
     { id: 'SLA Breaches', label: 'SLA Breaches', count: 2 },
     { id: 'Root Cause', label: 'Root Cause' },
     { id: 'Recovery Actions', label: 'Recovery Actions' },
-    { id: 'Reports', label: 'Reports' },
+    { id: 'Assign Complaint', label: 'Assign Complaint' },
+    { id: 'Resolve Complaint', label: 'Resolve Complaint' },
   ];
 
   return (

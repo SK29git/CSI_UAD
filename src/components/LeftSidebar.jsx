@@ -74,43 +74,33 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     return (
       <div 
         onClick={onToggleCollapse}
-        className="w-14 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 p-2 flex flex-col items-center gap-4 cursor-pointer hover:border-blue-300 transition-all duration-300 group py-4"
-        title="Click to expand Left Panel"
+        className="w-14 flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-300 p-2 flex flex-col items-center gap-3 cursor-pointer hover:border-blue-500 transition-all duration-300 group py-4 select-none min-h-[300px]"
+        title="Click to expand Customer Profile"
       >
         {/* Expand Toggle Button */}
         <button
           onClick={(e) => { e.stopPropagation(); onToggleCollapse && onToggleCollapse(); }}
-          className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-2xs"
-          title="Expand Left Panel"
+          className="w-9 h-9 rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center transition-colors shadow-2xs"
+          title="Expand Customer Profile"
         >
           <FaChevronRight className="text-sm" />
         </button>
 
-        <div className="w-full h-[1px] bg-gray-100 my-1" />
+        <div className="w-7 h-[1px] bg-gray-200 my-1" />
 
-        {/* VIP / Loyalty Indicator */}
-        <span className={`${customer.vip ? 'bg-amber-500' : 'bg-purple-700'} text-white text-[9px] font-bold px-1 py-0.5 rounded uppercase tracking-wider`}>
-          {customer.vip ? 'VIP' : loyaltyTier.slice(0, 4).toUpperCase()}
-        </span>
-
-        {/* Call Icon */}
-        <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center">
-          <FaPhoneAlt className="text-xs" />
+        {/* Customer Initial Avatar */}
+        <div 
+          className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shadow-xs"
+          title={customerName ? `Customer: ${customerName}` : 'Customer Profile'}
+        >
+          {customerName && customerName !== 'Customer' ? customerName.charAt(0).toUpperCase() : <FaUser className="text-xs text-slate-500" />}
         </div>
 
-        {/* Verified Badge */}
-        <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center" title="Verified Customer">
-          <FaCheckCircle className="text-xs" />
-        </div>
-
-        {/* Risk Warning */}
-        <div className="w-8 h-8 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center" title="High Escalation Risk">
-          <FaExclamationTriangle className="text-xs" />
-        </div>
-
-        {/* Notes Icon */}
-        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center" title="Customer Notes">
-          <FaStickyNote className="text-xs" />
+        {/* Vertical Panel Title */}
+        <div className="flex-1 flex items-center justify-center py-6 select-none">
+          <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-widest [writing-mode:vertical-lr] rotate-180 group-hover:text-blue-600 transition-colors">
+            Customer Profile
+          </span>
         </div>
       </div>
     );
@@ -200,46 +190,6 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
             </div>
           </div>
         )}
-
-        {/* Action Buttons Row */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-          <button 
-            title="Call"
-            className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors"
-          >
-            <FaPhoneAlt className="text-xs" />
-          </button>
-          <button 
-            title="WhatsApp"
-            className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center hover:bg-emerald-100 transition-colors"
-          >
-            <FaWhatsapp className="text-sm" />
-          </button>
-          <button 
-            title="Email"
-            className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors"
-          >
-            <FaEnvelope className="text-xs" />
-          </button>
-          <button 
-            title="SMS"
-            className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors"
-          >
-            <FaCommentAlt className="text-xs" />
-          </button>
-          <button 
-            title="Chat"
-            className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors"
-          >
-            <FaComments className="text-xs" />
-          </button>
-          <button 
-            title="More Options"
-            className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-gray-200 transition-colors"
-          >
-            <FaEllipsisH className="text-xs" />
-          </button>
-        </div>
       </div>
 
       {/* 2. Customer Key Meta Data Table */}
@@ -256,7 +206,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
 
           <div>
             <span className="text-gray-400 block text-[11px]">Group / Brand</span>
-            <span className="font-semibold text-gray-800">{customer.keyloopGroup || 'BMW'}</span>
+            <span className="font-semibold text-gray-800">{customer.keyloopGroup || ""}</span>
           </div>
           <div>
             <span className="text-gray-400 block text-[11px]">Last Updated</span>
