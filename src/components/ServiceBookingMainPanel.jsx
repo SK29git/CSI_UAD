@@ -51,8 +51,8 @@ export default function ServiceBookingMainPanel() {
   // Sync state when customer profile or selected vehicle changes
   useEffect(() => {
     if (customer) {
-      if (customer.keyloopGroup) setKeyloopGroup(customer.keyloopGroup);
-      if (customer.customerNumber || customer.id) setCustomerNumber(customer.customerNumber || customer.id);
+      if (customer?.keyloopGroup) setKeyloopGroup(customer?.keyloopGroup);
+      if (customer?.customerNumber || customer?.id) setCustomerNumber(customer?.customerNumber || customer?.id);
     }
   }, [customer]);
 

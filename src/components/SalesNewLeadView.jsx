@@ -19,7 +19,7 @@ export default function SalesNewLeadView() {
   const { customer, group: contextGroup } = useCustomer();
   const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || '');
   const customerNumber = customer?.customerNumber || "";
-  const vin = customer?.vin || (customer?.vehicles && customer.vehicles[0]?.vin) || "";
+  const vin = customer?.vin || (customer?.vehicles && customer?.vehicles[0]?.vin) || "";
 
   const [activeTab, setActiveTab] = useState("lead"); // "lead" | "complaint"
 
@@ -42,15 +42,15 @@ export default function SalesNewLeadView() {
 
   useEffect(() => {
     if (customer) {
-      if (customer.salutation) {
-        const cleanSal = customer.salutation.replace(/\.$/, '').trim();
-        setTitle(cleanSal || customer.salutation);
+      if (customer?.salutation) {
+        const cleanSal = customer?.salutation?.replace(/\.$/, '').trim();
+        setTitle(cleanSal || customer?.salutation);
       }
-      if (customer.firstName) setFirstname(customer.firstName);
-      if (customer.surname) setSurname(customer.surname);
-      if (customer.email) setEmail(customer.email);
-      if (customer.mobile || customer.mobileRaw) setMobile(customer.mobile || customer.mobileRaw);
-      if (customer.branchCode) setBranch(customer.branchCode);
+      if (customer?.firstName) setFirstname(customer?.firstName);
+      if (customer?.surname) setSurname(customer?.surname);
+      if (customer?.email) setEmail(customer?.email);
+      if (customer?.mobile || customer?.mobileRaw) setMobile(customer?.mobile || customer?.mobileRaw);
+      if (customer?.branchCode) setBranch(customer?.branchCode);
     }
   }, [customer]);
 

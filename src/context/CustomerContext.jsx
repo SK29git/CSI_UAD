@@ -633,8 +633,8 @@ export function CustomerProvider({ children }) {
   // Helper getters strictly based on profile API response fields
   const getFormattedName = () => {
     if (!customer) return 'N/A';
-    if (customer.fullName && customer.fullName.trim() !== '') return customer.fullName;
-    const parts = [customer.salutation, customer.firstName, customer.middleName, customer.surname].filter(Boolean);
+    if (customer?.fullName && customer.fullName.trim() !== '') return customer.fullName;
+    const parts = [customer?.salutation, customer?.firstName, customer?.middleName, customer?.surname].filter(Boolean);
     return parts.join(' ').trim() || 'N/A';
   };
 
@@ -651,7 +651,7 @@ export function CustomerProvider({ children }) {
 
   const getFormattedLocation = () => {
     if (!customer) return 'N/A';
-    const loc = customer.location || {};
+    const loc = customer?.location || {};
     const parts = [
       loc.flatBuilding && loc.flatBuilding !== 'N/A' && loc.flatBuilding !== 'EMPTY' ? loc.flatBuilding : null,
       loc.street && loc.street !== 'N/A' && loc.street !== 'EMPTY' ? loc.street : null,
@@ -661,26 +661,26 @@ export function CustomerProvider({ children }) {
     ].filter(Boolean);
 
     if (parts.length > 0) return parts.join(', ');
-    if (customer.nationality) return customer.nationality;
+    if (customer?.nationality) return customer.nationality;
     return 'N/A';
   };
 
   const getBranchName = () => {
     if (!customer) return 'N/A';
-    if (customer.preferredBranch && customer.preferredBranch.trim() !== '') return customer.preferredBranch;
-    if (customer.branchCode) return `Branch Code ${customer.branchCode}`;
+    if (customer?.preferredBranch && customer.preferredBranch.trim() !== '') return customer.preferredBranch;
+    if (customer?.branchCode) return `Branch Code ${customer.branchCode}`;
     return 'N/A';
   };
 
   const getLoyaltyTier = () => {
     if (!customer) return 'N/A';
-    if (customer.loyaltyTier && customer.loyaltyTier.trim() !== '') return customer.loyaltyTier;
-    if (customer.customerType && customer.customerType.trim() !== '') return customer.customerType;
+    if (customer?.loyaltyTier && customer.loyaltyTier.trim() !== '') return customer.loyaltyTier;
+    if (customer?.customerType && customer.customerType.trim() !== '') return customer.customerType;
     return 'N/A';
   };
 
   const getConsentsDisplay = () => {
-    if (!customer || !customer.consents) return 'None';
+    if (!customer || !customer?.consents) return 'None';
     const active = Object.entries(customer.consents)
       .filter(([_, v]) => Boolean(v))
       .map(([k]) => k.toUpperCase());

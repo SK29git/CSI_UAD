@@ -37,12 +37,12 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     verificationStatus
   } = useCustomer();
 
-  const customerName = getFormattedName();
-  const loyaltyTier = getLoyaltyTier();
-  const customerSince = getFormattedDate(customer.customerSince);
-  const locationStr = getFormattedLocation();
-  const branchName = getBranchName();
-  const customerId = customer.customerNumber || customer.id || '';
+  const customerName = getFormattedName ? getFormattedName() : '';
+  const loyaltyTier = getLoyaltyTier ? getLoyaltyTier() : 'N/A';
+  const customerSince = getFormattedDate ? getFormattedDate(customer?.customerSince) : (customer?.customerSince || 'N/A');
+  const locationStr = getFormattedLocation ? getFormattedLocation() : '';
+  const branchName = getBranchName ? getBranchName() : '';
+  const customerId = customer?.customerNumber || customer?.id || '';
 
   const hasRiskData = Boolean(
     riskOverview &&
@@ -68,7 +68,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     )
   );
 
-  const hasNotesData = Boolean(customer?.notes && String(customer.notes).trim() !== "");
+  const hasNotesData = Boolean(customer?.notes && String(customer?.notes).trim() !== "");
 
   if (isCollapsed) {
     return (
@@ -91,9 +91,9 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
         {/* Customer Initial Avatar */}
         <div 
           className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shadow-xs"
-          title={customerName ? `Customer: ${customerName}` : 'Customer Profile'}
+          title={customerName && customerName !== 'N/A' ? `Customer: ${customerName}` : 'Customer Profile'}
         >
-          {customerName && customerName !== 'Customer' ? customerName.charAt(0).toUpperCase() : <FaUser className="text-xs text-slate-500" />}
+          {customerName && customerName !== 'Customer' && customerName !== 'N/A' ? customerName.charAt(0).toUpperCase() : <FaUser className="text-xs text-slate-500" />}
         </div>
 
         {/* Vertical Panel Title */}
@@ -126,6 +126,14 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
             <FaSpinner className="animate-spin text-blue-600 text-lg" />
             <span>Fetching Customer Details...</span>
           </div>
+        ) : !customer ? (
+          <div className="py-6 flex flex-col items-center justify-center gap-2 text-gray-500 text-xs text-center">
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
+              <FaUser className="text-base" />
+            </div>
+            <span className="font-bold text-gray-800 text-sm">No Customer Profile</span>
+            <span className="text-[11px] text-gray-400">Search with a valid phone or customer ID</span>
+          </div>
         ) : (
           <div className="flex flex-col gap-2.5 mb-3">
             {/* Multi-Customer Account Selector Dropdown */}
@@ -136,7 +144,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                     Select Account ({customerList.length} Found)
                   </span>
                   <span className="text-[9px] font-bold bg-blue-600 text-white px-1.5 py-0.2 rounded">
-                    Active: #{customer.customerNumber || customerId}
+                    Active: #{customer?.customerNumber || customerId}
                   </span>
                 </div>
                 <select
@@ -145,8 +153,8 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                   className="w-full p-1.5 bg-white border border-blue-300 rounded font-bold text-gray-900 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs text-xs"
                 >
                   {customerList.map((item, idx) => (
-                    <option key={item.customerNumber || idx} value={idx}>
-                      {item.fullName || `${item.firstName || ''} ${item.surname || ''}`.trim() || 'Customer'} (Cust ID: {item.customerNumber})
+                    <option key={item?.customerNumber || idx} value={idx}>
+                      {item?.fullName || `${item?.firstName || ''} ${item?.surname || ''}`.trim() || 'Customer'} (Cust ID: {item?.customerNumber})
                     </option>
                   ))}
                 </select>
@@ -157,7 +165,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <h2 className="font-bold text-gray-900 text-base leading-tight truncate">{customerName}</h2>
-                  {customer.vip === true && (
+                  {customer?.vip === true && (
                     <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 shadow-xs">
                       <FaCrown className="text-[9px]" /> VIP
                     </span>
@@ -171,11 +179,11 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                 <div className="mt-1 space-y-1 text-xs text-gray-600">
                   <div className="flex items-center gap-1.5">
                     <FaPhoneAlt className="text-gray-400 text-[11px]" />
-                    <span className="font-medium">{customer.mobile || customer.mobileRaw || 'N/A'}</span>
+                    <span className="font-medium">{customer?.mobile || customer?.mobileRaw || 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <FaEnvelope className="text-gray-400 text-[11px]" />
-                    <span className="truncate max-w-[190px]">{customer.email || 'N/A'}</span>
+                    <span className="truncate max-w-[190px]">{customer?.email || 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <FaMapMarkerAlt className="text-gray-400 text-[11px]" />
@@ -183,7 +191,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <FaGlobe className="text-gray-400 text-[11px]" />
-                    <span>{customer.language || 'N/A'}</span>
+                    <span>{customer?.language || 'N/A'}</span>
                   </div>
                 </div>
               </div>
@@ -193,58 +201,60 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
       </div>
 
       {/* 2. Customer Key Meta Data Table */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 text-xs">
-        <div className="grid grid-cols-2 gap-y-3 gap-x-2">
-          <div>
-            <span className="text-gray-400 block text-[11px]">Customer Since</span>
-            <span className="font-semibold text-gray-800">{customerSince}</span>
-          </div>
-          <div>
-            <span className="text-gray-400 block text-[11px]">Customer ID</span>
-            <span className="font-semibold text-gray-800">{customerId}</span>
-          </div>
-
-          <div>
-            <span className="text-gray-400 block text-[11px]">Group / Brand</span>
-            <span className="font-semibold text-gray-800">{customer.keyloopGroup || ""}</span>
-          </div>
-          <div>
-            <span className="text-gray-400 block text-[11px]">Last Updated</span>
-            <span className="font-semibold text-gray-800">{getFormattedDate(customer.lastUpdated)}</span>
-          </div>
-
-          <div>
-            <span className="text-gray-400 block text-[11px]">Loyalty Tier</span>
-            <span className="font-semibold text-gray-800">{loyaltyTier}</span>
-          </div>
-          <div>
-            <span className="text-gray-400 block text-[11px]">Nationality</span>
-            <span className="font-semibold text-gray-800">{customer.nationality || 'N/A'}</span>
-          </div>
-
-          {customer.dateOfBirth && (
+      {customer && (
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 text-xs">
+          <div className="grid grid-cols-2 gap-y-3 gap-x-2">
             <div>
-              <span className="text-gray-400 block text-[11px]">Date of Birth</span>
-              <span className="font-semibold text-gray-800">{getFormattedDate(customer.dateOfBirth)}</span>
+              <span className="text-gray-400 block text-[11px]">Customer Since</span>
+              <span className="font-semibold text-gray-800">{customerSince}</span>
             </div>
-          )}
-          <div className="col-span-2 pt-1 border-t border-gray-50">
-            <span className="text-gray-400 block text-[11px]">Branch Code / Preferred</span>
-            <span className="font-semibold text-gray-800">{branchName}</span>
-          </div>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Customer ID</span>
+              <span className="font-semibold text-gray-800">{customerId}</span>
+            </div>
 
-          <div>
-            <span className="text-gray-400 block text-[11px]">Do Not Contact</span>
-            <span className={`font-semibold ${customer.doNotContact ? 'text-rose-600' : 'text-emerald-600'}`}>
-              {customer.doNotContact ? 'Yes' : 'No'}
-            </span>
-          </div>
-          <div>
-            <span className="text-gray-400 block text-[11px]">Consents</span>
-            <span className="font-medium text-gray-700">{getConsentsDisplay()}</span>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Group / Brand</span>
+              <span className="font-semibold text-gray-800">{customer?.keyloopGroup || ""}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Last Updated</span>
+              <span className="font-semibold text-gray-800">{getFormattedDate ? getFormattedDate(customer?.lastUpdated) : (customer?.lastUpdated || 'N/A')}</span>
+            </div>
+
+            <div>
+              <span className="text-gray-400 block text-[11px]">Loyalty Tier</span>
+              <span className="font-semibold text-gray-800">{loyaltyTier}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Nationality</span>
+              <span className="font-semibold text-gray-800">{customer?.nationality || 'N/A'}</span>
+            </div>
+
+            {customer?.dateOfBirth && (
+              <div>
+                <span className="text-gray-400 block text-[11px]">Date of Birth</span>
+                <span className="font-semibold text-gray-800">{getFormattedDate ? getFormattedDate(customer?.dateOfBirth) : (customer?.dateOfBirth || 'N/A')}</span>
+              </div>
+            )}
+            <div className="col-span-2 pt-1 border-t border-gray-50">
+              <span className="text-gray-400 block text-[11px]">Branch Code / Preferred</span>
+              <span className="font-semibold text-gray-800">{branchName}</span>
+            </div>
+
+            <div>
+              <span className="text-gray-400 block text-[11px]">Do Not Contact</span>
+              <span className={`font-semibold ${customer?.doNotContact ? 'text-rose-600' : 'text-emerald-600'}`}>
+                {customer?.doNotContact ? 'Yes' : 'No'}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Consents</span>
+              <span className="font-medium text-gray-700">{getConsentsDisplay ? getConsentsDisplay() : 'None'}</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 3. Verification Status Card (Rendered strictly from GET /api/v1/customers/{group}/{customerNumber}/verification) */}
       {hasVerificationData && (
@@ -372,7 +382,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
             <button className="text-blue-600 font-bold text-xs hover:underline">Edit</button>
           </div>
           <div className="space-y-1 text-gray-700 text-[11px] leading-relaxed">
-            <p>{customer.notes}</p>
+            <p>{customer?.notes}</p>
           </div>
         </div>
       )}

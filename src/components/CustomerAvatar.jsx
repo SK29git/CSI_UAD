@@ -2,9 +2,9 @@ import React from 'react';
 
 export function getGender(customer) {
   if (!customer) return 'male';
-  const salutation = (customer.salutation || '').toLowerCase();
-  const firstName = (customer.firstName || '').toLowerCase();
-  const fullName = (customer.fullName || '').toLowerCase();
+  const salutation = (customer?.salutation || '').toLowerCase();
+  const firstName = (customer?.firstName || '').toLowerCase();
+  const fullName = (customer?.fullName || '').toLowerCase();
 
   const femaleSalutations = ['mrs.', 'mrs', 'ms.', 'ms', 'miss', 'madam', 'lady', 'sheikha'];
   if (femaleSalutations.some(s => salutation.includes(s))) return 'female';
@@ -17,9 +17,9 @@ export function getGender(customer) {
 
 export function getInitials(customer) {
   if (!customer) return 'CU';
-  const first = customer.firstName || '';
-  const sur = customer.surname || '';
-  const full = customer.fullName || '';
+  const first = customer?.firstName || '';
+  const sur = customer?.surname || '';
+  const full = customer?.fullName || '';
 
   if (first && sur) return `${first[0]}${sur[0]}`.toUpperCase();
   if (full) {

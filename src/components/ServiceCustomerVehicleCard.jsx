@@ -126,7 +126,7 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
                   Select Account ({customerList.length} Found)
                 </span>
                 <span className="text-[9px] font-bold bg-blue-600 text-white px-1.5 py-0.5 rounded">
-                  Active: #{customer.customerNumber || customer.id || ''}
+                  Active: #{customer?.customerNumber || customer?.id || ''}
                 </span>
               </div>
               <select
@@ -135,46 +135,56 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
                 className="w-full p-1.5 bg-white border border-blue-300 rounded font-bold text-gray-900 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs text-xs"
               >
                 {customerList.map((item, idx) => (
-                  <option key={item.customerNumber || idx} value={idx}>
-                    {item.fullName || `${item.firstName || ''} ${item.surname || ''}`.trim() || 'Customer'} (Cust ID: {item.customerNumber})
+                  <option key={item?.customerNumber || idx} value={idx}>
+                    {item?.fullName || `${item?.firstName || ''} ${item?.surname || ''}`.trim() || 'Customer'} (Cust ID: {item?.customerNumber})
                   </option>
                 ))}
               </select>
             </div>
           )}
 
-          <div className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h3 className="font-extrabold text-gray-900 text-base leading-tight truncate">{customerName}</h3>
-                {loyaltyTier && loyaltyTier !== 'N/A' && (
-                  <span className="bg-purple-700 text-white text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider shadow-2xs">
-                    {loyaltyTier}
-                  </span>
-                )}
+          {!customer ? (
+            <div className="py-4 flex flex-col items-center justify-center gap-2 text-gray-500 text-xs text-center">
+              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
+                <FaUser className="text-base" />
               </div>
-              <div className="mt-2 space-y-1 text-[11px] text-gray-700">
-                <div className="flex items-center gap-2">
-                  <FaPhoneAlt className="text-gray-400 text-[10px]" />
-                  <span className="font-semibold">{customer.mobile || customer.mobileRaw || 'N/A'}</span>
+              <span className="font-bold text-gray-800 text-sm">No Customer Profile</span>
+              <span className="text-[11px] text-gray-400">Search with a valid phone or customer ID</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <h3 className="font-extrabold text-gray-900 text-base leading-tight truncate">{customerName}</h3>
+                  {loyaltyTier && loyaltyTier !== 'N/A' && (
+                    <span className="bg-purple-700 text-white text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider shadow-2xs">
+                      {loyaltyTier}
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <FaEnvelope className="text-gray-400 text-[10px]" />
-                  <span className="truncate max-w-[190px] font-semibold">{customer.email || 'N/A'}</span>
-                </div>
-                {customer.language && (
+                <div className="mt-2 space-y-1 text-[11px] text-gray-700">
                   <div className="flex items-center gap-2">
-                    <FaGlobe className="text-gray-400 text-[10px]" />
-                    <span className="font-semibold">{customer.language}</span>
+                    <FaPhoneAlt className="text-gray-400 text-[10px]" />
+                    <span className="font-semibold">{customer?.mobile || customer?.mobileRaw || 'N/A'}</span>
                   </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <FaMapMarkerAlt className="text-gray-400 text-[10px]" />
-                  <span className="truncate max-w-[190px] font-semibold">{locationStr}</span>
+                  <div className="flex items-center gap-2">
+                    <FaEnvelope className="text-gray-400 text-[10px]" />
+                    <span className="truncate max-w-[190px] font-semibold">{customer?.email || 'N/A'}</span>
+                  </div>
+                  {customer?.language && (
+                    <div className="flex items-center gap-2">
+                      <FaGlobe className="text-gray-400 text-[10px]" />
+                      <span className="font-semibold">{customer?.language}</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <FaMapMarkerAlt className="text-gray-400 text-[10px]" />
+                    <span className="truncate max-w-[190px] font-semibold">{locationStr}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Verification Footer (Only rendered when verification API returns data) */}
           {hasVerificationApi && (
@@ -203,54 +213,56 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
       </div>
 
       {/* 2. Customer Key Meta Data Card */}
-      <div className="bg-white rounded-xl shadow-xs border border-gray-300 overflow-hidden text-xs">
-        <div className="p-4 bg-slate-50/40">
-          <div className="grid grid-cols-2 gap-y-3 gap-x-2">
-            <div>
-              <span className="text-gray-500 block text-[11px] font-semibold">Customer Since</span>
-              <span className="font-extrabold text-gray-900">{getFormattedDate ? getFormattedDate(customer.customerSince) : (customer.customerSince || 'N/A')}</span>
-            </div>
-            <div>
-              <span className="text-gray-500 block text-[11px] font-semibold">Customer ID</span>
-              <span className="font-extrabold text-gray-900">{customer.customerNumber || customer.id || 'N/A'}</span>
-            </div>
+      {customer && (
+        <div className="bg-white rounded-xl shadow-xs border border-gray-300 overflow-hidden text-xs">
+          <div className="p-4 bg-slate-50/40">
+            <div className="grid grid-cols-2 gap-y-3 gap-x-2">
+              <div>
+                <span className="text-gray-500 block text-[11px] font-semibold">Customer Since</span>
+                <span className="font-extrabold text-gray-900">{getFormattedDate ? getFormattedDate(customer?.customerSince) : (customer?.customerSince || 'N/A')}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 block text-[11px] font-semibold">Customer ID</span>
+                <span className="font-extrabold text-gray-900">{customer?.customerNumber || customer?.id || 'N/A'}</span>
+              </div>
 
-            <div>
-              <span className="text-gray-500 block text-[11px] font-semibold">Group / Brand</span>
-              <span className="font-extrabold text-gray-900">{customer.keyloopGroup || ""}</span>
-            </div>
-            <div>
-              <span className="text-gray-500 block text-[11px] font-semibold">Last Updated</span>
-              <span className="font-extrabold text-gray-900">{getFormattedDate ? getFormattedDate(customer.lastUpdated) : (customer.lastUpdated || 'N/A')}</span>
-            </div>
+              <div>
+                <span className="text-gray-500 block text-[11px] font-semibold">Group / Brand</span>
+                <span className="font-extrabold text-gray-900">{customer?.keyloopGroup || ""}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 block text-[11px] font-semibold">Last Updated</span>
+                <span className="font-extrabold text-gray-900">{getFormattedDate ? getFormattedDate(customer?.lastUpdated) : (customer?.lastUpdated || 'N/A')}</span>
+              </div>
 
-            <div>
-              <span className="text-gray-500 block text-[11px] font-semibold">Loyalty Tier</span>
-              <span className="font-extrabold text-gray-900">{loyaltyTier}</span>
-            </div>
-            <div>
-              <span className="text-gray-500 block text-[11px] font-semibold">Nationality</span>
-              <span className="font-extrabold text-gray-900">{customer.nationality || 'N/A'}</span>
-            </div>
+              <div>
+                <span className="text-gray-500 block text-[11px] font-semibold">Loyalty Tier</span>
+                <span className="font-extrabold text-gray-900">{loyaltyTier}</span>
+              </div>
+              <div>
+                <span className="text-gray-500 block text-[11px] font-semibold">Nationality</span>
+                <span className="font-extrabold text-gray-900">{customer?.nationality || 'N/A'}</span>
+              </div>
 
-            <div className="col-span-2 pt-2 border-t border-gray-200">
-              <span className="text-gray-500 block text-[11px] font-semibold">Branch Code / Preferred</span>
-              <span className="font-extrabold text-blue-700">{getBranchName ? getBranchName() : 'N/A'}</span>
-            </div>
+              <div className="col-span-2 pt-2 border-t border-gray-200">
+                <span className="text-gray-500 block text-[11px] font-semibold">Branch Code / Preferred</span>
+                <span className="font-extrabold text-blue-700">{getBranchName ? getBranchName() : 'N/A'}</span>
+              </div>
 
-            <div>
-              <span className="text-gray-500 block text-[11px] font-semibold">Do Not Contact</span>
-              <span className={`font-extrabold ${customer.doNotContact ? 'text-rose-600' : 'text-emerald-600'}`}>
-                {customer.doNotContact ? 'Yes' : 'No'}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-500 block text-[11px] font-semibold">Consents</span>
-              <span className="font-bold text-gray-800">{getConsentsDisplay ? getConsentsDisplay() : 'None'}</span>
+              <div>
+                <span className="text-gray-500 block text-[11px] font-semibold">Do Not Contact</span>
+                <span className={`font-extrabold ${customer?.doNotContact ? 'text-rose-600' : 'text-emerald-600'}`}>
+                  {customer?.doNotContact ? 'Yes' : 'No'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500 block text-[11px] font-semibold">Consents</span>
+                <span className="font-bold text-gray-800">{getConsentsDisplay ? getConsentsDisplay() : 'None'}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 3. Vehicle Summary Card */}
       {currentVehicle && (

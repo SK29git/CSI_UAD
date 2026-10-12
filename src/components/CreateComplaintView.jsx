@@ -37,7 +37,7 @@ export default function CreateComplaintView() {
     const grp = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
     if (grp) setKeyloopGroup(grp);
     if (customer) {
-      setCustomerNumber(customer.customerNumber || customer.id || "");
+      setCustomerNumber(customer?.customerNumber || customer?.id || "");
     }
   }, [customer, contextGroup]);
 
