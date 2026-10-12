@@ -3,12 +3,23 @@ import CenterNavTabs from '../components/CenterNavTabs';
 import LeftSidebar from '../components/LeftSidebar';
 import FeedbackOverviewView from '../components/FeedbackOverviewView';
 import RightSidebar from '../components/RightSidebar';
+import { useCustomer } from '../context/CustomerContext';
 
 export default function FeedbackPage() {
+  const { group } = useCustomer();
   const [activeSubTab, setActiveSubTab] = useState('Overview');
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(false);
+
+  React.useEffect(() => {
+    const search = window.location.search || '';
+    const params = new URLSearchParams(search);
+    if (group && !params.get('group')) {
+      params.set('group', group);
+      window.history.replaceState(null, '', `/feedback?${params.toString()}`);
+    }
+  }, [group]);
 
   return (
     <div className="min-h-screen bg-[#f3f4f6] text-gray-800 flex flex-col font-sans">

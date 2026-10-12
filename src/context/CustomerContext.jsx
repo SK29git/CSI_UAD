@@ -175,6 +175,25 @@ export function CustomerProvider({ children }) {
   const [agentId, setAgentId] = useState("agent.42");
   const [openComplaintsCount, setOpenComplaintsCount] = useState(0);
 
+  // Group state from URL or detected customer
+  const [currentGroup, setCurrentGroup] = useState(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    return searchParams.get('group') || searchParams.get('keyloopGroup') || searchParams.get('brand') || '';
+  });
+
+  const syncGroupToUrl = (grp) => {
+    if (!grp) return;
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      if (searchParams.get('group') !== grp) {
+        searchParams.set('group', grp);
+        window.history.replaceState(null, '', `${window.location.pathname}?${searchParams.toString()}`);
+      }
+    } catch (e) {
+      console.warn("Could not sync group to URL:", e);
+    }
+  };
+
   // Vehicle summary state from API
   const [vehicles, setVehicles] = useState([]);
   const [selectedVin, setSelectedVin] = useState("");
@@ -208,7 +227,11 @@ export function CustomerProvider({ children }) {
     const salesMobileParam = searchParams.get('Sales') || searchParams.get('sales');
     const generalMobileParam = searchParams.get('mobile') || searchParams.get('phone');
     const customerNoParam = searchParams.get('customerNumber') || searchParams.get('customerNo') || searchParams.get('id') || searchParams.get('customer_id');
-    const groupParam = searchParams.get('keyloopGroup') || searchParams.get('group') || searchParams.get('brand') || '';
+    const groupParam = searchParams.get('group') || searchParams.get('keyloopGroup') || searchParams.get('brand') || '';
+    if (groupParam) {
+      setCurrentGroup(groupParam);
+      syncGroupToUrl(groupParam);
+    }
     const agentParam = searchParams.get('Agentid') || searchParams.get('agentId') || searchParams.get('agentid') || searchParams.get('agent_id') || searchParams.get('agent');
 
     if (agentParam) {
@@ -444,6 +467,11 @@ export function CustomerProvider({ children }) {
       if (res && res.ok && res.data && typeof res.data === 'object') {
         const prof = res.data;
         setCustomer(prof);
+        const resolvedGroup = prof.keyloopGroup || group || '';
+        if (resolvedGroup) {
+          setCurrentGroup(resolvedGroup);
+          syncGroupToUrl(resolvedGroup);
+        }
         localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(prof));
         fetchOpenComplaintsCount(group, custNo);
 
@@ -662,6 +690,11 @@ export function CustomerProvider({ children }) {
   return (
     <CustomerContext.Provider value={{
       customer,
+      group: currentGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || ''),
+      currentGroup,
+      setCurrentGroup,
+      setGroup: setCurrentGroup,
+      syncGroupToUrl,
       customerList,
       selectedIndex,
       selectCustomer,

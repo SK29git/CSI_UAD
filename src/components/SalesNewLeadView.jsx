@@ -16,8 +16,8 @@ import {
 } from 'react-icons/fa';
 
 export default function SalesNewLeadView() {
-  const { customer } = useCustomer();
-  const group = customer?.keyloopGroup || "";
+  const { customer, group: contextGroup } = useCustomer();
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || '');
   const customerNumber = customer?.customerNumber || "";
   const vin = customer?.vin || (customer?.vehicles && customer.vehicles[0]?.vin) || "";
 
@@ -31,12 +31,12 @@ export default function SalesNewLeadView() {
   const [surname, setSurname] = useState(customer?.surname || '');
   const [email, setEmail] = useState(customer?.email || '');
   const [mobile, setMobile] = useState(customer?.mobile || customer?.mobileRaw || '');
-  const [origin, setOrigin] = useState('BMW Test Drive - EN');
+  const [origin, setOrigin] = useState(group ? `${group} Test Drive - EN` : 'Test Drive - EN');
   const [source, setSource] = useState('WEBENQUIRY');
   const [branch, setBranch] = useState(customer?.branchCode || '10');
   const [newused, setNewused] = useState('NEW');
   const [model, setModel] = useState('X3');
-  const [notes, setNotes] = useState("Location : BMW - Sheikh Zayed Road Dubai, Model : 'X3'");
+  const [notes, setNotes] = useState(group ? `Location : ${group} - Sheikh Zayed Road Dubai, Model : 'X3'` : "");
   const [submittingLead, setSubmittingLead] = useState(false);
   const [leadResponseToast, setLeadResponseToast] = useState(null);
 
@@ -64,7 +64,7 @@ export default function SalesNewLeadView() {
         apikey: "3A22A9F89A2D021E3C130074",
         lead: { origin, source, branch, idnumber: "", allocate: "" },
         contact: { title, firstname, surname, email, phone: mobile, mobile, source: "" },
-        seeks: { newused, make: "BMW", model, stocknumber: "", regnumber: "", notes },
+        seeks: { newused, make: group || customer?.keyloopGroup || "", model, stocknumber: "", regnumber: "", notes },
         tradein: { registration: "", make: "", model: "", mileage: "", year: "", notes: "" },
         mkagree: { updatemkagree: "false", dealersms: false, dealeremail: false, dealerletter: false, dealerphone: false, partssms: false, partsemail: false, partletter: false, partsphone: false, salessms: false, salesemail: false, salesletter: false, salesphone: false, servicesms: false, serviceemail: false, serviceletter: false, servicephone: false }
       }

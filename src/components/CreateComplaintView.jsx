@@ -14,11 +14,11 @@ import {
 } from 'react-icons/fa';
 
 export default function CreateComplaintView() {
-  const { customer, getFormattedName, agentId } = useCustomer();
+  const { customer, getFormattedName, agentId, group: contextGroup } = useCustomer();
 
   const customerName = getFormattedName();
   const initialCustomerNo = customer?.customerNumber || customer?.id || "";
-  const initialGroup = customer?.keyloopGroup || "";
+  const initialGroup = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
 
   const [keyloopGroup, setKeyloopGroup] = useState(initialGroup);
   const [customerNumber, setCustomerNumber] = useState(initialCustomerNo);
@@ -34,11 +34,12 @@ export default function CreateComplaintView() {
   const [errorResponse, setErrorResponse] = useState(null);
 
   useEffect(() => {
+    const grp = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
+    if (grp) setKeyloopGroup(grp);
     if (customer) {
-      setKeyloopGroup(customer.keyloopGroup || "");
       setCustomerNumber(customer.customerNumber || customer.id || "");
     }
-  }, [customer]);
+  }, [customer, contextGroup]);
 
   // Auto-dismiss success toast after 5 seconds
   useEffect(() => {

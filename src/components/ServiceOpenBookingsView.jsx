@@ -14,8 +14,8 @@ import {
 } from 'react-icons/fa';
 
 export default function ServiceOpenBookingsView() {
-  const { customer, selectedVin, vehicleDetails, vehicles } = useCustomer();
-  const group = customer?.keyloopGroup || "";
+  const { customer, selectedVin, vehicleDetails, vehicles, group: contextGroup } = useCustomer();
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
   const customerNumber = customer?.customerNumber || customer?.id || "";
   const vin = selectedVin || vehicleDetails?.vin || (vehicles && vehicles[0]?.vin) || "";
 

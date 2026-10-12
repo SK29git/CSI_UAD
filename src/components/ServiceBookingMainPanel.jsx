@@ -20,11 +20,11 @@ import {
 } from 'react-icons/fa';
 
 export default function ServiceBookingMainPanel() {
-  const { customer, agentId, getFormattedName, selectedVin, vehicles } = useCustomer();
+  const { customer, agentId, getFormattedName, selectedVin, vehicles, group: contextGroup } = useCustomer();
 
   const customerName = getFormattedName();
   const initialCustomerNo = customer?.customerNumber || customer?.id || "";
-  const initialGroup = customer?.keyloopGroup || "";
+  const initialGroup = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
   const initialCreatedBy = agentId || "agent.42";
   const initialVin = selectedVin || customer?.vin || (vehicles && vehicles.length > 0 ? vehicles[0].vin : "") || "";
 

@@ -20,8 +20,8 @@ import {
 } from 'react-icons/fa';
 
 export default function SalesAfterSalesView() {
-  const { customer, vehicles: contextVehicles = [] } = useCustomer();
-  const group = customer?.keyloopGroup || "BMW";
+  const { customer, vehicles: contextVehicles = [], group: contextGroup } = useCustomer();
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || '');
   const customerNumber = customer?.customerNumber || "";
   const customerName = customer?.fullName || customer?.name || "Customer Record";
   const currentMobile = customer?.mobileRaw || customer?.mobile || "";
@@ -311,7 +311,7 @@ export default function SalesAfterSalesView() {
                 {vehiclesList.map((veh, idx) => {
                   const regNo = veh.registrationNumber || 'N/A';
                   const vin = veh.vin || 'N/A';
-                  const description = veh.description || veh.model || 'BMW Vehicle';
+                  const description = veh.description || veh.model || (group ? `${group} Vehicle` : 'Vehicle');
                   const mileage = typeof veh.mileageKm === 'number' ? `${veh.mileageKm.toLocaleString()} KM` : formatDisplayVal(veh.mileageKm);
                   const deliveryDate = veh.deliveryDate || 'N/A';
                   

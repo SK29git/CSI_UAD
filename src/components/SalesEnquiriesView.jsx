@@ -19,8 +19,8 @@ import {
 } from 'react-icons/fa';
 
 export default function SalesEnquiriesView() {
-  const { customer, currentMobile } = useCustomer();
-  const group = customer?.keyloopGroup || "";
+  const { customer, currentMobile, group: contextGroup } = useCustomer();
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
   const customerNumber = customer?.customerNumber || customer?.id || '';
   const mobile = currentMobile || customer?.mobileRaw || '';
 

@@ -19,10 +19,11 @@ export default function ServiceOverviewView() {
     selectedVin, 
     vehicleDetails, 
     vehiclesLoading, 
-    selectVehicleByVin 
+    selectVehicleByVin,
+    group: contextGroup
   } = useCustomer();
 
-  const group = customer?.keyloopGroup || "";
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
   const customerNumber = customer?.customerNumber || "";
   const currentVehicle = vehicleDetails || (vehicles && vehicles.length > 0 ? vehicles[0] : null);
   const vin = selectedVin || currentVehicle?.vin || "";

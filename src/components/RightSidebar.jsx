@@ -17,9 +17,9 @@ import {
 } from 'react-icons/fa';
 
 export default function RightSidebar({ isCollapsed = false, onToggleCollapse }) {
-  const { customer } = useCustomer();
-  const customerNumber = customer?.customerNumber || customer?.id || "80496";
-  const group = customer?.keyloopGroup || "";
+  const { customer, group: contextGroup } = useCustomer();
+  const customerNumber = customer?.customerNumber || customer?.id || "";
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
 
   const [activeFilter, setActiveFilter] = useState('All');
   const [complaintActivities, setComplaintActivities] = useState([]);

@@ -35,9 +35,11 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
     vehicleDetails,
     selectVehicleByVin,
     verificationStatus,
-    tradeInHistory
+    tradeInHistory,
+    group: contextGroup
   } = useCustomer();
 
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || '');
   const customerName = getFormattedName();
   const loyaltyTier = getLoyaltyTier();
   const locationStr = getFormattedLocation();
@@ -275,7 +277,7 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
           <div className="p-4 bg-slate-50/40 space-y-3">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-gray-900 text-white font-extrabold flex items-center justify-center text-xs shadow-xs uppercase">
-                {currentVehicle.brand || 'BMW'}
+                {currentVehicle.brand || group || ''}
               </div>
               <div className="min-w-0 flex-1">
                 <h5 className="font-extrabold text-gray-900 text-sm leading-tight truncate">

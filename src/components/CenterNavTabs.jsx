@@ -21,7 +21,7 @@ export default function CenterNavTabs({
   onToggleRight
 }) {
   const navigate = useNavigate();
-  const { openComplaintsCount, currentMobile, customer, agentId } = useCustomer();
+  const { openComplaintsCount, currentMobile, customer, agentId, group: contextGroup } = useCustomer();
 
   const handleNavigateModule = (targetModule) => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -30,8 +30,8 @@ export default function CenterNavTabs({
     const salesVal = searchParams.get('Sales') || searchParams.get('sales');
     const mobileVal = complaintVal || salesVal || searchParams.get('mobile') || searchParams.get('phone') || currentMobile || customer?.mobileRaw;
     const agentVal = searchParams.get('Agentid') || searchParams.get('agentId') || searchParams.get('agentid') || searchParams.get('agent_id') || searchParams.get('agent') || agentId;
-    const customerNoVal = searchParams.get('customerNumber') || searchParams.get('customerNo') || searchParams.get('id') || searchParams.get('customer_id');
-    const groupVal = searchParams.get('keyloopGroup') || searchParams.get('group') || searchParams.get('brand');
+    const customerNoVal = searchParams.get('customerNumber') || searchParams.get('customerNo') || searchParams.get('id') || searchParams.get('customer_id') || customer?.customerNumber || customer?.id;
+    const groupVal = searchParams.get('group') || searchParams.get('keyloopGroup') || searchParams.get('brand') || contextGroup || customer?.keyloopGroup || '';
 
     const newParams = new URLSearchParams();
 

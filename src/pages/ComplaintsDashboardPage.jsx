@@ -11,9 +11,11 @@ import SlaBreachesView from '../components/SlaBreachesView';
 import RecoveryActionsView from '../components/RecoveryActionsView';
 import AssignComplaintView from '../components/AssignComplaintView';
 import ResolveComplaintView from '../components/ResolveComplaintView';
+import { useCustomer } from '../context/CustomerContext';
 
 export default function ComplaintsDashboardPage() {
   const navigate = useNavigate();
+  const { group } = useCustomer();
   const [activeTab, setActiveTab] = useState('Overview');
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
@@ -23,13 +25,21 @@ export default function ComplaintsDashboardPage() {
     const search = window.location.search || '';
     const params = new URLSearchParams(search);
     const salesVal = params.get('Sales') || params.get('sales');
+    let modified = false;
     if (salesVal && !params.get('Complaint') && !params.get('complaint')) {
       params.set('Complaint', salesVal.replace(/[^0-9]/g, '') || salesVal);
       params.delete('Sales');
       params.delete('sales');
+      modified = true;
+    }
+    if (group && !params.get('group')) {
+      params.set('group', group);
+      modified = true;
+    }
+    if (modified) {
       window.history.replaceState(null, '', `/?${params.toString()}`);
     }
-  }, []);
+  }, [group]);
 
   const renderMainTabContent = () => {
     switch (activeTab) {

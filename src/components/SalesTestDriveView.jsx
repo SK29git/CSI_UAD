@@ -22,8 +22,8 @@ import {
 } from 'react-icons/fa';
 
 export default function SalesTestDriveView() {
-  const { customer } = useCustomer();
-  const group = customer?.keyloopGroup || "BMW";
+  const { customer, group: contextGroup } = useCustomer();
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || '');
   const customerNumber = customer?.customerNumber || "";
   const prospectNumber = customer?.prospectNumber || "";
 

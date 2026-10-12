@@ -13,9 +13,9 @@ import {
 } from 'react-icons/fa';
 
 export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
-  const { customer, getFormattedName } = useCustomer();
+  const { customer, getFormattedName, group: contextGroup } = useCustomer();
   const customerName = getFormattedName();
-  const group = customer?.keyloopGroup || "";
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
   const customerNumber = customer?.customerNumber || customer?.id || "";
 
   const [csiScore, setCsiScore] = useState(null);

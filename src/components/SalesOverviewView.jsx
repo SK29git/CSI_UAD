@@ -18,8 +18,8 @@ import {
 } from 'react-icons/fa';
 
 export default function SalesOverviewView() {
-  const { customer, salesSummary: contextSalesSummary } = useCustomer();
-  const group = customer?.keyloopGroup || "";
+  const { customer, salesSummary: contextSalesSummary, group: contextGroup } = useCustomer();
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
   const customerNumber = customer?.customerNumber || customer?.id || "";
 
   const [vehicles, setVehicles] = useState([]);

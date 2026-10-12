@@ -14,11 +14,11 @@ import {
 } from 'react-icons/fa';
 
 export default function OpenComplaintsView() {
-  const { customer, getFormattedName, setOpenComplaintsCount } = useCustomer();
+  const { customer, getFormattedName, setOpenComplaintsCount, group: contextGroup } = useCustomer();
   const customerName = getFormattedName();
   
-  const customerNumber = customer?.customerNumber || customer?.id || "80496";
-  const group = customer?.keyloopGroup || "";
+  const customerNumber = customer?.customerNumber || customer?.id || "";
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
 
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);

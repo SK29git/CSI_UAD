@@ -16,8 +16,8 @@ import {
 } from 'react-icons/fa';
 
 export default function SalesVehicleOrdersView() {
-  const { customer } = useCustomer();
-  const group = customer?.keyloopGroup || "";
+  const { customer, group: contextGroup } = useCustomer();
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
   const customerNumber = customer?.customerNumber || "";
 
   const [orders, setOrders] = useState([]);

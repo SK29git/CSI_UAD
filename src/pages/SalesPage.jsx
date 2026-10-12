@@ -9,8 +9,10 @@ import SalesSegmentsView from '../components/SalesSegmentsView';
 import SalesAfterSalesView from '../components/SalesAfterSalesView';
 import SalesEnquiriesView from '../components/SalesEnquiriesView';
 import RightSidebar from '../components/RightSidebar';
+import { useCustomer } from '../context/CustomerContext';
 
 export default function SalesPage() {
+  const { group } = useCustomer();
   const [activeSubTab, setActiveSubTab] = useState('New Lead');
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
@@ -20,16 +22,24 @@ export default function SalesPage() {
     const search = window.location.search || '';
     const params = new URLSearchParams(search);
     const complaintVal = params.get('Complaint') || params.get('complaint');
+    let modified = false;
     if (complaintVal && !params.get('Sales') && !params.get('sales')) {
       params.set('Sales', complaintVal.replace(/[^0-9]/g, '') || complaintVal);
       params.delete('Complaint');
       params.delete('complaint');
+      modified = true;
+    }
+    if (group && !params.get('group')) {
+      params.set('group', group);
+      modified = true;
+    }
+    if (modified) {
       window.history.replaceState(null, '', `/sales?${params.toString()}`);
     }
     if (search.toLowerCase().includes('salesnewlead')) {
       setActiveSubTab('New Lead');
     }
-  }, []);
+  }, [group]);
 
   const renderSalesContent = () => {
     switch (activeSubTab) {

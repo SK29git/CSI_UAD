@@ -8,12 +8,23 @@ import ServiceHistoryView from '../components/ServiceHistoryView';
 import ServiceWarrantyClaimsView from '../components/ServiceWarrantyClaimsView';
 import ServiceFeedbackView from '../components/ServiceFeedbackView';
 import ServiceActivityRightSidebar from '../components/ServiceActivityRightSidebar';
+import { useCustomer } from '../context/CustomerContext';
 
 export default function ServiceBookingPage() {
+  const { group } = useCustomer();
   const [activeSubTab, setActiveSubTab] = useState('Overview');
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
   const [isRightCollapsed, setIsRightCollapsed] = useState(false);
+
+  React.useEffect(() => {
+    const search = window.location.search || '';
+    const params = new URLSearchParams(search);
+    if (group && !params.get('group')) {
+      params.set('group', group);
+      window.history.replaceState(null, '', `/service?${params.toString()}`);
+    }
+  }, [group]);
 
   const renderServiceContent = () => {
     switch (activeSubTab) {

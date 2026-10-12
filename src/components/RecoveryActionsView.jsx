@@ -17,9 +17,9 @@ import {
 } from "react-icons/fa";
 
 export default function RecoveryActionsView({ complaintId: propComplaintId }) {
-  const { customer, getFormattedName, agentId } = useCustomer();
+  const { customer, getFormattedName, agentId, group: contextGroup } = useCustomer();
   const customerName = getFormattedName();
-  const group = customer?.keyloopGroup || "";
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
   const customerNumber = customer?.customerNumber || customer?.id || "";
 
   // Active view tab: 'list' | 'create' | 'update'

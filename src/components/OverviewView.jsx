@@ -12,9 +12,9 @@ import {
 } from 'react-icons/fa';
 
 export default function OverviewView() {
-  const { customer, openComplaintsCount, setOpenComplaintsCount } = useCustomer();
-  const customerNumber = customer?.customerNumber || customer?.id || "80496";
-  const group = customer?.keyloopGroup || "";
+  const { customer, openComplaintsCount, setOpenComplaintsCount, group: contextGroup } = useCustomer();
+  const customerNumber = customer?.customerNumber || customer?.id || "";
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
 
   const [summaryData, setSummaryData] = useState({
     keyloopGroup: group,
