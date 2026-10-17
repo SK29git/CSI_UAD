@@ -9,22 +9,36 @@ import {
   FaBolt, 
   FaUserClock, 
   FaExchangeAlt,
-  FaSpinner,
-  FaRedo,
-  FaSearch,
-  FaCar,
-  FaPhoneAlt,
-  FaEnvelope,
-  FaCalendarAlt
+  FaSpinner, 
+  FaRedo, 
+  FaSearch, 
+  FaCar, 
+  FaPhoneAlt, 
+  FaEnvelope, 
+  FaCalendarAlt,
+  FaCheckCircle,
+  FaTimesCircle,
+  FaFilter,
+  FaUser
 } from 'react-icons/fa';
 
 export default function SalesSegmentsView() {
-  const { customer, group: contextGroup } = useCustomer();
+  const { customer, currentMobile: contextMobile, group: contextGroup } = useCustomer();
   const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || '');
-  const customerNumber = customer?.customerNumber || "";
+  const customerNumber = customer?.customerNumber || customer?.id || "";
+  const customerName = customer?.fullName || `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() || "Customer Record";
 
+  // Clean customer mobile number for API parameter
+  const rawMobile = customer?.mobileRaw || customer?.mobile || contextMobile || 
+    (new URLSearchParams(window.location.search).get('Complaint') || 
+     new URLSearchParams(window.location.search).get('Sales') || 
+     new URLSearchParams(window.location.search).get('mobile') || '');
+  const cleanMobile = rawMobile ? String(rawMobile).replace(/[^0-9]/g, '') : '';
+
+  // Mode: 'customer' (strictly active customer's segments) or 'all' (overall brand cohort)
+  const [filterMode, setFilterMode] = useState('customer');
   const [segmentDataMap, setSegmentDataMap] = useState({});
-  const [activeSegmentTab, setActiveSegmentTab] = useState(null);
+  const [activeSegmentTab, setActiveSegmentTab] = useState('upgrade');
   const [loading, setLoading] = useState(true);
   const [searchFilter, setSearchFilter] = useState("");
 
@@ -40,45 +54,62 @@ export default function SalesSegmentsView() {
     return str;
   };
 
-  // Segment definitions matching Postman Collection folder "5. Segments"
-  const segmentDefinitions = useMemo(() => [
-    {
-      id: 'upgrade',
-      label: 'Upgrade Prospects',
-      icon: FaExchangeAlt,
-      url: `/api/v1/segments/upgrade?group=${group}&minMileageKm=60000&minAgeYears=4`
-    },
-    {
-      id: 'vip',
-      label: 'VIP Customers',
-      icon: FaCrown,
-      url: `/api/v1/segments/vip-customers?group=${group}`
-    },
-    {
-      id: 'ev',
-      label: 'EV Customers',
-      icon: FaBolt,
-      url: `/api/v1/segments/ev-customers?group=${group}`
-    },
-    {
-      id: 'birthdays',
-      label: 'Birthdays',
-      icon: FaBirthdayCake,
-      url: `/api/v1/segments/birthdays?group=${group}&month=${new Date().getMonth() + 1}`
-    },
-    {
-      id: 'inactive',
-      label: 'Inactive Leads',
-      icon: FaUserClock,
-      url: `/api/v1/segments/inactive-leads?group=${group}&olderThanDays=30`
-    },
-    {
-      id: 'insurance',
-      label: 'Insurance Expiring',
-      icon: FaShieldAlt,
-      url: `/api/v1/segments/insurance-expiring?group=${group}&withinDays=30`
-    }
-  ], [group]);
+  // Segment definitions matching updated Postman Collection folder "5. Segments"
+  const segmentDefinitions = useMemo(() => {
+    const mobileParam = (filterMode === 'customer' && cleanMobile) ? `&mobile=${cleanMobile}` : '';
+    const currentMonth = new Date().getMonth() + 1;
+
+    return [
+      {
+        id: 'upgrade',
+        label: 'Upgrade Prospects',
+        shortDesc: 'Vehicles >= 60,000 km or >= 4 yrs',
+        icon: FaExchangeAlt,
+        color: 'amber',
+        url: `/api/v1/segments/upgrade?group=${group}&minMileageKm=60000&minAgeYears=4${mobileParam}`
+      },
+      {
+        id: 'vip',
+        label: 'VIP Customers',
+        shortDesc: 'Keyloop registered VIP status',
+        icon: FaCrown,
+        color: 'yellow',
+        url: `/api/v1/segments/vip-customers?group=${group}${mobileParam}`
+      },
+      {
+        id: 'ev',
+        label: 'EV Customers',
+        shortDesc: 'Electric powertrain buyers',
+        icon: FaBolt,
+        color: 'emerald',
+        url: `/api/v1/segments/ev-customers?group=${group}${mobileParam}`
+      },
+      {
+        id: 'birthdays',
+        label: 'Birthdays',
+        shortDesc: `Birthdays in month ${currentMonth}`,
+        icon: FaBirthdayCake,
+        color: 'purple',
+        url: `/api/v1/segments/birthdays?group=${group}&month=${currentMonth}${mobileParam}`
+      },
+      {
+        id: 'inactive',
+        label: 'Inactive Leads',
+        shortDesc: 'Unconverted prospects > 30 days',
+        icon: FaUserClock,
+        color: 'blue',
+        url: `/api/v1/segments/inactive-leads?group=${group}&olderThanDays=30${mobileParam}`
+      },
+      {
+        id: 'insurance',
+        label: 'Insurance Expiring',
+        shortDesc: 'Policies expiring within 30 days',
+        icon: FaShieldAlt,
+        color: 'rose',
+        url: `/api/v1/segments/insurance-expiring?group=${group}&withinDays=30${mobileParam}`
+      }
+    ];
+  }, [group, filterMode, cleanMobile]);
 
   const fetchAllSegments = async () => {
     setLoading(true);
@@ -109,20 +140,14 @@ export default function SalesSegmentsView() {
 
       setSegmentDataMap(dataMap);
 
-      // Default to the first segment that actually returned data
+      // Default to the first segment that has data, or 'upgrade'
       const firstTabWithData = segmentDefinitions.find(
         (def) => dataMap[def.id] && dataMap[def.id].length > 0
       );
-
-      if (firstTabWithData) {
-        setActiveSegmentTab(firstTabWithData.id);
-      } else {
-        setActiveSegmentTab(null);
-      }
+      setActiveSegmentTab(firstTabWithData ? firstTabWithData.id : 'upgrade');
     } catch (err) {
       console.warn("Failed to fetch customer segments:", err);
       setSegmentDataMap({});
-      setActiveSegmentTab(null);
     } finally {
       setLoading(false);
     }
@@ -130,12 +155,7 @@ export default function SalesSegmentsView() {
 
   useEffect(() => {
     fetchAllSegments();
-  }, [group]);
-
-  // Only show tabs where the API returned records (removes empty tabs like Insurance Expiring)
-  const availableTabs = segmentDefinitions.filter(
-    (def) => segmentDataMap[def.id] && segmentDataMap[def.id].length > 0
-  );
+  }, [group, filterMode, cleanMobile]);
 
   const currentMembers = activeSegmentTab ? (segmentDataMap[activeSegmentTab] || []) : [];
 
@@ -150,10 +170,15 @@ export default function SalesSegmentsView() {
     return name.includes(q) || no.includes(q) || veh.includes(q) || reg.includes(q) || mob.includes(q);
   });
 
+  // Calculate customer's qualified segments count
+  const customerQualifiedCount = segmentDefinitions.filter(
+    (def) => (segmentDataMap[def.id]?.length || 0) > 0
+  ).length;
+
   return (
     <div className="bg-white rounded-xl p-5 shadow-xs border border-gray-100 flex flex-col gap-4 text-xs">
       
-      {/* Header Bar */}
+      {/* 1. Header Bar with Mode Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shadow-xs">
@@ -167,12 +192,53 @@ export default function SalesSegmentsView() {
               </span>
             </div>
             <p className="text-[11px] text-gray-500 font-medium">
-              Targeted customer cohorts from Keyloop API
+              {filterMode === 'customer' ? (
+                <span>
+                  Showing segment qualification for: <strong className="text-gray-800">{customerName}</strong>
+                  {customerNumber ? ` (#${customerNumber})` : ''}
+                  {cleanMobile ? ` | ${cleanMobile}` : ''}
+                </span>
+              ) : (
+                <span>Overall Brand Cohorts from Keyloop API ({group})</span>
+              )}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Mode Switcher Toggle */}
+          <div className="bg-gray-100 p-0.5 rounded-lg flex items-center text-[11px] font-bold">
+            <button
+              onClick={() => setFilterMode('customer')}
+              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                filterMode === 'customer'
+                  ? 'bg-purple-600 text-white shadow-2xs'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Show only segments for this customer"
+            >
+              <FaUser className="text-[10px]" />
+              <span>Customer Data</span>
+              {filterMode === 'customer' && !loading && (
+                <span className="bg-white/20 text-white px-1.5 py-0.2 rounded-full text-[9px]">
+                  {customerQualifiedCount} Active
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setFilterMode('all')}
+              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
+                filterMode === 'all'
+                  ? 'bg-purple-600 text-white shadow-2xs'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+              title="Show overall cohort members across brand"
+            >
+              <FaUsers className="text-[10px]" />
+              <span>Overall Cohort</span>
+            </button>
+          </div>
+
           <button 
             onClick={fetchAllSegments}
             className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 cursor-pointer flex items-center gap-1.5 font-medium text-xs transition-colors"
@@ -184,271 +250,341 @@ export default function SalesSegmentsView() {
         </div>
       </div>
 
+      {/* 2. Customer Segment Status Overview Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+        {segmentDefinitions.map((def) => {
+          const IconComp = def.icon;
+          const members = segmentDataMap[def.id] || [];
+          const isQualified = members.length > 0;
+          const isSelected = activeSegmentTab === def.id;
+
+          return (
+            <div
+              key={def.id}
+              onClick={() => {
+                setActiveSegmentTab(def.id);
+                setSearchFilter("");
+              }}
+              className={`p-3 rounded-xl border transition-all cursor-pointer relative flex flex-col justify-between min-h-[92px] ${
+                isSelected 
+                  ? 'border-purple-600 bg-purple-50/70 shadow-xs ring-1 ring-purple-500' 
+                  : isQualified
+                  ? 'border-emerald-300 bg-emerald-50/40 hover:border-emerald-400'
+                  : 'border-gray-200 bg-gray-50/60 opacity-80 hover:opacity-100 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-1">
+                <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-xs shadow-2xs ${
+                  isQualified ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+                }`}>
+                  <IconComp className="text-xs" />
+                </span>
+                {isQualified ? (
+                  <span className="flex items-center gap-0.5 text-emerald-700 bg-emerald-100/90 px-1.5 py-0.2 rounded font-extrabold text-[9px] border border-emerald-300">
+                    <FaCheckCircle className="text-[9px]" /> {filterMode === 'customer' ? 'QUALIFIED' : `${members.length}`}
+                  </span>
+                ) : (
+                  <span className="text-gray-400 font-semibold text-[9px]">
+                    None
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-2">
+                <h4 className="font-extrabold text-gray-900 text-xs leading-tight truncate" title={def.label}>
+                  {def.label}
+                </h4>
+                <p className="text-[10px] text-gray-500 truncate" title={def.shortDesc}>
+                  {isQualified 
+                    ? (filterMode === 'customer' ? `${members.length} Record Match` : `${members.length} Members`)
+                    : 'Not in segment'}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {loading ? (
         <div className="py-16 flex flex-col items-center justify-center text-gray-400 gap-2">
           <FaSpinner className="animate-spin text-2xl text-purple-600" />
-          <span className="text-xs font-medium">Fetching customer segments from Keyloop...</span>
-        </div>
-      ) : availableTabs.length === 0 ? (
-        <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-1">
-          <FaUsers className="mx-auto text-xl text-gray-400 mb-1" />
-          <p className="font-bold text-gray-700 text-xs">No active customer segments found for {group}.</p>
-          <p className="text-[11px] text-gray-400">There are no records returned from the segment endpoints for this brand.</p>
+          <span className="text-xs font-medium">
+            {filterMode === 'customer' ? 'Filtering customer segments...' : 'Fetching overall segment cohorts...'}
+          </span>
         </div>
       ) : (
         <>
-          {/* Segment Selector Tabs & Search */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-2">
-            {/* Tabs (Only tabs with live data are rendered) */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
-              {availableTabs.map((tab) => {
-                const IconComponent = tab.icon;
-                const count = segmentDataMap[tab.id]?.length || 0;
-                const isActive = activeSegmentTab === tab.id;
-
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      setActiveSegmentTab(tab.id);
-                      setSearchFilter("");
-                    }}
-                    className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold whitespace-nowrap cursor-pointer transition-colors ${
-                      isActive 
-                        ? 'bg-purple-600 text-white shadow-2xs' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    <IconComponent className="text-xs" />
-                    <span>{tab.label}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-                      isActive ? 'bg-white/30 text-white' : 'bg-purple-100 text-purple-800'
-                    }`}>
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
+          {/* 3. Segment Tab Header & Search */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-2 mt-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-bold text-gray-900 text-xs flex items-center gap-1.5">
+                <span>Active Tab:</span>
+                <span className="text-purple-700 font-extrabold">
+                  {segmentDefinitions.find(d => d.id === activeSegmentTab)?.label}
+                </span>
+                <span className="text-gray-400">({currentMembers.length} records)</span>
+              </h3>
             </div>
 
-            {/* Search Filter */}
-            <div className="relative self-end sm:self-auto">
-              <FaSearch className="absolute left-2.5 top-2.5 text-gray-400 text-[10px]" />
-              <input
-                type="text"
-                value={searchFilter}
-                onChange={(e) => setSearchFilter(e.target.value)}
-                placeholder="Search name, vehicle, mobile..."
-                className="pl-7 pr-3 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs w-48 sm:w-56 focus:outline-none focus:border-purple-500"
-              />
-            </div>
+            {/* Search Filter within Active Segment */}
+            {currentMembers.length > 0 && (
+              <div className="relative self-end sm:self-auto">
+                <FaSearch className="absolute left-2.5 top-2.5 text-gray-400 text-[10px]" />
+                <input
+                  type="text"
+                  value={searchFilter}
+                  onChange={(e) => setSearchFilter(e.target.value)}
+                  placeholder="Filter within segment..."
+                  className="pl-7 pr-3 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs w-48 sm:w-56 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            )}
           </div>
 
-          {/* Table Container with Frozen Header (sticky top-0) and Internal Scroll */}
-          <div className="border border-gray-200 rounded-xl overflow-x-auto overflow-y-auto max-h-[460px] shadow-2xs relative bg-white">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-slate-100 text-gray-700 font-extrabold uppercase text-[9px] sticky top-0 z-10 shadow-2xs">
-                <tr className="border-b border-gray-200">
-                  <th className="py-3 px-3 bg-slate-100">Cust / Lead #</th>
-                  <th className="py-3 px-3 bg-slate-100">Customer Name</th>
-                  <th className="py-3 px-3 bg-slate-100">Contact Details</th>
-                  {activeSegmentTab === 'upgrade' && (
-                    <>
-                      <th className="py-3 px-3 bg-slate-100">Delivered Vehicle</th>
-                      <th className="py-3 px-3 bg-slate-100">Mileage</th>
-                      <th className="py-3 px-3 bg-slate-100">Next Service</th>
-                    </>
-                  )}
-                  {activeSegmentTab === 'vip' && (
-                    <>
-                      <th className="py-3 px-3 bg-slate-100">VIP Status</th>
-                      <th className="py-3 px-3 bg-slate-100">Contact Preference</th>
-                    </>
-                  )}
-                  {activeSegmentTab === 'ev' && (
-                    <>
-                      <th className="py-3 px-3 bg-slate-100">Electric Vehicle</th>
-                      <th className="py-3 px-3 bg-slate-100">Powertrain</th>
-                      <th className="py-3 px-3 bg-slate-100">Mileage</th>
-                    </>
-                  )}
-                  {activeSegmentTab === 'birthdays' && (
-                    <>
-                      <th className="py-3 px-3 bg-slate-100">Date of Birth</th>
-                      <th className="py-3 px-3 bg-slate-100">VIP Status</th>
-                      <th className="py-3 px-3 bg-slate-100">Contact Preference</th>
-                    </>
-                  )}
-                  {activeSegmentTab === 'inactive' && (
-                    <>
-                      <th className="py-3 px-3 bg-slate-100">Lead Source</th>
-                      <th className="py-3 px-3 bg-slate-100">Created Date</th>
-                    </>
-                  )}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
-                {filteredMembers.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-8 text-center text-gray-400">
-                      No members match the search criteria.
-                    </td>
+          {/* 4. Segment Records Display */}
+          {currentMembers.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 bg-gray-50/80 rounded-xl border border-dashed border-gray-200 space-y-1">
+              <FaUsers className="mx-auto text-2xl text-gray-300 mb-1" />
+              <p className="font-bold text-gray-700 text-xs">
+                {filterMode === 'customer'
+                  ? `Customer #${customerNumber || 'active'} is not currently in this segment.`
+                  : `No members found in this cohort for ${group}.`}
+              </p>
+              <p className="text-[11px] text-gray-400">
+                {filterMode === 'customer'
+                  ? 'Keyloop API returned 0 matching records for this mobile / criteria.'
+                  : 'No customer records match this segment criteria.'}
+              </p>
+            </div>
+          ) : (
+            <div className="border border-gray-200 rounded-xl overflow-x-auto overflow-y-auto max-h-[460px] shadow-2xs relative bg-white">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-100 text-gray-700 font-extrabold uppercase text-[9px] sticky top-0 z-10 shadow-2xs">
+                  <tr className="border-b border-gray-200">
+                    <th className="py-3 px-3 bg-slate-100">Cust / Lead #</th>
+                    <th className="py-3 px-3 bg-slate-100">Customer Name</th>
+                    <th className="py-3 px-3 bg-slate-100">Contact Details</th>
+                    {activeSegmentTab === 'upgrade' && (
+                      <>
+                        <th className="py-3 px-3 bg-slate-100">Delivered Vehicle</th>
+                        <th className="py-3 px-3 bg-slate-100">Mileage</th>
+                        <th className="py-3 px-3 bg-slate-100">Next Service</th>
+                      </>
+                    )}
+                    {activeSegmentTab === 'vip' && (
+                      <>
+                        <th className="py-3 px-3 bg-slate-100">VIP Status</th>
+                        <th className="py-3 px-3 bg-slate-100">Spend / Purchase</th>
+                      </>
+                    )}
+                    {activeSegmentTab === 'ev' && (
+                      <>
+                        <th className="py-3 px-3 bg-slate-100">Electric Vehicle</th>
+                        <th className="py-3 px-3 bg-slate-100">Powertrain</th>
+                        <th className="py-3 px-3 bg-slate-100">Mileage</th>
+                      </>
+                    )}
+                    {activeSegmentTab === 'birthdays' && (
+                      <>
+                        <th className="py-3 px-3 bg-slate-100">Date of Birth</th>
+                        <th className="py-3 px-3 bg-slate-100">VIP Status</th>
+                        <th className="py-3 px-3 bg-slate-100">Contact Preference</th>
+                      </>
+                    )}
+                    {activeSegmentTab === 'inactive' && (
+                      <>
+                        <th className="py-3 px-3 bg-slate-100">Lead Source</th>
+                        <th className="py-3 px-3 bg-slate-100">Created Date</th>
+                      </>
+                    )}
+                    {activeSegmentTab === 'insurance' && (
+                      <>
+                        <th className="py-3 px-3 bg-slate-100">Vehicle</th>
+                        <th className="py-3 px-3 bg-slate-100">Insurance Provider</th>
+                        <th className="py-3 px-3 bg-slate-100">Expiry Date</th>
+                      </>
+                    )}
                   </tr>
-                ) : (
-                  filteredMembers.map((row, idx) => {
-                    const custNo = row.customerNumber || row.leadId || `ID-${idx + 1}`;
-                    const custName = row.customerName || 'Customer Record';
-                    const mobile = row.mobile || '';
-                    const email = row.email || '';
-                    const isThisCustomer = customerNumber && String(custNo) === String(customerNumber);
+                </thead>
+                <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
+                  {filteredMembers.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-8 text-center text-gray-400">
+                        No records match the filter query.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredMembers.map((row, idx) => {
+                      const custNo = row.customerNumber || row.leadId || `ID-${idx + 1}`;
+                      const custName = row.customerName || 'Customer Record';
+                      const mob = row.mobile || '';
+                      const em = row.email || '';
+                      const isThisCustomer = customerNumber && String(custNo) === String(customerNumber);
 
-                    return (
-                      <tr 
-                        key={idx} 
-                        className={`transition-colors ${
-                          isThisCustomer ? 'bg-purple-50/80 font-bold' : 'hover:bg-purple-50/40'
-                        }`}
-                      >
-                        {/* Cust / Lead # */}
-                        <td className="py-3 px-3 font-mono font-bold text-purple-700 whitespace-nowrap">
-                          <span className="flex items-center gap-1">
-                            #{custNo}
-                            {isThisCustomer && (
-                              <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.2 rounded uppercase">
-                                Current
-                              </span>
-                            )}
-                          </span>
-                        </td>
+                      return (
+                        <tr 
+                          key={idx} 
+                          className={`transition-colors ${
+                            isThisCustomer ? 'bg-purple-50/80 font-bold' : 'hover:bg-purple-50/40'
+                          }`}
+                        >
+                          {/* Cust / Lead # */}
+                          <td className="py-3 px-3 font-mono font-bold text-purple-700 whitespace-nowrap">
+                            <span className="flex items-center gap-1">
+                              #{custNo}
+                              {isThisCustomer && (
+                                <span className="text-[9px] bg-purple-600 text-white px-1.5 py-0.2 rounded uppercase">
+                                  Current
+                                </span>
+                              )}
+                            </span>
+                          </td>
 
-                        {/* Customer Name */}
-                        <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap max-w-[200px] truncate" title={custName}>
-                          {custName}
-                        </td>
+                          {/* Customer Name */}
+                          <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap max-w-[200px] truncate" title={custName}>
+                            {custName}
+                          </td>
 
-                        {/* Contact Details */}
-                        <td className="py-3 px-3 whitespace-nowrap">
-                          <div className="flex flex-col gap-0.5 text-[10px]">
-                            {mobile && (
-                              <span className="font-mono text-gray-700 flex items-center gap-1">
-                                <FaPhoneAlt className="text-gray-400 text-[9px]" /> {mobile}
-                              </span>
-                            )}
-                            {email && (
-                              <span className="text-gray-500 flex items-center gap-1 truncate max-w-[180px]" title={email}>
-                                <FaEnvelope className="text-gray-400 text-[9px]" /> {email}
-                              </span>
-                            )}
-                            {!mobile && !email && (
-                              <span className="text-gray-400 italic">No contact details</span>
-                            )}
-                          </div>
-                        </td>
+                          {/* Contact Details */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <div className="flex flex-col gap-0.5 text-[10px]">
+                              {mob && (
+                                <span className="font-mono text-gray-700 flex items-center gap-1">
+                                  <FaPhoneAlt className="text-gray-400 text-[9px]" /> {mob}
+                                </span>
+                              )}
+                              {em && (
+                                <span className="text-gray-500 flex items-center gap-1 truncate max-w-[180px]" title={em}>
+                                  <FaEnvelope className="text-gray-400 text-[9px]" /> {em}
+                                </span>
+                              )}
+                              {!mob && !em && (
+                                <span className="text-gray-400 italic">No contact details</span>
+                              )}
+                            </div>
+                          </td>
 
-                        {/* Segment-Specific Columns */}
-                        {activeSegmentTab === 'upgrade' && (
-                          <>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              <span className="font-medium text-gray-800 flex items-center gap-1">
-                                <FaCar className="text-gray-400 text-[10px]" />
+                          {/* Segment-Specific Columns */}
+                          {activeSegmentTab === 'upgrade' && (
+                            <>
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                <span className="font-medium text-gray-800 flex items-center gap-1">
+                                  <FaCar className="text-gray-400 text-[10px]" />
+                                  {formatDisplayVal(row.vehicle, 'Vehicle on Record')}
+                                </span>
+                                {row.registrationNumber && (
+                                  <span className="font-mono text-[10px] text-gray-500 block">
+                                    {row.registrationNumber}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                  {typeof row.mileageKm === 'number' 
+                                    ? `${row.mileageKm.toLocaleString()} KM` 
+                                    : formatDisplayVal(row.mileageKm)}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 whitespace-nowrap text-gray-600">
+                                {formatDisplayVal(row.nextServiceDate)}
+                              </td>
+                            </>
+                          )}
+
+                          {activeSegmentTab === 'vip' && (
+                            <>
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold text-[10px] border border-amber-300">
+                                  <FaCrown className="text-[9px]" /> VIP Member
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 whitespace-nowrap text-gray-600">
+                                {row.spend || row.purchaseCount 
+                                  ? `Spend: ${row.spend || 'N/A'} | Orders: ${row.purchaseCount || 'N/A'}`
+                                  : 'Active VIP Status'}
+                              </td>
+                            </>
+                          )}
+
+                          {activeSegmentTab === 'ev' && (
+                            <>
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                <span className="font-medium text-gray-800 flex items-center gap-1">
+                                  <FaCar className="text-gray-400 text-[10px]" />
+                                  {formatDisplayVal(row.vehicle, 'Electric Vehicle')}
+                                </span>
+                                {row.vin && (
+                                  <span className="font-mono text-[9px] text-gray-400 block truncate max-w-[140px]" title={row.vin}>
+                                    VIN: {row.vin}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px] border border-emerald-300">
+                                  <FaBolt className="text-[9px]" /> {formatDisplayVal(row.fuelType, 'Electric')}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 whitespace-nowrap text-gray-700 font-mono">
+                                {typeof row.mileageKm === 'number' ? `${row.mileageKm.toLocaleString()} KM` : formatDisplayVal(row.mileageKm)}
+                              </td>
+                            </>
+                          )}
+
+                          {activeSegmentTab === 'birthdays' && (
+                            <>
+                              <td className="py-3 px-3 whitespace-nowrap font-medium text-gray-800">
+                                <span className="flex items-center gap-1">
+                                  <FaCalendarAlt className="text-purple-400 text-[10px]" />
+                                  {formatDisplayVal(row.dateOfBirth)}
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                {row.vip ? (
+                                  <span className="text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded text-[10px] font-bold">
+                                    VIP
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-500 text-[10px]">Standard</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 whitespace-nowrap text-gray-600">
+                                {formatDisplayVal(row.contactPreference, 'Phone / Email')}
+                              </td>
+                            </>
+                          )}
+
+                          {activeSegmentTab === 'inactive' && (
+                            <>
+                              <td className="py-3 px-3 whitespace-nowrap text-gray-700">
+                                {formatDisplayVal(row.leadSource || row.source, 'Direct / Walk-in')}
+                              </td>
+                              <td className="py-3 px-3 whitespace-nowrap text-gray-600 font-mono">
+                                {formatDisplayVal(row.leadCreatedAt || row.createdAt ? (row.leadCreatedAt || row.createdAt).slice(0, 10) : null)}
+                              </td>
+                            </>
+                          )}
+
+                          {activeSegmentTab === 'insurance' && (
+                            <>
+                              <td className="py-3 px-3 whitespace-nowrap text-gray-800">
                                 {formatDisplayVal(row.vehicle, 'Vehicle on Record')}
-                              </span>
-                              {row.registrationNumber && (
-                                <span className="font-mono text-[10px] text-gray-500 block">
-                                  {row.registrationNumber}
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                                {typeof row.mileageKm === 'number' 
-                                  ? `${row.mileageKm.toLocaleString()} KM` 
-                                  : formatDisplayVal(row.mileageKm)}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap text-gray-600">
-                              {formatDisplayVal(row.nextServiceDate)}
-                            </td>
-                          </>
-                        )}
-
-                        {activeSegmentTab === 'vip' && (
-                          <>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold text-[10px] border border-amber-300">
-                                <FaCrown className="text-[9px]" /> VIP Member
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap text-gray-600">
-                              {formatDisplayVal(row.contactPreference, 'Any')}
-                            </td>
-                          </>
-                        )}
-
-                        {activeSegmentTab === 'ev' && (
-                          <>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              <span className="font-medium text-gray-800 flex items-center gap-1">
-                                <FaCar className="text-gray-400 text-[10px]" />
-                                {formatDisplayVal(row.vehicle, 'Electric Vehicle')}
-                              </span>
-                              {row.vin && (
-                                <span className="font-mono text-[9px] text-gray-400 block truncate max-w-[140px]" title={row.vin}>
-                                  VIN: {row.vin}
-                                </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold text-[10px] border border-emerald-300">
-                                <FaBolt className="text-[9px]" /> {formatDisplayVal(row.fuelType, 'Electric')}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap text-gray-700 font-mono">
-                              {typeof row.mileageKm === 'number' ? `${row.mileageKm.toLocaleString()} KM` : formatDisplayVal(row.mileageKm)}
-                            </td>
-                          </>
-                        )}
-
-                        {activeSegmentTab === 'birthdays' && (
-                          <>
-                            <td className="py-3 px-3 whitespace-nowrap font-medium text-gray-800">
-                              <span className="flex items-center gap-1">
-                                <FaCalendarAlt className="text-purple-400 text-[10px]" />
-                                {formatDisplayVal(row.dateOfBirth)}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap">
-                              {row.vip ? (
-                                <span className="text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded text-[10px] font-bold">
-                                  VIP
-                                </span>
-                              ) : (
-                                <span className="text-gray-500 text-[10px]">Standard</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap text-gray-600">
-                              {formatDisplayVal(row.contactPreference, 'Phone / Email')}
-                            </td>
-                          </>
-                        )}
-
-                        {activeSegmentTab === 'inactive' && (
-                          <>
-                            <td className="py-3 px-3 whitespace-nowrap text-gray-700">
-                              {formatDisplayVal(row.source, 'Direct / Walk-in')}
-                            </td>
-                            <td className="py-3 px-3 whitespace-nowrap text-gray-600">
-                              {formatDisplayVal(row.createdAt ? row.createdAt.slice(0, 10) : null)}
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                              </td>
+                              <td className="py-3 px-3 whitespace-nowrap text-gray-700">
+                                {formatDisplayVal(row.provider, 'Sukoon / Active Policy')}
+                              </td>
+                              <td className="py-3 px-3 whitespace-nowrap font-mono text-rose-600 font-bold">
+                                {formatDisplayVal(row.expiryDate)}
+                              </td>
+                            </>
+                          )}
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       )}
     </div>

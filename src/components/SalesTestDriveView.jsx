@@ -26,6 +26,7 @@ export default function SalesTestDriveView() {
   const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || '');
   const customerNumber = customer?.customerNumber || "";
   const prospectNumber = customer?.prospectNumber || "";
+  const enquiryNumber = customer?.enquiryNumber || (new URLSearchParams(window.location.search).get('enquiryNumber') || "");
 
   const [activeTab, setActiveTab] = useState("bookings"); // "bookings" | "fleet"
   const [filterMode, setFilterMode] = useState("customer"); // "customer" | "date"
@@ -72,12 +73,8 @@ export default function SalesTestDriveView() {
   const fetchTestDrives = async () => {
     setLoading(true);
     try {
-      // 1. Fetch available test drive fleet slots
-      const branchCode = customer?.branchCode || customer?.preferredBranch || "";
-      const slotsUrl = branchCode 
-        ? `/api/v1/test-drives/vehicles?group=${group}&branchCode=${branchCode}`
-        : `/api/v1/test-drives/vehicles?group=${group}`;
-      
+      // 1. Fetch available test drive fleet slots for group
+      const slotsUrl = `/api/v1/test-drives/vehicles?group=${group}`;
       const slotsRes = await apiFetch(slotsUrl);
       if (slotsRes && slotsRes.ok && Array.isArray(slotsRes.data)) {
         setAvailableSlots(slotsRes.data);
@@ -91,6 +88,8 @@ export default function SalesTestDriveView() {
         listUrl = `/api/v1/test-drives?group=${group}&date=${selectedDate}`;
       } else if (customerNumber) {
         listUrl = `/api/v1/test-drives?group=${group}&customerNumber=${customerNumber}`;
+      } else if (enquiryNumber) {
+        listUrl = `/api/v1/test-drives?group=${group}&enquiryNumber=${enquiryNumber}`;
       } else if (prospectNumber) {
         listUrl = `/api/v1/test-drives?group=${group}&prospectNumber=${prospectNumber}`;
       }
@@ -99,8 +98,13 @@ export default function SalesTestDriveView() {
         let listRes = await apiFetch(listUrl);
         let bookings = (listRes && listRes.ok && Array.isArray(listRes.data)) ? listRes.data : [];
 
-        // If customerNumber returned 0 and prospectNumber is present, fallback
-        if (bookings.length === 0 && customerNumber && prospectNumber) {
+        // If customerNumber returned 0 and enquiryNumber/prospectNumber is present, fallback
+        if (bookings.length === 0 && enquiryNumber) {
+          const fallbackRes = await apiFetch(`/api/v1/test-drives?group=${group}&enquiryNumber=${enquiryNumber}`);
+          if (fallbackRes && fallbackRes.ok && Array.isArray(fallbackRes.data)) {
+            bookings = fallbackRes.data;
+          }
+        } else if (bookings.length === 0 && prospectNumber) {
           const fallbackRes = await apiFetch(`/api/v1/test-drives?group=${group}&prospectNumber=${prospectNumber}`);
           if (fallbackRes && fallbackRes.ok && Array.isArray(fallbackRes.data)) {
             bookings = fallbackRes.data;

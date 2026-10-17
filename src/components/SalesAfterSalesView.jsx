@@ -16,20 +16,30 @@ import {
   FaPaperPlane, 
   FaInfoCircle,
   FaShieldAlt,
-  FaFileContract
+  FaFileContract,
+  FaExclamationTriangle,
+  FaHistory
 } from 'react-icons/fa';
 
 export default function SalesAfterSalesView() {
-  const { customer, vehicles: contextVehicles = [], group: contextGroup } = useCustomer();
+  const { customer, vehicles: contextVehicles = [], currentMobile: contextMobile, group: contextGroup } = useCustomer();
   const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || '');
-  const customerNumber = customer?.customerNumber || "";
-  const customerName = customer?.fullName || customer?.name || "Customer Record";
-  const currentMobile = customer?.mobileRaw || customer?.mobile || "";
+  const customerNumber = customer?.customerNumber || customer?.id || "";
+  const customerName = customer?.fullName || `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() || "Customer Record";
 
-  // Tabs: only customer-specific data related to this customer number
+  const rawMobile = customer?.mobileRaw || customer?.mobile || contextMobile || 
+    (new URLSearchParams(window.location.search).get('Complaint') || 
+     new URLSearchParams(window.location.search).get('Sales') || 
+     new URLSearchParams(window.location.search).get('mobile') || '');
+  const cleanMobile = rawMobile ? String(rawMobile).replace(/[^0-9]/g, '') : '';
+
+  // Tabs: 'CustomerVehicles' | 'ServiceBookings' | 'RetentionAlerts'
   const [activeTab, setActiveTab] = useState('CustomerVehicles');
   const [vehiclesList, setVehiclesList] = useState([]);
   const [bookingsList, setBookingsList] = useState([]);
+  const [serviceDueList, setServiceDueList] = useState([]);
+  const [noServiceList, setNoServiceList] = useState([]);
+  const [reactivatedList, setReactivatedList] = useState([]);
   const [loading, setLoading] = useState(false);
 
   // WIP / Work Order Search and actions
@@ -50,11 +60,14 @@ export default function SalesAfterSalesView() {
     return str;
   };
 
-  // Fetch after-sales data strictly for this customer number
+  // Fetch after-sales data strictly for this customer number & mobile
   const fetchCustomerAfterSalesData = async () => {
-    if (!customerNumber) {
+    if (!customerNumber && !cleanMobile) {
       setVehiclesList([]);
       setBookingsList([]);
+      setServiceDueList([]);
+      setNoServiceList([]);
+      setReactivatedList([]);
       setLoading(false);
       return;
     }
@@ -63,26 +76,56 @@ export default function SalesAfterSalesView() {
 
     try {
       // 1. Fetch customer's vehicles: /api/v1/vehicles?group={group}&customerNumber={customerNumber}
-      const vehRes = await apiFetch(`/api/v1/vehicles?group=${group}&customerNumber=${customerNumber}`);
-      let vList = [];
-      if (vehRes && vehRes.ok && Array.isArray(vehRes.data)) {
-        vList = vehRes.data;
-      } else if (contextVehicles && contextVehicles.length > 0) {
-        vList = contextVehicles;
-      }
-      setVehiclesList(vList);
-
-      // 2. Fetch customer's service bookings: /api/v1/customers/{group}/{customerNumber}/service-bookings
-      const bookRes = await apiFetch(`/api/v1/customers/${group}/${customerNumber}/service-bookings`);
-      let bList = [];
-      if (bookRes && bookRes.ok) {
-        if (Array.isArray(bookRes.data)) {
-          bList = bookRes.data;
-        } else if (bookRes.data && Array.isArray(bookRes.data.members)) {
-          bList = bookRes.data.members;
+      if (customerNumber) {
+        const vehRes = await apiFetch(`/api/v1/vehicles?group=${group}&customerNumber=${customerNumber}`);
+        let vList = [];
+        if (vehRes && vehRes.ok && Array.isArray(vehRes.data)) {
+          vList = vehRes.data;
+        } else if (contextVehicles && contextVehicles.length > 0) {
+          vList = contextVehicles;
         }
+        setVehiclesList(vList);
+
+        // 2. Fetch customer's service bookings: /api/v1/customers/{group}/{customerNumber}/service-bookings
+        const bookRes = await apiFetch(`/api/v1/customers/${group}/${customerNumber}/service-bookings`);
+        let bList = [];
+        if (bookRes && bookRes.ok) {
+          if (Array.isArray(bookRes.data)) {
+            bList = bookRes.data;
+          } else if (bookRes.data && Array.isArray(bookRes.data.members)) {
+            bList = bookRes.data.members;
+          }
+        }
+        setBookingsList(bList);
       }
-      setBookingsList(bList);
+
+      // 3. Customer-specific After-sales Segments (filtered by cleanMobile)
+      const mobileQuery = cleanMobile ? `&mobile=${cleanMobile}` : '';
+
+      // a. Service Due within 30 days
+      const dueRes = await apiFetch(`/api/v1/segments/service-due?group=${group}&withinDays=30${mobileQuery}`);
+      if (dueRes && dueRes.ok && Array.isArray(dueRes.data?.members)) {
+        setServiceDueList(dueRes.data.members);
+      } else {
+        setServiceDueList([]);
+      }
+
+      // b. No Service in 18+ Months
+      const noServRes = await apiFetch(`/api/v1/segments/no-service?group=${group}&months=18${mobileQuery}`);
+      if (noServRes && noServRes.ok && Array.isArray(noServRes.data?.members)) {
+        setNoServiceList(noServRes.data.members);
+      } else {
+        setNoServiceList([]);
+      }
+
+      // c. Reactivated Customers
+      const reactRes = await apiFetch(`/api/v1/segments/reactivated?group=${group}&months=18${mobileQuery}`);
+      if (reactRes && reactRes.ok && Array.isArray(reactRes.data?.members)) {
+        setReactivatedList(reactRes.data.members);
+      } else {
+        setReactivatedList([]);
+      }
+
     } catch (err) {
       console.warn("Failed to fetch customer after-sales data:", err);
     } finally {
@@ -92,7 +135,7 @@ export default function SalesAfterSalesView() {
 
   useEffect(() => {
     fetchCustomerAfterSalesData();
-  }, [group, customerNumber]);
+  }, [group, customerNumber, cleanMobile]);
 
   const handleTriggerWipAction = async (actionType, targetWip) => {
     const wipNo = targetWip || selectedWipNo || searchWipInput;
@@ -132,6 +175,8 @@ export default function SalesAfterSalesView() {
     }
   };
 
+  const totalAlertsCount = serviceDueList.length + noServiceList.length + reactivatedList.length;
+
   return (
     <div className="bg-white rounded-xl p-5 shadow-xs border border-gray-100 flex flex-col gap-4 text-xs">
       
@@ -151,12 +196,12 @@ export default function SalesAfterSalesView() {
             <p className="text-[11px] text-gray-500 font-medium">
               Customer: <span className="font-bold text-gray-800">{customerName}</span> 
               {customerNumber ? ` (#${customerNumber})` : ''}
-              {currentMobile ? ` | ${currentMobile}` : ''}
+              {cleanMobile ? ` | ${cleanMobile}` : ''}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* WIP / Booking Lookup Search Bar */}
           <form onSubmit={handleLookupWipSubmit} className="flex items-center gap-1.5">
             <div className="relative">
@@ -189,8 +234,8 @@ export default function SalesAfterSalesView() {
         </div>
       </div>
 
-      {/* Tabs Selector: Strictly customer-specific endpoints */}
-      <div className="flex items-center gap-2 border-b border-gray-100 pb-2">
+      {/* Tabs Selector */}
+      <div className="flex items-center gap-2 border-b border-gray-100 pb-2 flex-wrap">
         <button
           onClick={() => setActiveTab('CustomerVehicles')}
           className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 ${
@@ -224,6 +269,25 @@ export default function SalesAfterSalesView() {
             {bookingsList.length}
           </span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('RetentionAlerts')}
+          className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 ${
+            activeTab === 'RetentionAlerts' 
+              ? 'bg-teal-600 text-white shadow-2xs' 
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          <FaBell className="text-xs" />
+          <span>Retention & Cohort Alerts</span>
+          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+            totalAlertsCount > 0 
+              ? (activeTab === 'RetentionAlerts' ? 'bg-white/30 text-white' : 'bg-amber-100 text-amber-900 border border-amber-300') 
+              : 'bg-gray-200 text-gray-600'
+          }`}>
+            {totalAlertsCount}
+          </span>
+        </button>
       </div>
 
       {/* Action API Output Result Card (shown when a WIP is inspected or looked up) */}
@@ -252,152 +316,94 @@ export default function SalesAfterSalesView() {
             </div>
           </div>
 
-          {actionOutput.error ? (
-            <p className="text-xs font-medium text-rose-700">{actionOutput.error}</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-[11px]">
+          {actionOutput.ok && typeof actionOutput.data === 'object' && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 text-[11px]">
               <div>
-                <span className="text-gray-500 block text-[10px]">Vehicle:</span>
-                <strong>{actionOutput.data?.vehicle || actionOutput.data?.vin || 'N/A'}</strong>
+                <span className="text-gray-500 block text-[10px]">Job Number / Status</span>
+                <span className="font-mono font-bold text-gray-900">{actionOutput.data.jobNumber || actionOutput.data.status || 'Active'}</span>
               </div>
               <div>
-                <span className="text-gray-500 block text-[10px]">Workshop Branch:</span>
-                <strong>{actionOutput.data?.branch?.name || actionOutput.data?.branch || 'N/A'}</strong>
+                <span className="text-gray-500 block text-[10px]">Service Code / Brand</span>
+                <span className="font-bold text-gray-900">{actionOutput.data.serviceCode || actionOutput.data.brand || group}</span>
               </div>
               <div>
-                <span className="text-gray-500 block text-[10px]">Service Advisor:</span>
-                <strong>{actionOutput.data?.bookedBy || 'N/A'}</strong>
+                <span className="text-gray-500 block text-[10px]">Due Out Date</span>
+                <span className="font-mono font-semibold text-gray-800">{actionOutput.data.dueOutDate || actionOutput.data.date || 'Scheduled'}</span>
               </div>
               <div>
-                <span className="text-gray-500 block text-[10px]">Service Status:</span>
-                <span className="inline-block bg-teal-100 text-teal-900 font-bold px-2 py-0.5 rounded text-[10px]">
-                  {actionOutput.data?.status || 'Active'}
-                </span>
+                <span className="text-gray-500 block text-[10px]">Customer / Vehicle</span>
+                <span className="font-semibold text-gray-800">{actionOutput.data.vehicle || customerName}</span>
               </div>
             </div>
+          )}
+
+          {!actionOutput.ok && (
+            <p className="text-rose-700 font-medium text-[11px]">{actionOutput.error}</p>
           )}
         </div>
       )}
 
-      {/* Data Views */}
       {loading ? (
-        <div className="py-12 flex flex-col items-center justify-center text-gray-400 gap-2">
+        <div className="py-16 flex flex-col items-center justify-center text-gray-400 gap-2">
           <FaSpinner className="animate-spin text-2xl text-teal-600" />
-          <span className="text-xs font-medium">Fetching after-sales details for customer #{customerNumber}...</span>
+          <span className="text-xs font-medium">Fetching customer after-sales data...</span>
         </div>
       ) : activeTab === 'CustomerVehicles' ? (
         /* TAB 1: CUSTOMER VEHICLES & CONTRACTS */
         vehiclesList.length === 0 ? (
           <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-1">
             <FaCar className="mx-auto text-xl text-gray-300 mb-1" />
-            <p className="font-bold text-gray-700 text-xs">No vehicles found for customer #{customerNumber}.</p>
-            <p className="text-[11px] text-gray-400">There are no vehicle records linked to this customer number in Keyloop.</p>
+            <p className="font-bold text-gray-700 text-xs">No registered vehicles found for customer #{customerNumber}.</p>
+            <p className="text-[11px] text-gray-400">There are no vehicles linked to this customer account in Keyloop.</p>
           </div>
         ) : (
           <div className="border border-gray-200 rounded-xl overflow-x-auto overflow-y-auto max-h-[460px] shadow-2xs relative bg-white">
             <table className="w-full text-left text-xs border-collapse">
               <thead className="bg-slate-100 text-gray-700 font-extrabold uppercase text-[9px] sticky top-0 z-10 shadow-2xs">
                 <tr className="border-b border-gray-200">
-                  <th className="py-3 px-3 bg-slate-100">Cust #</th>
-                  <th className="py-3 px-3 bg-slate-100">Customer Name</th>
-                  <th className="py-3 px-3 bg-slate-100">Vehicle Description</th>
-                  <th className="py-3 px-3 bg-slate-100">Plate & VIN</th>
-                  <th className="py-3 px-3 bg-slate-100">Mileage & Delivery</th>
-                  <th className="py-3 px-3 bg-slate-100">Warranty & Contracts</th>
+                  <th className="py-3 px-3 bg-slate-100">Vehicle / Model</th>
+                  <th className="py-3 px-3 bg-slate-100">VIN / Chassis</th>
+                  <th className="py-3 px-3 bg-slate-100">Reg #</th>
+                  <th className="py-3 px-3 bg-slate-100">Mileage</th>
+                  <th className="py-3 px-3 bg-slate-100">Warranty Status</th>
                   <th className="py-3 px-3 bg-slate-100 text-right">Insurance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
-                {vehiclesList.map((veh, idx) => {
-                  const regNo = veh.registrationNumber || 'N/A';
-                  const vin = veh.vin || 'N/A';
-                  const description = veh.description || veh.model || (group ? `${group} Vehicle` : 'Vehicle');
-                  const mileage = typeof veh.mileageKm === 'number' ? `${veh.mileageKm.toLocaleString()} KM` : formatDisplayVal(veh.mileageKm);
-                  const deliveryDate = veh.deliveryDate || 'N/A';
-                  
-                  const warranty = veh.warranty;
-                  const serviceContract = veh.serviceContract;
-                  const ins = Array.isArray(veh.insurance) && veh.insurance.length > 0 ? veh.insurance[0] : null;
+                {vehiclesList.map((v, idx) => {
+                  const vin = v.vin || v.chassisNumber || `VIN-${idx+1}`;
+                  const modelName = v.model || v.description || v.variant || `${v.brand || ''} Vehicle`.trim();
+                  const mileage = v.mileageKm || v.odometerKm;
+                  const regNo = v.registrationNumber || v.plateNumber || 'N/A';
+                  const warranty = v.warranty;
+                  const ins = v.insurance && v.insurance.length > 0 ? v.insurance[0] : null;
 
                   return (
                     <tr key={idx} className="hover:bg-teal-50/40 transition-colors">
-                      {/* Cust # */}
-                      <td className="py-3 px-3 font-mono font-bold text-teal-700 whitespace-nowrap">
-                        #{customerNumber}
-                      </td>
-
-                      {/* Real Customer Name */}
                       <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap">
-                        {customerName}
-                      </td>
-
-                      {/* Vehicle Description */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <span className="font-bold text-gray-900 flex items-center gap-1.5">
-                          <FaCar className="text-teal-600 text-xs" />
-                          {description}
+                        <span className="flex items-center gap-1.5">
+                          <FaCar className="text-gray-400 text-xs" />
+                          <span>{modelName}</span>
                         </span>
-                        {veh.colour && (
-                          <span className="text-[10px] text-gray-500 block">
-                            Colour: {veh.colour} ({veh.modelYear || ''})
+                      </td>
+                      <td className="py-3 px-3 font-mono font-bold text-teal-700 whitespace-nowrap">{vin}</td>
+                      <td className="py-3 px-3 font-mono text-gray-600 whitespace-nowrap">{regNo}</td>
+                      <td className="py-3 px-3 font-mono text-gray-800 whitespace-nowrap">
+                        {mileage ? `${Number(mileage).toLocaleString()} KM` : 'N/A'}
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        {warranty && warranty.status ? (
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                            warranty.status === 'ACTIVE' 
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                              : 'bg-gray-100 text-gray-600'
+                          }`}>
+                            {warranty.status} ({warranty.provider || 'OEM'})
                           </span>
+                        ) : (
+                          <span className="text-gray-400 italic">No warranty</span>
                         )}
                       </td>
-
-                      {/* Plate & VIN */}
-                      <td className="py-3 px-3 whitespace-nowrap font-mono text-[10px]">
-                        <span className="bg-gray-100 px-1.5 py-0.5 rounded font-bold text-gray-800 border border-gray-200">
-                          {regNo}
-                        </span>
-                        <span className="text-gray-400 block mt-0.5" title={vin}>
-                          VIN: {vin}
-                        </span>
-                      </td>
-
-                      {/* Mileage & Delivery Date */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <span className="font-bold text-gray-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[10px]">
-                          {mileage}
-                        </span>
-                        <span className="text-[10px] text-gray-500 block mt-0.5">
-                          Delivered: {deliveryDate}
-                        </span>
-                      </td>
-
-                      {/* Warranty & Service Contract */}
-                      <td className="py-3 px-3 whitespace-nowrap text-[10px]">
-                        <div className="flex flex-col gap-1">
-                          {warranty && (
-                            <span className="flex items-center gap-1">
-                              <span className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold ${
-                                warranty.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-600'
-                              }`}>
-                                Warranty: {warranty.status}
-                              </span>
-                              <span className="text-gray-500 truncate max-w-[120px]" title={warranty.provider}>
-                                {warranty.expiryDate ? `Exp: ${warranty.expiryDate}` : ''}
-                              </span>
-                            </span>
-                          )}
-                          {serviceContract && (
-                            <span className="flex items-center gap-1">
-                              <span className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold ${
-                                serviceContract.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
-                              }`}>
-                                Service Contract: {serviceContract.status}
-                              </span>
-                              <span className="text-gray-500 truncate max-w-[120px]">
-                                {serviceContract.expiryDate ? `Exp: ${serviceContract.expiryDate}` : ''}
-                              </span>
-                            </span>
-                          )}
-                          {!warranty && !serviceContract && (
-                            <span className="text-gray-400 italic">No contract on file</span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Insurance */}
                       <td className="py-3 px-3 text-right whitespace-nowrap text-[10px]">
                         {ins ? (
                           <div className="flex flex-col items-end">
@@ -419,7 +425,7 @@ export default function SalesAfterSalesView() {
             </table>
           </div>
         )
-      ) : (
+      ) : activeTab === 'ServiceBookings' ? (
         /* TAB 2: SERVICE BOOKINGS & OPEN WIPS */
         bookingsList.length === 0 ? (
           <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-1">
@@ -473,6 +479,112 @@ export default function SalesAfterSalesView() {
             </table>
           </div>
         )
+      ) : (
+        /* TAB 3: RETENTION & SERVICE COHORT ALERTS */
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* 1. Service Due Alert Card */}
+            <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+              serviceDueList.length > 0 
+                ? 'bg-amber-50/80 border-amber-300 text-amber-900' 
+                : 'bg-gray-50 border-gray-200 text-gray-600'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-extrabold text-xs flex items-center gap-1.5">
+                  <FaBell className={serviceDueList.length > 0 ? 'text-amber-600' : 'text-gray-400'} />
+                  Service Due within 30 Days
+                </span>
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                  serviceDueList.length > 0 ? 'bg-amber-200 text-amber-950' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {serviceDueList.length > 0 ? `${serviceDueList.length} Due` : 'Clear'}
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-600">
+                {serviceDueList.length > 0
+                  ? `Next service due date: ${serviceDueList[0].nextServiceDate || 'Upcoming'} (${serviceDueList[0].vehicle || 'Vehicle'})`
+                  : 'Customer has no vehicles scheduled or due for routine maintenance in the next 30 days.'}
+              </p>
+            </div>
+
+            {/* 2. No Service 18+ Months Card */}
+            <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+              noServiceList.length > 0 
+                ? 'bg-rose-50/80 border-rose-300 text-rose-900' 
+                : 'bg-gray-50 border-gray-200 text-gray-600'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-extrabold text-xs flex items-center gap-1.5">
+                  <FaExclamationTriangle className={noServiceList.length > 0 ? 'text-rose-600' : 'text-gray-400'} />
+                  No Service (18+ Months)
+                </span>
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                  noServiceList.length > 0 ? 'bg-rose-200 text-rose-950' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {noServiceList.length > 0 ? `${noServiceList.length} Inactive` : 'Active'}
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-600">
+                {noServiceList.length > 0
+                  ? `Vehicle ${noServiceList[0].vehicle || ''} has not visited the service workshop in > 18 months.`
+                  : 'Customer is actively servicing their vehicles with AGMC.'}
+              </p>
+            </div>
+
+            {/* 3. Reactivated Customer Card */}
+            <div className={`p-4 rounded-xl border flex flex-col justify-between ${
+              reactivatedList.length > 0 
+                ? 'bg-emerald-50/80 border-emerald-300 text-emerald-900' 
+                : 'bg-gray-50 border-gray-200 text-gray-600'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-extrabold text-xs flex items-center gap-1.5">
+                  <FaUserCheck className={reactivatedList.length > 0 ? 'text-emerald-600' : 'text-gray-400'} />
+                  Reactivated Customer
+                </span>
+                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                  reactivatedList.length > 0 ? 'bg-emerald-200 text-emerald-950' : 'bg-gray-200 text-gray-600'
+                }`}>
+                  {reactivatedList.length > 0 ? 'Reactivated' : 'Regular'}
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-600">
+                {reactivatedList.length > 0
+                  ? `Customer returned for service on ${reactivatedList[0].bookingDate || 'recent date'}.`
+                  : 'Customer maintains regular service cadence with AGMC.'}
+              </p>
+            </div>
+          </div>
+
+          {/* Details Table if Alerts exist */}
+          {totalAlertsCount > 0 && (
+            <div className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-2xs">
+              <div className="p-3 bg-slate-100 font-extrabold text-xs text-gray-800 border-b border-gray-200">
+                Detailed Service Cohort Records for {customerName}
+              </div>
+              <div className="p-3 space-y-2 text-[11px]">
+                {noServiceList.map((item, idx) => (
+                  <div key={`no-serv-${idx}`} className="p-2.5 bg-rose-50/70 border border-rose-200 rounded-lg flex items-center justify-between gap-3">
+                    <div>
+                      <span className="font-bold text-rose-900 block text-xs">Retention Risk: No Service in 18+ Months</span>
+                      <span className="text-gray-600">Vehicle: {item.vehicle} | VIN: {item.vin} | Mileage: {item.mileageKm ? `${item.mileageKm.toLocaleString()} KM` : 'N/A'}</span>
+                    </div>
+                    <span className="text-[10px] bg-rose-200 text-rose-950 px-2 py-0.5 rounded font-bold">Follow-Up Recommended</span>
+                  </div>
+                ))}
+                {serviceDueList.map((item, idx) => (
+                  <div key={`serv-due-${idx}`} className="p-2.5 bg-amber-50/70 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
+                    <div>
+                      <span className="font-bold text-amber-900 block text-xs">Upcoming Service Window</span>
+                      <span className="text-gray-600">Vehicle: {item.vehicle} | Next Service: {item.nextServiceDate} | Registration: {item.registrationNumber}</span>
+                    </div>
+                    <span className="text-[10px] bg-amber-200 text-amber-950 px-2 py-0.5 rounded font-bold">Due in &lt; 30 Days</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
     </div>

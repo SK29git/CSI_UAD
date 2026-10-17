@@ -71,8 +71,8 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
         : (Array.isArray(reasonsRes?.data?.reasons) ? reasonsRes.data.reasons : []);
       setLostSalesReasons(reasonsArray);
 
-      // 5. Lost Sales Details: GET /api/v1/lost-sales?group={group}&customerNumber={customerNumber}
-      const lostDetailsRes = await apiFetch(`/api/v1/lost-sales?group=${group}&customerNumber=${customerNumber}`);
+      // 5. Lost Sales Details: GET /api/v1/lost-sales?group={group}&customerNumber={customerNumber}&from=2012-01-01&to=2026-12-31
+      const lostDetailsRes = await apiFetch(`/api/v1/lost-sales?group=${group}&customerNumber=${customerNumber}&from=2012-01-01&to=2026-12-31`);
       if (lostDetailsRes && lostDetailsRes.ok && Array.isArray(lostDetailsRes.data)) {
         setLostSalesDetails(lostDetailsRes.data);
       } else {

@@ -1,10 +1,11 @@
 {
   "info": {
-    "_postman_id": "891c9389-d858-4e06-b181-dbd64a99a41c",
-    "name": "AGMC Interface - Group wise UAT",
-    "description": "Middleware between the brand websites (BMW, Geely, ...) and Keyloop / Genesys.",
+    "_postman_id": "dc851705-d942-487e-9449-09f3655d19a2",
+    "name": "AGMC Interface UAT Updated - 16/10",
+    "description": "Middleware between the brand websites (BMW, Geely, ...) and Keyloop / Genesys",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "29497344"
+    "_exporter_id": "50201511",
+    "_collection_link": "https://go.postman.co/collection/50201511-dc851705-d942-487e-9449-09f3655d19a2?source=collection_link"
   },
   "item": [
     {
@@ -31,98 +32,6 @@
       ]
     },
     {
-      "name": "Leads",
-      "item": [
-        {
-          "name": "Submit Lead (website)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    const json = pm.response.json();",
-                  "    pm.collectionVariables.set('referenceId', json.referenceId);",
-                  "    console.log('Saved referenceId:', json.referenceId);",
-                  "}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"enquiry\": {\n    \"apikey\": \"3A22A9F89A2D021E3C130074\",\n    \"lead\": {\n      \"origin\": \"BMW Test Drive - EN\",\n      \"source\": \"WEBENQUIRY\",\n      \"branch\": \"10\",\n      \"idnumber\": \"\",\n      \"allocate\": \"\"\n    },\n    \"contact\": {\n      \"title\": \"Mr\",\n      \"firstname\": \"John\",\n      \"surname\": \"Smith\",\n      \"email\": \"john.smith@example.com\",\n      \"phone\": \"+971500000000\",\n      \"mobile\": \"+971500000000\",\n      \"source\": \"\"\n    },\n    \"seeks\": {\n      \"newused\": \"NEW\",\n      \"make\": \"\",\n      \"model\": \"X3\",\n      \"stocknumber\": \"\",\n      \"regnumber\": \"\",\n      \"notes\": \"Location : BMW - Sheikh Zayed Road Dubai, Body Type : ALL , Model : 'X3'\"\n    },\n    \"tradein\": {\n      \"registration\": \"\",\n      \"make\": \"\",\n      \"model\": \"\",\n      \"mileage\": \"\",\n      \"year\": \"\",\n      \"notes\": \"\"\n    },\n    \"mkagree\": {\n      \"updatemkagree\": \"false\",\n      \"dealersms\": false,\n      \"dealeremail\": false,\n      \"dealerletter\": false,\n      \"dealerphone\": false,\n      \"partssms\": false,\n      \"partsemail\": false,\n      \"partsletter\": false,\n      \"partsphone\": false,\n      \"salessms\": false,\n      \"salesemail\": false,\n      \"salesletter\": false,\n      \"salesphone\": false,\n      \"servicesms\": false,\n      \"serviceemail\": false,\n      \"serviceletter\": false,\n      \"servicephone\": false\n    }\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/leads",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "leads"
-              ]
-            },
-            "description": "This is the endpoint the website's backend calls - the exact same JSON shape it used to send Keyloop directly (captured from real production logs, not guessed). Brand is identified by enquiry.apikey - this example uses BMW's confirmed-working key. Saves the returned referenceId into {{referenceId}} for the next two requests."
-          },
-          "response": []
-        },
-        {
-          "name": "Get Lead Status",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/leads/{{referenceId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "leads",
-                "{{referenceId}}"
-              ]
-            },
-            "description": "Shows the resolved brand, forwarded payload, and the raw Keyloop/Genesys responses (or error messages) for this lead."
-          },
-          "response": []
-        },
-        {
-          "name": "Retry Failed Lead",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/leads/{{referenceId}}/retry",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "leads",
-                "{{referenceId}}",
-                "retry"
-              ]
-            },
-            "description": "Re-triggers async delivery to Keyloop/Genesys for a lead that previously ended up KEYLOOP_FAILED / GENESIS_FAILED."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
       "name": "Sales Screen (agent desktop)",
       "item": [
         {
@@ -131,7 +40,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/customers?group={{group}}&mobile={{mobile}}",
+              "raw": "{{baseUrl}}/api/v1/customers?mobile={{mobile}}",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -141,10 +50,6 @@
                 "customers"
               ],
               "query": [
-                {
-                  "key": "group",
-                  "value": "{{group}}"
-                },
                 {
                   "key": "mobile",
                   "value": "{{mobile}}"
@@ -191,7 +96,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/v1/customers?group={{group}}&customerNumber={{customerNumber}}",
+              "raw": "{{baseUrl}}/api/v1/customers?customerNumber={{customerNumber}}",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -201,10 +106,6 @@
                 "customers"
               ],
               "query": [
-                {
-                  "key": "group",
-                  "value": "{{group}}"
-                },
                 {
                   "key": "customerNumber",
                   "value": "{{customerNumber}}"
@@ -239,29 +140,6 @@
           "response": []
         },
         {
-          "name": "Verification Status (501)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/verification",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "customers",
-                "{{group}}",
-                "{{customerNumber}}",
-                "verification"
-              ]
-            },
-            "description": "White on the sheet of 2026-09-21 (Verified By and Verification Date/Time are red font). The sheet's own remark says it is recorded in Genesys; no feed of it reaches this side, so this answers 501 after the usual 404 check."
-          },
-          "response": []
-        },
-        {
           "name": "Vehicle Details",
           "request": {
             "method": "GET",
@@ -280,7 +158,7 @@
                 "vehicles"
               ]
             },
-            "description": "The customer's vehicles, newest registration first. Every car whose vehicle record names this customer as owner, aftersales customer or driver (`linkedVia`: `OWNER` / `AFTERSALES` / `DRIVER`, from Keyloop's Sales / Aftersales / Drive Customer columns), plus cars on their invoiced enquiries that no vehicle record gives to an owner yet (`INVOICED_ENQUIRY`). A car they bought that the vehicle report now gives to someone else (a resale) is not listed. Keyloop's vehicle export has no engine or transmission column. `mileageKm` is the last odometer reading (Keyloop's 0 = no reading, omitted)."
+            "description": "The customer's vehicles, newest registration first. Found through the VIN on one of their invoiced enquiries (`linkedVia` = `INVOICED_ENQUIRY`). The \"Customer Number\" on Keyloop's vehicle export is not followed - on the real files it does not identify the car's owner. Keyloop's vehicle export has no engine or transmission column. `mileageKm` is the last odometer reading (Keyloop's 0 = no reading, omitted)."
           },
           "response": []
         },
@@ -406,29 +284,6 @@
           "response": []
         },
         {
-          "name": "Sales Summary",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/sales-summary",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "customers",
-                "{{group}}",
-                "{{customerNumber}}",
-                "sales-summary"
-              ]
-            },
-            "description": "Total Leads, Open Leads, Won Deals, Lost Deals, Last Purchase Date from the customer's enquiries in Keyloop's enquiry export: won = Invoiced, lost = Lost sale, open = everything else; last purchase = latest invoice date."
-          },
-          "response": []
-        },
-        {
           "name": "Overall agent desktop",
           "request": {
             "method": "GET",
@@ -447,167 +302,16 @@
                 "sales-screen"
               ]
             },
-            "description": "Every white section in one call: profile, vehicles, insurance, finance, trade-in history, complaints (10 most recent), risk overview. Rows that are red on the spec are not included. Customer + Vehicle + Sales (salesSummary) + Service (serviceBookings: the customer's open workshop bookings) + Complaint. Interaction data is red font: interactionData is returned empty (\"\")."
+            "description": "Every white section in one call: profile, vehicles, insurance, finance, trade-in history, complaints (10 most recent), risk overview. Rows that are red on the spec are not included."
           },
           "response": []
         }
       ],
-      "description": "Read-only API behind the Genesys agent desktop's Sales Screen, one request per section of the screen spec. Answered from the core.* tables (Keyloop's typed mirror); nothing is written back. Only the rows left white on the spec have an endpoint, and red-font fields inside a white row are returned empty (\"\"). Fully red rows - Trade-in Eligibility, Documents, Accessories, Recent Sales Activities, SLA Countdown, Customer Sentiment, AI Assistant, Activity Timeline, Complaint Manager, Notes - are Genesys's or another system's and are not routed.\n\nA customer is addressed by Keyloop group + customer number (`{{group}}` / `{{customerNumber}}`) because the number is only unique within a dealer group. Start with a search (by the caller's mobile, an e-mail, or the number) - it returns both.\n\nFields Keyloop leaves empty are omitted from the JSON rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop.\n\nCustomer phone numbers and e-mail addresses are masked in every response: a phone shows only its last three digits (+*********567), an e-mail its first letter and domain (a***@example.com). Searching by mobile or e-mail still works - the match comes back masked. The test-drive advisor is staff and is not masked."
+      "description": "Read-only API behind the Genesys agent desktop's Sales Screen, one request per section of the screen spec. Answered from the core.* tables (Keyloop's typed mirror); nothing is written back. Only the rows left white on the spec have an endpoint, and red-font fields inside a white row are returned empty (\"\"). Fully red rows - Trade-in Eligibility, Documents, Accessories, Recent Sales Activities, SLA Countdown, Customer Sentiment, AI Assistant, Activity Timeline, Complaint Manager, Notes - are Genesys's or another system's and are not routed.\n\nA customer is addressed by Keyloop group + customer number (`{{group}}` / `{{customerNumber}}`) because the number is only unique within a dealer group. Start with a search (by the caller's mobile, an e-mail, or the number) - it returns both.\n\nFields Keyloop leaves empty are omitted from the JSON rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
     },
     {
       "name": "Sales New Lead Screen",
       "item": [
-        {
-          "name": "1. Lead",
-          "item": [
-            {
-              "name": "Capture new prospect (write) = Submit Lead",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "if (pm.response.code === 201) {",
-                      "    const json = pm.response.json();",
-                      "    pm.collectionVariables.set('referenceId', json.referenceId);",
-                      "    console.log('Saved referenceId:', json.referenceId);",
-                      "}"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"enquiry\": {\n    \"apikey\": \"3A22A9F89A2D021E3C130074\",\n    \"lead\": {\n      \"origin\": \"BMW Test Drive - EN\",\n      \"source\": \"WEBENQUIRY\",\n      \"branch\": \"10\",\n      \"idnumber\": \"\",\n      \"allocate\": \"\"\n    },\n    \"contact\": {\n      \"title\": \"Mr\",\n      \"firstname\": \"John\",\n      \"surname\": \"Smith\",\n      \"email\": \"john.smith@example.com\",\n      \"phone\": \"+971500000000\",\n      \"mobile\": \"+971500000000\",\n      \"source\": \"\"\n    },\n    \"seeks\": {\n      \"newused\": \"NEW\",\n      \"make\": \"\",\n      \"model\": \"X3\",\n      \"stocknumber\": \"\",\n      \"regnumber\": \"\",\n      \"notes\": \"Location : BMW - Sheikh Zayed Road Dubai, Body Type : ALL , Model : 'X3'\"\n    },\n    \"tradein\": {\n      \"registration\": \"\",\n      \"make\": \"\",\n      \"model\": \"\",\n      \"mileage\": \"\",\n      \"year\": \"\",\n      \"notes\": \"\"\n    },\n    \"mkagree\": {\n      \"updatemkagree\": \"false\",\n      \"dealersms\": false,\n      \"dealeremail\": false,\n      \"dealerletter\": false,\n      \"dealerphone\": false,\n      \"partssms\": false,\n      \"partsemail\": false,\n      \"partsletter\": false,\n      \"partsphone\": false,\n      \"salessms\": false,\n      \"salesemail\": false,\n      \"salesletter\": false,\n      \"salesphone\": false,\n      \"servicesms\": false,\n      \"serviceemail\": false,\n      \"serviceletter\": false,\n      \"servicephone\": false\n    }\n  }\n}"
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/leads",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "leads"
-                  ]
-                },
-                "description": "Same endpoint as Leads > Submit Lead: the enquiry-shaped JSON the website sends. The lead is forwarded to Keyloop and Genesys; once Keyloop exports it, it appears as a prospect in the read requests below."
-              },
-              "response": []
-            },
-            {
-              "name": "Capture new prospect (read) - search",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/prospects?group={{group}}&mobile={{mobile}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "prospects"
-                  ],
-                  "query": [
-                    {
-                      "key": "group",
-                      "value": "{{group}}"
-                    },
-                    {
-                      "key": "mobile",
-                      "value": "{{mobile}}"
-                    }
-                  ]
-                },
-                "description": "Keyloop's leads by mobile, email, prospectNumber or customerNumber. The mobile is tried against the registered number, then every other phone Keyloop holds (the spec's \"search by another phone number\")."
-              },
-              "response": []
-            },
-            {
-              "name": "Capture new prospect (read) - one lead",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/prospects/{{group}}/{{prospectNumber}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "prospects",
-                    "{{group}}",
-                    "{{prospectNumber}}"
-                  ]
-                },
-                "description": "Lead ID, name, mobile, e-mail, lead source, status (OPEN / CONVERTED), customer number once converted, journeys it is enrolled in. Keyloop's prospect export has no Model column."
-              },
-              "response": []
-            },
-            {
-              "name": "Push lead to Genesys",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/leads/{{referenceId}}/genesys?group={{group}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "leads",
-                    "{{referenceId}}",
-                    "genesys"
-                  ],
-                  "query": [
-                    {
-                      "key": "group",
-                      "value": "{{group}}"
-                    }
-                  ]
-                },
-                "description": "Lead ID, customer, mobile, source, campaign (contact list), push status. Genesys Contact ID is red font: returned empty (\"\")."
-              },
-              "response": []
-            },
-            {
-              "name": "Display slots to customer (Lead ID, Mobile)",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/prospects/{{group}}/{{prospectNumber}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "prospects",
-                    "{{group}}",
-                    "{{prospectNumber}}"
-                  ]
-                },
-                "description": "Black fields on this row are Lead ID and Mobile - both on the prospect. Slot List and Push Status are red font: Genesys builds and pushes the slots."
-              },
-              "response": []
-            }
-          ]
-        },
         {
           "name": "2. Test drive",
           "item": [
@@ -617,7 +321,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/test-drives/vehicles?group={{group}}&branchCode={{branchCode}}",
+                  "raw": "{{baseUrl}}/api/v1/test-drives/vehicles?group={{group}}",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -634,7 +338,8 @@
                     },
                     {
                       "key": "branchCode",
-                      "value": "{{branchCode}}"
+                      "value": "{{branchCode}}",
+                      "disabled": true
                     }
                   ]
                 },
@@ -648,7 +353,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/test-drives?group={{group}}&prospectNumber={{prospectNumber}}",
+                  "raw": "{{baseUrl}}/api/v1/test-drives?group={{group}}&enquiryNumber={{enquiryNumber}}",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -663,8 +368,8 @@
                       "value": "{{group}}"
                     },
                     {
-                      "key": "prospectNumber",
-                      "value": "{{prospectNumber}}"
+                      "key": "enquiryNumber",
+                      "value": "{{enquiryNumber}}"
                     }
                   ]
                 },
@@ -691,75 +396,6 @@
                   ]
                 },
                 "description": "Customer, Vehicle, Slot, Advisor, Booking ID, Status. Writing a booking into Keyloop is not possible from here."
-              },
-              "response": []
-            },
-            {
-              "name": "Notify advisor",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/test-drives/{{group}}/{{bookingNumber}}/advisor-notification",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "test-drives",
-                    "{{group}}",
-                    "{{bookingNumber}}",
-                    "advisor-notification"
-                  ]
-                },
-                "description": "Booking ID, Advisor (name, mobile, e-mail), Customer, Date/Time. Message ID and Delivery Status are red font."
-              },
-              "response": []
-            },
-            {
-              "name": "Trigger feedback",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/test-drives/{{group}}/{{bookingNumber}}/feedback",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "test-drives",
-                    "{{group}}",
-                    "{{bookingNumber}}",
-                    "feedback"
-                  ]
-                },
-                "description": "Booking ID, Customer, and testDriveDone (the trigger). Template and Trigger Status are red font."
-              },
-              "response": []
-            },
-            {
-              "name": "Receive feedback",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/test-drives/{{group}}/{{bookingNumber}}/feedback",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "test-drives",
-                    "{{group}}",
-                    "{{bookingNumber}}",
-                    "feedback"
-                  ]
-                },
-                "description": "Only Booking ID is black on this row - Genesys receives and records the rating, comments and routing. Same response as Trigger feedback: the booking and customer the feedback belongs to."
               },
               "response": []
             },
@@ -987,6 +623,11 @@
                     {
                       "key": "withinDays",
                       "value": "30"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
                     }
                   ]
                 },
@@ -1119,7 +760,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/customers?group={{group}}&mobile={{mobile}}",
+                  "raw": "{{baseUrl}}/api/v1/customers?mobile={{mobile}}",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -1129,10 +770,6 @@
                     "customers"
                   ],
                   "query": [
-                    {
-                      "key": "group",
-                      "value": "{{group}}"
-                    },
                     {
                       "key": "mobile",
                       "value": "{{mobile}}"
@@ -1242,6 +879,11 @@
                     {
                       "key": "months",
                       "value": "18"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
                     }
                   ]
                 },
@@ -1273,6 +915,11 @@
                     {
                       "key": "months",
                       "value": "18"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
                     }
                   ]
                 },
@@ -1313,6 +960,11 @@
                     {
                       "key": "minAgeYears",
                       "value": "4"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
                     }
                   ]
                 },
@@ -1344,6 +996,11 @@
                     {
                       "key": "withinDays",
                       "value": "30"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
                     }
                   ]
                 },
@@ -1375,6 +1032,11 @@
                     {
                       "key": "withinDays",
                       "value": "30"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
                     }
                   ]
                 },
@@ -1406,6 +1068,11 @@
                     {
                       "key": "month",
                       "value": "9"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
                     }
                   ]
                 },
@@ -1433,10 +1100,15 @@
                     {
                       "key": "group",
                       "value": "{{group}}"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
                     }
                   ]
                 },
-                "description": "Customer, Vehicle, Fuel Type from Keyloop's own electric-vehicle export (folder EV, table core.electric_vehicle) - the main vehicle export leaves Fuel Type blank on almost every car, so EVs cannot be told from it. A car's customer is its owner: the Sales Customer on the vehicle record (joined by VIN), else the buyer on its latest invoiced enquiry, matched by vehicle number; cars that belong to nobody yet (stock, demo) are left out. The EV export's own Customer Number (Keyloop's old, wrong column) and Enquiry Number (a copy of the Vehicle Number) are not followed. A car without a chassis yet has no vin. Optional fuelTypes=E narrows by Keyloop's fuel-type code. Ownership Date is red font. Page with limit (default 100, max 1000) and offset; Segment ID and Record Count are red font: returned empty (\"\")."
+                "description": "Customer, Vehicle, Fuel Type from Keyloop's own electric-vehicle export (folder EV, table core.electric_vehicle) - the main vehicle export leaves Fuel Type blank on almost every car, so EVs cannot be told from it. A car's customer is the buyer on its latest invoiced enquiry, matched by vehicle number; cars never invoiced to anyone (stock, demo, open orders) are left out. The EV row's own Customer Number does not identify the car's owner and its Enquiry Number only repeats the Vehicle Number, so neither is followed. A car without a chassis yet has no vin. Optional fuelTypes=E narrows by Keyloop's fuel-type code. Ownership Date is red font. Page with limit (default 100, max 1000) and offset; Segment ID and Record Count are red font: returned empty (\"\")."
               },
               "response": []
             },
@@ -1464,6 +1136,11 @@
                     {
                       "key": "olderThanDays",
                       "value": "30"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
                     }
                   ]
                 },
@@ -1491,6 +1168,11 @@
                     {
                       "key": "group",
                       "value": "{{group}}"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
                     }
                   ]
                 },
@@ -1503,55 +1185,6 @@
         {
           "name": "6. Complaints",
           "item": [
-            {
-              "name": "Create complaint ticket",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "if (pm.response.code === 201) {",
-                      "    const json = pm.response.json();",
-                      "    pm.collectionVariables.set('desktopComplaintId', json.complaintId);",
-                      "    console.log('Saved desktopComplaintId:', json.complaintId);",
-                      "}"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"keyloopGroup\": \"{{group}}\",\n  \"customerNumber\": \"{{customerNumber}}\",\n  \"category\": \"Issue after last visit\",\n  \"branch\": \"{{branchCode}}\",\n  \"department\": \"Service\",\n  \"description\": \"Brake noise after last service\",\n  \"vin\": \"{{vin}}\",\n  \"createdBy\": \"agent.42\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/complaints",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "complaints"
-                  ]
-                },
-                "description": "Customer, Category, Branch, Department, Vehicle, Description in; Complaint ID (AGMC-<id>) and Status out. Saved on this side (app.customer_request) - nothing is written to Keyloop. The same call as the Complaint Screen's \"Create Complaint\": description is required; category, vin, branch, priority and createdBy are optional. The new id is saved to {{desktopComplaintId}}; read it back with \"Monitor complaint status\" by setting {{complaintReference}} to it."
-              },
-              "response": []
-            },
             {
               "name": "Send acknowledgement",
               "request": {
@@ -1595,167 +1228,11 @@
                 "description": "Complaint ID with OPEN or CLOSED - Keyloop records only a closed date, so In Progress and Re-opened (red font) do not exist. For all of a customer's complaints use .../customers/{group}/{customerNumber}/complaints."
               },
               "response": []
-            },
-            {
-              "name": "Trigger satisfaction form",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{complaintReference}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "complaints",
-                    "{{group}}",
-                    "{{complaintReference}}"
-                  ]
-                },
-                "description": "Complaint ID, Customer, Closure Date (complaint.closedDate / closedAt). Message ID and Status are red font."
-              },
-              "response": []
             }
           ]
         }
       ],
-      "description": "One request per white row of the Sales New Lead Screen (2026-09-18 version). Each serves the fields that are in black on its row; red-font fields (message ids, delivery and trigger statuses, templates, slot lists, ratings, production / shipment / registration statuses, tracking number, segment id, record count...) are Genesys's or another system's: they are returned empty (\"\").\n\nFully red rows have no request: Get showroom slots, Create showroom appointment, Return customer response, Get service slots, Anniversary extraction, Push campaign segment, Stop communication after 6 months, Assign relationship manager, Fast-track VIP service.\n\nRead-only over core.* (Keyloop's typed mirror) and the leads table, except the complaint ticket, which writes to a table of our own. Writing bookings or appointments into Keyloop is not possible - they only arrive as Keyloop's exports. Times are dealer-local (+04:00). Fields Keyloop leaves empty are omitted. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop.\n\nCustomer phone numbers and e-mail addresses are masked in every response: a phone shows only its last three digits (+*********567), an e-mail its first letter and domain (a***@example.com). Searching by mobile or e-mail still works - the match comes back masked. The test-drive advisor is staff and is not masked."
-    },
-    {
-      "name": "Enquiries",
-      "item": [
-        {
-          "name": "Enquiries by customer mobile, make and model",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/enquiries?group={{group}}&mobile={{mobile}}&make={{make}}&model={{model}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "enquiries"
-              ],
-              "query": [
-                {
-                  "key": "group",
-                  "value": "{{group}}"
-                },
-                {
-                  "key": "mobile",
-                  "value": "{{mobile}}"
-                },
-                {
-                  "key": "make",
-                  "value": "{{make}}"
-                },
-                {
-                  "key": "model",
-                  "value": "{{model}}"
-                }
-              ]
-            },
-            "description": "The customer's enquiries for one make and model. mobile in any spelling (+971 50 123 4567 / 0501234567 / 501234567); drop make or model to widen, add status=open|won|lost to narrow by outcome, group= to stay inside one Keyloop group."
-          },
-          "response": []
-        },
-        {
-          "name": "Enquiries by customer mobile (all makes)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/enquiries?group={{group}}&mobile={{mobile}}&status=open",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "enquiries"
-              ],
-              "query": [
-                {
-                  "key": "group",
-                  "value": "{{group}}"
-                },
-                {
-                  "key": "mobile",
-                  "value": "{{mobile}}"
-                },
-                {
-                  "key": "status",
-                  "value": "open"
-                }
-              ]
-            },
-            "description": "Every open enquiry of the customer with this mobile, any make or model. status=all (the default) also lists invoiced and lost ones."
-          },
-          "response": []
-        },
-        {
-          "name": "Enquiries for a customer number",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/enquiries?group={{group}}&customerNumber={{customerNumber}}&make={{make}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "enquiries"
-              ],
-              "query": [
-                {
-                  "key": "group",
-                  "value": "{{group}}"
-                },
-                {
-                  "key": "customerNumber",
-                  "value": "{{customerNumber}}"
-                },
-                {
-                  "key": "make",
-                  "value": "{{make}}"
-                }
-              ]
-            },
-            "description": "The same list keyed by Keyloop customer number, for a caller that already identified the customer."
-          },
-          "response": []
-        },
-        {
-          "name": "Enquiry details",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/enquiries/{{group}}/{{enquiryNumber}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "enquiries",
-                "{{group}}",
-                "{{enquiryNumber}}"
-              ]
-            },
-            "description": "One enquiry by its Keyloop number: the row above plus the journeys the engine enrolled it in (J01 showroom appointment, J03 delivery). 404 when unknown."
-          },
-          "response": []
-        }
-      ],
-      "description": "Keyloop enquiries for the agent desktop, found by the CUSTOMER's mobile number and narrowed by make and model. Each row is the enquiry id (Keyloop enquiry number) with everything Keyloop records on it: status (Keyloop's label) and outcome (OPEN / WON / LOST), customer (number, name, masked mobile and e-mail), make (normalised brand) and manufacturer code, model / model code / variant, new or used, branch, sales executive, source, appointment and test-drive dates, order and invoice facts, the car (vehicle number, VIN and the vehicle record when Keyloop has it) and, on a lost sale, the reason and date.\n\nThe mobile is matched on the customer record (registered mobile first, then every other phone Keyloop holds for them), never on the enquiry's own \"Mobile Phone Number\" column - in Keyloop's export that column is the sales executive's. make=BMW also covers BMW i (brand BMW_I); MINI, Motorrad and Rolls-Royce are their own makes. model matches whole words in any spacing (\"X5\", \"5 series\", \"Countryman\", or the model code \"G05\"); \"X1\" does not find an iX1. Read only, newest first, limit max 100. Times are dealer-local (+04:00)."
+      "description": "One request per white row of the Sales New Lead Screen (2026-09-18 version). Each serves the fields that are in black on its row; red-font fields (message ids, delivery and trigger statuses, templates, slot lists, ratings, production / shipment / registration statuses, tracking number, segment id, record count...) are Genesys's or another system's: they are returned empty (\"\").\n\nFully red rows have no request: Get showroom slots, Create showroom appointment, Return customer response, Get service slots, Anniversary extraction, Push campaign segment, Stop communication after 6 months, Assign relationship manager, Fast-track VIP service.\n\nRead-only over core.* (Keyloop's typed mirror) and the leads table, except the complaint ticket, which writes to a table of our own. Writing bookings or appointments into Keyloop is not possible - they only arrive as Keyloop's exports. Times are dealer-local (+04:00). Fields Keyloop leaves empty are omitted. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
     },
     {
       "name": "Service Booking Screen",
@@ -1769,7 +1246,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/customers?group={{group}}&mobile={{mobile}}",
+                  "raw": "{{baseUrl}}/api/v1/customers?mobile={{mobile}}",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -1779,10 +1256,6 @@
                     "customers"
                   ],
                   "query": [
-                    {
-                      "key": "group",
-                      "value": "{{group}}"
-                    },
                     {
                       "key": "mobile",
                       "value": "{{mobile}}"
@@ -1839,7 +1312,7 @@
                     "{{vin}}"
                   ]
                 },
-                "description": "Model, VIN, mileage, last service date, next service due and the insurance contracts on the car. warranty and serviceContract are the one-line covers from Keyloop's warranty and service-contract exports (status, provider, type, expiry)."
+                "description": "Model, VIN, mileage, last service date, next service due and the insurance contracts on the car. Warranty Status and Service Contract have no Keyloop feed (the contract export is insurance only)."
               },
               "response": []
             },
@@ -1869,14 +1342,14 @@
                     }
                   ]
                 },
-                "description": "Every car whose vehicle record names the customer (owner, aftersales customer or driver), plus cars on their invoiced enquiries that no vehicle record gives to an owner yet; newest registration first. customerNumber on each car is its aftersales customer."
+                "description": "Every car the customer bought (VIN on one of their invoiced enquiries), newest registration first."
               },
               "response": []
             }
           ]
         },
         {
-          "name": "3. Service Eligibility / Warranty Check",
+          "name": "3. Service Eligibility / Warranty Check (501)",
           "item": [
             {
               "name": "Service eligibility / warranty check",
@@ -1897,46 +1370,7 @@
                     "service-eligibility"
                   ]
                 },
-                "description": "Vehicle ID, Mileage, Warranty Coverage (the live warranty's provider text, e.g. \"BMW Extended Warranty 5y/200,000 km\") and warranty status / expiry, Service Contract Status / type / expiry - from Keyloop's warranty and service-contract exports (folders WAR and SVC, since 2026-09-22). Service Type and Eligibility are red font: returned empty (\"\"). Status is ACTIVE / EXPIRED / INACTIVE, or NONE when Keyloop has no contract of that kind for the car."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "4. Create Service Booking (read / write)",
-          "item": [
-            {
-              "name": "Save a service booking request",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"keyloopGroup\": \"{{group}}\",\n  \"customerNumber\": \"{{customerNumber}}\",\n  \"vin\": \"{{vin}}\",\n  \"createdBy\": \"agent.42\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/service-bookings",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "service-bookings"
-                  ]
-                },
-                "description": "Customer ID and Vehicle ID are the only fields in black on this row (service type, branch, advisor, slot, date/time are red font) and Keyloop has no booking write API. So this saves the request - this customer wants this car booked - in app.customer_request (kind SERVICE_BOOKING) for the workshop to pick up. Nothing appears in Keyloop or in Get Open Bookings until the workshop books it there."
+                "description": "BSI / BRI / ASI: no Keyloop feed carries warranty or service contracts, so this answers 501 after the usual 404 check. Service Type and Eligibility are in red font anyway."
               },
               "response": []
             }
@@ -1972,43 +1406,6 @@
         {
           "name": "6. Save Customer Complaints / Requests (read / write)",
           "item": [
-            {
-              "name": "Save a complaint or request",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"kind\": \"COMPLAINT\",\n  \"text\": \"Brake noise after last service\",\n  \"vin\": \"{{vin}}\",\n  \"createdBy\": \"agent.42\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/requests",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "customers",
-                    "{{group}}",
-                    "{{customerNumber}}",
-                    "requests"
-                  ]
-                },
-                "description": "kind COMPLAINT or REQUEST; vin and createdBy optional. Returns Customer ID, Vehicle ID, text and Status. Service Booking ID, Request ID and Saved Timestamp are in red font: returned empty (\"\"). A saved complaint shows up on the Complaint Screen under its Complaint ID (AGMC-<id>), where it is updated and resolved."
-              },
-              "response": []
-            },
             {
               "name": "List a customer's complaints and requests",
               "request": {
@@ -2056,7 +1453,7 @@
                     "confirmation"
                   ]
                 },
-                "description": "Booking ID, Customer ID, customer name, Mobile and the appointment (date, time, branch, service, car, status). Message ID and Delivery Status are in red font - Genesys sends the message. Keyloop's booking export names no customer, so it is the car's Aftersales Customer on the vehicle record (then its owner, then the invoiced buyer while the record names nobody); omitted when the car is in neither."
+                "description": "Booking ID, Customer ID, customer name, Mobile and the appointment (date, time, branch, service, car, status). Message ID and Delivery Status are in red font - Genesys sends the message. The customer is the buyer on the car's latest invoiced enquiry: Keyloop's booking export names none."
               },
               "response": []
             }
@@ -2112,42 +1509,14 @@
                     "service-feedback"
                   ]
                 },
-                "description": "Customer ID, Feedback, Date of the SERVICE and CSI feedback submitted through POST /api/v1/feedback (Feedback Screen) plus Keyloop's after-sales service survey answers (FID feed, core.feedback). Booking ID and Rating are in red font. Optional bookingId=, from=, to=, limit=."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "10. AI Service Recommendation",
-          "item": [
-            {
-              "name": "Service recommendation inputs",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}/service-recommendation",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "vehicles",
-                    "{{group}}",
-                    "{{vin}}",
-                    "service-recommendation"
-                  ]
-                },
-                "description": "White on the sheet of 2026-09-21. Customer ID, Vehicle ID, Mileage and Service History - what a recommendation is made from. Recommended Package, Recommendation Reason and Recommendation Type are red font: returned empty (\"\"), for whoever runs the model to fill."
+                "description": "Customer ID, Feedback, Date of the SERVICE and CSI feedback submitted through POST /api/v1/feedback (Feedback Screen) - no Keyloop feed carries feedback. Booking ID and Rating are in red font. Optional bookingId=, from=, to=, limit=."
               },
               "response": []
             }
           ]
         }
       ],
-      "description": "The rows of the Service Booking Screen that are not fully red (sheet of 2026-09-20), with red-font fields kept in each row's response but always empty (\"\").\n\nFully red, no endpoint: Get Trade-in Eligibility (was yellow, removed), Get Service Types, Get Workshop Availability, Get Service Slots, Get Available Service Advisors, Cancel Booking, Get Recommended Service Packages, Get Package Details, Calculate Service Estimate, Check Additional Services, Get Customer Activity (removed).\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop.\n\nCustomer phone numbers and e-mail addresses are masked in every response: a phone shows only its last three digits (+*********567), an e-mail its first letter and domain (a***@example.com). Searching by mobile or e-mail still works - the match comes back masked. The test-drive advisor is staff and is not masked."
+      "description": "The rows of the Service Booking Screen that are not fully red (sheet of 2026-09-20), with red-font fields kept in each row's response but always empty (\"\").\n\nFully red, no endpoint: Get Trade-in Eligibility (was yellow, removed), Get Service Types, Get Workshop Availability, Get Service Slots, Get Available Service Advisors, Cancel Booking, Get Recommended Service Packages, Get Package Details, Calculate Service Estimate, Check Additional Services, Get Customer Activity (removed), AI Service Recommendation.\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
     },
     {
       "name": "Service Overview Screen",
@@ -2161,7 +1530,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/customers?group={{group}}&mobile={{mobile}}",
+                  "raw": "{{baseUrl}}/api/v1/customers?mobile={{mobile}}",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -2171,10 +1540,6 @@
                     "customers"
                   ],
                   "query": [
-                    {
-                      "key": "group",
-                      "value": "{{group}}"
-                    },
                     {
                       "key": "mobile",
                       "value": "{{mobile}}"
@@ -2259,7 +1624,7 @@
                     "{{vin}}"
                   ]
                 },
-                "description": "VIN, registration, model, year, mileage, fuel type, colour, service dates the insurance contracts on the car, and its warranty and serviceContract covers. Engine and Transmission are not in Keyloop's vehicle export."
+                "description": "VIN, registration, model, year, mileage, fuel type, colour, service dates and the insurance contracts on the car. Engine and Transmission are not in Keyloop's vehicle export."
               },
               "response": []
             },
@@ -2296,7 +1661,7 @@
           ]
         },
         {
-          "name": "4. Get Warranty Status",
+          "name": "4. Get Warranty Status (501)",
           "item": [
             {
               "name": "Warranty status",
@@ -2317,14 +1682,14 @@
                     "warranty"
                   ]
                 },
-                "description": "Vehicle ID, Warranty Status (ACTIVE / EXPIRED / INACTIVE / NONE), Expiry Date and provider of the warranty that matters (active first, then the latest to end), with every warranty Keyloop holds for the car in contracts[]. From Keyloop's warranty export (WAR, since 2026-09-22). Coverage is red font: returned empty (\"\")."
+                "description": "No Keyloop feed carries warranties (the contract export is insurance only): 501 after the usual 404 check."
               },
               "response": []
             }
           ]
         },
         {
-          "name": "5. Get Service Contract",
+          "name": "5. Get Service Contract (501)",
           "item": [
             {
               "name": "Service contract",
@@ -2345,7 +1710,7 @@
                     "service-contract"
                   ]
                 },
-                "description": "Vehicle ID, Contract Type (SERVICEINCL, ASI8Y...), Status (ACTIVE / EXPIRED / INACTIVE / NONE), Expiry Date and provider of the service contract that matters, with every one Keyloop holds for the car in contracts[]. From Keyloop's service-contract export (SVC, since 2026-09-22). Coverage is red font: returned empty (\"\")."
+                "description": "No Keyloop feed carries service plans (BSI / BRI / ASI): 501 after the usual 404 check."
               },
               "response": []
             }
@@ -2546,42 +1911,14 @@
                     "service-feedback"
                   ]
                 },
-                "description": "Customer ID, Feedback, Date of the SERVICE and CSI feedback submitted through POST /api/v1/feedback, plus Keyloop's after-sales service survey answers (FID feed, core.feedback). Rating and Score are in red font. Optional bookingId=, from=, to=, limit=."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "12. Get Customer Risk",
-          "item": [
-            {
-              "name": "Customer risk",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/risk-overview",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "customers",
-                    "{{group}}",
-                    "{{customerNumber}}",
-                    "risk-overview"
-                  ]
-                },
-                "description": "White on the sheet of 2026-09-21. Last Complaint (date and complaint id) from Keyloop's complaint export. Risk Level, Risk Score and Repeat Complaints are red font - Genesys derives them - and are returned empty (\"\"). Same endpoint as the Sales Screen's Customer Risk Overview."
+                "description": "Customer ID, Feedback, Date of the SERVICE and CSI feedback submitted through POST /api/v1/feedback. Rating and Score are in red font. Optional bookingId=, from=, to=, limit=."
               },
               "response": []
             }
           ]
         }
       ],
-      "description": "The rows of the Service Overview Screen that are not fully red (sheet of 2026-09-20), with red-font fields kept in each row's response but always empty (\"\").\n\nFully red, no endpoint: Get Cancelled Bookings, Get Active Service Cases (removed), Get Roadside Assistance Cases, Get Vehicle Documents, Get Customer Activity (removed), Get Communication History, Get Customer Requests, Get Trade-in Eligibility (removed), Get AI Recommendation.\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop.\n\nCustomer phone numbers and e-mail addresses are masked in every response: a phone shows only its last three digits (+*********567), an e-mail its first letter and domain (a***@example.com). Searching by mobile or e-mail still works - the match comes back masked. The test-drive advisor is staff and is not masked."
+      "description": "The rows of the Service Overview Screen that are not fully red (sheet of 2026-09-20), with red-font fields kept in each row's response but always empty (\"\").\n\nFully red, no endpoint: Get Cancelled Bookings, Get Active Service Cases (removed), Get Roadside Assistance Cases, Get Vehicle Documents, Get Customer Activity (removed), Get Communication History, Get Customer Requests, Get Trade-in Eligibility (removed), Get Customer Risk, Get AI Recommendation.\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
     },
     {
       "name": "Complaint Screen",
@@ -2595,7 +1932,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/customers?group={{group}}&mobile={{mobile}}",
+                  "raw": "{{baseUrl}}/api/v1/customers?mobile={{mobile}}",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -2605,10 +1942,6 @@
                     "customers"
                   ],
                   "query": [
-                    {
-                      "key": "group",
-                      "value": "{{group}}"
-                    },
                     {
                       "key": "mobile",
                       "value": "{{mobile}}"
@@ -2702,37 +2035,15 @@
                     {
                       "key": "status",
                       "value": "open"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
                     }
                   ]
                 },
                 "description": "Complaint ID, Category, Priority, Open Date across both origins, newest first. status=open (default) or all. Status (it is the filter) and SLA Due are in red font."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "4. Get Complaint Details",
-          "item": [
-            {
-              "name": "Complaint by Complaint ID",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{complaintId}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "complaints",
-                    "{{group}}",
-                    "{{complaintId}}"
-                  ]
-                },
-                "description": "Complaint ID, Category, Branch (location), Priority, Status, Opened On, with the customer's name and mobile. Works for a Keyloop reference and for AGMC-<id>. Subcategory and Assigned Team are in red font. Set {{complaintId}} to {{desktopComplaintId}} to read one created here."
               },
               "response": []
             }
@@ -2775,101 +2086,6 @@
           ]
         },
         {
-          "name": "6. Create Complaint (read / write)",
-          "item": [
-            {
-              "name": "Create a complaint",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "if (pm.response.code === 201) {",
-                      "    const json = pm.response.json();",
-                      "    pm.collectionVariables.set('desktopComplaintId', json.complaintId);",
-                      "    console.log('Saved desktopComplaintId:', json.complaintId);",
-                      "}"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"keyloopGroup\": \"{{group}}\",\n  \"customerNumber\": \"{{customerNumber}}\",\n  \"category\": \"Customer Handling Skills\",\n  \"department\": \"Service\",\n  \"description\": \"Advisor did not call back as promised\",\n  \"branch\": \"{{branchCode}}\",\n  \"priority\": \"HIGH\",\n  \"createdBy\": \"agent.42\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/complaints",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "complaints"
-                  ]
-                },
-                "description": "Customer ID, Category, Description, Branch, Priority (LOW / MEDIUM / HIGH / CRITICAL) in; Complaint ID (AGMC-<id>), Status, Created Date out. Saved on this side only. Subcategory is in red font."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "7. Update Complaint (read / write)",
-          "item": [
-            {
-              "name": "Update a complaint created here",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"status\": \"IN_PROGRESS\",\n  \"priority\": \"CRITICAL\",\n  \"comment\": \"Called the customer back\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{desktopComplaintId}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "complaints",
-                    "{{group}}",
-                    "{{desktopComplaintId}}"
-                  ]
-                },
-                "description": "Any of status (OPEN / IN_PROGRESS / CLOSED), priority, category, comment; returns the updated status and date. 409 for a Keyloop complaint. Uses {{desktopComplaintId}}, which \"Create a complaint\" fills in - run that first."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
           "name": "8. Get Recovery Actions",
           "item": [
             {
@@ -2892,101 +2108,6 @@
                   ]
                 },
                 "description": "Action ID, Action Type, Owner, Status, Due Date. Actions are ours (app.complaint_action) and can hang off a Keyloop complaint or one created here."
-              },
-              "response": []
-            }
-          ]
-        },
-        {
-          "name": "9. Create / Update Recovery Action (read / write)",
-          "item": [
-            {
-              "name": "Create a recovery action",
-              "event": [
-                {
-                  "listen": "test",
-                  "script": {
-                    "type": "text/javascript",
-                    "exec": [
-                      "if (pm.response.code === 201) {",
-                      "    const json = pm.response.json();",
-                      "    pm.collectionVariables.set('actionId', json.actionId);",
-                      "    console.log('Saved actionId:', json.actionId);",
-                      "}"
-                    ]
-                  }
-                }
-              ],
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"actionType\": \"Call back\",\n  \"description\": \"Service manager to call the customer\",\n  \"owner\": \"Raza\",\n  \"dueDate\": \"2026-09-25\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{complaintId}}/recovery-actions",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "complaints",
-                    "{{group}}",
-                    "{{complaintId}}",
-                    "recovery-actions"
-                  ]
-                },
-                "description": "actionType is required; status defaults to OPEN."
-              },
-              "response": []
-            },
-            {
-              "name": "Update a recovery action",
-              "request": {
-                "method": "PATCH",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"status\": \"DONE\",\n  \"description\": \"Called, goodwill wash offered\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{complaintId}}/recovery-actions/{{actionId}}",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "complaints",
-                    "{{group}}",
-                    "{{complaintId}}",
-                    "recovery-actions",
-                    "{{actionId}}"
-                  ]
-                },
-                "description": "Any of actionType, description, owner, dueDate, status (OPEN / IN_PROGRESS / DONE / CANCELLED); returns the action with its updated date."
               },
               "response": []
             }
@@ -3017,28 +2138,19 @@
                 "description": "Resolution Code, Resolution Notes, Resolution Status (OPEN / RESOLVED), Resolved Date. For a Keyloop complaint the code is Keyloop's closure text and there are no notes. Resolution ID is in red font."
               },
               "response": []
-            },
+            }
+          ]
+        },
+        {
+          "name": "4. Get Complaint Details",
+          "item": [
             {
-              "name": "Resolve a complaint created here",
+              "name": "Complaint by Complaint ID",
               "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"resolutionCode\": \"Apology\",\n  \"resolutionNotes\": \"Manager apologised, customer satisfied\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
+                "method": "GET",
+                "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{desktopComplaintId}}/resolve",
+                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{complaintId}}",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3047,11 +2159,10 @@
                     "v1",
                     "complaints",
                     "{{group}}",
-                    "{{desktopComplaintId}}",
-                    "resolve"
+                    "{{complaintId}}"
                   ]
                 },
-                "description": "resolutionCode required. 409 for a Keyloop complaint. Uses {{desktopComplaintId}}, which \"Create a complaint\" fills in - run that first."
+                "description": "Complaint ID, Category, Branch (location), Priority, Status, Opened On, with the customer's name and mobile. Works for a Keyloop reference and for AGMC-<id>. Subcategory and Assigned Team are in red font. Set {{complaintId}} to {{desktopComplaintId}} to read one created here."
               },
               "response": []
             }
@@ -3096,74 +2207,9 @@
               "response": []
             }
           ]
-        },
-        {
-          "name": "12. Assign Complaint",
-          "item": [
-            {
-              "name": "Assignment of a complaint",
-              "request": {
-                "method": "GET",
-                "header": [],
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{complaintId}}/assignment",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "complaints",
-                    "{{group}}",
-                    "{{complaintId}}",
-                    "assignment"
-                  ]
-                },
-                "description": "White on the sheet of 2026-09-21. Complaint ID, Team/Agent ID, Assignment Status (ASSIGNED / UNASSIGNED), Assigned To. For a Keyloop complaint it is Keyloop's allocated-to name (Keyloop has no id for it); for one created here it is what the desktop assigned."
-              },
-              "response": []
-            },
-            {
-              "name": "Assign a complaint created here",
-              "request": {
-                "method": "PUT",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"teamAgentId\": \"T-7\",\n  \"assignedTo\": \"Service Quality Team\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{desktopComplaintId}}/assignment",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "complaints",
-                    "{{group}}",
-                    "{{desktopComplaintId}}",
-                    "assignment"
-                  ]
-                },
-                "description": "Gives a complaint created here to a team or agent; send both fields empty to unassign. 409 for a Keyloop complaint. Uses {{desktopComplaintId}}, which \"Create a complaint\" fills in."
-              },
-              "response": []
-            }
-          ]
         }
       ],
-      "description": "The rows of the Complaint Screen that are not fully red. A complaint has one of two origins: KEYLOOP (core.complaint, Keyloop's export, read-only, Complaint ID = Keyloop's reference) or DESKTOP (created here, app.customer_request, Complaint ID = AGMC-<id>). Nothing is written back to Keyloop, so updating or resolving a Keyloop complaint answers 409. Keyloop records no priority.\n\nRed font, returned empty (\"\"): subcategory, assigned team, SLA due / breaches, escalations, resolution time, resolution id, loyalty tier, preferred branch, communication preference.\n\nFully red, no endpoint: Get Escalation Details, Escalate Complaint, Get SLA Status, Get SLA Breaches, Get Root Cause, Update Root Cause, Get Compensation Details, Approve Compensation, Send Customer Update, Get Complaint Activity, Get Complaint Feedback, Get Complaint Risk/Sentiment, Notify Internal Team.\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop.\n\nCustomer phone numbers and e-mail addresses are masked in every response: a phone shows only its last three digits (+*********567), an e-mail its first letter and domain (a***@example.com). Searching by mobile or e-mail still works - the match comes back masked. The test-drive advisor is staff and is not masked."
+      "description": "The rows of the Complaint Screen that are not fully red. A complaint has one of two origins: KEYLOOP (core.complaint, Keyloop's export, read-only, Complaint ID = Keyloop's reference) or DESKTOP (created here, app.customer_request, Complaint ID = AGMC-<id>). Nothing is written back to Keyloop, so updating or resolving a Keyloop complaint answers 409. Keyloop records no priority.\n\nRed font, returned empty (\"\"): subcategory, assigned team, SLA due / breaches, escalations, resolution time, resolution id, loyalty tier, preferred branch, communication preference.\n\nFully red, no endpoint: Assign Complaint, Get Escalation Details, Escalate Complaint, Get SLA Status, Get SLA Breaches, Get Root Cause, Update Root Cause, Get Compensation Details, Approve Compensation, Send Customer Update, Get Complaint Activity, Get Complaint Feedback, Get Complaint Risk/Sentiment, Notify Internal Team.\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
     },
     {
       "name": "Feedback Screen",
@@ -3177,7 +2223,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/customers?group={{group}}&mobile={{mobile}}",
+                  "raw": "{{baseUrl}}/api/v1/customers?mobile={{mobile}}",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3187,10 +2233,6 @@
                     "customers"
                   ],
                   "query": [
-                    {
-                      "key": "group",
-                      "value": "{{group}}"
-                    },
                     {
                       "key": "mobile",
                       "value": "{{mobile}}"
@@ -3303,7 +2345,7 @@
                     }
                   ]
                 },
-                "description": "Feedback ID, origin (KEYLOOP / DESKTOP), Type (Keyloop: SERVICE / SALES / LOST_SALE from the survey; desktop: CSI / SERVICE / SALES / COMPLAINT / GENERAL), survey, Comments (a Keyloop entry writes its answers out, and lists them in answers[]), Date, newest first. from / to / limit optional. Channel, Reference and Score are red font: returned empty (\"\") - Keyloop's numeric answers (\"10\") stay in answers[]."
+                "description": "Feedback ID, Type (CSI / SERVICE / SALES / COMPLAINT / GENERAL), Comments, Date, newest first. from / to / limit optional. Channel, Reference and Score are in red font."
               },
               "response": []
             }
@@ -3330,7 +2372,7 @@
                     "{{feedbackId}}"
                   ]
                 },
-                "description": "Feedback Type, Comments, Date, answers[] - by Keyloop's response serial or by AGMC-<id> for feedback submitted here. Score, Channel and Interaction ID are red font. 404 until one exists: submit one, then run \"Recent feedback for a customer\", which fills {{feedbackId}}."
+                "description": "Feedback Type, Comments, Date. Score, Channel and Interaction ID are in red font. 404 until a feedback exists: submit one, then run \"Recent feedback for a customer\", which fills {{feedbackId}}."
               },
               "response": []
             }
@@ -3394,7 +2436,7 @@
                     "csi-responses"
                   ]
                 },
-                "description": "Comments and Date of the customer's CSI feedback: what was submitted here as CSI, plus Keyloop's satisfaction surveys (after-sales service, handover, showroom visit). Response ID, Score and Channel are red font. from / to / limit optional."
+                "description": "Comments and Date of the customer's CSI feedback. Response ID, Score and Channel are in red font. from / to / limit optional."
               },
               "response": []
             }
@@ -3430,7 +2472,7 @@
                     }
                   ]
                 },
-                "description": "The reasons in use on Keyloop's \"Lost sale\" enquiries, by branch and lost date (from=, to=), one row each: reasons[].reason is Keyloop's \"Lost Sale Reason\" text (export of 2026-09-21; the code stands in on an older enquiry that has only that) and reasons[].reasonCodes the lost event codes behind it (L01, L26...; Keyloop has two codes for some texts, so a reason is one row with both). Count and Percentage are in red font: reasons[].count and reasons[].percentage are returned empty (\"\")."
+                "description": "Keyloop's lost event codes (L01, L26...) in use on \"Lost sale\" enquiries, by branch and lost date (from=, to=), one row each: reasons[].reason. The export carries no description for the codes. Count and Percentage are in red font: reasons[].count and reasons[].percentage are returned empty (\"\")."
               },
               "response": []
             }
@@ -3445,7 +2487,7 @@
                 "method": "GET",
                 "header": [],
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/lost-sales?group={{group}}&customerNumber={{customerNumber}}&from=2025-01-01&to=2025-12-31",
+                  "raw": "{{baseUrl}}/api/v1/lost-sales?group={{group}}&customerNumber={{customerNumber}}&from=2012-01-01&to=2025-12-31",
                   "host": [
                     "{{baseUrl}}"
                   ],
@@ -3465,7 +2507,7 @@
                     },
                     {
                       "key": "from",
-                      "value": "2025-01-01"
+                      "value": "2012-01-01"
                     },
                     {
                       "key": "to",
@@ -3473,7 +2515,7 @@
                     }
                   ]
                 },
-                "description": "Lead / Opportunity ID (the enquiry number), Reason (Keyloop's lost sale reason text, with reasonCode = its lost event code), Date (the lost sale date), with the model and branch. customerNumber, branch, from, to are all optional; page with limit (default 100, max 1000) and offset. Value and Competitor / Outcome are red font: returned empty (\"\")."
+                "description": "Lead / Opportunity ID (the enquiry number), Reason (lost event code), Date (lost date), with the model and branch. customerNumber, branch, from, to are all optional; page with limit (default 100, max 1000) and offset. Value and Competitor / Outcome are in red font."
               },
               "response": []
             }
@@ -3516,58 +2558,19 @@
               "response": []
             }
           ]
-        },
-        {
-          "name": "10. Submit Feedback Response (read / write)",
-          "item": [
-            {
-              "name": "Submit a feedback response",
-              "request": {
-                "method": "POST",
-                "header": [
-                  {
-                    "key": "Content-Type",
-                    "value": "application/json"
-                  }
-                ],
-                "body": {
-                  "mode": "raw",
-                  "raw": "{\n  \"keyloopGroup\": \"{{group}}\",\n  \"surveyId\": \"CSI-2026-09\",\n  \"customerNumber\": \"{{customerNumber}}\",\n  \"type\": \"CSI\",\n  \"comments\": \"Very happy with the handover\",\n  \"submittedDate\": \"2026-09-20\"\n}",
-                  "options": {
-                    "raw": {
-                      "language": "json"
-                    }
-                  }
-                },
-                "url": {
-                  "raw": "{{baseUrl}}/api/v1/feedback",
-                  "host": [
-                    "{{baseUrl}}"
-                  ],
-                  "path": [
-                    "api",
-                    "v1",
-                    "feedback"
-                  ]
-                },
-                "description": "Survey ID, Customer ID, Comments, Submitted Date (defaults to today; not in the future). type CSI / SERVICE / SALES / COMPLAINT / GENERAL (default); bookingId and branch optional. Score, Response ID and Submission Status are in red font: returned empty (\"\")."
-              },
-              "response": []
-            }
-          ]
         }
       ],
-      "description": "The rows of the Feedback Screen that are not fully red. Feedback has two origins: KEYLOOP - survey responses from Keyloop's feedback export (folder FID, table core.feedback, since 2026-09-23: handover, showroom, after-sales service and lost-sales surveys; Feedback ID = the response serial, answers[] = what the customer chose) - and DESKTOP - what is submitted here (app.feedback_response, Feedback ID = AGMC-<id>). The lost-sales rows are Keyloop's \"Lost sale\" enquiries.\n\nRed font, returned empty (\"\"): scores, ratings, channels, references, interaction ids, response ids, submission status, counts and percentages, value, competitor / outcome, loyalty tier.\n\nFully red, no endpoint: Get NPS Score, Get NPS Responses, Get NPS Trend, Get Lost Sales Summary, Get Cancelled Bookings, Get Feedback Trend, Get Feedback Sentiment, Get Feedback Activity, Send Feedback Survey, Feedback Dashboard.\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop.\n\nCustomer phone numbers and e-mail addresses are masked in every response: a phone shows only its last three digits (+*********567), an e-mail its first letter and domain (a***@example.com). Searching by mobile or e-mail still works - the match comes back masked. The test-drive advisor is staff and is not masked."
+      "description": "The rows of the Feedback Screen that are not fully red. No Keyloop feed carries feedback, so feedback is what is submitted here (app.feedback_response). The lost-sales rows are Keyloop's \"Lost sale\" enquiries.\n\nRed font, returned empty (\"\"): scores, ratings, channels, references, interaction ids, response ids, submission status, counts and percentages, value, competitor / outcome, loyalty tier.\n\nFully red, no endpoint: Get NPS Score, Get NPS Responses, Get NPS Trend, Get Lost Sales Summary, Get Cancelled Bookings, Get Feedback Trend, Get Feedback Sentiment, Get Feedback Activity, Send Feedback Survey, Feedback Dashboard.\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
     }
   ],
   "variable": [
     {
       "key": "baseUrl",
-      "value": "https://ccaas.agmcgroup.ae"
+      "value": "http://localhost:8080"
     },
     {
       "key": "referenceId",
-      "value": "AGMC-BB15D4F9-59F"
+      "value": ""
     },
     {
       "key": "brandCode",
@@ -3627,19 +2630,11 @@
     },
     {
       "key": "feedbackId",
-      "value": "AGMC-1"
+      "value": "1"
     },
     {
       "key": "desktopComplaintId",
       "value": "AGMC-1"
-    },
-    {
-      "key": "make",
-      "value": "BMW"
-    },
-    {
-      "key": "model",
-      "value": "X5"
     }
   ]
 }
