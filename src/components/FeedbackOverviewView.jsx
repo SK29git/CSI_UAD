@@ -9,7 +9,10 @@ import {
   FaPaperPlane,
   FaChartLine,
   FaTag,
-  FaComments
+  FaComments,
+  FaEye,
+  FaTimes,
+  FaInfoCircle
 } from 'react-icons/fa';
 
 export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
@@ -21,10 +24,15 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
   const [csiScore, setCsiScore] = useState(null);
   const [csiResponses, setCsiResponses] = useState([]);
   const [recentFeedback, setRecentFeedback] = useState([]);
+  const [serviceFeedback, setServiceFeedback] = useState([]);
   const [lostSalesReasons, setLostSalesReasons] = useState([]);
   const [lostSalesDetails, setLostSalesDetails] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Feedback Details Modal State (Postman API 4)
+  const [selectedFeedbackDetails, setSelectedFeedbackDetails] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
 
   // Submit Feedback Form State
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -86,16 +94,46 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
       } else {
         setBookings([]);
       }
+
+      // 7. Service Feedback: GET /api/v1/customers/{group}/{customerNumber}/service-feedback
+      const serviceFeedbackRes = await apiFetch(`/api/v1/customers/${group}/${customerNumber}/service-feedback`);
+      if (serviceFeedbackRes && serviceFeedbackRes.ok && Array.isArray(serviceFeedbackRes.data)) {
+        setServiceFeedback(serviceFeedbackRes.data);
+      } else {
+        setServiceFeedback([]);
+      }
     } catch (err) {
       console.warn("Failed to fetch feedback endpoints:", err);
       setCsiScore(null);
       setCsiResponses([]);
       setRecentFeedback([]);
+      setServiceFeedback([]);
       setLostSalesReasons([]);
       setLostSalesDetails([]);
       setBookings([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenFeedbackDetails = async (f) => {
+    const fId = f.feedbackId || f.id;
+    if (!fId || String(fId).startsWith('SF-') || String(fId).startsWith('CR-')) {
+      setSelectedFeedbackDetails(f);
+      return;
+    }
+    setDetailsLoading(true);
+    try {
+      const res = await apiFetch(`/api/v1/feedback/${group}/${fId}`);
+      if (res && res.ok && res.data) {
+        setSelectedFeedbackDetails(res.data);
+      } else {
+        setSelectedFeedbackDetails(f);
+      }
+    } catch {
+      setSelectedFeedbackDetails(f);
+    } finally {
+      setDetailsLoading(false);
     }
   };
 
@@ -171,17 +209,40 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
     }
   }
 
-  // Combined feedback list for tables
+  // Combined feedback list for tables from Keyloop API
   const allFeedback = [
-    ...recentFeedback,
-    ...csiResponses.map(cr => ({
+    ...recentFeedback.map(rf => ({
+      ...rf,
+      feedbackId: rf.feedbackId || rf.id || '',
+      type: rf.type || 'GENERAL',
+      surveyId: rf.feedbackId || rf.survey || rf.surveyId || '—',
+      score: rf.score || '',
+      comments: rf.comments || rf.comment || '—',
+      submittedDate: rf.date || rf.submittedDate || '—',
+      channel: rf.channel || '—',
+      status: rf.status || 'RECORDED',
+      origin: rf.origin || 'DESKTOP'
+    })),
+    ...csiResponses.map((cr, idx) => ({
+      feedbackId: cr.responseId || `CR-${idx + 1}`,
       type: 'CSI',
-      surveyId: cr.responseId || cr.id || cr.surveyId || '—',
+      surveyId: cr.responseId || cr.id || cr.surveyId || 'CSI Survey',
       score: cr.score || '',
       comments: cr.comments || cr.comment || '—',
       submittedDate: cr.date || cr.submittedDate || '—',
       channel: cr.channel || '—',
       status: cr.status || 'RECORDED',
+      origin: cr.origin || 'KEYLOOP'
+    })),
+    ...serviceFeedback.map((sf, idx) => ({
+      feedbackId: sf.bookingId ? `SF-${sf.bookingId}` : `SF-${idx + 1}`,
+      type: 'SERVICE',
+      surveyId: sf.bookingId ? `Booking #${sf.bookingId}` : 'Service CSI',
+      score: sf.score || sf.rating || '',
+      comments: sf.feedback || sf.comments || '—',
+      submittedDate: sf.date || '—',
+      channel: 'Workshop',
+      status: 'RECORDED',
       origin: 'KEYLOOP'
     }))
   ];
@@ -577,11 +638,12 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
                       <th className="py-2.5 px-2">Date</th>
                       <th className="py-2.5 px-2">Channel</th>
                       <th className="py-2.5 px-2">Status</th>
+                      <th className="py-2.5 px-2 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
                     {displayedFeedback.map((f, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
+                      <tr key={i} className="hover:bg-gray-50 transition-colors">
                         <td className="py-2.5 px-2">
                           <span className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
                             (f.type || '').toUpperCase() === 'CSI' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
@@ -601,7 +663,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
                             <span className="text-gray-400 font-normal">-</span>
                           )}
                         </td>
-                        <td className="py-2.5 px-2 text-gray-600 max-w-[250px] truncate">
+                        <td className="py-2.5 px-2 text-gray-600 max-w-[250px] truncate" title={f.comments || f.comment || ''}>
                           {f.comments || f.comment || '—'}
                         </td>
                         <td className="py-2.5 px-2 text-gray-400 text-[10px] font-mono">
@@ -615,10 +677,104 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
                             {f.status || 'RECORDED'}
                           </span>
                         </td>
+                        <td className="py-2.5 px-2 text-right">
+                          <button
+                            onClick={() => handleOpenFeedbackDetails(f)}
+                            className="text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-1 cursor-pointer hover:underline text-[11px]"
+                            title="View Feedback Record"
+                          >
+                            <FaEye className="text-[10px]" /> View
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Details Modal (Postman API 4: GET /api/v1/feedback/{group}/{feedbackId}) */}
+      {selectedFeedbackDetails && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-2xs animate-fade-in">
+          <div className="bg-white rounded-xl max-w-lg w-full p-5 shadow-2xl border border-gray-200 space-y-4 text-xs">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                  <FaInfoCircle className="text-sm" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm">
+                    Feedback Details #{selectedFeedbackDetails.feedbackId || selectedFeedbackDetails.id || selectedFeedbackDetails.surveyId || 'Record'}
+                  </h3>
+                  <span className="text-[10px] text-gray-400 font-mono">Keyloop Group: {group}</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedFeedbackDetails(null)} 
+                className="text-gray-400 hover:text-gray-700 font-bold p-1 cursor-pointer text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {detailsLoading ? (
+              <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
+                <FaSpinner className="animate-spin text-xl text-blue-600" />
+                <span>Loading feedback record...</span>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2.5 bg-gray-50 p-3 rounded-lg border border-gray-200 text-[11px]">
+                  <div>
+                    <span className="text-gray-400 text-[10px] block font-semibold uppercase">Feedback Type</span>
+                    <span className="font-bold text-gray-800">{selectedFeedbackDetails.type || 'GENERAL'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 text-[10px] block font-semibold uppercase">Origin / Source</span>
+                    <span className="font-mono text-gray-700 font-semibold">{selectedFeedbackDetails.origin || 'DESKTOP'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 text-[10px] block font-semibold uppercase">Customer Number</span>
+                    <span className="font-mono text-purple-700 font-bold">#{selectedFeedbackDetails.customerNumber || customerNumber || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 text-[10px] block font-semibold uppercase">Survey ID</span>
+                    <span className="font-mono text-gray-800">{selectedFeedbackDetails.survey || selectedFeedbackDetails.surveyId || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 text-[10px] block font-semibold uppercase">Recorded Date</span>
+                    <span className="font-mono text-gray-700">{selectedFeedbackDetails.date || selectedFeedbackDetails.submittedDate || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 text-[10px] block font-semibold uppercase">Channel</span>
+                    <span className="text-gray-700">{selectedFeedbackDetails.channel || 'Direct / Portal'}</span>
+                  </div>
+                  {selectedFeedbackDetails.interactionId && (
+                    <div className="col-span-2">
+                      <span className="text-gray-400 text-[10px] block font-semibold uppercase">Interaction ID (Genesys)</span>
+                      <span className="font-mono text-blue-700 font-bold">{selectedFeedbackDetails.interactionId}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <span className="text-gray-500 font-bold text-[11px] block mb-1">Customer Comments / Voice</span>
+                  <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-lg text-gray-800 text-xs leading-relaxed font-medium">
+                    "{selectedFeedbackDetails.comments || selectedFeedbackDetails.feedback || selectedFeedbackDetails.comment || 'No comments provided'}"
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-2 border-t border-gray-100">
+                  <button
+                    onClick={() => setSelectedFeedbackDetails(null)}
+                    className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-lg cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             )}
           </div>

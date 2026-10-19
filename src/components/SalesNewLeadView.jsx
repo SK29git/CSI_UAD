@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
-import { apiFetch } from '../utils/api';
+import { apiFetch, submitLeadIntake } from '../utils/api';
 import { 
   FaUserPlus,
   FaExclamationTriangle,
@@ -14,6 +14,44 @@ import {
   FaRedo,
   FaClock
 } from 'react-icons/fa';
+import { getFullMobileNumber, isFullMobileNumber } from '../utils/phoneUtils';
+
+const BRAND_MODELS = {
+  BMW: [
+    'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'XM',
+    '1 Series', '2 Series Gran Coupe', '3 Series Sedan', '4 Series Coupe', '4 Series Gran Coupe',
+    '5 Series Sedan', '7 Series Sedan', '8 Series Gran Coupe',
+    'i4', 'i5', 'i7', 'iX', 'iX1', 'iX3', 'M2', 'M3', 'M4', 'M5'
+  ],
+  Geely: [
+    'Coolray', 'Monjaro', 'Tugella', 'Emgrand', 'Geometry C', 'Okavango', 'Preface', 'Starray', 'GX3 Pro'
+  ],
+  MINI: [
+    'Cooper 3-Door', 'Cooper 5-Door', 'Countryman', 'Clubman', 'Aceman', 'Cabrio', 'John Cooper Works'
+  ],
+  'Rolls-Royce': [
+    'Ghost', 'Phantom', 'Cullinan', 'Spectre'
+  ]
+};
+
+const BRANCHES = [
+  { code: '10', name: 'Sheikh Zayed Road Dubai' },
+  { code: '20', name: 'Sharjah Branch' },
+  { code: '30', name: 'Abu Dhabi Branch' },
+  { code: '40', name: 'Deira Branch' },
+  { code: '50', name: 'Motor City Dubai' }
+];
+
+const formatMobileForLead = (val) => {
+  if (!val) return '';
+  const str = String(val).trim();
+  if (str.startsWith('+')) return str;
+  if (str.startsWith('00')) return `+${str.slice(2)}`;
+  const digits = str.replace(/[^0-9]/g, '');
+  if (digits.startsWith('971')) return `+${digits}`;
+  if (digits.startsWith('0')) return `+971${digits.slice(1)}`;
+  return `+971${digits}`;
+};
 
 export default function SalesNewLeadView() {
   const { customer, group: contextGroup } = useCustomer();
@@ -26,17 +64,25 @@ export default function SalesNewLeadView() {
   // ----------------------------------------------------
   // 1. LEAD STATE & HANDLERS
   // ----------------------------------------------------
+  const [make, setMake] = useState(group || customer?.keyloopGroup || 'BMW');
+  const [model, setModel] = useState(() => {
+    const curMake = group || customer?.keyloopGroup || 'BMW';
+    return (BRAND_MODELS[curMake] && BRAND_MODELS[curMake][2]) || (BRAND_MODELS[curMake] && BRAND_MODELS[curMake][0]) || 'X3';
+  });
   const [title, setTitle] = useState(customer?.salutation || 'Mr');
   const [firstname, setFirstname] = useState(customer?.firstName || '');
   const [surname, setSurname] = useState(customer?.surname || '');
   const [email, setEmail] = useState(customer?.email || '');
-  const [mobile, setMobile] = useState(customer?.mobile || customer?.mobileRaw || '');
+  const [mobile, setMobile] = useState(() => getFullMobileNumber(customer) || '');
   const [origin, setOrigin] = useState(group ? `${group} Test Drive - EN` : 'Test Drive - EN');
   const [source, setSource] = useState('WEBENQUIRY');
   const [branch, setBranch] = useState(customer?.branchCode || '10');
   const [newused, setNewused] = useState('NEW');
-  const [model, setModel] = useState('X3');
-  const [notes, setNotes] = useState(group ? `Location : ${group} - Sheikh Zayed Road Dubai, Model : 'X3'` : "");
+  const [customLocation, setCustomLocation] = useState('');
+  const [notes, setNotes] = useState(() => {
+    const curMake = group || customer?.keyloopGroup || 'BMW';
+    return `Location : ${curMake} - Sheikh Zayed Road Dubai, Model : '${(BRAND_MODELS[curMake] && BRAND_MODELS[curMake][2]) || 'X3'}'`;
+  });
   const [submittingLead, setSubmittingLead] = useState(false);
   const [leadResponseToast, setLeadResponseToast] = useState(null);
 
@@ -49,52 +95,89 @@ export default function SalesNewLeadView() {
       if (customer?.firstName) setFirstname(customer?.firstName);
       if (customer?.surname) setSurname(customer?.surname);
       if (customer?.email) setEmail(customer?.email);
-      if (customer?.mobile || customer?.mobileRaw) setMobile(customer?.mobile || customer?.mobileRaw);
+      const fullMobile = getFullMobileNumber(customer);
+      if (fullMobile) {
+        setMobile(fullMobile);
+      } else if (customer?.mobile && isFullMobileNumber(customer.mobile)) {
+        setMobile(customer.mobile);
+      }
       if (customer?.branchCode) setBranch(customer?.branchCode);
+      if (customer?.keyloopGroup) {
+        setMake(customer.keyloopGroup);
+      }
     }
   }, [customer]);
+
+  useEffect(() => {
+    if (group && group !== make) {
+      setMake(group);
+      const models = BRAND_MODELS[group] || [];
+      if (models.length > 0) setModel(models[0]);
+    }
+  }, [group]);
+
+  const handleMakeChange = (newMake) => {
+    setMake(newMake);
+    const models = BRAND_MODELS[newMake] || [];
+    const defModel = models[0] || '';
+    setModel(defModel);
+    setOrigin(`${newMake} Test Drive - EN`);
+    const brObj = BRANCHES.find(b => b.code === branch);
+    const brName = brObj ? brObj.name : 'Sheikh Zayed Road Dubai';
+    setNotes(`Location : ${newMake} - ${brName}, Model : '${defModel}'`);
+  };
+
+  const handleBranchChange = (newBranch) => {
+    setBranch(newBranch);
+    const brObj = BRANCHES.find(b => b.code === newBranch);
+    const brName = brObj ? brObj.name : 'Sheikh Zayed Road Dubai';
+    setNotes(`Location : ${make} - ${brName}, Model : '${model}'`);
+  };
 
   const handleSaveLead = async (e) => {
     e.preventDefault();
     setSubmittingLead(true);
     setLeadResponseToast(null);
 
+    const brObj = BRANCHES.find(b => b.code === branch);
+    const brName = brObj ? brObj.name : 'Sheikh Zayed Road Dubai';
+    const computedLocation = customLocation.trim() || `${make} - ${brName}`;
+    const formattedMobile = formatMobileForLead(mobile);
+
     const payload = {
-      enquiry: {
-        apikey: "3A22A9F89A2D021E3C130074",
-        lead: { origin, source, branch, idnumber: "", allocate: "" },
-        contact: { title, firstname, surname, email, phone: mobile, mobile, source: "" },
-        seeks: { newused, make: group || customer?.keyloopGroup || "", model, stocknumber: "", regnumber: "", notes },
-        tradein: { registration: "", make: "", model: "", mileage: "", year: "", notes: "" },
-        mkagree: { updatemkagree: "false", dealersms: false, dealeremail: false, dealerletter: false, dealerphone: false, partssms: false, partsemail: false, partletter: false, partsphone: false, salessms: false, salesemail: false, salesletter: false, salesphone: false, servicesms: false, serviceemail: false, serviceletter: false, servicephone: false }
-      }
+      firstName: firstname.trim(),
+      lastName: surname.trim(),
+      email: email.trim(),
+      mobile: formattedMobile,
+      make: make.trim(),
+      model: model.trim(),
+      newUsed: (newused || "new").toLowerCase(),
+      location: computedLocation,
+      title: title || "",
+      leadOrigin: origin || "",
+      leadSource: source || "WEBENQUIRY",
+      branch: branch || "10",
+      notes: notes || ""
     };
 
     try {
-      const res = await apiFetch('/api/v1/leads', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const res = await submitLeadIntake(payload);
 
       if (res && res.ok && res.data) {
         setLeadResponseToast({
-          referenceId: res.data.referenceId || res.data.id || "RECEIVED",
+          isError: false,
+          referenceId: res.data.referenceId || "AGMC-SUCCESS",
           status: res.data.status || "RECEIVED",
-          message: res.data.message || "Lead received successfully"
-        });
-      } else {
-        setLeadResponseToast({
-          referenceId: "N/A",
-          status: res?.statusText || "PROCESSED",
-          message: "Lead processed by backend"
+          message: res.data.message || "Lead received and is being forwarded to Keyloop and Genesys"
         });
       }
     } catch (err) {
+      console.error("Failed to submit sales lead:", err);
       setLeadResponseToast({
-        referenceId: "N/A",
+        isError: true,
+        referenceId: "FAILED",
         status: "ERROR",
-        message: err.message || "Failed to submit lead"
+        message: err.message || "Failed to submit sales lead. Please check required fields."
       });
     } finally {
       setSubmittingLead(false);
@@ -286,20 +369,39 @@ export default function SalesNewLeadView() {
         <div className="flex flex-col gap-4">
           
           {leadResponseToast && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3.5 rounded-xl flex items-center justify-between shadow-xs animate-fade-in">
+            <div className={`p-4 rounded-xl flex items-center justify-between shadow-xs border animate-fade-in ${
+              leadResponseToast.isError
+                ? "bg-rose-50 border-rose-200 text-rose-900"
+                : "bg-emerald-50 border-emerald-200 text-emerald-800"
+            }`}>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                  ✓
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-xs text-white ${
+                  leadResponseToast.isError ? "bg-rose-500" : "bg-emerald-500"
+                }`}>
+                  {leadResponseToast.isError ? "✕" : "✓"}
                 </div>
                 <div>
-                  <h4 className="font-bold text-xs text-emerald-950">{leadResponseToast.message}</h4>
-                  <div className="flex items-center gap-3 text-[11px] text-emerald-700 mt-0.5 font-mono">
+                  <h4 className={`font-bold text-xs ${leadResponseToast.isError ? "text-rose-950" : "text-emerald-950"}`}>
+                    {leadResponseToast.message}
+                  </h4>
+                  <div className={`flex items-center gap-3 text-[11px] mt-0.5 font-mono ${
+                    leadResponseToast.isError ? "text-rose-700" : "text-emerald-700"
+                  }`}>
                     <span>Reference ID: <strong className="text-gray-900 font-bold">{leadResponseToast.referenceId}</strong></span>
                     <span>•</span>
-                    <span>Status: <strong className="uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded text-[10px] font-bold">{leadResponseToast.status}</strong></span>
+                    <span>Status: <strong className={`uppercase px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                      leadResponseToast.isError ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-800"
+                    }`}>{leadResponseToast.status}</strong></span>
                   </div>
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => setLeadResponseToast(null)}
+                className="text-gray-400 hover:text-gray-600 text-xs px-2 py-1 rounded cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
           )}
 
@@ -342,12 +444,12 @@ export default function SalesNewLeadView() {
                 </label>
                 <select 
                   value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
+                  onChange={(e) => handleBranchChange(e.target.value)}
                   className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
                 >
-                  <option value="10">10 - Sheikh Zayed Road</option>
-                  <option value="20">20 - Sharjah Branch</option>
-                  <option value="30">30 - Abu Dhabi Branch</option>
+                  {BRANCHES.map(b => (
+                    <option key={b.code} value={b.code}>{b.code} - {b.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -421,6 +523,7 @@ export default function SalesNewLeadView() {
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value)}
                   required
+                  placeholder="+971500000001"
                   className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500" 
                 />
               </div>
@@ -438,32 +541,71 @@ export default function SalesNewLeadView() {
               </div>
             </div>
 
-            {/* ROW 4: Model & Notes */}
+            {/* ROW 4: Make/Brand, Interested Model, Location */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">Interested Model <span className="text-rose-500">*</span></label>
-                <select 
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
+                <label className="text-[11px] font-bold text-gray-700 block mb-1">
+                  Make / Brand <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={make}
+                  onChange={(e) => handleMakeChange(e.target.value)}
                   className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
                 >
-                  <option value="X3">BMW X3</option>
-                  <option value="X5">BMW X5 xDrive40i</option>
-                  <option value="X6">BMW X6 xDrive40i</option>
-                  <option value="X7">BMW X7 xDrive40i</option>
-                  <option value="520i">BMW 520i Sedan</option>
+                  <option value="BMW">BMW</option>
+                  <option value="Geely">Geely</option>
+                  <option value="MINI">MINI</option>
+                  <option value="Rolls-Royce">Rolls-Royce</option>
+                  {!["BMW", "Geely", "MINI", "Rolls-Royce"].includes(make) && make && (
+                    <option value={make}>{make}</option>
+                  )}
                 </select>
               </div>
 
-              <div className="sm:col-span-2">
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">Enquiry Notes</label>
-                <textarea 
-                  rows={2}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-800 focus:outline-none focus:border-blue-500 leading-relaxed"
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 block mb-1">
+                  Interested Model <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    list="brand-model-options"
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    placeholder="e.g. Coolray, X3, etc."
+                    required
+                    className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                  />
+                  <datalist id="brand-model-options">
+                    {(BRAND_MODELS[make] || []).map((m) => (
+                      <option key={m} value={m} />
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 block mb-1">
+                  Location (Dealership)
+                </label>
+                <input
+                  type="text"
+                  value={customLocation || `${make} - ${(BRANCHES.find(b => b.code === branch)?.name) || 'Sheikh Zayed Road Dubai'}`}
+                  onChange={(e) => setCustomLocation(e.target.value)}
+                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
                 />
               </div>
+            </div>
+
+            {/* ROW 5: Enquiry Notes */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 block mb-1">Enquiry Notes</label>
+              <textarea 
+                rows={2}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-800 focus:outline-none focus:border-blue-500 leading-relaxed"
+              />
             </div>
 
             {/* Form Submit Button */}

@@ -10,6 +10,7 @@ import {
   FaChevronRight,
   FaColumns
 } from 'react-icons/fa';
+import { getFullMobileNumber } from '../utils/phoneUtils';
 
 export default function CenterNavTabs({ 
   activeModule, 
@@ -26,24 +27,20 @@ export default function CenterNavTabs({
   const handleNavigateModule = (targetModule) => {
     const searchParams = new URLSearchParams(window.location.search);
     
-    const complaintVal = searchParams.get('Complaint') || searchParams.get('complaint');
-    const salesVal = searchParams.get('Sales') || searchParams.get('sales');
-    const mobileVal = complaintVal || salesVal || searchParams.get('mobile') || searchParams.get('phone') || currentMobile || customer?.mobileRaw;
+    const validMobile = getFullMobileNumber(customer, currentMobile);
     const agentVal = searchParams.get('Agentid') || searchParams.get('agentId') || searchParams.get('agentid') || searchParams.get('agent_id') || searchParams.get('agent') || agentId;
     const customerNoVal = searchParams.get('customerNumber') || searchParams.get('customerNo') || searchParams.get('id') || searchParams.get('customer_id') || customer?.customerNumber || customer?.id;
     const groupVal = searchParams.get('group') || searchParams.get('keyloopGroup') || searchParams.get('brand') || contextGroup || customer?.keyloopGroup || '';
 
     const newParams = new URLSearchParams();
 
-    if (mobileVal) {
-      const cleanMobile = String(mobileVal).replace(/[^0-9]/g, '');
-      const finalMobile = cleanMobile || mobileVal;
+    if (validMobile) {
       if (targetModule === 'Sales') {
-        newParams.set('Sales', finalMobile);
+        newParams.set('Sales', validMobile);
       } else if (targetModule === 'Complaints Manager') {
-        newParams.set('Complaint', finalMobile);
+        newParams.set('Complaint', validMobile);
       } else {
-        newParams.set('mobile', finalMobile);
+        newParams.set('mobile', validMobile);
       }
     }
 

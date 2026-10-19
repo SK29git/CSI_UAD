@@ -17,12 +17,13 @@ import {
   FaInfoCircle,
   FaArrowRight
 } from 'react-icons/fa';
+import { getFullMobileNumber } from '../utils/phoneUtils';
 
 export default function SalesEnquiriesView() {
   const { customer, currentMobile, group: contextGroup } = useCustomer();
   const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
   const customerNumber = customer?.customerNumber || customer?.id || '';
-  const mobile = currentMobile || customer?.mobileRaw || '';
+  const mobile = getFullMobileNumber(customer, currentMobile);
 
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(true);

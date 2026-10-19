@@ -21,6 +21,7 @@ import {
   FaFilter,
   FaUser
 } from 'react-icons/fa';
+import { getFullMobileNumber } from '../utils/phoneUtils';
 
 export default function SalesSegmentsView() {
   const { customer, currentMobile: contextMobile, group: contextGroup } = useCustomer();
@@ -28,15 +29,9 @@ export default function SalesSegmentsView() {
   const customerNumber = customer?.customerNumber || customer?.id || "";
   const customerName = customer?.fullName || `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() || "Customer Record";
 
-  // Clean customer mobile number for API parameter
-  const rawMobile = customer?.mobileRaw || customer?.mobile || contextMobile || 
-    (new URLSearchParams(window.location.search).get('Complaint') || 
-     new URLSearchParams(window.location.search).get('Sales') || 
-     new URLSearchParams(window.location.search).get('mobile') || '');
-  const cleanMobile = rawMobile ? String(rawMobile).replace(/[^0-9]/g, '') : '';
+  // Resolve genuine unmasked customer mobile number (never use masked fragments like 574)
+  const cleanMobile = getFullMobileNumber(customer, contextMobile);
 
-  // Mode: 'customer' (strictly active customer's segments) or 'all' (overall brand cohort)
-  const [filterMode, setFilterMode] = useState('customer');
   const [segmentDataMap, setSegmentDataMap] = useState({});
   const [activeSegmentTab, setActiveSegmentTab] = useState('upgrade');
   const [loading, setLoading] = useState(true);
@@ -54,9 +49,9 @@ export default function SalesSegmentsView() {
     return str;
   };
 
-  // Segment definitions matching updated Postman Collection folder "5. Segments"
+  // Segment definitions matching updated Postman Collection folder "5. Segments" with mobile parameter
   const segmentDefinitions = useMemo(() => {
-    const mobileParam = (filterMode === 'customer' && cleanMobile) ? `&mobile=${cleanMobile}` : '';
+    const mobileParam = cleanMobile ? `&mobile=${cleanMobile}` : '';
     const currentMonth = new Date().getMonth() + 1;
 
     return [
@@ -109,7 +104,7 @@ export default function SalesSegmentsView() {
         url: `/api/v1/segments/insurance-expiring?group=${group}&withinDays=30${mobileParam}`
       }
     ];
-  }, [group, filterMode, cleanMobile]);
+  }, [group, cleanMobile]);
 
   const fetchAllSegments = async () => {
     setLoading(true);
@@ -126,6 +121,11 @@ export default function SalesSegmentsView() {
             } else if (Array.isArray(res.data)) {
               list = res.data;
             }
+          }
+          // When filtering strictly for current customer and unmasked mobile wasn't available in URL/CTI,
+          // filter the fetched cohort by customerNumber to see if this customer qualifies
+          if (!cleanMobile && customerNumber) {
+            list = list.filter(m => String(m.customerNumber || m.leadId || '') === String(customerNumber));
           }
           return { id: def.id, members: list };
         })
@@ -155,7 +155,7 @@ export default function SalesSegmentsView() {
 
   useEffect(() => {
     fetchAllSegments();
-  }, [group, filterMode, cleanMobile]);
+  }, [group, cleanMobile, customerNumber]);
 
   const currentMembers = activeSegmentTab ? (segmentDataMap[activeSegmentTab] || []) : [];
 
@@ -178,7 +178,7 @@ export default function SalesSegmentsView() {
   return (
     <div className="bg-white rounded-xl p-5 shadow-xs border border-gray-100 flex flex-col gap-4 text-xs">
       
-      {/* 1. Header Bar with Mode Toggle */}
+      {/* 1. Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center font-bold shadow-xs">
@@ -192,52 +192,19 @@ export default function SalesSegmentsView() {
               </span>
             </div>
             <p className="text-[11px] text-gray-500 font-medium">
-              {filterMode === 'customer' ? (
-                <span>
-                  Showing segment qualification for: <strong className="text-gray-800">{customerName}</strong>
-                  {customerNumber ? ` (#${customerNumber})` : ''}
-                  {cleanMobile ? ` | ${cleanMobile}` : ''}
-                </span>
-              ) : (
-                <span>Overall Brand Cohorts from Keyloop API ({group})</span>
-              )}
+              Showing segment qualification for: <strong className="text-gray-800">{customerName}</strong>
+              {customerNumber ? ` (#${customerNumber})` : ''}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Mode Switcher Toggle */}
-          <div className="bg-gray-100 p-0.5 rounded-lg flex items-center text-[11px] font-bold">
-            <button
-              onClick={() => setFilterMode('customer')}
-              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
-                filterMode === 'customer'
-                  ? 'bg-purple-600 text-white shadow-2xs'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-              title="Show only segments for this customer"
-            >
-              <FaUser className="text-[10px]" />
-              <span>Customer Data</span>
-              {filterMode === 'customer' && !loading && (
-                <span className="bg-white/20 text-white px-1.5 py-0.2 rounded-full text-[9px]">
-                  {customerQualifiedCount} Active
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setFilterMode('all')}
-              className={`px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer ${
-                filterMode === 'all'
-                  ? 'bg-purple-600 text-white shadow-2xs'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-              title="Show overall cohort members across brand"
-            >
-              <FaUsers className="text-[10px]" />
-              <span>Overall Cohort</span>
-            </button>
-          </div>
+          {!loading && (
+            <div className="bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 text-xs font-bold shadow-2xs">
+              <span className="w-2 h-2 rounded-full bg-purple-600"></span>
+              <span>{customerQualifiedCount} Qualified Segments</span>
+            </div>
+          )}
 
           <button 
             onClick={fetchAllSegments}
@@ -281,11 +248,11 @@ export default function SalesSegmentsView() {
                 </span>
                 {isQualified ? (
                   <span className="flex items-center gap-0.5 text-emerald-700 bg-emerald-100/90 px-1.5 py-0.2 rounded font-extrabold text-[9px] border border-emerald-300">
-                    <FaCheckCircle className="text-[9px]" /> {filterMode === 'customer' ? 'QUALIFIED' : `${members.length}`}
+                    <FaCheckCircle className="text-[9px]" /> QUALIFIED
                   </span>
                 ) : (
                   <span className="text-gray-400 font-semibold text-[9px]">
-                    None
+                    Not Qualified
                   </span>
                 )}
               </div>
@@ -296,7 +263,7 @@ export default function SalesSegmentsView() {
                 </h4>
                 <p className="text-[10px] text-gray-500 truncate" title={def.shortDesc}>
                   {isQualified 
-                    ? (filterMode === 'customer' ? `${members.length} Record Match` : `${members.length} Members`)
+                    ? `${members.length} Record Match`
                     : 'Not in segment'}
                 </p>
               </div>
@@ -309,7 +276,7 @@ export default function SalesSegmentsView() {
         <div className="py-16 flex flex-col items-center justify-center text-gray-400 gap-2">
           <FaSpinner className="animate-spin text-2xl text-purple-600" />
           <span className="text-xs font-medium">
-            {filterMode === 'customer' ? 'Filtering customer segments...' : 'Fetching overall segment cohorts...'}
+            Evaluating customer segment qualification...
           </span>
         </div>
       ) : (
@@ -346,14 +313,10 @@ export default function SalesSegmentsView() {
             <div className="p-8 text-center text-gray-500 bg-gray-50/80 rounded-xl border border-dashed border-gray-200 space-y-1">
               <FaUsers className="mx-auto text-2xl text-gray-300 mb-1" />
               <p className="font-bold text-gray-700 text-xs">
-                {filterMode === 'customer'
-                  ? `Customer #${customerNumber || 'active'} is not currently in this segment.`
-                  : `No members found in this cohort for ${group}.`}
+                Customer #{customerNumber || 'active'} does not qualify for this segment.
               </p>
               <p className="text-[11px] text-gray-400">
-                {filterMode === 'customer'
-                  ? 'Keyloop API returned 0 matching records for this mobile / criteria.'
-                  : 'No customer records match this segment criteria.'}
+                Keyloop API returned 0 matching records for this customer criteria.
               </p>
             </div>
           ) : (
@@ -470,7 +433,7 @@ export default function SalesSegmentsView() {
                               <td className="py-3 px-3 whitespace-nowrap">
                                 <span className="font-medium text-gray-800 flex items-center gap-1">
                                   <FaCar className="text-gray-400 text-[10px]" />
-                                  {formatDisplayVal(row.vehicle, 'Vehicle on Record')}
+                                  {formatDisplayVal(row.vehicle)}
                                 </span>
                                 {row.registrationNumber && (
                                   <span className="font-mono text-[10px] text-gray-500 block">
@@ -494,14 +457,18 @@ export default function SalesSegmentsView() {
                           {activeSegmentTab === 'vip' && (
                             <>
                               <td className="py-3 px-3 whitespace-nowrap">
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold text-[10px] border border-amber-300">
-                                  <FaCrown className="text-[9px]" /> VIP Member
-                                </span>
+                                {row.vip ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-extrabold text-[10px] border border-amber-300">
+                                    <FaCrown className="text-[9px]" /> VIP Member
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-500 text-[10px]">Standard</span>
+                                )}
                               </td>
                               <td className="py-3 px-3 whitespace-nowrap text-gray-600">
                                 {row.spend || row.purchaseCount 
                                   ? `Spend: ${row.spend || 'N/A'} | Orders: ${row.purchaseCount || 'N/A'}`
-                                  : 'Active VIP Status'}
+                                  : 'Registered VIP'}
                               </td>
                             </>
                           )}
@@ -511,7 +478,7 @@ export default function SalesSegmentsView() {
                               <td className="py-3 px-3 whitespace-nowrap">
                                 <span className="font-medium text-gray-800 flex items-center gap-1">
                                   <FaCar className="text-gray-400 text-[10px]" />
-                                  {formatDisplayVal(row.vehicle, 'Electric Vehicle')}
+                                  {formatDisplayVal(row.vehicle)}
                                 </span>
                                 {row.vin && (
                                   <span className="font-mono text-[9px] text-gray-400 block truncate max-w-[140px]" title={row.vin}>
@@ -547,8 +514,12 @@ export default function SalesSegmentsView() {
                                   <span className="text-gray-500 text-[10px]">Standard</span>
                                 )}
                               </td>
-                              <td className="py-3 px-3 whitespace-nowrap text-gray-600">
-                                {formatDisplayVal(row.contactPreference, 'Phone / Email')}
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                {row.doNotContact ? (
+                                  <span className="text-rose-600 font-bold text-[10px]">Do Not Contact</span>
+                                ) : (
+                                  <span className="text-emerald-700 font-semibold text-[10px]">Contact Allowed</span>
+                                )}
                               </td>
                             </>
                           )}
@@ -556,7 +527,7 @@ export default function SalesSegmentsView() {
                           {activeSegmentTab === 'inactive' && (
                             <>
                               <td className="py-3 px-3 whitespace-nowrap text-gray-700">
-                                {formatDisplayVal(row.leadSource || row.source, 'Direct / Walk-in')}
+                                {formatDisplayVal(row.leadSource || row.source)}
                               </td>
                               <td className="py-3 px-3 whitespace-nowrap text-gray-600 font-mono">
                                 {formatDisplayVal(row.leadCreatedAt || row.createdAt ? (row.leadCreatedAt || row.createdAt).slice(0, 10) : null)}
@@ -567,10 +538,10 @@ export default function SalesSegmentsView() {
                           {activeSegmentTab === 'insurance' && (
                             <>
                               <td className="py-3 px-3 whitespace-nowrap text-gray-800">
-                                {formatDisplayVal(row.vehicle, 'Vehicle on Record')}
+                                {formatDisplayVal(row.vehicle)}
                               </td>
                               <td className="py-3 px-3 whitespace-nowrap text-gray-700">
-                                {formatDisplayVal(row.provider, 'Sukoon / Active Policy')}
+                                {formatDisplayVal(row.provider ? `${row.provider}${row.contractNumber ? ` (${row.contractNumber})` : ''}` : row.contractNumber)}
                               </td>
                               <td className="py-3 px-3 whitespace-nowrap font-mono text-rose-600 font-bold">
                                 {formatDisplayVal(row.expiryDate)}

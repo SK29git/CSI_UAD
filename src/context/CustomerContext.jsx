@@ -174,6 +174,9 @@ export function CustomerProvider({ children }) {
   const [currentCustomerNumber, setCurrentCustomerNumber] = useState("");
   const [agentId, setAgentId] = useState("agent.42");
   const [openComplaintsCount, setOpenComplaintsCount] = useState(0);
+  const [customerFormMode, setCustomerFormMode] = useState(null); // 'create' | 'edit' | null
+  const openCustomerForm = (mode = 'create') => setCustomerFormMode(mode);
+  const closeCustomerForm = () => setCustomerFormMode(null);
 
   // Group state from URL or detected customer
   const [currentGroup, setCurrentGroup] = useState(() => {
@@ -208,6 +211,37 @@ export function CustomerProvider({ children }) {
   const [salesSummary, setSalesSummary] = useState(null);
   const [verificationStatus, setVerificationStatus] = useState(null);
 
+  // Enquiry state from customer search or profile
+  const [enquiryNumber, setEnquiryNumber] = useState(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    return searchParams.get('enquiryNumber') || searchParams.get('enquiryNo') || searchParams.get('enquiry') || '';
+  });
+  const [enquiries, setEnquiries] = useState([]);
+
+  const syncEnquiriesFromCustomer = (custObj, searchItem = null) => {
+    if (!custObj && !searchItem) return '';
+    const list = (custObj && Array.isArray(custObj.enquiries) && custObj.enquiries.length > 0)
+      ? custObj.enquiries
+      : (searchItem && Array.isArray(searchItem.enquiries) && searchItem.enquiries.length > 0)
+        ? searchItem.enquiries
+        : (custObj?.enquiries || []);
+
+    const primaryEnquiry = (list[0] && list[0].enquiryNumber)
+      || custObj?.enquiryNumber
+      || (searchItem && (searchItem.enquiryNumber || (searchItem.enquiries && searchItem.enquiries[0]?.enquiryNumber)))
+      || '';
+
+    if (custObj) {
+      custObj.enquiries = list;
+      custObj.enquiryNumber = primaryEnquiry;
+    }
+    setEnquiries(list);
+    if (primaryEnquiry) {
+      setEnquiryNumber(primaryEnquiry);
+    }
+    return primaryEnquiry;
+  };
+
   useEffect(() => {
     // Clear localStorage when window/tab is closed
     const handleTabClose = () => {
@@ -225,8 +259,23 @@ export function CustomerProvider({ children }) {
     const searchParams = new URLSearchParams(window.location.search);
     const complaintMobileParam = searchParams.get('Complaint') || searchParams.get('complaint');
     const salesMobileParam = searchParams.get('Sales') || searchParams.get('sales');
-    const generalMobileParam = searchParams.get('mobile') || searchParams.get('phone');
+    const generalMobileParam = searchParams.get('mobile') || 
+                               searchParams.get('Mobile') || 
+                               searchParams.get('phone') || 
+                               searchParams.get('Phone') || 
+                               searchParams.get('ani') || 
+                               searchParams.get('ANI') || 
+                               searchParams.get('callerId') || 
+                               searchParams.get('callerid') || 
+                               searchParams.get('msisdn') || 
+                               searchParams.get('MSISDN');
     const customerNoParam = searchParams.get('customerNumber') || searchParams.get('customerNo') || searchParams.get('id') || searchParams.get('customer_id');
+    const emailParam = searchParams.get('email') || searchParams.get('Email');
+    const enquiryNoParam = searchParams.get('enquiryNumber') || searchParams.get('enquiryNo') || searchParams.get('enquiry');
+    if (enquiryNoParam) {
+      setEnquiryNumber(enquiryNoParam);
+    }
+
     const groupParam = searchParams.get('group') || searchParams.get('keyloopGroup') || searchParams.get('brand') || '';
     if (groupParam) {
       setCurrentGroup(groupParam);
@@ -239,12 +288,18 @@ export function CustomerProvider({ children }) {
     }
 
     const activeMobile = complaintMobileParam || salesMobileParam || generalMobileParam;
+    const plateParam = searchParams.get('plate') || searchParams.get('Plate');
+    const vinParam = searchParams.get('vin') || searchParams.get('Vin') || searchParams.get('VIN');
     const isSales = Boolean(salesMobileParam);
     const prefix = isSales ? 'sales_' : 'complaint_';
 
     if (activeMobile) {
       setCurrentMobile(activeMobile);
       fetchCustomerByMobile(activeMobile, groupParam, prefix);
+    } else if (emailParam) {
+      fetchCustomerByEmail(emailParam, groupParam, prefix);
+    } else if (plateParam || vinParam) {
+      fetchCustomerByPlateOrVin(plateParam || vinParam, groupParam, prefix);
     } else if (customerNoParam) {
       setCurrentCustomerNumber(customerNoParam);
       fetchCustomerByCustomerNumber(groupParam, customerNoParam, prefix);
@@ -255,6 +310,7 @@ export function CustomerProvider({ children }) {
         try {
           const cachedProfile = JSON.parse(cachedProfileStr);
           if (cachedProfile && cachedProfile.customerNumber) {
+            syncEnquiriesFromCustomer(cachedProfile);
             setCustomer(cachedProfile);
             const g = cachedProfile.keyloopGroup || '';
             if (g) {
@@ -277,7 +333,7 @@ export function CustomerProvider({ children }) {
     };
   }, []);
 
-  const fetchVehiclesByCustomer = async (group, custNo) => {
+  const fetchVehiclesByCustomer = async (group, custNo, options = {}) => {
     setVehiclesLoading(true);
     const g = group || customer?.keyloopGroup || '';
     const c = custNo || customer?.customerNumber || '';
@@ -307,10 +363,23 @@ export function CustomerProvider({ children }) {
       
       if (list.length > 0) {
         setVehicles(list);
-        const targetVin = list[0]?.vin || list[0]?.chassisNumber;
+        let selectedItem = list[0];
+        if (options?.targetVin) {
+          const matchVin = list.find(v => (v.vin || v.chassisNumber || '').toUpperCase() === options.targetVin.toUpperCase());
+          if (matchVin) selectedItem = matchVin;
+        } else if (options?.targetPlate) {
+          const cleanTarget = options.targetPlate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+          const matchPlate = list.find(v => {
+            const reg = (v.registrationNumber || v.plateNumber || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            return reg && (reg.includes(cleanTarget) || cleanTarget.includes(reg));
+          });
+          if (matchPlate) selectedItem = matchPlate;
+        }
+
+        const targetVin = selectedItem?.vin || selectedItem?.chassisNumber;
         if (targetVin) {
           setSelectedVin(targetVin);
-          await fetchSingleVehicleDetails(g, targetVin, list[0]);
+          await fetchSingleVehicleDetails(g, targetVin, selectedItem);
         } else {
           setSelectedVin("");
           setVehicleDetails(null);
@@ -457,7 +526,7 @@ export function CustomerProvider({ children }) {
     }
   };
 
-  const fetchProfileByCustomerNumber = async (group, custNo, prefix = 'complaint_') => {
+  const fetchProfileByCustomerNumber = async (group, custNo, prefix = 'complaint_', options = {}, searchItem = null) => {
     setLoading(true);
     setError(null);
     try {
@@ -466,6 +535,7 @@ export function CustomerProvider({ children }) {
 
       if (res && res.ok && res.data && typeof res.data === 'object') {
         const prof = res.data;
+        syncEnquiriesFromCustomer(prof, searchItem);
         setCustomer(prof);
         const resolvedGroup = prof.keyloopGroup || group || '';
         if (resolvedGroup) {
@@ -477,16 +547,28 @@ export function CustomerProvider({ children }) {
 
         if (Array.isArray(prof.vehicles) && prof.vehicles.length > 0) {
           setVehicles(prof.vehicles);
-          const vin = prof.vehicles[0].vin || prof.vehicles[0].chassisNumber;
+          let selectedItem = prof.vehicles[0];
+          if (options?.targetVin) {
+            const matchVin = prof.vehicles.find(v => (v.vin || v.chassisNumber || '').toUpperCase() === options.targetVin.toUpperCase());
+            if (matchVin) selectedItem = matchVin;
+          } else if (options?.targetPlate) {
+            const cleanTarget = options.targetPlate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const matchPlate = prof.vehicles.find(v => {
+              const reg = (v.registrationNumber || v.plateNumber || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+              return reg && (reg.includes(cleanTarget) || cleanTarget.includes(reg));
+            });
+            if (matchPlate) selectedItem = matchPlate;
+          }
+          const vin = selectedItem.vin || selectedItem.chassisNumber;
           setSelectedVin(vin || "");
-          fetchSingleVehicleDetails(group, vin, prof.vehicles[0]);
+          fetchSingleVehicleDetails(group, vin, selectedItem);
         } else if (prof.vin) {
           const vObj = { vin: prof.vin, brand: prof.keyloopGroup || group, model: prof.model || prof.description || '' };
           setVehicles([vObj]);
           setSelectedVin(prof.vin);
           fetchSingleVehicleDetails(group, prof.vin, vObj);
         } else {
-          fetchVehiclesByCustomer(group, custNo);
+          fetchVehiclesByCustomer(group, custNo, options);
         }
 
         fetchCustomerExtraDetails(group, custNo);
@@ -496,8 +578,12 @@ export function CustomerProvider({ children }) {
     } catch (err) {
       console.warn("Profile API fetch error:", err.message);
       setError(err.message);
+      if (searchItem) {
+        syncEnquiriesFromCustomer(searchItem);
+        setCustomer(searchItem);
+      }
       fetchOpenComplaintsCount(group, custNo);
-      fetchVehiclesByCustomer(group, custNo);
+      fetchVehiclesByCustomer(group, custNo, options);
       fetchCustomerExtraDetails(group, custNo);
     } finally {
       setLoading(false);
@@ -555,7 +641,11 @@ export function CustomerProvider({ children }) {
 
         if (targetItem && targetItem.customerNumber) {
           const detectedGroup = targetItem.keyloopGroup || group || '';
-          await fetchProfileByCustomerNumber(detectedGroup, targetItem.customerNumber, prefix);
+          await fetchProfileByCustomerNumber(detectedGroup, targetItem.customerNumber, prefix, {}, targetItem);
+          return;
+        } else if (targetItem) {
+          syncEnquiriesFromCustomer(targetItem);
+          setCustomer(targetItem);
           return;
         }
       }
@@ -598,7 +688,7 @@ export function CustomerProvider({ children }) {
         setCustomerList(allResults);
         setSelectedIndex(0);
         const detectedGroup = allResults[0].keyloopGroup || group || '';
-        await fetchProfileByCustomerNumber(detectedGroup, allResults[0].customerNumber, prefix);
+        await fetchProfileByCustomerNumber(detectedGroup, allResults[0].customerNumber, prefix, {}, allResults[0]);
         return;
       }
       
@@ -608,6 +698,175 @@ export function CustomerProvider({ children }) {
     } catch (err) {
       console.warn("Customer number search error:", err.message);
       setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCustomerByEmail = async (email, group = '', prefix = 'complaint_') => {
+    setLoading(true);
+    setError(null);
+    const cleanEmail = (email || '').trim();
+    if (!cleanEmail) {
+      setLoading(false);
+      return { ok: false, message: 'Please enter a valid email address' };
+    }
+
+    try {
+      let allResults = [];
+      const activeGroup = group || currentGroup || customer?.keyloopGroup || '';
+      if (activeGroup && activeGroup.trim() !== '') {
+        const searchUrl = `/api/v1/customers?group=${encodeURIComponent(activeGroup.trim())}&email=${encodeURIComponent(cleanEmail)}`;
+        const res = await apiFetch(searchUrl);
+        if (res && res.ok && res.data) {
+          allResults = Array.isArray(res.data) ? res.data : [res.data];
+        }
+      } else {
+        const groupPromises = KNOWN_GROUPS.map(g =>
+          apiFetch(`/api/v1/customers?group=${g}&email=${encodeURIComponent(cleanEmail)}`)
+            .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
+            .catch(() => [])
+        );
+        const groupResults = await Promise.all(groupPromises);
+        allResults = groupResults.flat();
+      }
+
+      if (allResults.length > 0) {
+        localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(allResults));
+        setCustomerList(allResults);
+        setSelectedIndex(0);
+        const targetItem = allResults[0];
+        const detectedGroup = targetItem.keyloopGroup || activeGroup || 'BMW';
+        if (targetItem.customerNumber) {
+          await fetchProfileByCustomerNumber(detectedGroup, targetItem.customerNumber, prefix, {}, targetItem);
+        } else {
+          syncEnquiriesFromCustomer(targetItem);
+          setCustomer(targetItem);
+        }
+        return { ok: true, count: allResults.length, customer: targetItem, group: detectedGroup };
+      }
+
+      setCustomer(null);
+      setCustomerList([]);
+      return { ok: false, message: `No customer record found for email "${cleanEmail}"` };
+    } catch (err) {
+      console.warn("Search email error:", err.message);
+      setError(err.message);
+      setCustomer(null);
+      setCustomerList([]);
+      return { ok: false, message: err.message || 'Search failed' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCustomerByPlateOrVin = async (query, group = '', prefix = 'complaint_') => {
+    setLoading(true);
+    setError(null);
+    const trimmed = (query || '').trim();
+    if (!trimmed) {
+      setLoading(false);
+      return { ok: false, message: 'Please enter a Plate or VIN number' };
+    }
+
+    const activeGroup = group || currentGroup || customer?.keyloopGroup || 'BMW';
+    const groupsToTry = [activeGroup, ...KNOWN_GROUPS.filter(g => g !== activeGroup)];
+
+    // Check if query is likely a VIN (11-17 alphanumeric characters without spaces/hyphens)
+    const isLikelyVin = /^[A-HJ-NPR-Z0-9]{11,17}$/i.test(trimmed.replace(/\s+/g, ''));
+
+    try {
+      let allResults = [];
+      let detectedGroup = activeGroup;
+      let matchedType = isLikelyVin ? 'vin' : 'plate';
+
+      for (const g of groupsToTry) {
+        if (isLikelyVin) {
+          // 1. Try VIN endpoint: /api/v1/customers?group={group}&vin={vin}
+          const resVin = await apiFetch(`/api/v1/customers?group=${encodeURIComponent(g)}&vin=${encodeURIComponent(trimmed.replace(/\s+/g, ''))}`);
+          if (resVin && resVin.ok && Array.isArray(resVin.data) && resVin.data.length > 0) {
+            allResults = resVin.data;
+            detectedGroup = g;
+            matchedType = 'vin';
+            break;
+          }
+          // 2. Fallback to Plate: /api/v1/customers?group={group}&plate={plate}
+          const resPlate = await apiFetch(`/api/v1/customers?group=${encodeURIComponent(g)}&plate=${encodeURIComponent(trimmed)}`);
+          if (resPlate && resPlate.ok && Array.isArray(resPlate.data) && resPlate.data.length > 0) {
+            allResults = resPlate.data;
+            detectedGroup = g;
+            matchedType = 'plate';
+            break;
+          }
+        } else {
+          // 1. Try Plate endpoint: /api/v1/customers?group={group}&plate={plate}
+          const resPlate = await apiFetch(`/api/v1/customers?group=${encodeURIComponent(g)}&plate=${encodeURIComponent(trimmed)}`);
+          if (resPlate && resPlate.ok && Array.isArray(resPlate.data) && resPlate.data.length > 0) {
+            allResults = resPlate.data;
+            detectedGroup = g;
+            matchedType = 'plate';
+            break;
+          }
+          // 2. Fallback to VIN
+          const resVin = await apiFetch(`/api/v1/customers?group=${encodeURIComponent(g)}&vin=${encodeURIComponent(trimmed.replace(/\s+/g, ''))}`);
+          if (resVin && resVin.ok && Array.isArray(resVin.data) && resVin.data.length > 0) {
+            allResults = resVin.data;
+            detectedGroup = g;
+            matchedType = 'vin';
+            break;
+          }
+        }
+      }
+
+      if (allResults.length > 0) {
+        localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(allResults));
+        localStorage.setItem(prefix + 'selected_index', '0');
+
+        setCustomerList(allResults);
+        setSelectedIndex(0);
+
+        const targetItem = allResults[0];
+        const finalGroup = targetItem.keyloopGroup || detectedGroup;
+        if (finalGroup) {
+          setCurrentGroup(finalGroup);
+          syncGroupToUrl(finalGroup);
+        }
+
+        // Sync URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.set('customerNumber', targetItem.customerNumber);
+        urlParams.set('group', finalGroup);
+        if (matchedType === 'plate') {
+          urlParams.set('plate', trimmed);
+          urlParams.delete('vin');
+        } else {
+          urlParams.set('vin', trimmed);
+          urlParams.delete('plate');
+        }
+        window.history.replaceState(null, '', `${window.location.pathname}?${urlParams.toString()}`);
+
+        await fetchProfileByCustomerNumber(finalGroup, targetItem.customerNumber, prefix, {
+          targetPlate: matchedType === 'plate' ? trimmed : null,
+          targetVin: matchedType === 'vin' ? trimmed : null
+        }, targetItem);
+
+        return { 
+          ok: true, 
+          count: allResults.length, 
+          customer: allResults[0], 
+          matchedType,
+          group: finalGroup 
+        };
+      }
+
+      return { 
+        ok: false, 
+        message: `No customer record found matching ${isLikelyVin ? 'VIN' : 'Plate'} "${trimmed}".` 
+      };
+    } catch (err) {
+      console.warn("fetchCustomerByPlateOrVin error:", err);
+      setError(err.message);
+      return { ok: false, message: err.message || 'Search failed' };
     } finally {
       setLoading(false);
     }
@@ -625,9 +884,196 @@ export function CustomerProvider({ children }) {
       const g = target.keyloopGroup || customer?.keyloopGroup || '';
       const c = target.customerNumber;
       if (c) {
-        fetchProfileByCustomerNumber(g, c, prefix);
+        fetchProfileByCustomerNumber(g, c, prefix, {}, target);
+      } else {
+        syncEnquiriesFromCustomer(target);
+        setCustomer(target);
       }
     }
+  };
+
+  // Create New Customer Handler matching Genesys CCaaS payload schema
+  const createCustomer = async (details) => {
+    setLoading(true);
+    setError(null);
+    const payload = {
+      caseType: "CREATE_CUSTOMER",
+      callbackUrl: "https://ccaas.agmcgroup.ae",
+      createdBy: agentId || "genesys",
+      details: {
+        group: details.group || currentGroup || "BMW",
+        branch: details.branch || "10 - Sheikh Zayed Rd",
+        titleCode: details.titleCode || "Mr.",
+        firstName: details.firstName || "",
+        surname: details.surname || "",
+        area: details.area || "",
+        city: details.city || "Dubai",
+        country: details.country || "United Arab Emirates",
+        mobile: details.mobile || "",
+        email: details.email || ""
+      }
+    };
+
+    console.log("Submitting CREATE_CUSTOMER payload:", payload);
+
+    let apiData = null;
+
+    try {
+      // Attempt backend case creation endpoint
+      const res = await apiFetch('/api/v1/cases', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res && res.ok) {
+        apiData = res.data;
+      }
+    } catch (e) {
+      console.warn("Backend /api/v1/cases POST error (fallback to local state):", e);
+    }
+
+    // Generate unique customer ID if not provided by backend
+    const generatedCustNo = apiData?.customerNumber || apiData?.id || String(Math.floor(100000 + Math.random() * 900000));
+    const branchCodeNum = details.branch ? details.branch.split(' - ')[0].trim() : "10";
+
+    const newProfile = {
+      keyloopGroup: details.group || currentGroup || "BMW",
+      customerNumber: generatedCustNo,
+      customerType: "PROSPECT",
+      salutation: details.titleCode || "Mr.",
+      firstName: details.firstName || "",
+      middleName: "",
+      surname: details.surname || "",
+      fullName: `${details.titleCode ? details.titleCode + ' ' : ''}${details.firstName || ''} ${details.surname || ''}`.trim(),
+      mobile: details.mobile || "",
+      mobileRaw: (details.mobile || "").replace(/\D/g, ''),
+      mobileValid: Boolean(details.mobile && details.mobile.length >= 7),
+      email: details.email || "",
+      emailValid: Boolean(details.email && details.email.includes('@')),
+      location: {
+        flatBuilding: "N/A",
+        area: details.area || "Deira",
+        city: details.city || "Dubai"
+      },
+      branchCode: branchCodeNum,
+      preferredBranch: details.branch || "10 - Sheikh Zayed Rd",
+      customerSince: new Date().toISOString().split('T')[0],
+      lastUpdated: new Date().toISOString().split('T')[0],
+      dateOfBirth: "",
+      nationality: details.country || "United Arab Emirates",
+      vip: false,
+      doNotContact: false,
+      consents: {
+        email: true,
+        phone: true,
+        sms: true,
+        whatsapp: true
+      },
+      language: "English",
+      loyaltyTier: "STANDARD"
+    };
+
+    // Update active state
+    setCustomer(newProfile);
+    setCustomerList(prev => [newProfile, ...(prev || [])]);
+    setSelectedIndex(0);
+    setCurrentGroup(newProfile.keyloopGroup);
+    syncGroupToUrl(newProfile.keyloopGroup);
+    setVehicles([]);
+    setSelectedVin("");
+    setVehicleDetails(null);
+
+    // Save to local storage
+    try {
+      localStorage.setItem('complaint_customer_profile_data', JSON.stringify(newProfile));
+      localStorage.setItem('sales_customer_profile_data', JSON.stringify(newProfile));
+    } catch (err) {
+      console.warn("LocalStorage save error:", err);
+    }
+
+    setLoading(false);
+    return { ok: true, payload, customer: newProfile };
+  };
+
+  // Update Customer Handler (edit existing customer name, mobile, email, branch, address, etc.)
+  const updateCustomer = async (details) => {
+    if (!customer) return { ok: false, error: "No active customer to update" };
+
+    const branchCodeNum = details.branch ? details.branch.split(' - ')[0].trim() : (customer.branchCode || "10");
+
+    const payload = {
+      caseType: "UPDATE_CUSTOMER",
+      callbackUrl: "https://ccaas.agmcgroup.ae",
+      createdBy: agentId || "genesys",
+      customerNumber: customer.customerNumber,
+      details: {
+        group: details.group || customer.keyloopGroup || "BMW",
+        branch: details.branch || customer.preferredBranch || "10 - Sheikh Zayed Rd",
+        titleCode: details.titleCode || customer.salutation || "Mr.",
+        firstName: details.firstName !== undefined ? details.firstName : customer.firstName,
+        surname: details.surname !== undefined ? details.surname : customer.surname,
+        area: details.area !== undefined ? details.area : customer.location?.area || "",
+        city: details.city !== undefined ? details.city : customer.location?.city || "Dubai",
+        country: details.country !== undefined ? details.country : customer.nationality || "United Arab Emirates",
+        mobile: details.mobile !== undefined ? details.mobile : customer.mobile,
+        email: details.email !== undefined ? details.email : customer.email
+      }
+    };
+
+    console.log("Submitting UPDATE_CUSTOMER payload:", payload);
+
+    try {
+      // Attempt backend update endpoint
+      await apiFetch(`/api/v1/customers/${encodeURIComponent(payload.details.group)}/${encodeURIComponent(customer.customerNumber)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      console.warn("Backend update error (applying local state update):", e);
+    }
+
+    const updatedProfile = {
+      ...customer,
+      keyloopGroup: payload.details.group,
+      salutation: payload.details.titleCode,
+      firstName: payload.details.firstName,
+      surname: payload.details.surname,
+      fullName: `${payload.details.titleCode ? payload.details.titleCode + ' ' : ''}${payload.details.firstName || ''} ${payload.details.surname || ''}`.trim(),
+      mobile: payload.details.mobile,
+      mobileRaw: (payload.details.mobile || "").replace(/\D/g, ''),
+      email: payload.details.email,
+      location: {
+        ...(customer.location || {}),
+        area: payload.details.area,
+        city: payload.details.city
+      },
+      branchCode: branchCodeNum,
+      preferredBranch: payload.details.branch,
+      nationality: payload.details.country,
+      lastUpdated: new Date().toISOString().split('T')[0]
+    };
+
+    setCustomer(updatedProfile);
+    setCustomerList(prev => {
+      if (!Array.isArray(prev) || prev.length === 0) return [updatedProfile];
+      return prev.map(c => c.customerNumber === customer.customerNumber ? { ...c, ...updatedProfile } : c);
+    });
+
+    if (payload.details.group !== currentGroup) {
+      setCurrentGroup(payload.details.group);
+      syncGroupToUrl(payload.details.group);
+    }
+
+    // Persist to local storage
+    try {
+      localStorage.setItem('complaint_customer_profile_data', JSON.stringify(updatedProfile));
+      localStorage.setItem('sales_customer_profile_data', JSON.stringify(updatedProfile));
+    } catch (err) {
+      console.warn("LocalStorage update error:", err);
+    }
+
+    return { ok: true, payload, customer: updatedProfile };
   };
 
   // Helper getters strictly based on profile API response fields
@@ -704,12 +1150,18 @@ export function CustomerProvider({ children }) {
       currentCustomerNumber,
       agentId,
       setAgentId,
+      enquiryNumber,
+      setEnquiryNumber,
+      enquiries,
+      setEnquiries,
       openComplaintsCount,
       setOpenComplaintsCount,
       fetchOpenComplaintsCount,
       fetchProfileByCustomerNumber,
       fetchCustomerByMobile,
+      fetchCustomerByEmail,
       fetchCustomerByCustomerNumber,
+      fetchCustomerByPlateOrVin,
       getFormattedName,
       getFormattedDate,
       getFormattedLocation,
@@ -728,7 +1180,12 @@ export function CustomerProvider({ children }) {
       riskOverview,
       salesSummary,
       verificationStatus,
-      fetchCustomerExtraDetails
+      fetchCustomerExtraDetails,
+      createCustomer,
+      updateCustomer,
+      customerFormMode,
+      openCustomerForm,
+      closeCustomerForm
     }}>
       {children}
     </CustomerContext.Provider>

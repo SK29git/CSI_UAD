@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import { 
   FaPhoneAlt, 
@@ -17,12 +17,18 @@ import {
   FaUser,
   FaStickyNote,
   FaCrown,
-  FaSpinner
+  FaSpinner,
+  FaUserPlus,
+  FaEdit,
+  FaSearch
 } from 'react-icons/fa';
+import { getFullMobileNumber } from '../utils/phoneUtils';
 
 export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
   const { 
     customer, 
+    currentMobile,
+    currentGroup,
     customerList, 
     selectedIndex, 
     selectCustomer, 
@@ -34,8 +40,57 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     getLoyaltyTier,
     getConsentsDisplay,
     riskOverview,
-    verificationStatus
+    verificationStatus,
+    openCustomerForm,
+    fetchCustomerByPlateOrVin,
+    fetchCustomerByEmail,
+    fetchCustomerByCustomerNumber
   } = useCustomer();
+
+  const [searchQuery, setSearchQuery] = useState(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    return searchParams.get('plate') || searchParams.get('vin') || searchParams.get('email') || '';
+  });
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchStatus, setSearchStatus] = useState(null);
+
+  const handlePlateOrVinSearch = async (e) => {
+    if (e) e.preventDefault();
+    const q = searchQuery.trim();
+    if (!q) return;
+
+    setIsSearching(true);
+    setSearchStatus(null);
+
+    const isSales = window.location.pathname.includes('/sales');
+    const prefix = isSales ? 'sales_' : 'complaint_';
+    
+    let res = null;
+    if (q.includes('@')) {
+      res = await fetchCustomerByEmail(q, currentGroup, prefix);
+    } else if (/^\d{4,8}$/.test(q)) {
+      // Numerical: try customer number
+      await fetchCustomerByCustomerNumber(currentGroup, q, prefix);
+      res = { ok: true, customer: { customerNumber: q } };
+    } else {
+      res = await fetchCustomerByPlateOrVin(q, currentGroup, prefix);
+    }
+
+    setIsSearching(false);
+    if (res && res.ok) {
+      setSearchStatus({
+        type: 'success',
+        message: `Found: ${res.customer?.fullName || 'Customer'} (#${res.customer?.customerNumber || q})`
+      });
+      setTimeout(() => setSearchStatus(null), 4000);
+    } else {
+      setSearchStatus({
+        type: 'error',
+        message: res?.message || `No customer found for "${q}"`
+      });
+      setTimeout(() => setSearchStatus(null), 4000);
+    }
+  };
 
   const customerName = getFormattedName ? getFormattedName() : '';
   const loyaltyTier = getLoyaltyTier ? getLoyaltyTier() : 'N/A';
@@ -86,6 +141,24 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
           <FaChevronRight className="text-sm" />
         </button>
 
+        {/* Quick New Customer Button in Collapsed Mode */}
+        <button
+          onClick={(e) => { e.stopPropagation(); openCustomerForm('create'); }}
+          className="w-9 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+          title="Create New Customer"
+        >
+          <FaUserPlus className="text-xs" />
+        </button>
+
+        {/* Quick Search Plate / VIN in Collapsed Mode (expands panel) */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onToggleCollapse && onToggleCollapse(); }}
+          className="w-9 h-9 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
+          title="Search Plate or VIN"
+        >
+          <FaSearch className="text-xs" />
+        </button>
+
         <div className="w-7 h-[1px] bg-gray-200 my-1" />
 
         {/* Customer Initial Avatar */}
@@ -108,6 +181,71 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
 
   return (
     <div className="w-full lg:w-[310px] xl:w-[330px] flex-shrink-0 flex flex-col gap-4 transition-all duration-300">
+      {/* 0. Top Action Button: Create New Customer */}
+      <button
+        type="button"
+        onClick={() => openCustomerForm('create')}
+        className="w-full py-2.5 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+        title="Create a new customer profile"
+      >
+        <FaUserPlus className="text-xs" />
+        <span>+ Create New Customer</span>
+      </button>
+
+      {/* 0.1 Search Bar: Plate or VIN Number */}
+      <div className="relative w-full">
+        <form onSubmit={handlePlateOrVinSearch} className="relative flex items-center w-full">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search Plate, VIN, Email, Cust #..."
+            className="w-full pl-3 pr-16 py-2 bg-white hover:border-gray-400 focus:bg-white border border-gray-300 focus:border-blue-600 rounded-xl text-xs font-semibold text-gray-800 placeholder-gray-400 focus:outline-none transition-all shadow-2xs"
+          />
+          <div className="absolute right-1.5 flex items-center gap-1">
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => { setSearchQuery(''); setSearchStatus(null); }}
+                className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 text-[10px] transition-colors"
+                title="Clear"
+              >
+                ✕
+              </button>
+            )}
+            <button
+              type="submit"
+              disabled={isSearching || !searchQuery.trim()}
+              className="w-7 h-7 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg transition-colors shadow-2xs cursor-pointer flex items-center justify-center shrink-0"
+              title="Search Plate or VIN"
+            >
+              {isSearching ? <FaSpinner className="animate-spin text-xs" /> : <FaSearch className="text-xs" />}
+            </button>
+          </div>
+        </form>
+
+        {/* Search Result Feedback Popover */}
+        {searchStatus && (
+          <div className={`absolute top-full left-0 right-0 mt-1.5 z-30 px-3 py-1.5 rounded-lg shadow-md border text-[11px] font-semibold flex items-center justify-between gap-1.5 animate-in fade-in slide-in-from-top-1 ${
+            searchStatus.type === 'success' 
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
+              : 'bg-rose-50 text-rose-800 border-rose-200'
+          }`}>
+            <div className="flex items-center gap-1.5 truncate">
+              <span className={`w-2 h-2 rounded-full shrink-0 ${searchStatus.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <span className="truncate">{searchStatus.message}</span>
+            </div>
+            <button 
+              type="button" 
+              onClick={() => setSearchStatus(null)} 
+              className="text-gray-400 hover:text-gray-700 text-xs font-bold cursor-pointer shrink-0 ml-1"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* 1. Profile Overview Card */}
       <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 relative">
         {/* Collapse Toggle Button */}
@@ -165,6 +303,15 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <h2 className="font-bold text-gray-900 text-base leading-tight truncate">{customerName}</h2>
+                  <button
+                    type="button"
+                    onClick={() => openCustomerForm('edit')}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 transition-colors shadow-2xs"
+                    title="Edit Customer Profile (Mobile, Name, Email, Address, etc.)"
+                  >
+                    <FaEdit className="text-[10px]" />
+                    <span>Edit</span>
+                  </button>
                   {customer?.vip === true && (
                     <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 shadow-xs">
                       <FaCrown className="text-[9px]" /> VIP
@@ -179,7 +326,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                 <div className="mt-1 space-y-1 text-xs text-gray-600">
                   <div className="flex items-center gap-1.5">
                     <FaPhoneAlt className="text-gray-400 text-[11px]" />
-                    <span className="font-medium">{customer?.mobile || customer?.mobileRaw || 'N/A'}</span>
+                    <span className="font-medium">{getFullMobileNumber(customer, currentMobile) || customer?.mobile || 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <FaEnvelope className="text-gray-400 text-[11px]" />

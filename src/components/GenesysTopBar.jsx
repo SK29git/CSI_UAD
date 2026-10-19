@@ -12,12 +12,15 @@ import {
   FaPaperclip
 } from 'react-icons/fa';
 
+import { getFullMobileNumber } from '../utils/phoneUtils';
+
 export default function GenesysTopBar() {
   const navigate = useNavigate();
-  const { customer, getFormattedName } = useCustomer();
+  const { customer, getFormattedName, currentMobile } = useCustomer();
 
   const customerName = getFormattedName ? getFormattedName() : '';
-  const customerMobile = customer?.mobile || customer?.mobileRaw || '+971 50 123 4567';
+  const fullMobile = getFullMobileNumber(customer, currentMobile);
+  const customerMobile = fullMobile || customer?.mobile || '+971 50 123 4567';
 
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 py-2.5 px-4 shadow-2xs">

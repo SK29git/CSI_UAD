@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import CenterNavTabs from '../components/CenterNavTabs';
-import ServiceCustomerVehicleCard from '../components/ServiceCustomerVehicleCard';
+import LeftSidebar from '../components/LeftSidebar';
 import ServiceBookingMainPanel from '../components/ServiceBookingMainPanel';
 import ServiceOverviewView from '../components/ServiceOverviewView';
 import ServiceOpenBookingsView from '../components/ServiceOpenBookingsView';
@@ -8,10 +8,11 @@ import ServiceHistoryView from '../components/ServiceHistoryView';
 import ServiceWarrantyClaimsView from '../components/ServiceWarrantyClaimsView';
 import ServiceFeedbackView from '../components/ServiceFeedbackView';
 import ServiceActivityRightSidebar from '../components/ServiceActivityRightSidebar';
+import CustomerFormView from '../components/CustomerFormView';
 import { useCustomer } from '../context/CustomerContext';
 
 export default function ServiceBookingPage() {
-  const { group } = useCustomer();
+  const { group, customerFormMode, closeCustomerForm } = useCustomer();
   const [activeSubTab, setActiveSubTab] = useState('Overview');
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
@@ -27,6 +28,10 @@ export default function ServiceBookingPage() {
   }, [group]);
 
   const renderServiceContent = () => {
+    if (customerFormMode) {
+      return <CustomerFormView mode={customerFormMode} onClose={closeCustomerForm} />;
+    }
+
     switch (activeSubTab) {
       case 'Overview':
         return <ServiceOverviewView />;
@@ -50,14 +55,14 @@ export default function ServiceBookingPage() {
       {/* Main 3-Column Layout */}
       <div className="max-w-[1600px] w-full mx-auto p-3 sm:p-4 lg:p-5 flex-1 flex flex-col lg:flex-row gap-4 items-start relative">
         
-        {/* LEFT COLUMN: Customer 360 & Vehicle Summary */}
+        {/* LEFT COLUMN: Customer Profile */}
         <aside className={`
           fixed lg:sticky lg:top-5 inset-y-0 left-0 z-40 lg:z-10 bg-white lg:bg-transparent p-4 lg:p-0 
           transform ${mobileLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} 
           transition-all duration-300 ease-in-out shadow-2xl lg:shadow-none overflow-y-auto max-h-screen lg:max-h-none
         `}>
           <div className="flex justify-between items-center lg:hidden pb-3 mb-2 border-b border-gray-100">
-            <span className="font-bold text-gray-900">Customer & Vehicle Details</span>
+            <span className="font-bold text-gray-900">Customer Profile</span>
             <button 
               onClick={() => setMobileLeftSidebarOpen(false)}
               className="text-gray-500 font-bold text-sm px-2 py-1 bg-gray-100 rounded"
@@ -65,7 +70,7 @@ export default function ServiceBookingPage() {
               ✕ Close
             </button>
           </div>
-          <ServiceCustomerVehicleCard 
+          <LeftSidebar 
             isCollapsed={isLeftCollapsed}
             onToggleCollapse={() => setIsLeftCollapsed(!isLeftCollapsed)}
           />

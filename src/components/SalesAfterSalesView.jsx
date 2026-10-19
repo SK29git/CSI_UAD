@@ -20,6 +20,7 @@ import {
   FaExclamationTriangle,
   FaHistory
 } from 'react-icons/fa';
+import { getFullMobileNumber } from '../utils/phoneUtils';
 
 export default function SalesAfterSalesView() {
   const { customer, vehicles: contextVehicles = [], currentMobile: contextMobile, group: contextGroup } = useCustomer();
@@ -27,11 +28,7 @@ export default function SalesAfterSalesView() {
   const customerNumber = customer?.customerNumber || customer?.id || "";
   const customerName = customer?.fullName || `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() || "Customer Record";
 
-  const rawMobile = customer?.mobileRaw || customer?.mobile || contextMobile || 
-    (new URLSearchParams(window.location.search).get('Complaint') || 
-     new URLSearchParams(window.location.search).get('Sales') || 
-     new URLSearchParams(window.location.search).get('mobile') || '');
-  const cleanMobile = rawMobile ? String(rawMobile).replace(/[^0-9]/g, '') : '';
+  const cleanMobile = getFullMobileNumber(customer, contextMobile);
 
   // Tabs: 'CustomerVehicles' | 'ServiceBookings' | 'RetentionAlerts'
   const [activeTab, setActiveTab] = useState('CustomerVehicles');
@@ -105,7 +102,11 @@ export default function SalesAfterSalesView() {
       // a. Service Due within 30 days
       const dueRes = await apiFetch(`/api/v1/segments/service-due?group=${group}&withinDays=30${mobileQuery}`);
       if (dueRes && dueRes.ok && Array.isArray(dueRes.data?.members)) {
-        setServiceDueList(dueRes.data.members);
+        let members = dueRes.data.members;
+        if (!cleanMobile && customerNumber) {
+          members = members.filter(m => String(m.customerNumber || '') === String(customerNumber));
+        }
+        setServiceDueList(members);
       } else {
         setServiceDueList([]);
       }
@@ -113,7 +114,11 @@ export default function SalesAfterSalesView() {
       // b. No Service in 18+ Months
       const noServRes = await apiFetch(`/api/v1/segments/no-service?group=${group}&months=18${mobileQuery}`);
       if (noServRes && noServRes.ok && Array.isArray(noServRes.data?.members)) {
-        setNoServiceList(noServRes.data.members);
+        let members = noServRes.data.members;
+        if (!cleanMobile && customerNumber) {
+          members = members.filter(m => String(m.customerNumber || '') === String(customerNumber));
+        }
+        setNoServiceList(members);
       } else {
         setNoServiceList([]);
       }
@@ -121,7 +126,11 @@ export default function SalesAfterSalesView() {
       // c. Reactivated Customers
       const reactRes = await apiFetch(`/api/v1/segments/reactivated?group=${group}&months=18${mobileQuery}`);
       if (reactRes && reactRes.ok && Array.isArray(reactRes.data?.members)) {
-        setReactivatedList(reactRes.data.members);
+        let members = reactRes.data.members;
+        if (!cleanMobile && customerNumber) {
+          members = members.filter(m => String(m.customerNumber || '') === String(customerNumber));
+        }
+        setReactivatedList(members);
       } else {
         setReactivatedList([]);
       }
@@ -196,7 +205,6 @@ export default function SalesAfterSalesView() {
             <p className="text-[11px] text-gray-500 font-medium">
               Customer: <span className="font-bold text-gray-800">{customerName}</span> 
               {customerNumber ? ` (#${customerNumber})` : ''}
-              {cleanMobile ? ` | ${cleanMobile}` : ''}
             </p>
           </div>
         </div>

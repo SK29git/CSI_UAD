@@ -11,11 +11,12 @@ import SlaBreachesView from '../components/SlaBreachesView';
 import RecoveryActionsView from '../components/RecoveryActionsView';
 import AssignComplaintView from '../components/AssignComplaintView';
 import ResolveComplaintView from '../components/ResolveComplaintView';
+import CustomerFormView from '../components/CustomerFormView';
 import { useCustomer } from '../context/CustomerContext';
 
 export default function ComplaintsDashboardPage() {
   const navigate = useNavigate();
-  const { group } = useCustomer();
+  const { group, customerFormMode, closeCustomerForm } = useCustomer();
   const [activeTab, setActiveTab] = useState('Overview');
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
@@ -42,6 +43,10 @@ export default function ComplaintsDashboardPage() {
   }, [group]);
 
   const renderMainTabContent = () => {
+    if (customerFormMode) {
+      return <CustomerFormView mode={customerFormMode} onClose={closeCustomerForm} />;
+    }
+
     switch (activeTab) {
       case 'Overview':
         return <OverviewView />;

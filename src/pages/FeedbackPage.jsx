@@ -3,10 +3,11 @@ import CenterNavTabs from '../components/CenterNavTabs';
 import LeftSidebar from '../components/LeftSidebar';
 import FeedbackOverviewView from '../components/FeedbackOverviewView';
 import RightSidebar from '../components/RightSidebar';
+import CustomerFormView from '../components/CustomerFormView';
 import { useCustomer } from '../context/CustomerContext';
 
 export default function FeedbackPage() {
-  const { group } = useCustomer();
+  const { group, customerFormMode, closeCustomerForm } = useCustomer();
   const [activeSubTab, setActiveSubTab] = useState('Overview');
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
@@ -68,7 +69,11 @@ export default function FeedbackPage() {
           />
 
           <div className="transition-all duration-200">
-            <FeedbackOverviewView activeSubTab={activeSubTab} />
+            {customerFormMode ? (
+              <CustomerFormView mode={customerFormMode} onClose={closeCustomerForm} />
+            ) : (
+              <FeedbackOverviewView activeSubTab={activeSubTab} />
+            )}
           </div>
         </main>
 

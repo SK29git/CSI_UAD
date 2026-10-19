@@ -91,6 +91,36 @@
           "response": []
         },
         {
+          "name": "Search by plate or VIN",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers?group=BMW&plate=14020-2-DXB",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "group",
+                  "value": "BMW"
+                },
+                {
+                  "key": "plate",
+                  "value": "14020-2-DXB"
+                }
+              ]
+            },
+            "description": "Case-insensitive exact match on the customer's e-mail."
+          },
+          "response": []
+        },
+        {
           "name": "Search by customer number",
           "request": {
             "method": "GET",
@@ -1226,6 +1256,61 @@
                   ]
                 },
                 "description": "Complaint ID with OPEN or CLOSED - Keyloop records only a closed date, so In Progress and Re-opened (red font) do not exist. For all of a customer's complaints use .../customers/{group}/{customerNumber}/complaints."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "1. Leads",
+          "item": [
+            {
+              "name": "Enquiries",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/enquiries?group={{group}}&mobile={{mobile}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "enquiries"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}"
+                    }
+                  ]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Enquiry",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/enquiries/{{group}}/{{enquiryNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "enquiries",
+                    "{{group}}",
+                    "{{enquiryNumber}}"
+                  ]
+                }
               },
               "response": []
             }
@@ -2561,6 +2646,77 @@
         }
       ],
       "description": "The rows of the Feedback Screen that are not fully red. No Keyloop feed carries feedback, so feedback is what is submitted here (app.feedback_response). The lost-sales rows are Keyloop's \"Lost sale\" enquiries.\n\nRed font, returned empty (\"\"): scores, ratings, channels, references, interaction ids, response ids, submission status, counts and percentages, value, competitor / outcome, loyalty tier.\n\nFully red, no endpoint: Get NPS Score, Get NPS Responses, Get NPS Trend, Get Lost Sales Summary, Get Cancelled Bookings, Get Feedback Trend, Get Feedback Sentiment, Get Feedback Activity, Send Feedback Survey, Feedback Dashboard.\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
+    },
+    {
+      "name": "Leads",
+      "item": [
+        {
+          "name": "Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"username\": \"Genesys Team\", \"password\": \"4TxmiWV1MgtHKk-YinN-dcGCgI_6OQS9\" }\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/v1/lead-intake/token",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "lead-intake",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Lead Intake",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"firstName\":\"John\",\"lastName\":\"Smith\",\"email\":\"john@example.com\",\r\n  \"mobile\":\"+971500000001\",\"make\":\"Geely\",\"model\":\"Coolray\",\r\n  \"newUsed\":\"new\",\"location\":\"Geely - Sheikh Zayed Road Dubai\" }\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/v1/lead-intake",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "v1",
+                "lead-intake"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "variable": [

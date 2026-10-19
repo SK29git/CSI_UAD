@@ -9,10 +9,11 @@ import SalesSegmentsView from '../components/SalesSegmentsView';
 import SalesAfterSalesView from '../components/SalesAfterSalesView';
 import SalesEnquiriesView from '../components/SalesEnquiriesView';
 import RightSidebar from '../components/RightSidebar';
+import CustomerFormView from '../components/CustomerFormView';
 import { useCustomer } from '../context/CustomerContext';
 
 export default function SalesPage() {
-  const { group } = useCustomer();
+  const { group, customerFormMode, closeCustomerForm } = useCustomer();
   const [activeSubTab, setActiveSubTab] = useState('New Lead');
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
@@ -42,6 +43,10 @@ export default function SalesPage() {
   }, [group]);
 
   const renderSalesContent = () => {
+    if (customerFormMode) {
+      return <CustomerFormView mode={customerFormMode} onClose={closeCustomerForm} />;
+    }
+
     switch (activeSubTab) {
       case 'Overview':
         return <SalesOverviewView />;
