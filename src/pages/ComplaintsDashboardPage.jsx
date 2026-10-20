@@ -19,8 +19,23 @@ export default function ComplaintsDashboardPage() {
   const { group, customerFormMode, closeCustomerForm } = useCustomer();
   const [activeTab, setActiveTab] = useState('Overview');
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
-  const [isLeftCollapsed, setIsLeftCollapsed] = useState(false);
+  const [isLeftCollapsed, setIsLeftCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 1200;
+    }
+    return false;
+  });
   const [isRightCollapsed, setIsRightCollapsed] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setIsLeftCollapsed(true);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const search = window.location.search || '';
@@ -68,23 +83,24 @@ export default function ComplaintsDashboardPage() {
   return (
     <div className="min-h-screen bg-[#f3f4f6] text-gray-800 flex flex-col font-sans">
       {/* Main 3-Column Layout */}
-      <div className="max-w-[1600px] w-full mx-auto p-3 sm:p-4 lg:p-5 flex-1 flex flex-col lg:flex-row gap-4 items-start relative">
+      <div className="max-w-[1600px] w-full mx-auto p-2 sm:p-3 lg:p-5 flex-1 flex flex-row gap-2 sm:gap-3 lg:gap-4 items-start relative">
         
         {/* LEFT COLUMN: Customer Profile & Risk Overview */}
         <aside className={`
-          fixed lg:sticky lg:top-5 inset-y-0 left-0 z-40 lg:z-10 bg-white lg:bg-transparent p-4 lg:p-0 
-          transform ${mobileLeftSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} 
-          transition-all duration-300 ease-in-out shadow-2xl lg:shadow-none overflow-y-auto max-h-screen lg:max-h-none
+          flex-shrink-0 sticky top-2 sm:top-5 z-30 transition-all duration-300
+          ${!isLeftCollapsed ? 'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:bg-white max-md:p-3 max-md:shadow-2xl max-md:overflow-y-auto max-md:w-[320px]' : ''}
         `}>
-          <div className="flex justify-between items-center lg:hidden pb-3 mb-2 border-b border-gray-100">
-            <span className="font-bold text-gray-900">Customer Profile</span>
-            <button 
-              onClick={() => setMobileLeftSidebarOpen(false)}
-              className="text-gray-500 font-bold text-sm px-2 py-1 bg-gray-100 rounded"
-            >
-              ✕ Close
-            </button>
-          </div>
+          {!isLeftCollapsed && (
+            <div className="md:hidden flex justify-between items-center pb-2 mb-2 border-b border-gray-100">
+              <span className="font-bold text-gray-900 text-xs">Customer Profile</span>
+              <button 
+                onClick={() => setIsLeftCollapsed(true)}
+                className="text-gray-500 font-bold text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded cursor-pointer"
+              >
+                ✕ Close
+              </button>
+            </div>
+          )}
           <LeftSidebar 
             isCollapsed={isLeftCollapsed}
             onToggleCollapse={() => setIsLeftCollapsed(!isLeftCollapsed)}
@@ -92,10 +108,10 @@ export default function ComplaintsDashboardPage() {
         </aside>
 
         {/* Backdrop overlay for mobile sidebar */}
-        {mobileLeftSidebarOpen && (
+        {!isLeftCollapsed && (
           <div 
-            onClick={() => setMobileLeftSidebarOpen(false)} 
-            className="fixed inset-0 bg-black/40 z-30 lg:hidden backdrop-blur-xs"
+            onClick={() => setIsLeftCollapsed(true)} 
+            className="md:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-xs"
           />
         )}
 
@@ -117,7 +133,7 @@ export default function ComplaintsDashboardPage() {
         </main>
 
         {/* RIGHT COLUMN: Complaint Activity Timeline */}
-        <aside className="w-full lg:w-auto flex-shrink-0 lg:sticky lg:top-5 z-10 transition-all duration-300">
+        <aside className="hidden xl:block w-auto flex-shrink-0 sticky top-5 z-10 transition-all duration-300">
           <RightSidebar 
             isCollapsed={isRightCollapsed}
             onToggleCollapse={() => setIsRightCollapsed(!isRightCollapsed)}

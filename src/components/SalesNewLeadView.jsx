@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import { apiFetch, submitLeadIntake } from '../utils/api';
 import { 
@@ -12,34 +12,137 @@ import {
   FaStar,
   FaInfoCircle,
   FaRedo,
-  FaClock
+  FaClock,
+  FaChevronDown,
+  FaCheck
 } from 'react-icons/fa';
 import { getFullMobileNumber, isFullMobileNumber } from '../utils/phoneUtils';
+import { BRAND_OPTIONS, getModelsForBrand, GEELY_BRANCHES, BMW_BRANCHES, getBranchesForGroup } from '../data/brandModels';
 
-const BRAND_MODELS = {
-  BMW: [
-    'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'XM',
-    '1 Series', '2 Series Gran Coupe', '3 Series Sedan', '4 Series Coupe', '4 Series Gran Coupe',
-    '5 Series Sedan', '7 Series Sedan', '8 Series Gran Coupe',
-    'i4', 'i5', 'i7', 'iX', 'iX1', 'iX3', 'M2', 'M3', 'M4', 'M5'
-  ],
-  Geely: [
-    'Coolray', 'Monjaro', 'Tugella', 'Emgrand', 'Geometry C', 'Okavango', 'Preface', 'Starray', 'GX3 Pro'
-  ],
-  MINI: [
-    'Cooper 3-Door', 'Cooper 5-Door', 'Countryman', 'Clubman', 'Aceman', 'Cabrio', 'John Cooper Works'
-  ],
-  'Rolls-Royce': [
-    'Ghost', 'Phantom', 'Cullinan', 'Spectre'
-  ]
-};
+/**
+ * CustomSelect - Compact dropdown that ALWAYS opens downwards with medium scrollbar height
+ */
+function CustomSelect({
+  value,
+  onChange,
+  options = [],
+  placeholder = '-- Select --',
+  searchable = true,
+  searchPlaceholder = 'Search...',
+  required = false
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef(null);
 
-const BRANCHES = [
-  { code: '10', name: 'Sheikh Zayed Road Dubai' },
-  { code: '20', name: 'Sharjah Branch' },
-  { code: '30', name: 'Abu Dhabi Branch' },
-  { code: '40', name: 'Deira Branch' },
-  { code: '50', name: 'Motor City Dubai' }
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  const normalizedOptions = options.map(opt => 
+    typeof opt === 'object' ? opt : { value: opt, label: opt }
+  );
+
+  const selectedOption = normalizedOptions.find(o => o.value === value) || (value ? { value, label: value } : null);
+
+  const filteredOptions = normalizedOptions.filter(o => 
+    (o.label || o.value || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className={`relative w-full ${isOpen ? 'z-50' : 'z-10'}`} ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => { setIsOpen(prev => !prev); setSearch(''); }}
+        className="w-full p-2 bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-lg font-semibold text-gray-800 text-left flex items-center justify-between focus:outline-none focus:border-blue-500 cursor-pointer shadow-2xs text-xs"
+      >
+        <span className="truncate">
+          {selectedOption ? selectedOption.label : <span className="text-gray-400 font-normal">{placeholder}</span>}
+        </span>
+        <FaChevronDown className={`text-gray-400 text-xs shrink-0 ml-1.5 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {required && (
+        <input
+          tabIndex={-1}
+          autoComplete="off"
+          style={{ opacity: 0, width: 0, height: 0, position: 'absolute', pointerEvents: 'none' }}
+          value={value || ''}
+          onChange={() => {}}
+          required={required}
+        />
+      )}
+
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 flex flex-col gap-1">
+          {searchable && normalizedOptions.length > 8 && (
+            <div className="relative p-1">
+              <FaSearch className="absolute left-2.5 top-2.5 text-gray-400 text-[10px]" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={searchPlaceholder}
+                autoFocus
+                className="w-full pl-6 pr-2 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+          )}
+
+          <div className="max-h-48 overflow-y-auto flex flex-col gap-0.5 pr-0.5 divide-y divide-gray-50 text-xs">
+            {filteredOptions.length === 0 ? (
+              <div className="p-2.5 text-center text-gray-400 text-xs">
+                No matching options
+              </div>
+            ) : (
+              filteredOptions.map((opt) => {
+                const isSelected = opt.value === value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(opt.value);
+                      setIsOpen(false);
+                    }}
+                    className={`w-full px-2.5 py-1.5 text-left text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-between ${
+                      isSelected
+                        ? 'bg-blue-600 text-white font-bold'
+                        : 'text-gray-800 hover:bg-blue-50 hover:text-blue-700 font-medium'
+                    }`}
+                  >
+                    <span className="truncate">{opt.label}</span>
+                    {isSelected && <FaCheck className="text-[10px] shrink-0 ml-1.5 text-white" />}
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const LEAD_SOURCES = [
+  'WEBENQUIRY',
+  'SHOWROOM',
+  'REFERRAL',
+  'PHONE',
+  'CRM Inbound',
+  'CRM Outbound',
+  'CRM Digital Media / Online Enquiries',
+  'CRM Service Booking Lead'
 ];
 
 const formatMobileForLead = (val) => {
@@ -64,11 +167,39 @@ export default function SalesNewLeadView() {
   // ----------------------------------------------------
   // 1. LEAD STATE & HANDLERS
   // ----------------------------------------------------
-  const [make, setMake] = useState(group || customer?.keyloopGroup || 'BMW');
+  const resolveMake = (val) => {
+    if (!val) return 'BMW';
+    const norm = String(val).trim().toUpperCase();
+    if (BRAND_OPTIONS.some(b => b.code === norm)) return norm;
+    if (norm === 'GEELY') return 'GEELY';
+    if (norm === 'ROLLS-ROYCE' || norm === 'ROLLS_ROYCE') return 'ROLLS';
+    if (norm === 'BMW_I' || norm === 'BMW I') return 'BMWI';
+    if (norm === 'BMW_MOTORRAD' || norm === 'MOTORRAD') return 'BMWMOTO';
+    return norm;
+  };
+
+  const initialMake = resolveMake(group || customer?.keyloopGroup || 'BMW');
+  const [make, setMake] = useState(initialMake);
   const [model, setModel] = useState(() => {
-    const curMake = group || customer?.keyloopGroup || 'BMW';
-    return (BRAND_MODELS[curMake] && BRAND_MODELS[curMake][2]) || (BRAND_MODELS[curMake] && BRAND_MODELS[curMake][0]) || 'X3';
+    const models = getModelsForBrand(initialMake);
+    return models[0] || 'E85';
   });
+
+  // Determine branch list dynamically based on group / make
+  const getBranches = () => {
+    const mk = String(make || '').toUpperCase();
+    if (['GEELY', 'GALAXY', 'RIDDARA'].includes(mk)) {
+      return GEELY_BRANCHES;
+    }
+    const grp = String(group || customer?.keyloopGroup || '').toUpperCase();
+    if (grp.includes('GEELY')) {
+      return GEELY_BRANCHES;
+    }
+    return BMW_BRANCHES;
+  };
+
+  const currentBranches = getBranches();
+
   const [title, setTitle] = useState(customer?.salutation || 'Mr');
   const [firstname, setFirstname] = useState(customer?.firstName || '');
   const [surname, setSurname] = useState(customer?.surname || '');
@@ -76,15 +207,27 @@ export default function SalesNewLeadView() {
   const [mobile, setMobile] = useState(() => getFullMobileNumber(customer) || '');
   const [origin, setOrigin] = useState(group ? `${group} Test Drive - EN` : 'Test Drive - EN');
   const [source, setSource] = useState('WEBENQUIRY');
-  const [branch, setBranch] = useState(customer?.branchCode || '10');
+  const [branch, setBranch] = useState(() => {
+    if (customer?.branchCode && currentBranches.some(b => b.code === customer.branchCode)) {
+      return customer.branchCode;
+    }
+    return currentBranches[0]?.code || '10';
+  });
   const [newused, setNewused] = useState('NEW');
-  const [customLocation, setCustomLocation] = useState('');
+  const [dealershipLocation, setDealershipLocation] = useState(() => {
+    const brObj = currentBranches.find(b => b.code === (customer?.branchCode || '10'));
+    return brObj ? brObj.name : (currentBranches[0]?.name || 'Sheikh Zayed Rd');
+  });
   const [notes, setNotes] = useState(() => {
-    const curMake = group || customer?.keyloopGroup || 'BMW';
-    return `Location : ${curMake} - Sheikh Zayed Road Dubai, Model : '${(BRAND_MODELS[curMake] && BRAND_MODELS[curMake][2]) || 'X3'}'`;
+    const curMake = resolveMake(group || customer?.keyloopGroup || 'BMW');
+    const models = getModelsForBrand(curMake);
+    const defModel = models[0] || '';
+    return `Model : '${defModel}'`;
   });
   const [submittingLead, setSubmittingLead] = useState(false);
   const [leadResponseToast, setLeadResponseToast] = useState(null);
+
+  const currentModels = getModelsForBrand(make);
 
   useEffect(() => {
     if (customer) {
@@ -103,35 +246,51 @@ export default function SalesNewLeadView() {
       }
       if (customer?.branchCode) setBranch(customer?.branchCode);
       if (customer?.keyloopGroup) {
-        setMake(customer.keyloopGroup);
+        const detectedMake = resolveMake(customer.keyloopGroup);
+        setMake(detectedMake);
+        const models = getModelsForBrand(detectedMake);
+        if (models.length > 0) setModel(models[0]);
       }
     }
   }, [customer]);
 
   useEffect(() => {
     if (group && group !== make) {
-      setMake(group);
-      const models = BRAND_MODELS[group] || [];
+      const resolved = resolveMake(group);
+      setMake(resolved);
+      const models = getModelsForBrand(resolved);
       if (models.length > 0) setModel(models[0]);
     }
   }, [group]);
 
+  // Keep branch valid if switching between Geely & BMW
+  useEffect(() => {
+    if (!currentBranches.some(b => b.code === branch)) {
+      setBranch(currentBranches[0]?.code || '10');
+    }
+  }, [currentBranches, branch]);
+
   const handleMakeChange = (newMake) => {
     setMake(newMake);
-    const models = BRAND_MODELS[newMake] || [];
+    const models = getModelsForBrand(newMake);
     const defModel = models[0] || '';
     setModel(defModel);
     setOrigin(`${newMake} Test Drive - EN`);
-    const brObj = BRANCHES.find(b => b.code === branch);
-    const brName = brObj ? brObj.name : 'Sheikh Zayed Road Dubai';
-    setNotes(`Location : ${newMake} - ${brName}, Model : '${defModel}'`);
+    // Note: Do NOT touch dealershipLocation when selecting brand!
+    setNotes(`Model : '${defModel}'`);
+  };
+
+  const handleModelChange = (newModel) => {
+    setModel(newModel);
+    setNotes(`Model : '${newModel}'`);
   };
 
   const handleBranchChange = (newBranch) => {
     setBranch(newBranch);
-    const brObj = BRANCHES.find(b => b.code === newBranch);
-    const brName = brObj ? brObj.name : 'Sheikh Zayed Road Dubai';
-    setNotes(`Location : ${make} - ${brName}, Model : '${model}'`);
+    const brObj = currentBranches.find(b => b.code === newBranch);
+    const brName = brObj ? brObj.name : 'Sheikh Zayed Rd';
+    setDealershipLocation(brName);
+    setNotes(`Location : ${brName}, Model : '${model}'`);
   };
 
   const handleSaveLead = async (e) => {
@@ -139,9 +298,7 @@ export default function SalesNewLeadView() {
     setSubmittingLead(true);
     setLeadResponseToast(null);
 
-    const brObj = BRANCHES.find(b => b.code === branch);
-    const brName = brObj ? brObj.name : 'Sheikh Zayed Road Dubai';
-    const computedLocation = customLocation.trim() || `${make} - ${brName}`;
+    const computedLocation = dealershipLocation.trim() || 'Sheikh Zayed Road Dubai';
     const formattedMobile = formatMobileForLead(mobile);
 
     const payload = {
@@ -431,10 +588,11 @@ export default function SalesNewLeadView() {
                   onChange={(e) => setSource(e.target.value)}
                   className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
                 >
-                  <option value="WEBENQUIRY">WEBENQUIRY</option>
-                  <option value="SHOWROOM">SHOWROOM</option>
-                  <option value="REFERRAL">REFERRAL</option>
-                  <option value="PHONE">PHONE</option>
+                  {LEAD_SOURCES.map((srcOption) => (
+                    <option key={srcOption} value={srcOption}>
+                      {srcOption}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -442,15 +600,14 @@ export default function SalesNewLeadView() {
                 <label className="text-[11px] font-bold text-gray-700 block mb-1">
                   Branch Code <span className="text-rose-500">*</span>
                 </label>
-                <select 
+                <CustomSelect
                   value={branch}
-                  onChange={(e) => handleBranchChange(e.target.value)}
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
-                >
-                  {BRANCHES.map(b => (
-                    <option key={b.code} value={b.code}>{b.code} - {b.name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => handleBranchChange(val)}
+                  options={currentBranches.map(b => ({ value: b.code, label: `${b.code} - ${b.name}` }))}
+                  placeholder="-- Select Branch --"
+                  searchPlaceholder="Search branch..."
+                  required
+                />
               </div>
             </div>
 
@@ -547,41 +704,28 @@ export default function SalesNewLeadView() {
                 <label className="text-[11px] font-bold text-gray-700 block mb-1">
                   Make / Brand <span className="text-rose-500">*</span>
                 </label>
-                <select
+                <CustomSelect
                   value={make}
-                  onChange={(e) => handleMakeChange(e.target.value)}
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="BMW">BMW</option>
-                  <option value="Geely">Geely</option>
-                  <option value="MINI">MINI</option>
-                  <option value="Rolls-Royce">Rolls-Royce</option>
-                  {!["BMW", "Geely", "MINI", "Rolls-Royce"].includes(make) && make && (
-                    <option value={make}>{make}</option>
-                  )}
-                </select>
+                  onChange={(val) => handleMakeChange(val)}
+                  options={BRAND_OPTIONS.map((b) => ({ value: b.code, label: b.label }))}
+                  placeholder="-- Select Brand --"
+                  searchPlaceholder="Search brand..."
+                  required
+                />
               </div>
 
               <div>
                 <label className="text-[11px] font-bold text-gray-700 block mb-1">
                   Interested Model <span className="text-rose-500">*</span>
                 </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    list="brand-model-options"
-                    value={model}
-                    onChange={(e) => setModel(e.target.value)}
-                    placeholder="e.g. Coolray, X3, etc."
-                    required
-                    className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
-                  />
-                  <datalist id="brand-model-options">
-                    {(BRAND_MODELS[make] || []).map((m) => (
-                      <option key={m} value={m} />
-                    ))}
-                  </datalist>
-                </div>
+                <CustomSelect
+                  value={model}
+                  onChange={(val) => handleModelChange(val)}
+                  options={currentModels.map((m) => ({ value: m, label: m }))}
+                  placeholder={`-- Select Model (${currentModels.length} available) --`}
+                  searchPlaceholder="Search model..."
+                  required
+                />
               </div>
 
               <div>
@@ -590,9 +734,10 @@ export default function SalesNewLeadView() {
                 </label>
                 <input
                   type="text"
-                  value={customLocation || `${make} - ${(BRANCHES.find(b => b.code === branch)?.name) || 'Sheikh Zayed Road Dubai'}`}
-                  onChange={(e) => setCustomLocation(e.target.value)}
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                  value={dealershipLocation}
+                  onChange={(e) => setDealershipLocation(e.target.value)}
+                  placeholder="e.g. Sheikh Zayed Road Dubai"
+                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500 text-xs"
                 />
               </div>
             </div>

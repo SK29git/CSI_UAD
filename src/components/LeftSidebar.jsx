@@ -152,9 +152,16 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
 
         {/* Quick Search Plate / VIN in Collapsed Mode (expands panel) */}
         <button
-          onClick={(e) => { e.stopPropagation(); onToggleCollapse && onToggleCollapse(); }}
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            onToggleCollapse && onToggleCollapse(); 
+            setTimeout(() => {
+              const el = document.getElementById('sidebar-search-input');
+              if (el) el.focus();
+            }, 150);
+          }}
           className="w-9 h-9 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 border border-blue-200 flex items-center justify-center transition-colors shadow-2xs cursor-pointer"
-          title="Search Plate or VIN"
+          title="Search Plate, VIN, Email or Customer #"
         >
           <FaSearch className="text-xs" />
         </button>
@@ -196,6 +203,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
       <div className="relative w-full">
         <form onSubmit={handlePlateOrVinSearch} className="relative flex items-center w-full">
           <input
+            id="sidebar-search-input"
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

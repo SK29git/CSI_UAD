@@ -137,28 +137,44 @@ export default function SalesOverviewView() {
             <h2 className="font-bold text-gray-900 text-base">Vehicle Details</h2>
             {vehicles.length > 0 && (
               <span className="bg-emerald-50 text-emerald-700 font-bold text-xs px-2.5 py-0.5 rounded-full border border-emerald-200">
-                {selectedIndex === 0 ? 'Primary Vehicle' : `Vehicle ${selectedIndex + 1}`}
+                {selectedIndex === 0 ? 'Primary Vehicle' : `Vehicle ${selectedIndex + 1} of ${vehicles.length}`}
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Vehicle Selector Pills */}
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Vehicle Selector Dropdown */}
             {vehicles.length > 1 && (
-              <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg">
-                {vehicles.map((v, idx) => (
-                  <button
-                    key={v.vin || idx}
-                    onClick={() => setSelectedIndex(idx)}
-                    className={`px-2.5 py-0.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                      selectedIndex === idx
-                        ? 'bg-blue-600 text-white shadow-2xs'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    {v.brand || 'Vehicle'} {v.model || idx + 1}
-                  </button>
-                ))}
+              <div className="flex items-center gap-1.5 bg-blue-50/70 border border-blue-200 px-2 py-1 rounded-lg">
+                <FaCar className="text-blue-600 text-xs shrink-0" />
+                <label htmlFor="vehicle-select" className="text-[11px] font-bold text-blue-950 shrink-0">
+                  Select Vehicle:
+                </label>
+                <select
+                  id="vehicle-select"
+                  value={selectedIndex}
+                  onChange={(e) => setSelectedIndex(Number(e.target.value))}
+                  className="bg-white text-xs font-bold text-gray-800 border border-blue-300 rounded-md px-2.5 py-1 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs max-w-[280px] truncate"
+                >
+                  {vehicles.map((v, idx) => {
+                    const brand = v.brand || 'Vehicle';
+                    const model = v.model || v.variant || '';
+                    const desc = v.description || `${brand} ${model}`.trim();
+                    const reg = v.registrationNumber || v.plateNumber || '';
+                    const vinShort = v.vin ? `(..${v.vin.slice(-6)})` : '';
+                    const label = [
+                      `${idx === 0 ? 'Primary: ' : ''}${desc || brand}`,
+                      reg ? `[${reg}]` : '',
+                      vinShort
+                    ].filter(Boolean).join(' ');
+
+                    return (
+                      <option key={v.vin || idx} value={idx}>
+                        {label || `Vehicle ${idx + 1}`}
+                      </option>
+                    );
+                  })}
+                </select>
               </div>
             )}
 
