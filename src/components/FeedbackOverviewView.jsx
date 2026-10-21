@@ -261,7 +261,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
       case 'NPS': return 'Net Promoter Score (NPS) Responses';
       case 'Lost Sales Analysis': return 'Lost Sales Analysis & Reasons';
       case 'Open Bookings': return 'Open Workshop Bookings';
-      default: return 'Customer Feedback';
+      default: return 'Customer Survey';
     }
   };
 
@@ -283,7 +283,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
           onClick={() => setShowSubmitModal(true)}
           className="bg-blue-600 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg hover:bg-blue-700 shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
         >
-          <FaPlus className="text-[10px]" /> Submit Feedback
+          <FaPlus className="text-[10px]" /> Submit Survey
         </button>
       </div>
 
@@ -291,7 +291,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
       {showSubmitModal && (
         <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 text-xs animate-fade-in space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-blue-200">
-            <span className="font-bold text-blue-950 text-xs">Submit Feedback Response Payload</span>
+            <span className="font-bold text-blue-950 text-xs">Submit Survey Response Payload</span>
             <button onClick={() => setShowSubmitModal(false)} className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">✕</button>
           </div>
 
@@ -308,7 +308,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-gray-700 mb-1">Feedback Type</label>
+              <label className="block text-[10px] font-bold text-gray-700 mb-1">Survey Type</label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
@@ -356,7 +356,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
                 className="px-4 py-1.5 bg-blue-600 text-white font-bold text-xs rounded-lg hover:bg-blue-700 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
                 {submitting ? <FaSpinner className="animate-spin text-xs" /> : <FaPaperPlane className="text-xs" />}
-                <span>POST Feedback Response</span>
+                <span>POST Survey Response</span>
               </button>
             </div>
           </form>
@@ -471,7 +471,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
           <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-500 font-bold text-[11px] uppercase tracking-wider block">Total Feedbacks</span>
+                <span className="text-gray-500 font-bold text-[11px] uppercase tracking-wider block">Total Surveys</span>
                 <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs">
                   <FaComments className="text-xs" />
                 </div>
@@ -624,7 +624,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
               </div>
             ) : displayedFeedback.length === 0 ? (
               <div className="py-10 text-center text-gray-400 bg-gray-50/70 rounded-xl border border-dashed border-gray-300 font-medium">
-                No feedback records found for filter: {activeSubTab}
+                No survey records found for filter: {activeSubTab}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -634,7 +634,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
                       <th className="py-2.5 px-2">Type</th>
                       <th className="py-2.5 px-2">Reference / Survey ID</th>
                       <th className="py-2.5 px-2">Score</th>
-                      <th className="py-2.5 px-2">Feedback / Comments</th>
+                      <th className="py-2.5 px-2">Survey / Comments</th>
                       <th className="py-2.5 px-2">Date</th>
                       <th className="py-2.5 px-2">Channel</th>
                       <th className="py-2.5 px-2">Status</th>
@@ -648,7 +648,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
                           <span className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
                             (f.type || '').toUpperCase() === 'CSI' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
                           }`}>
-                            {f.type || 'FEEDBACK'}
+                            {f.type || 'SURVEY'}
                           </span>
                         </td>
                         <td className="py-2.5 px-2 font-mono font-bold text-gray-800">
@@ -681,7 +681,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
                           <button
                             onClick={() => handleOpenFeedbackDetails(f)}
                             className="text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-1 cursor-pointer hover:underline text-[11px]"
-                            title="View Feedback Record"
+                            title="View Survey Record"
                           >
                             <FaEye className="text-[10px]" /> View
                           </button>
@@ -696,7 +696,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
         </div>
       )}
 
-      {/* Feedback Details Modal (Postman API 4: GET /api/v1/feedback/{group}/{feedbackId}) */}
+      {/* Survey Details Modal (Postman API 4: GET /api/v1/feedback/{group}/{feedbackId}) */}
       {selectedFeedbackDetails && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-2xs animate-fade-in">
           <div className="bg-white rounded-xl max-w-lg w-full p-5 shadow-2xl border border-gray-200 space-y-4 text-xs">
@@ -707,7 +707,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 text-sm">
-                    Feedback Details #{selectedFeedbackDetails.feedbackId || selectedFeedbackDetails.id || selectedFeedbackDetails.surveyId || 'Record'}
+                    Survey Details #{selectedFeedbackDetails.feedbackId || selectedFeedbackDetails.id || selectedFeedbackDetails.surveyId || 'Record'}
                   </h3>
                   <span className="text-[10px] text-gray-400 font-mono">Keyloop Group: {group}</span>
                 </div>
@@ -723,13 +723,13 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
             {detailsLoading ? (
               <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
                 <FaSpinner className="animate-spin text-xl text-blue-600" />
-                <span>Loading feedback record...</span>
+                <span>Loading survey record...</span>
               </div>
             ) : (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-2.5 bg-gray-50 p-3 rounded-lg border border-gray-200 text-[11px]">
                   <div>
-                    <span className="text-gray-400 text-[10px] block font-semibold uppercase">Feedback Type</span>
+                    <span className="text-gray-400 text-[10px] block font-semibold uppercase">Survey Type</span>
                     <span className="font-bold text-gray-800">{selectedFeedbackDetails.type || 'GENERAL'}</span>
                   </div>
                   <div>

@@ -44,12 +44,13 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     openCustomerForm,
     fetchCustomerByPlateOrVin,
     fetchCustomerByEmail,
-    fetchCustomerByCustomerNumber
+    fetchCustomerByCustomerNumber,
+    searchCustomer
   } = useCustomer();
 
   const [searchQuery, setSearchQuery] = useState(() => {
     const searchParams = new URLSearchParams(window.location.search);
-    return searchParams.get('plate') || searchParams.get('vin') || searchParams.get('email') || '';
+    return searchParams.get('plate') || searchParams.get('vin') || searchParams.get('email') || searchParams.get('mobile') || '';
   });
   const [isSearching, setIsSearching] = useState(false);
   const [searchStatus, setSearchStatus] = useState(null);
@@ -65,30 +66,28 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     const isSales = window.location.pathname.includes('/sales');
     const prefix = isSales ? 'sales_' : 'complaint_';
     
-    let res = null;
-    if (q.includes('@')) {
-      res = await fetchCustomerByEmail(q, currentGroup, prefix);
-    } else if (/^\d{4,8}$/.test(q)) {
-      // Numerical: try customer number
-      await fetchCustomerByCustomerNumber(currentGroup, q, prefix);
-      res = { ok: true, customer: { customerNumber: q } };
-    } else {
-      res = await fetchCustomerByPlateOrVin(q, currentGroup, prefix);
-    }
+    const res = await searchCustomer(q, currentGroup, prefix);
 
     setIsSearching(false);
     if (res && res.ok) {
+      const typeLabel = res.isProspect 
+        ? (res.isWebLead ? 'Web Lead' : 'Prospect') 
+        : 'Customer';
+      const idLabel = res.customer?.prospectNumber 
+        ? `Prospect #${res.customer.prospectNumber}` 
+        : `ID #${res.customer?.customerNumber || q}`;
+
       setSearchStatus({
         type: 'success',
-        message: `Found: ${res.customer?.fullName || 'Customer'} (#${res.customer?.customerNumber || q})`
+        message: `Found ${typeLabel}: ${res.customer?.fullName || 'Account'} (${idLabel})`
       });
-      setTimeout(() => setSearchStatus(null), 4000);
+      setTimeout(() => setSearchStatus(null), 5000);
     } else {
       setSearchStatus({
         type: 'error',
-        message: res?.message || `No customer found for "${q}"`
+        message: res?.message || `No customer, prospect, or lead found for "${q}"`
       });
-      setTimeout(() => setSearchStatus(null), 4000);
+      setTimeout(() => setSearchStatus(null), 5000);
     }
   };
 
@@ -199,7 +198,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
         <span>+ Create New Customer</span>
       </button>
 
-      {/* 0.1 Search Bar: Plate or VIN Number */}
+      {/* 0.1 Universal Customer & Prospect Search Bar */}
       <div className="relative w-full">
         <form onSubmit={handlePlateOrVinSearch} className="relative flex items-center w-full">
           <input
@@ -207,7 +206,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Plate, VIN, Email, Cust #..."
+            placeholder="Search Mobile, Email, VIN, Plate, Cust #, Prospect..."
             className="w-full pl-3 pr-16 py-2 bg-white hover:border-gray-400 focus:bg-white border border-gray-300 focus:border-blue-600 rounded-xl text-xs font-semibold text-gray-800 placeholder-gray-400 focus:outline-none transition-all shadow-2xs"
           />
           <div className="absolute right-1.5 flex items-center gap-1">
@@ -225,7 +224,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               type="submit"
               disabled={isSearching || !searchQuery.trim()}
               className="w-7 h-7 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg transition-colors shadow-2xs cursor-pointer flex items-center justify-center shrink-0"
-              title="Search Plate or VIN"
+              title="Search Mobile, Email, Plate, VIN, Cust #, or Prospect #"
             >
               {isSearching ? <FaSpinner className="animate-spin text-xs" /> : <FaSearch className="text-xs" />}
             </button>
@@ -278,11 +277,11 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <FaUser className="text-base" />
             </div>
             <span className="font-bold text-gray-800 text-sm">No Customer Profile</span>
-            <span className="text-[11px] text-gray-400">Search with a valid phone or customer ID</span>
+            <span className="text-[11px] text-gray-400">Search with a valid phone, email, plate, or customer/prospect ID</span>
           </div>
         ) : (
           <div className="flex flex-col gap-2.5 mb-3">
-            {/* Multi-Customer Account Selector Dropdown */}
+            {/* Multi-Customer / Prospect Account Selector Dropdown */}
             {customerList && customerList.length > 1 && (
               <div className="p-2 bg-blue-50/80 border border-blue-200 rounded-lg text-xs mb-1">
                 <div className="flex items-center justify-between mb-1">
@@ -290,17 +289,21 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                     Select Account ({customerList.length} Found)
                   </span>
                   <span className="text-[9px] font-bold bg-blue-600 text-white px-1.5 py-0.2 rounded">
-                    Active: #{customer?.customerNumber || customerId}
+                    Active: #{customer?.prospectNumber ? `PR-${customer.prospectNumber}` : (customer?.customerNumber || customerId)}
                   </span>
                 </div>
                 <select
                   value={selectedIndex}
                   onChange={(e) => selectCustomer(Number(e.target.value))}
-                  className="w-full p-1.5 bg-white border border-blue-300 rounded font-bold text-gray-900 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs text-xs"
+                  className="w-full p-1.5 bg-white border border-blue-300 rounded font-bold text-gray-900 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs text-xs truncate"
                 >
                   {customerList.map((item, idx) => (
-                    <option key={item?.customerNumber || idx} value={idx}>
-                      {item?.fullName || `${item?.firstName || ''} ${item?.surname || ''}`.trim() || 'Customer'} (Cust ID: {item?.customerNumber})
+                    <option key={item?.customerNumber || item?.prospectNumber || item?.leadId || idx} value={idx}>
+                      {item?.fullName || `${item?.firstName || ''} ${item?.surname || ''}`.trim() || 'Record'} 
+                      {item?.isProspect 
+                        ? ` (Prospect: #${item?.prospectNumber || item?.leadId})` 
+                        : ` (Cust ID: ${item?.customerNumber})`}
+                      {item?.leadSource ? ` [${item.leadSource}]` : ''}
                     </option>
                   ))}
                 </select>
@@ -320,15 +323,30 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                     <FaEdit className="text-[10px]" />
                     <span>Edit</span>
                   </button>
-                  {customer?.vip === true && (
-                    <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 shadow-xs">
-                      <FaCrown className="text-[9px]" /> VIP
+
+                  {customer?.isProspect ? (
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs flex items-center gap-1 ${
+                      customer?.customerType === 'CONVERTED_PROSPECT'
+                        ? 'bg-emerald-600 text-white'
+                        : customer?.isWebLead
+                          ? 'bg-cyan-700 text-white'
+                          : 'bg-amber-600 text-white'
+                    }`}>
+                      <span>★</span> {customer?.customerType === 'CONVERTED_PROSPECT' ? 'CONVERTED' : (customer?.isWebLead ? 'WEB LEAD' : 'PROSPECT')}
                     </span>
-                  )}
-                  {loyaltyTier !== 'N/A' && (
-                    <span className="bg-purple-700 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
-                      {loyaltyTier}
-                    </span>
+                  ) : (
+                    <>
+                      {customer?.vip === true && (
+                        <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 shadow-xs">
+                          <FaCrown className="text-[9px]" /> VIP
+                        </span>
+                      )}
+                      {loyaltyTier !== 'N/A' && (
+                        <span className="bg-purple-700 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
+                          {loyaltyTier}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
                 <div className="mt-1 space-y-1 text-xs text-gray-600">
@@ -360,12 +378,12 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 text-xs">
           <div className="grid grid-cols-2 gap-y-3 gap-x-2">
             <div>
-              <span className="text-gray-400 block text-[11px]">Customer Since</span>
+              <span className="text-gray-400 block text-[11px]">{customer?.isProspect ? 'Prospect Since' : 'Customer Since'}</span>
               <span className="font-semibold text-gray-800">{customerSince}</span>
             </div>
             <div>
-              <span className="text-gray-400 block text-[11px]">Customer ID</span>
-              <span className="font-semibold text-gray-800">{customerId}</span>
+              <span className="text-gray-400 block text-[11px]">{customer?.isProspect ? 'Prospect / Lead ID' : 'Customer ID'}</span>
+              <span className="font-semibold text-gray-800">{customer?.prospectNumber || customerId}</span>
             </div>
 
             <div>
@@ -377,14 +395,29 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <span className="font-semibold text-gray-800">{getFormattedDate ? getFormattedDate(customer?.lastUpdated) : (customer?.lastUpdated || 'N/A')}</span>
             </div>
 
-            <div>
-              <span className="text-gray-400 block text-[11px]">Loyalty Tier</span>
-              <span className="font-semibold text-gray-800">{loyaltyTier}</span>
-            </div>
-            <div>
-              <span className="text-gray-400 block text-[11px]">Nationality</span>
-              <span className="font-semibold text-gray-800">{customer?.nationality || 'N/A'}</span>
-            </div>
+            {customer?.isProspect ? (
+              <>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Lead Source</span>
+                  <span className="font-semibold text-indigo-700 truncate block">{customer?.leadSource || 'Web / Inbound'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Lead Status</span>
+                  <span className="font-semibold text-amber-700">{customer?.status || 'OPEN'}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Loyalty Tier</span>
+                  <span className="font-semibold text-gray-800">{loyaltyTier}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Nationality</span>
+                  <span className="font-semibold text-gray-800">{customer?.nationality || 'N/A'}</span>
+                </div>
+              </>
+            )}
 
             {customer?.dateOfBirth && (
               <div>
@@ -407,6 +440,39 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <span className="text-gray-400 block text-[11px]">Consents</span>
               <span className="font-medium text-gray-700">{getConsentsDisplay ? getConsentsDisplay() : 'None'}</span>
             </div>
+
+            {/* Visual Marketing Consents Pills */}
+            {customer?.consents && (
+              <div className="col-span-2 pt-2 border-t border-gray-100">
+                <span className="text-gray-400 block text-[10px] uppercase font-bold tracking-wider mb-1.5">Communication Consents</span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[
+                    { key: 'phone', label: 'Phone', icon: FaPhoneAlt },
+                    { key: 'email', label: 'Email', icon: FaEnvelope },
+                    { key: 'sms', label: 'SMS', icon: FaCommentAlt },
+                    { key: 'whatsapp', label: 'WhatsApp', icon: FaWhatsapp }
+                  ].map(c => {
+                    const active = customer.consents[c.key] === true;
+                    const IconComp = c.icon;
+                    return (
+                      <span 
+                        key={c.key} 
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 border transition-all ${
+                          active 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300' 
+                            : 'bg-gray-50 text-gray-400 border-gray-200 opacity-60'
+                        }`}
+                        title={`${c.label} Consent: ${active ? 'Opted In' : 'Opted Out'}`}
+                      >
+                        <IconComp className="text-[9px]" />
+                        <span>{c.label}:</span>
+                        <span className={active ? 'text-emerald-800' : 'text-gray-400'}>{active ? 'YES' : 'NO'}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

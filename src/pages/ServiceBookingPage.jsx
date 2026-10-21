@@ -59,6 +59,7 @@ export default function ServiceBookingPage() {
       case 'Warranty Claims':
         return <ServiceWarrantyClaimsView />;
       case 'Service Feedback':
+      case 'Customer Survey':
         return <ServiceFeedbackView />;
       default:
         return <ServiceOverviewView />;

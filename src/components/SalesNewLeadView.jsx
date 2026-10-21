@@ -14,7 +14,17 @@ import {
   FaRedo,
   FaClock,
   FaChevronDown,
-  FaCheck
+  FaCheck,
+  FaTh,
+  FaBullhorn,
+  FaBuilding,
+  FaUser,
+  FaEnvelope,
+  FaPhoneAlt,
+  FaCar,
+  FaList,
+  FaMapMarkerAlt,
+  FaRegFileAlt
 } from 'react-icons/fa';
 import { getFullMobileNumber, isFullMobileNumber } from '../utils/phoneUtils';
 import { BRAND_OPTIONS, getModelsForBrand, GEELY_BRANCHES, BMW_BRANCHES, getBranchesForGroup } from '../data/brandModels';
@@ -29,7 +39,8 @@ function CustomSelect({
   placeholder = '-- Select --',
   searchable = true,
   searchPlaceholder = 'Search...',
-  required = false
+  required = false,
+  icon = null
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -64,12 +75,21 @@ function CustomSelect({
       <button
         type="button"
         onClick={() => { setIsOpen(prev => !prev); setSearch(''); }}
-        className="w-full p-2 bg-gray-50 border border-gray-200 hover:border-gray-300 rounded-lg font-semibold text-gray-800 text-left flex items-center justify-between focus:outline-none focus:border-blue-500 cursor-pointer shadow-2xs text-xs"
+        className={`w-full h-9 px-2.5 bg-white border rounded-lg font-semibold text-gray-800 text-left flex items-center justify-between cursor-pointer shadow-2xs text-xs transition-all ${
+          isOpen ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200/90 hover:border-slate-300'
+        }`}
       >
-        <span className="truncate">
-          {selectedOption ? selectedOption.label : <span className="text-gray-400 font-normal">{placeholder}</span>}
-        </span>
-        <FaChevronDown className={`text-gray-400 text-xs shrink-0 ml-1.5 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
+        <div className="flex items-center min-w-0 flex-1">
+          {icon && (
+            <div className="w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-2">
+              {icon}
+            </div>
+          )}
+          <span className="truncate">
+            {selectedOption ? selectedOption.label : <span className="text-gray-400 font-normal">{placeholder}</span>}
+          </span>
+        </div>
+        <FaChevronDown className={`text-gray-400 text-[10px] shrink-0 ml-1 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {required && (
@@ -84,17 +104,17 @@ function CustomSelect({
       )}
 
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-white border border-gray-200 rounded-xl shadow-lg p-1.5 flex flex-col gap-1">
+        <div className="absolute top-full left-0 right-0 mt-1.5 z-50 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 flex flex-col gap-1 animate-in fade-in slide-in-from-top-1">
           {searchable && normalizedOptions.length > 8 && (
             <div className="relative p-1">
-              <FaSearch className="absolute left-2.5 top-2.5 text-gray-400 text-[10px]" />
+              <FaSearch className="absolute left-3 top-3 text-gray-400 text-[10px]" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={searchPlaceholder}
                 autoFocus
-                className="w-full pl-6 pr-2 py-1 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                className="w-full pl-7 pr-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
               />
             </div>
           )}
@@ -115,7 +135,7 @@ function CustomSelect({
                       onChange(opt.value);
                       setIsOpen(false);
                     }}
-                    className={`w-full px-2.5 py-1.5 text-left text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-between ${
+                    className={`w-full px-2.5 py-2 text-left text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-between ${
                       isSelected
                         ? 'bg-blue-600 text-white font-bold'
                         : 'text-gray-800 hover:bg-blue-50 hover:text-blue-700 font-medium'
@@ -135,14 +155,35 @@ function CustomSelect({
 }
 
 const LEAD_SOURCES = [
-  'WEBENQUIRY',
-  'SHOWROOM',
-  'REFERRAL',
-  'PHONE',
   'CRM Inbound',
   'CRM Outbound',
   'CRM Digital Media / Online Enquiries',
   'CRM Service Booking Lead'
+];
+
+const LEAD_ORIGINS = [
+  'BMW Test Drive - EN',
+  'BMW Test Drive - AR',
+  'BMW Web Enquiry',
+  'Geely Test Drive - EN',
+  'Geely Web Enquiry',
+  'MINI Test Drive',
+  'Motorrad Test Drive',
+  'Showroom Walk-in',
+  'Website Inquiry',
+  'Digital Campaign',
+  'Call Center Inbound',
+  'Direct Referral'
+];
+
+const TITLE_OPTIONS = [
+  'Mr',
+  'Ms',
+  'Mrs',
+  'Messrs',
+  'Dr',
+  'Prof',
+  'Eng'
 ];
 
 const formatMobileForLead = (val) => {
@@ -182,7 +223,7 @@ export default function SalesNewLeadView() {
   const [make, setMake] = useState(initialMake);
   const [model, setModel] = useState(() => {
     const models = getModelsForBrand(initialMake);
-    return models[0] || 'E85';
+    return models[0] || 'Z4 Roadster';
   });
 
   // Determine branch list dynamically based on group / make
@@ -206,7 +247,7 @@ export default function SalesNewLeadView() {
   const [email, setEmail] = useState(customer?.email || '');
   const [mobile, setMobile] = useState(() => getFullMobileNumber(customer) || '');
   const [origin, setOrigin] = useState(group ? `${group} Test Drive - EN` : 'Test Drive - EN');
-  const [source, setSource] = useState('WEBENQUIRY');
+  const [source, setSource] = useState(LEAD_SOURCES[0]);
   const [branch, setBranch] = useState(() => {
     if (customer?.branchCode && currentBranches.some(b => b.code === customer.branchCode)) {
       return customer.branchCode;
@@ -228,6 +269,8 @@ export default function SalesNewLeadView() {
   const [leadResponseToast, setLeadResponseToast] = useState(null);
 
   const currentModels = getModelsForBrand(make);
+  const originOptions = Array.from(new Set([origin, ...LEAD_ORIGINS])).filter(Boolean);
+  const titleOptions = Array.from(new Set([title, ...TITLE_OPTIONS])).filter(Boolean);
 
   useEffect(() => {
     if (customer) {
@@ -312,7 +355,7 @@ export default function SalesNewLeadView() {
       location: computedLocation,
       title: title || "",
       leadOrigin: origin || "",
-      leadSource: source || "WEBENQUIRY",
+      leadSource: source || LEAD_SOURCES[0],
       branch: branch || "10",
       notes: notes || ""
     };
@@ -484,55 +527,78 @@ export default function SalesNewLeadView() {
   };
 
   return (
-    <div className="bg-white rounded-xl p-5 shadow-xs border border-gray-100 flex flex-col gap-4 text-xs">
+    <div className="bg-white rounded-xl p-3.5 sm:p-4 shadow-xs border border-slate-200/90 flex flex-col gap-2.5 text-xs transition-all">
       
-      {/* Top Main Mode Navigation Bar */}
-      <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setActiveTab("lead")}
-            className={`px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 cursor-pointer transition-all ${
-              activeTab === "lead"
-                ? "bg-blue-600 text-white shadow-2xs"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            <FaUserPlus className="text-xs" />
-            <span>Create Sales Lead</span>
-          </button>
+      {/* Top Header Card */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        {/* Left: Icon, Title, Subtitle & Switch Tab Pill */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {activeTab === "lead" ? (
+            <>
+              <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-sm shadow-xs shrink-0">
+                <FaUserPlus />
+              </div>
+              <div>
+                <h2 className="text-sm font-extrabold text-gray-900 leading-tight">Create Sales Lead</h2>
+                <p className="text-[10px] text-gray-400 font-medium">Capture customer details to create a new sales lead</p>
+              </div>
 
-          <button
-            onClick={() => setActiveTab("complaint")}
-            className={`px-4 py-2 rounded-lg font-bold text-xs flex items-center gap-2 cursor-pointer transition-all ${
-              activeTab === "complaint"
-                ? "bg-amber-600 text-white shadow-2xs"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            <FaExclamationTriangle className="text-xs" />
-            <span>Sales Complaints & Tickets</span>
-          </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("complaint")}
+                className="ml-0 sm:ml-2 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center gap-1.5 border border-slate-200/80 cursor-pointer shadow-2xs transition-all"
+              >
+                <FaExclamationTriangle className="text-slate-600 text-[10px]" />
+                <span>Sales Complaints & Tickets</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center text-sm shadow-xs shrink-0">
+                <FaExclamationTriangle />
+              </div>
+              <div>
+                <h2 className="text-sm font-extrabold text-gray-900 leading-tight">Sales Complaints & Tickets</h2>
+                <p className="text-[10px] text-gray-400 font-medium">Manage and track customer complaints and inquiries</p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab("lead")}
+                className="ml-0 sm:ml-2 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center gap-1.5 border border-slate-200/80 cursor-pointer shadow-2xs transition-all"
+              >
+                <FaUserPlus className="text-blue-600 text-[10px]" />
+                <span>Create Sales Lead</span>
+              </button>
+            </>
+          )}
         </div>
 
-        <span className="text-[10px] text-gray-400 font-mono">
-          Group: {group} {customerNumber ? `| Customer #${customerNumber}` : ''}
-        </span>
+        {/* Right: Group / Customer badge and Circular Car Icon */}
+        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+          <span className="text-[11px] text-gray-500 font-medium">
+            Group : <span className="font-bold text-gray-700">{group || 'BMW'}</span> | Customer #{customerNumber || '162973'}
+          </span>
+          <div className="w-7 h-7 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-2xs shrink-0">
+            <FaCar className="text-xs" />
+          </div>
+        </div>
       </div>
 
       {/* ------------------------------------------------------------------- */}
       {/* TAB 1: CREATE NEW SALES LEAD FORM                                    */}
       {/* ------------------------------------------------------------------- */}
       {activeTab === "lead" && (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2.5">
           
           {leadResponseToast && (
-            <div className={`p-4 rounded-xl flex items-center justify-between shadow-xs border animate-fade-in ${
+            <div className={`p-3 rounded-lg flex items-center justify-between shadow-xs border animate-fade-in ${
               leadResponseToast.isError
                 ? "bg-rose-50 border-rose-200 text-rose-900"
                 : "bg-emerald-50 border-emerald-200 text-emerald-800"
             }`}>
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-xs text-white ${
+              <div className="flex items-center gap-2.5">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] shadow-xs text-white ${
                   leadResponseToast.isError ? "bg-rose-500" : "bg-emerald-500"
                 }`}>
                   {leadResponseToast.isError ? "✕" : "✓"}
@@ -541,12 +607,12 @@ export default function SalesNewLeadView() {
                   <h4 className={`font-bold text-xs ${leadResponseToast.isError ? "text-rose-950" : "text-emerald-950"}`}>
                     {leadResponseToast.message}
                   </h4>
-                  <div className={`flex items-center gap-3 text-[11px] mt-0.5 font-mono ${
+                  <div className={`flex items-center gap-2.5 text-[10px] mt-0.5 font-mono ${
                     leadResponseToast.isError ? "text-rose-700" : "text-emerald-700"
                   }`}>
                     <span>Reference ID: <strong className="text-gray-900 font-bold">{leadResponseToast.referenceId}</strong></span>
                     <span>•</span>
-                    <span>Status: <strong className={`uppercase px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                    <span>Status: <strong className={`uppercase px-1.5 py-0.2 rounded text-[9px] font-bold ${
                       leadResponseToast.isError ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-800"
                     }`}>{leadResponseToast.status}</strong></span>
                   </div>
@@ -555,52 +621,52 @@ export default function SalesNewLeadView() {
               <button
                 type="button"
                 onClick={() => setLeadResponseToast(null)}
-                className="text-gray-400 hover:text-gray-600 text-xs px-2 py-1 rounded cursor-pointer"
+                className="text-gray-400 hover:text-gray-600 text-xs px-2 py-0.5 rounded cursor-pointer"
               >
                 ✕
               </button>
             </div>
           )}
 
-          <form onSubmit={handleSaveLead} className="space-y-3 text-xs">
+          <form onSubmit={handleSaveLead} className="space-y-2 text-xs">
             {/* ROW 1: Lead Origin, Lead Source, Branch Code */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
               <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">
-                  Lead Origin <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Lead Origin <span className="text-rose-500 font-bold">*</span>
                 </label>
-                <input 
-                  type="text"
+                <CustomSelect
+                  icon={<FaTh className="text-blue-500 text-[10px]" />}
                   value={origin}
-                  onChange={(e) => setOrigin(e.target.value)}
-                  placeholder="e.g. BMW Test Drive - EN"
+                  onChange={(val) => setOrigin(val)}
+                  options={originOptions.map(o => ({ value: o, label: o }))}
+                  placeholder="Select Lead Origin"
+                  searchPlaceholder="Search origin..."
                   required
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
                 />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">
-                  Lead Source <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Lead Source <span className="text-rose-500 font-bold">*</span>
                 </label>
-                <select 
+                <CustomSelect
+                  icon={<FaBullhorn className="text-blue-500 text-[10px]" />}
                   value={source}
-                  onChange={(e) => setSource(e.target.value)}
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
-                >
-                  {LEAD_SOURCES.map((srcOption) => (
-                    <option key={srcOption} value={srcOption}>
-                      {srcOption}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSource(val)}
+                  options={LEAD_SOURCES.map(s => ({ value: s, label: s }))}
+                  placeholder="Select Lead Source"
+                  searchPlaceholder="Search source..."
+                  required
+                />
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">
-                  Branch Code <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Branch Code <span className="text-rose-500 font-bold">*</span>
                 </label>
                 <CustomSelect
+                  icon={<FaBuilding className="text-blue-500 text-[10px]" />}
                   value={branch}
                   onChange={(val) => handleBranchChange(val)}
                   options={currentBranches.map(b => ({ value: b.code, label: `${b.code} - ${b.name}` }))}
@@ -612,99 +678,121 @@ export default function SalesNewLeadView() {
             </div>
 
             {/* ROW 2: Title, First Name, Surname */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
               <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">Title</label>
-                <select 
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="Mr">Mr</option>
-                  <option value="Ms">Ms</option>
-                  <option value="Mrs">Mrs</option>
-                  <option value="Messrs">Messrs</option>
-                  <option value="Dr">Dr</option>
-                  <option value="Prof">Prof</option>
-                  <option value="Eng">Eng</option>
-                  {!["Mr", "Ms", "Mrs", "Messrs", "Dr", "Prof", "Eng"].includes(title) && (
-                    <option value={title}>{title}</option>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">
-                  First Name <span className="text-rose-500">*</span>
-                </label>
-                <input 
-                  type="text" 
-                  value={firstname}
-                  onChange={(e) => setFirstname(e.target.value)}
-                  required
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500" 
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">
-                  Surname <span className="text-rose-500">*</span>
-                </label>
-                <input 
-                  type="text" 
-                  value={surname}
-                  onChange={(e) => setSurname(e.target.value)}
-                  required
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500" 
-                />
-              </div>
-            </div>
-
-            {/* ROW 3: Email, Mobile, Vehicle Type */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">Email Address <span className="text-rose-500">*</span></label>
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500" 
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">Mobile / Phone <span className="text-rose-500">*</span></label>
-                <input 
-                  type="text" 
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  required
-                  placeholder="+971500000001"
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500" 
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">Vehicle Type (New/Used)</label>
-                <select 
-                  value={newused}
-                  onChange={(e) => setNewused(e.target.value)}
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
-                >
-                  <option value="NEW">NEW</option>
-                  <option value="USED">USED</option>
-                </select>
-              </div>
-            </div>
-
-            {/* ROW 4: Make/Brand, Interested Model, Location */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">
-                  Make / Brand <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Title
                 </label>
                 <CustomSelect
+                  icon={<FaUser className="text-blue-500 text-[10px]" />}
+                  value={title}
+                  onChange={(val) => setTitle(val)}
+                  options={titleOptions.map(t => ({ value: t, label: t }))}
+                  placeholder="Select Title"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  First Name <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-9 px-2.5 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-2">
+                    <FaUser />
+                  </div>
+                  <input 
+                    type="text" 
+                    value={firstname}
+                    onChange={(e) => setFirstname(e.target.value)}
+                    required
+                    placeholder="Enter first name"
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs placeholder:text-gray-400"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Surname <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-9 px-2.5 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-xs mr-2">
+                    <FaUser />
+                  </div>
+                  <input 
+                    type="text" 
+                    value={surname}
+                    onChange={(e) => setSurname(e.target.value)}
+                    required
+                    placeholder="Enter surname"
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs placeholder:text-gray-400"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ROW 3: Email Address, Mobile / Phone, Vehicle Type */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Email Address <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-9 px-2.5 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-2">
+                    <FaEnvelope />
+                  </div>
+                  <input 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="Enter email address"
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs placeholder:text-gray-400"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Mobile / Phone <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-9 px-2.5 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-2">
+                    <FaPhoneAlt />
+                  </div>
+                  <input 
+                    type="text" 
+                    value={mobile}
+                    onChange={(e) => setMobile(e.target.value)}
+                    required
+                    placeholder="544444551"
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs placeholder:text-gray-400"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Vehicle Type (New/Used)
+                </label>
+                <CustomSelect
+                  icon={<FaCar className="text-blue-500 text-[10px]" />}
+                  value={newused}
+                  onChange={(val) => setNewused(val)}
+                  options={[{ value: 'NEW', label: 'NEW' }, { value: 'USED', label: 'USED' }]}
+                  placeholder="Select Vehicle Type"
+                />
+              </div>
+            </div>
+
+            {/* ROW 4: Make / Brand, Model, Location */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Make / Brand <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <CustomSelect
+                  icon={<FaCar className="text-blue-500 text-[10px]" />}
                   value={make}
                   onChange={(val) => handleMakeChange(val)}
                   options={BRAND_OPTIONS.map((b) => ({ value: b.code, label: b.label }))}
@@ -715,10 +803,11 @@ export default function SalesNewLeadView() {
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">
-                  Interested Model <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Model <span className="text-rose-500 font-bold">*</span>
                 </label>
                 <CustomSelect
+                  icon={<FaList className="text-blue-500 text-[10px]" />}
                   value={model}
                   onChange={(val) => handleModelChange(val)}
                   options={currentModels.map((m) => ({ value: m, label: m }))}
@@ -729,36 +818,54 @@ export default function SalesNewLeadView() {
               </div>
 
               <div>
-                <label className="text-[11px] font-bold text-gray-700 block mb-1">
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Location (Dealership)
                 </label>
-                <input
-                  type="text"
-                  value={dealershipLocation}
-                  onChange={(e) => setDealershipLocation(e.target.value)}
-                  placeholder="e.g. Sheikh Zayed Road Dubai"
-                  className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500 text-xs"
-                />
+                <div className="w-full h-9 px-2.5 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-2">
+                    <FaMapMarkerAlt />
+                  </div>
+                  <input
+                    type="text"
+                    value={dealershipLocation}
+                    onChange={(e) => setDealershipLocation(e.target.value)}
+                    placeholder="e.g. Sheikh Zayed Rd"
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs placeholder:text-gray-400"
+                  />
+                </div>
               </div>
             </div>
 
             {/* ROW 5: Enquiry Notes */}
             <div>
-              <label className="text-[11px] font-bold text-gray-700 block mb-1">Enquiry Notes</label>
-              <textarea 
-                rows={2}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-800 focus:outline-none focus:border-blue-500 leading-relaxed"
-              />
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1.5">
+                <FaRegFileAlt className="text-blue-500 text-[11px]" />
+                <span>Enquiry Notes</span>
+              </label>
+              <div className="relative w-full bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs transition-all p-2">
+                <div className="absolute top-2 left-2 w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px]">
+                  <FaRegFileAlt />
+                </div>
+                <textarea 
+                  rows={2}
+                  maxLength={500}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Enter enquiry notes..."
+                  className="w-full bg-transparent border-0 focus:outline-none text-xs font-semibold text-gray-800 pl-8 pr-14 py-0.5 leading-relaxed resize-none placeholder:text-gray-400"
+                />
+                <div className="absolute bottom-1.5 right-2.5 text-[10px] font-semibold text-gray-400 select-none">
+                  {(notes || '').length}/500
+                </div>
+              </div>
             </div>
 
             {/* Form Submit Button */}
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-gray-100">
+            <div className="flex items-center justify-end pt-1">
               <button 
                 type="submit" 
                 disabled={submittingLead}
-                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-xs flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-xs hover:shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-50"
               >
                 {submittingLead ? (
                   <>

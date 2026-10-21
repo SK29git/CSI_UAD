@@ -136,7 +136,7 @@ export default function ServiceFeedbackView() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-gray-900 leading-tight">Customer Service Feedback & CSI</h2>
+              <h2 className="text-base font-bold text-gray-900 leading-tight">Customer Service Survey & CSI</h2>
               {feedbackList.length > 0 && (
                 <span className="bg-indigo-100 text-indigo-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-indigo-200">
                   {feedbackList.length} {feedbackList.length === 1 ? 'Record' : 'Records'}

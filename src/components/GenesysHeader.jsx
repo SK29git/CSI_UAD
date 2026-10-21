@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useCustomer } from '../context/CustomerContext';
 import { 
   FaPause, 
   FaMicrophoneSlash, 
@@ -17,6 +18,9 @@ export default function GenesysHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const currentPath = location.pathname;
+  const { customer, currentMobile, getFormattedName } = useCustomer ? useCustomer() : {};
+  const callerName = customer ? (getFormattedName ? getFormattedName() : customer.fullName) : 'Sumedh Kamble';
+  const callerPhone = customer?.mobile || currentMobile || '+971 50 123 4567';
 
   const [activeSubTab, setActiveSubTab] = useState('Book Service');
 
@@ -75,8 +79,8 @@ export default function GenesysHeader() {
 
             {/* Caller Details & Active Timer */}
             <div className="flex items-center gap-2">
-              <span className="font-bold text-gray-900">Sumedh Kamble</span>
-              <span className="text-gray-400 text-[11px] font-normal">+971 50 123 4567</span>
+              <span className="font-bold text-gray-900 truncate max-w-[140px]">{callerName}</span>
+              <span className="text-gray-400 text-[11px] font-normal truncate max-w-[120px]">{callerPhone}</span>
               <span className="font-mono text-gray-700 text-[11px] font-medium bg-gray-100 px-1.5 py-0.2 rounded">02:14</span>
             </div>
 
@@ -160,7 +164,7 @@ export default function GenesysHeader() {
             }`}
           >
             <FaStar className="text-xs" />
-            <span>Feedback</span>
+            <span>Survey</span>
           </button>
 
           <button 

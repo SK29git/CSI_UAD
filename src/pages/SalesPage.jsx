@@ -85,11 +85,11 @@ export default function SalesPage() {
   return (
     <div className="min-h-screen bg-[#f3f4f6] text-gray-800 flex flex-col font-sans">
       {/* Main 3-Column Layout */}
-      <div className="max-w-[1600px] w-full mx-auto p-2 sm:p-3 lg:p-5 flex-1 flex flex-row gap-2 sm:gap-3 lg:gap-4 items-start relative">
+      <div className="max-w-[1600px] w-full mx-auto p-2 sm:p-2.5 lg:p-3 flex-1 flex flex-row gap-2 sm:gap-2.5 lg:gap-3 items-start relative">
         
         {/* LEFT COLUMN: Customer Profile & Risk Overview & Notes */}
         <aside className={`
-          flex-shrink-0 sticky top-2 sm:top-5 z-30 transition-all duration-300
+          flex-shrink-0 sticky top-2 sm:top-3 z-30 transition-all duration-300
           ${!isLeftCollapsed ? 'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:bg-white max-md:p-3 max-md:shadow-2xl max-md:overflow-y-auto max-md:w-[320px]' : ''}
         `}>
           {!isLeftCollapsed && (

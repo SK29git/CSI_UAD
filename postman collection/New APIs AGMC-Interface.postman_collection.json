@@ -1,0 +1,131 @@
+{
+  "info": {
+    "_postman_id": "7f4d0238-343f-407c-8f04-f3d087acb1de",
+    "name": "New APIs AGMC-Interface",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "50201511",
+    "_collection_link": "https://go.postman.co/collection/50201511-7f4d0238-343f-407c-8f04-f3d087acb1de?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "E00MI Search by mobile (caller id)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/e00mi?group={{group}}&mobile={{mobile}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "e00mi"
+          ],
+          "query": [
+            {
+              "key": "group",
+              "value": "{{group}}"
+            },
+            {
+              "key": "mobile",
+              "value": "{{mobile}}"
+            }
+          ]
+        },
+        "description": "Any UAE mobile format works: 0501234567, 971501234567, +971 50 123 4567. When nothing matches the registered mobile, every other phone number Keyloop holds for the customer (Phone1-3, landlines, foreign numbers) is tried digit-for-digit - the spec's \"search by another phone number\" for a caller on an unregistered line. Add `group=BMW` to restrict to one dealer group; `limit` defaults to 20 (max 100)."
+      },
+      "response": []
+    },
+    {
+      "name": "Prospect Search by mobile (caller id)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/prospects?group={{group}}&mobile={{mobile}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "prospects"
+          ],
+          "query": [
+            {
+              "key": "group",
+              "value": "{{group}}"
+            },
+            {
+              "key": "mobile",
+              "value": "{{mobile}}"
+            }
+          ]
+        },
+        "description": "Any UAE mobile format works: 0501234567, 971501234567, +971 50 123 4567. When nothing matches the registered mobile, every other phone number Keyloop holds for the customer (Phone1-3, landlines, foreign numbers) is tried digit-for-digit - the spec's \"search by another phone number\" for a caller on an unregistered line. Add `group=BMW` to restrict to one dealer group; `limit` defaults to 20 (max 100)."
+      },
+      "response": []
+    },
+    {
+      "name": "E00MI Search by email(caller id)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/e00mi?group={{group}}&mobile={{mobile}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "e00mi"
+          ],
+          "query": [
+            {
+              "key": "group",
+              "value": "{{group}}"
+            },
+            {
+              "key": "mobile",
+              "value": "{{mobile}}"
+            }
+          ]
+        },
+        "description": "Any UAE mobile format works: 0501234567, 971501234567, +971 50 123 4567. When nothing matches the registered mobile, every other phone number Keyloop holds for the customer (Phone1-3, landlines, foreign numbers) is tried digit-for-digit - the spec's \"search by another phone number\" for a caller on an unregistered line. Add `group=BMW` to restrict to one dealer group; `limit` defaults to 20 (max 100)."
+      },
+      "response": []
+    },
+    {
+      "name": "Prospect Search by email(caller id)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/e00mi?group={{group}}&email={{email}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "e00mi"
+          ],
+          "query": [
+            {
+              "key": "group",
+              "value": "{{group}}"
+            },
+            {
+              "key": "email",
+              "value": "{{email}}"
+            }
+          ]
+        },
+        "description": "Any UAE mobile format works: 0501234567, 971501234567, +971 50 123 4567. When nothing matches the registered mobile, every other phone number Keyloop holds for the customer (Phone1-3, landlines, foreign numbers) is tried digit-for-digit - the spec's \"search by another phone number\" for a caller on an unregistered line. Add `group=BMW` to restrict to one dealer group; `limit` defaults to 20 (max 100)."
+      },
+      "response": []
+    }
+  ]
+}
