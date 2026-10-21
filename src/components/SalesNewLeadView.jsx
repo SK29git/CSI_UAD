@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useCustomer } from '../context/CustomerContext';
-import { apiFetch, submitLeadIntake } from '../utils/api';
+import { useCustomer, isExistingCustomer } from '../context/CustomerContext';
+import { apiFetch, submitLeadIntake, executeRpaCase } from '../utils/api';
 import { 
   FaUserPlus,
+  FaUserCheck,
   FaExclamationTriangle,
   FaPaperPlane,
   FaSpinner,
@@ -75,13 +76,13 @@ function CustomSelect({
       <button
         type="button"
         onClick={() => { setIsOpen(prev => !prev); setSearch(''); }}
-        className={`w-full h-9 px-2.5 bg-white border rounded-lg font-semibold text-gray-800 text-left flex items-center justify-between cursor-pointer shadow-2xs text-xs transition-all ${
+        className={`w-full h-8 px-2 bg-white border rounded-lg font-semibold text-gray-800 text-left flex items-center justify-between cursor-pointer shadow-2xs text-xs transition-all ${
           isOpen ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200/90 hover:border-slate-300'
         }`}
       >
         <div className="flex items-center min-w-0 flex-1">
           {icon && (
-            <div className="w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-2">
+            <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
               {icon}
             </div>
           )}
@@ -89,7 +90,7 @@ function CustomSelect({
             {selectedOption ? selectedOption.label : <span className="text-gray-400 font-normal">{placeholder}</span>}
           </span>
         </div>
-        <FaChevronDown className={`text-gray-400 text-[10px] shrink-0 ml-1 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
+        <FaChevronDown className={`text-gray-400 text-[9px] shrink-0 ml-1 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {required && (
@@ -198,7 +199,8 @@ const formatMobileForLead = (val) => {
 };
 
 export default function SalesNewLeadView() {
-  const { customer, group: contextGroup } = useCustomer();
+  const { customer, currentMobile, group: contextGroup } = useCustomer();
+  const hasCustomer = isExistingCustomer(customer);
   const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || '');
   const customerNumber = customer?.customerNumber || "";
   const vin = customer?.vin || (customer?.vehicles && customer?.vehicles[0]?.vin) || "";
@@ -221,10 +223,7 @@ export default function SalesNewLeadView() {
 
   const initialMake = resolveMake(group || customer?.keyloopGroup || 'BMW');
   const [make, setMake] = useState(initialMake);
-  const [model, setModel] = useState(() => {
-    const models = getModelsForBrand(initialMake);
-    return models[0] || 'Z4 Roadster';
-  });
+  const [model, setModel] = useState(() => customer?.model || '');
 
   // Determine branch list dynamically based on group / make
   const getBranches = () => {
@@ -241,11 +240,11 @@ export default function SalesNewLeadView() {
 
   const currentBranches = getBranches();
 
-  const [title, setTitle] = useState(customer?.salutation || 'Mr');
-  const [firstname, setFirstname] = useState(customer?.firstName || '');
-  const [surname, setSurname] = useState(customer?.surname || '');
-  const [email, setEmail] = useState(customer?.email || '');
-  const [mobile, setMobile] = useState(() => getFullMobileNumber(customer) || '');
+  const [title, setTitle] = useState(() => (customer?.salutation ? customer.salutation.replace(/\.$/, '').trim() : 'Mr'));
+  const [firstname, setFirstname] = useState(() => customer?.firstName || '');
+  const [surname, setSurname] = useState(() => customer?.surname || '');
+  const [email, setEmail] = useState(() => (customer?.email && !customer.email.includes('***') ? customer.email : (customer?.email || '')));
+  const [mobile, setMobile] = useState(() => getFullMobileNumber(customer) || currentMobile || '');
   const [origin, setOrigin] = useState(group ? `${group} Test Drive - EN` : 'Test Drive - EN');
   const [source, setSource] = useState(LEAD_SOURCES[0]);
   const [branch, setBranch] = useState(() => {
@@ -259,12 +258,7 @@ export default function SalesNewLeadView() {
     const brObj = currentBranches.find(b => b.code === (customer?.branchCode || '10'));
     return brObj ? brObj.name : (currentBranches[0]?.name || 'Sheikh Zayed Rd');
   });
-  const [notes, setNotes] = useState(() => {
-    const curMake = resolveMake(group || customer?.keyloopGroup || 'BMW');
-    const models = getModelsForBrand(curMake);
-    const defModel = models[0] || '';
-    return `Model : '${defModel}'`;
-  });
+  const [notes, setNotes] = useState('');
   const [submittingLead, setSubmittingLead] = useState(false);
   const [leadResponseToast, setLeadResponseToast] = useState(null);
 
@@ -273,36 +267,48 @@ export default function SalesNewLeadView() {
   const titleOptions = Array.from(new Set([title, ...TITLE_OPTIONS])).filter(Boolean);
 
   useEffect(() => {
-    if (customer) {
+    if (customer && customer.customerNumber) {
       if (customer?.salutation) {
         const cleanSal = customer?.salutation?.replace(/\.$/, '').trim();
         setTitle(cleanSal || customer?.salutation);
       }
-      if (customer?.firstName) setFirstname(customer?.firstName);
-      if (customer?.surname) setSurname(customer?.surname);
-      if (customer?.email) setEmail(customer?.email);
+      setFirstname(customer?.firstName || '');
+      setSurname(customer?.surname || '');
+      setEmail(customer?.email && !customer.email.includes('***') ? customer.email : (customer.email || ''));
       const fullMobile = getFullMobileNumber(customer);
       if (fullMobile) {
         setMobile(fullMobile);
       } else if (customer?.mobile && isFullMobileNumber(customer.mobile)) {
         setMobile(customer.mobile);
+      } else if (currentMobile) {
+        setMobile(currentMobile);
       }
       if (customer?.branchCode) setBranch(customer?.branchCode);
       if (customer?.keyloopGroup) {
         const detectedMake = resolveMake(customer.keyloopGroup);
         setMake(detectedMake);
         const models = getModelsForBrand(detectedMake);
-        if (models.length > 0) setModel(models[0]);
+        if (customer?.model && models.includes(customer.model)) {
+          setModel(customer.model);
+        }
       }
+    } else {
+      // Clean state for New Customer / Prospect intake
+      setTitle('Mr');
+      setFirstname('');
+      setSurname('');
+      setEmail('');
+      setMobile(currentMobile || '');
+      setModel('');
+      setNotes('');
     }
-  }, [customer]);
+  }, [customer, currentMobile]);
 
   useEffect(() => {
     if (group && group !== make) {
       const resolved = resolveMake(group);
       setMake(resolved);
-      const models = getModelsForBrand(resolved);
-      if (models.length > 0) setModel(models[0]);
+      setModel('');
     }
   }, [group]);
 
@@ -315,17 +321,16 @@ export default function SalesNewLeadView() {
 
   const handleMakeChange = (newMake) => {
     setMake(newMake);
-    const models = getModelsForBrand(newMake);
-    const defModel = models[0] || '';
-    setModel(defModel);
+    setModel('');
     setOrigin(`${newMake} Test Drive - EN`);
-    // Note: Do NOT touch dealershipLocation when selecting brand!
-    setNotes(`Model : '${defModel}'`);
+    setNotes('');
   };
 
   const handleModelChange = (newModel) => {
     setModel(newModel);
-    setNotes(`Model : '${newModel}'`);
+    if (!notes || notes.startsWith("Model : '")) {
+      setNotes(newModel ? `Model : '${newModel}'` : '');
+    }
   };
 
   const handleBranchChange = (newBranch) => {
@@ -333,7 +338,9 @@ export default function SalesNewLeadView() {
     const brObj = currentBranches.find(b => b.code === newBranch);
     const brName = brObj ? brObj.name : 'Sheikh Zayed Rd';
     setDealershipLocation(brName);
-    setNotes(`Location : ${brName}, Model : '${model}'`);
+    if (model) {
+      setNotes(`Location : ${brName}, Model : '${model}'`);
+    }
   };
 
   const handleSaveLead = async (e) => {
@@ -341,6 +348,53 @@ export default function SalesNewLeadView() {
     setSubmittingLead(true);
     setLeadResponseToast(null);
 
+    const dynamicGroup = group || customer?.keyloopGroup || 'BMW';
+    const brObj = currentBranches.find(b => b.code === branch);
+    const branchLabel = brObj ? `${brObj.code} - ${brObj.name}` : `${branch} - ${dealershipLocation || 'Sheikh Zayed Rd'}`;
+    const fullName = `${firstname} ${surname}`.trim() || customer?.fullName || "Valued Prospect";
+
+    // If active profile is a Prospect with a prospect ID, use RPA Case: CONVERT_PROSPECT_TO_ENQUIRY (Item 4 in RPA collection)
+    const prospectId = customer?.prospectNumber || (customer?.isProspect ? (customer?.customerNumber || customer?.id) : null);
+    if (prospectId) {
+      const rpaPayload = {
+        prospectId: String(prospectId),
+        customerName: fullName,
+        group: dynamicGroup,
+        branch: branchLabel,
+        titleCode: title || customer?.salutation || "Mr.",
+        area: customer?.location?.area || "Dubai",
+        city: customer?.location?.city || "Dubai",
+        country: customer?.nationality || "United Arab Emirates",
+        postcode: "",
+        source: source || customer?.leadSource || "Inbound",
+        dob: customer?.dateOfBirth || "",
+        vehicleType: (newused || "new").toLowerCase(),
+        manufacturer: make || "BMW",
+        model: model || "",
+        purchaseType: "",
+        dateRequired: ""
+      };
+
+      try {
+        const result = await executeRpaCase("CONVERT_PROSPECT_TO_ENQUIRY", rpaPayload, {
+          createdBy: "genesys"
+        });
+
+        const enqId = result?.result?.enquiryId || result?.result?.enquiryNumber || result?.taskId || "CONVERTED";
+        setLeadResponseToast({
+          isError: false,
+          referenceId: String(enqId),
+          status: "COMPLETED",
+          message: `Prospect #${prospectId} successfully converted to Enquiry #${enqId} in Keyloop!`
+        });
+        setSubmittingLead(false);
+        return;
+      } catch (err) {
+        console.warn("Prospect to Enquiry RPA failed, falling back to Lead Intake API:", err);
+      }
+    }
+
+    // Default flow: New Lead Intake submission (for brand-new unassigned web prospects)
     const computedLocation = dealershipLocation.trim() || 'Sheikh Zayed Road Dubai';
     const formattedMobile = formatMobileForLead(mobile);
 
@@ -382,6 +436,98 @@ export default function SalesNewLeadView() {
     } finally {
       setSubmittingLead(false);
     }
+  };
+
+  const handleSaveExistingCustomerEnquiry = async (e) => {
+    e.preventDefault();
+    const custNo = customerNumber || customer?.customerNumber || customer?.id;
+    if (!custNo) {
+      setLeadResponseToast({
+        isError: true,
+        referenceId: "FAILED",
+        status: "ERROR",
+        message: "No existing customer number found. Please select a customer or switch to Prospect mode."
+      });
+      return;
+    }
+
+    setSubmittingLead(true);
+    setLeadResponseToast(null);
+
+    const dynamicGroup = group || customer?.keyloopGroup || 'BMW';
+    const brObj = currentBranches.find(b => b.code === branch);
+    const branchLabel = brObj ? `${brObj.code} - ${brObj.name}` : `${branch} - ${dealershipLocation}`;
+    const fullName = `${firstname} ${surname}`.trim() || customer?.fullName || customer?.name || "Valued Customer";
+
+    const payload = {
+      group: dynamicGroup,
+      customerId: String(custNo),
+      customerName: fullName,
+      branch: branchLabel,
+      vehicleType: (newused || "new").toLowerCase(),
+      manufacturer: make,
+      model: model
+    };
+
+    try {
+      const result = await executeRpaCase("CONVERT_PROSPECT_TO_ENQUIRY", payload, {
+        createdBy: "genesys"
+      });
+
+      const enqId = result?.result?.enquiryId || result?.result?.enquiryNumber || result?.taskId || "CREATED";
+      setLeadResponseToast({
+        isError: false,
+        referenceId: String(enqId),
+        status: "COMPLETED",
+        message: `New Enquiry successfully created for Customer #${custNo} via Keyloop RPA!`
+      });
+    } catch (err) {
+      console.warn("Existing customer enquiry RPA error, falling back to Lead Intake:", err);
+      try {
+        const computedLocation = dealershipLocation.trim() || 'Sheikh Zayed Road Dubai';
+        const formattedMobile = formatMobileForLead(mobile);
+        const intakeRes = await submitLeadIntake({
+          firstName: firstname.trim(),
+          lastName: surname.trim(),
+          email: email.trim(),
+          mobile: formattedMobile,
+          make: make.trim(),
+          model: model.trim(),
+          newUsed: (newused || "new").toLowerCase(),
+          location: computedLocation,
+          title: title || "",
+          leadOrigin: origin || "",
+          leadSource: source || LEAD_SOURCES[0],
+          branch: branch || "10",
+          notes: `Existing Customer #${custNo}. ${notes || ''}`
+        });
+
+        if (intakeRes && intakeRes.ok && intakeRes.data) {
+          setLeadResponseToast({
+            isError: false,
+            referenceId: intakeRes.data.referenceId || "AGMC-SUCCESS",
+            status: intakeRes.data.status || "RECEIVED",
+            message: `Enquiry received for Existing Customer #${custNo} and forwarded to Keyloop!`
+          });
+        }
+      } catch (fallbackErr) {
+        setLeadResponseToast({
+          isError: true,
+          referenceId: "FAILED",
+          status: "ERROR",
+          message: err.message || fallbackErr.message || "Failed to create enquiry for existing customer."
+        });
+      }
+    } finally {
+      setSubmittingLead(false);
+    }
+  };
+
+  const handleSubmitEnquiry = (e) => {
+    if (hasCustomer) {
+      return handleSaveExistingCustomerEnquiry(e);
+    }
+    return handleSaveLead(e);
   };
 
   // ----------------------------------------------------
@@ -527,78 +673,84 @@ export default function SalesNewLeadView() {
   };
 
   return (
-    <div className="bg-white rounded-xl p-3.5 sm:p-4 shadow-xs border border-slate-200/90 flex flex-col gap-2.5 text-xs transition-all">
+    <div className="bg-white rounded-xl p-2.5 sm:p-3 shadow-xs border border-slate-200/90 flex flex-col gap-2 text-xs transition-all">
       
       {/* Top Header Card */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
         {/* Left: Icon, Title, Subtitle & Switch Tab Pill */}
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           {activeTab === "lead" ? (
             <>
-              <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center text-sm shadow-xs shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs shadow-xs shrink-0">
                 <FaUserPlus />
               </div>
               <div>
-                <h2 className="text-sm font-extrabold text-gray-900 leading-tight">Create Sales Lead</h2>
-                <p className="text-[10px] text-gray-400 font-medium">Capture customer details to create a new sales lead</p>
+                <h2 className="text-xs sm:text-sm font-extrabold text-gray-900 leading-tight">
+                  {hasCustomer ? 'New Enquiry' : 'New Lead'}
+                </h2>
+                <p className="text-[10px] text-gray-400 font-medium">
+                  {hasCustomer 
+                    ? `Create new enquiry for Customer #${customerNumber}` 
+                    : 'Capture customer details to create a new sales lead'}
+                </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setActiveTab("complaint")}
-                className="ml-0 sm:ml-2 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center gap-1.5 border border-slate-200/80 cursor-pointer shadow-2xs transition-all"
+                className="ml-0 sm:ml-1.5 px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center gap-1 border border-slate-200/80 cursor-pointer shadow-2xs transition-all"
               >
-                <FaExclamationTriangle className="text-slate-600 text-[10px]" />
+                <FaExclamationTriangle className="text-slate-500 text-[9px]" />
                 <span>Sales Complaints & Tickets</span>
               </button>
             </>
           ) : (
             <>
-              <div className="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center text-sm shadow-xs shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-amber-600 text-white flex items-center justify-center text-xs shadow-xs shrink-0">
                 <FaExclamationTriangle />
               </div>
               <div>
-                <h2 className="text-sm font-extrabold text-gray-900 leading-tight">Sales Complaints & Tickets</h2>
+                <h2 className="text-xs sm:text-sm font-extrabold text-gray-900 leading-tight">Sales Complaints & Tickets</h2>
                 <p className="text-[10px] text-gray-400 font-medium">Manage and track customer complaints and inquiries</p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setActiveTab("lead")}
-                className="ml-0 sm:ml-2 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] flex items-center gap-1.5 border border-slate-200/80 cursor-pointer shadow-2xs transition-all"
+                className="ml-0 sm:ml-1.5 px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center gap-1 border border-slate-200/80 cursor-pointer shadow-2xs transition-all"
               >
-                <FaUserPlus className="text-blue-600 text-[10px]" />
-                <span>Create Sales Lead</span>
+                <FaUserPlus className="text-blue-600 text-[9px]" />
+                <span>{hasCustomer ? 'New Enquiry' : 'New Lead'}</span>
               </button>
             </>
           )}
         </div>
 
         {/* Right: Group / Customer badge and Circular Car Icon */}
-        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-          <span className="text-[11px] text-gray-500 font-medium">
-            Group : <span className="font-bold text-gray-700">{group || 'BMW'}</span> | Customer #{customerNumber || '162973'}
+        <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+          <span className="text-[10px] text-gray-500 font-medium">
+            Group : <span className="font-bold text-gray-700">{group || 'BMW'}</span> | <span className="font-bold text-gray-700">{hasCustomer ? `Customer #${customerNumber}` : 'New Lead'}</span>
           </span>
-          <div className="w-7 h-7 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-2xs shrink-0">
-            <FaCar className="text-xs" />
+          <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-2xs shrink-0">
+            <FaCar className="text-[10px]" />
           </div>
         </div>
       </div>
 
       {/* ------------------------------------------------------------------- */}
-      {/* TAB 1: CREATE NEW SALES LEAD FORM                                    */}
+      {/* TAB 1: CREATE NEW ENQUIRY (EXISTING CUSTOMER) / NEW LEAD             */}
       {/* ------------------------------------------------------------------- */}
       {activeTab === "lead" && (
-        <div className="flex flex-col gap-2.5">
-          
+        <div className="flex flex-col gap-2">
+
           {leadResponseToast && (
-            <div className={`p-3 rounded-lg flex items-center justify-between shadow-xs border animate-fade-in ${
+            <div className={`p-2.5 rounded-lg flex items-center justify-between shadow-xs border animate-fade-in ${
               leadResponseToast.isError
                 ? "bg-rose-50 border-rose-200 text-rose-900"
                 : "bg-emerald-50 border-emerald-200 text-emerald-800"
             }`}>
-              <div className="flex items-center gap-2.5">
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[11px] shadow-xs text-white ${
+              <div className="flex items-center gap-2">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] shadow-xs text-white ${
                   leadResponseToast.isError ? "bg-rose-500" : "bg-emerald-500"
                 }`}>
                   {leadResponseToast.isError ? "✕" : "✓"}
@@ -607,7 +759,7 @@ export default function SalesNewLeadView() {
                   <h4 className={`font-bold text-xs ${leadResponseToast.isError ? "text-rose-950" : "text-emerald-950"}`}>
                     {leadResponseToast.message}
                   </h4>
-                  <div className={`flex items-center gap-2.5 text-[10px] mt-0.5 font-mono ${
+                  <div className={`flex items-center gap-2 text-[10px] mt-0.5 font-mono ${
                     leadResponseToast.isError ? "text-rose-700" : "text-emerald-700"
                   }`}>
                     <span>Reference ID: <strong className="text-gray-900 font-bold">{leadResponseToast.referenceId}</strong></span>
@@ -621,16 +773,18 @@ export default function SalesNewLeadView() {
               <button
                 type="button"
                 onClick={() => setLeadResponseToast(null)}
-                className="text-gray-400 hover:text-gray-600 text-xs px-2 py-0.5 rounded cursor-pointer"
+                className="text-gray-400 hover:text-gray-600 text-xs px-1.5 py-0.5 rounded cursor-pointer"
               >
                 ✕
               </button>
             </div>
           )}
 
-          <form onSubmit={handleSaveLead} className="space-y-2 text-xs">
-            {/* ROW 1: Lead Origin, Lead Source, Branch Code */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
+          <form onSubmit={handleSubmitEnquiry} className="space-y-1.5 text-xs">
+            {/* Unified Continuous Grid: 3 columns on xl/lg, 2 columns on md/sm */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1.5">
+              
+              {/* 1. Lead Origin */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Lead Origin <span className="text-rose-500 font-bold">*</span>
@@ -646,6 +800,7 @@ export default function SalesNewLeadView() {
                 />
               </div>
 
+              {/* 2. Lead Source */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Lead Source <span className="text-rose-500 font-bold">*</span>
@@ -661,6 +816,7 @@ export default function SalesNewLeadView() {
                 />
               </div>
 
+              {/* 3. Branch Code */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Branch Code <span className="text-rose-500 font-bold">*</span>
@@ -675,10 +831,8 @@ export default function SalesNewLeadView() {
                   required
                 />
               </div>
-            </div>
 
-            {/* ROW 2: Title, First Name, Surname */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
+              {/* 4. Title */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Title
@@ -692,12 +846,13 @@ export default function SalesNewLeadView() {
                 />
               </div>
 
+              {/* 5. First Name */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   First Name <span className="text-rose-500 font-bold">*</span>
                 </label>
-                <div className="w-full h-9 px-2.5 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
-                  <div className="w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-2">
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
                     <FaUser />
                   </div>
                   <input 
@@ -711,12 +866,13 @@ export default function SalesNewLeadView() {
                 </div>
               </div>
 
+              {/* 6. Surname */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Surname <span className="text-rose-500 font-bold">*</span>
                 </label>
-                <div className="w-full h-9 px-2.5 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
-                  <div className="w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-xs mr-2">
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-xs mr-1.5">
                     <FaUser />
                   </div>
                   <input 
@@ -729,35 +885,14 @@ export default function SalesNewLeadView() {
                   />
                 </div>
               </div>
-            </div>
 
-            {/* ROW 3: Email Address, Mobile / Phone, Vehicle Type */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
-              <div>
-                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                  Email Address <span className="text-rose-500 font-bold">*</span>
-                </label>
-                <div className="w-full h-9 px-2.5 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
-                  <div className="w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-2">
-                    <FaEnvelope />
-                  </div>
-                  <input 
-                    type="email" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="Enter email address"
-                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs placeholder:text-gray-400"
-                  />
-                </div>
-              </div>
-
+              {/* 7. Mobile / Phone */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Mobile / Phone <span className="text-rose-500 font-bold">*</span>
                 </label>
-                <div className="w-full h-9 px-2.5 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
-                  <div className="w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-2">
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
                     <FaPhoneAlt />
                   </div>
                   <input 
@@ -771,6 +906,27 @@ export default function SalesNewLeadView() {
                 </div>
               </div>
 
+              {/* 8. Email Address */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Email Address <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                    <FaEnvelope />
+                  </div>
+                  <input 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    placeholder="Enter email address"
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs placeholder:text-gray-400"
+                  />
+                </div>
+              </div>
+
+              {/* 9. Vehicle Type (New/Used) */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Vehicle Type (New/Used)
@@ -783,10 +939,8 @@ export default function SalesNewLeadView() {
                   placeholder="Select Vehicle Type"
                 />
               </div>
-            </div>
 
-            {/* ROW 4: Make / Brand, Model, Location */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-1.5">
+              {/* 10. Make / Brand */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Make / Brand <span className="text-rose-500 font-bold">*</span>
@@ -802,6 +956,7 @@ export default function SalesNewLeadView() {
                 />
               </div>
 
+              {/* 11. Model */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Model <span className="text-rose-500 font-bold">*</span>
@@ -817,12 +972,13 @@ export default function SalesNewLeadView() {
                 />
               </div>
 
+              {/* 12. Location (Dealership) */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Location (Dealership)
                 </label>
-                <div className="w-full h-9 px-2.5 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
-                  <div className="w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-2">
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
                     <FaMapMarkerAlt />
                   </div>
                   <input
@@ -834,48 +990,46 @@ export default function SalesNewLeadView() {
                   />
                 </div>
               </div>
+
             </div>
 
-            {/* ROW 5: Enquiry Notes */}
-            <div>
-              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1.5">
-                <FaRegFileAlt className="text-blue-500 text-[11px]" />
-                <span>Enquiry Notes</span>
-              </label>
-              <div className="relative w-full bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs transition-all p-2">
-                <div className="absolute top-2 left-2 w-6 h-6 rounded-md bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px]">
-                  <FaRegFileAlt />
-                </div>
-                <textarea 
-                  rows={2}
-                  maxLength={500}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Enter enquiry notes..."
-                  className="w-full bg-transparent border-0 focus:outline-none text-xs font-semibold text-gray-800 pl-8 pr-14 py-0.5 leading-relaxed resize-none placeholder:text-gray-400"
-                />
-                <div className="absolute bottom-1.5 right-2.5 text-[10px] font-semibold text-gray-400 select-none">
-                  {(notes || '').length}/500
+            {/* ROW: Enquiry Notes & Submit Button */}
+            <div className="flex flex-col sm:flex-row items-end gap-2 pt-0.5">
+              <div className="flex-1 w-full">
+                <label className="text-[10px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  <FaRegFileAlt className="text-blue-500 text-[10px]" />
+                  <span>Enquiry Notes</span>
+                </label>
+                <div className="relative w-full bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs transition-all px-2 py-1">
+                  <textarea 
+                    rows={1}
+                    maxLength={500}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Enter enquiry notes..."
+                    className="w-full bg-transparent border-0 focus:outline-none text-xs font-semibold text-gray-800 pr-12 py-0.5 leading-snug resize-none placeholder:text-gray-400 h-6.5"
+                  />
+                  <div className="absolute right-2 top-1.5 text-[9px] font-semibold text-gray-400 select-none">
+                    {(notes || '').length}/500
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Form Submit Button */}
-            <div className="flex items-center justify-end pt-1">
+              {/* Form Submit Button */}
               <button 
                 type="submit" 
                 disabled={submittingLead}
-                className="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-xs hover:shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-50"
+                className="h-8.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-50 shrink-0"
               >
                 {submittingLead ? (
                   <>
                     <FaSpinner className="animate-spin text-xs" />
-                    <span>Submitting Lead...</span>
+                    <span>{hasCustomer ? 'Creating Enquiry...' : 'Submitting Lead...'}</span>
                   </>
                 ) : (
                   <>
                     <FaPaperPlane className="text-xs" />
-                    <span>Create Sales Lead</span>
+                    <span>{hasCustomer ? `Create Enquiry #${customerNumber}` : 'Create Sales Lead'}</span>
                   </>
                 )}
               </button>

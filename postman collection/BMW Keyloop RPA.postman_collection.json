@@ -1,0 +1,600 @@
+{
+  "info": {
+    "_postman_id": "546833b1-c25b-4e79-8e6c-6a0be03de214",
+    "name": "BMW Keyloop RPA",
+    "description": "One request per case type against POST /api/intake/cases, plus the status endpoint. Set apiKey to the backend's RPA_INTAKE_API_KEY and baseUrl to the environment. No externalRef is sent: the same details are one task while it is queued or running, so a second send returns the same taskId.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "56440035",
+    "_collection_link": "https://go.postman.co/collection/56440035-546833b1-c25b-4e79-8e6c-6a0be03de214?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "BMW Test Drive",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('accepted', function () { pm.response.to.have.status(200); });\nif (pm.response.code === 200) { const b = pm.response.json(); pm.collectionVariables.set('taskId', b.taskId); console.log('task', b.taskId, b.status); }\nelse { console.log('refused:', pm.response.text()); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Api-Key",
+            "value": "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"caseType\": \"BOOK_DEMO_VEHICLE\",\n  \"callbackUrl\": \"http://localhost:9999/hook\",\n  \"createdBy\": \"genesys\",\n  \"details\": {\n    \"enquiryId\": \"567984\",\n    \"group\": \"BMW\",\n    \"manufacturer\": \"BMW\",\n    \"branch\": \"10 - Sheikh Zayed Rd\",\n    \"startAt\": \"{{resolvedDemoStartAt}}\",\n    \"endAt\": \"{{resolvedDemoEndAt}}\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://ccaas.agmcgroup.ae/api/intake/cases",
+          "protocol": "https",
+          "host": [
+            "ccaas",
+            "agmcgroup",
+            "ae"
+          ],
+          "path": [
+            "api",
+            "intake",
+            "cases"
+          ]
+        },
+        "description": "BMW login: group BMW routes to BOOK_DEMO_VEHICLE_BMW; with manufacturer given and vehicleId / salesExecutiveId empty, the CCaaS backend picks a free demonstrator and an on-shift sales executive for the slot (the dev backend needs vehicleId)."
+      },
+      "response": []
+    },
+    {
+      "name": "BMW Reschedule Test Drive",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('accepted', function () { pm.response.to.have.status(200); });\nif (pm.response.code === 200) { const b = pm.response.json(); pm.collectionVariables.set('taskId', b.taskId); console.log('task', b.taskId, b.status); }\nelse { console.log('refused:', pm.response.text()); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Api-Key",
+            "value": "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"caseType\": \"RESCHEDULE_DEMO_VEHICLE\",\n  \"callbackUrl\": \"http://localhost:9999/hook\",\n  \"createdBy\": \"genesys\",\n  \"details\": {\n    \"enquiryId\": \"{{enquiryId}}\",\n    \"group\": \"BMW\",\n    \"startAt\": \"2026-10-10T12:00\",\n    \"endAt\": \"2026-10-10T12:30\",\n    \"branch\": \"10 - Sheikh Zayed Rd\",\n    \"vehicleId\": \"\",\n    \"manufacturer\": \"BMW\",\n    \"model\": \"\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://ccaas.agmcgroup.ae/api/intake/cases",
+          "protocol": "https",
+          "host": [
+            "ccaas",
+            "agmcgroup",
+            "ae"
+          ],
+          "path": [
+            "api",
+            "intake",
+            "cases"
+          ]
+        },
+        "description": "BMW login: group BMW routes to RESCHEDULE_DEMO_VEHICLE_BMW. vehicleId: a new demonstrator; leave it empty with manufacturer given to have the CCaaS backend pick a free one for the new slot, or leave both empty to keep the booked car. The case result carries rescheduledDate, rescheduledTimeFrom, rescheduledTimeTo and rescheduledBranch read back from Autoline."
+      },
+      "response": []
+    },
+    {
+      "name": "BMW Cancel Test Drive",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('accepted', function () { pm.response.to.have.status(200); });\nif (pm.response.code === 200) { const b = pm.response.json(); pm.collectionVariables.set('taskId', b.taskId); console.log('task', b.taskId, b.status); }\nelse { console.log('refused:', pm.response.text()); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Api-Key",
+            "value": "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"caseType\": \"CANCEL_DEMO_VEHICLE\",\n  \"callbackUrl\": \"http://localhost:9999/hook\",\n  \"createdBy\": \"genesys\",\n  \"details\": {\n    \"enquiryId\": \"{{enquiryId}}\",\n    \"reason\": \"customer cancelled\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://ccaas.agmcgroup.ae/api/intake/cases",
+          "protocol": "https",
+          "host": [
+            "ccaas",
+            "agmcgroup",
+            "ae"
+          ],
+          "path": [
+            "api",
+            "intake",
+            "cases"
+          ]
+        },
+        "description": "Cancels the enquiry's demo booking. reason is optional and replaces the booking's comment."
+      },
+      "response": []
+    },
+    {
+      "name": "BMW Prospect To ENquiry",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('accepted', function () { pm.response.to.have.status(200); });\nif (pm.response.code === 200) { const b = pm.response.json(); pm.collectionVariables.set('taskId', b.taskId); console.log('task', b.taskId, b.status); }\nelse { console.log('refused:', pm.response.text()); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Api-Key",
+            "value": "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"caseType\": \"CONVERT_PROSPECT_TO_ENQUIRY\",\n  \"callbackUrl\": \"http://localhost:9999/hook\",\n  \"createdBy\": \"Genesys\",\n  \"details\": {\n    \"prospectId\": \"{{prospectId}}\",\n    \"customerName\": \"\",\n    \"group\": \"BMW\",\n    \"branch\": \"10 - Sheikh Zayed Rd\",\n    \"titleCode\": \"Mr.\",\n    \"area\": \"Al Mamzar\",\n    \"city\": \"Dubai\",\n    \"country\": \"United Arab Emirates\",\n    \"postcode\": \"\",\n    \"source\": \"\",\n    \"dob\": \"1993-09-28\",\n    \"vehicleType\": \"new\",\n    \"manufacturer\": \"BMW\",\n    \"model\": \"X5 M (F95)\",\n    \"purchaseType\": \"\",\n    \"dateRequired\": \"\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://ccaas.agmcgroup.ae/api/intake/cases",
+          "protocol": "https",
+          "host": [
+            "ccaas",
+            "agmcgroup",
+            "ae"
+          ],
+          "path": [
+            "api",
+            "intake",
+            "cases"
+          ]
+        },
+        "description": "BMW login: group BMW routes the case to CONVERT_PROSPECT_TO_ENQUIRY_BMW. Branch, manufacturer and model are the BMW picker captions; the BMW client must be the open kclient."
+      },
+      "response": []
+    },
+    {
+      "name": "BMW  Create Customer",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('accepted', function () { pm.response.to.have.status(200); });\nif (pm.response.code === 200) { const b = pm.response.json(); pm.collectionVariables.set('taskId', b.taskId); console.log('task', b.taskId, b.status); }\nelse { console.log('refused:', pm.response.text()); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Api-Key",
+            "value": "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"caseType\": \"CREATE_CUSTOMER\",\n  \"callbackUrl\": \"http://localhost:9999/hook\",\n  \"createdBy\": \"genesys\",\n  \"details\": {\n    \"group\": \"BMW\",\n    \"branch\": \"10 - Sheikh Zayed Rd\",\n    \"titleCode\": \"Mr.\",\n    \"firstName\": \"Tariq\",\n    \"surname\": \"Bashir\",\n    \"area\": \"Deira\",\n    \"city\": \"Dubai\",\n    \"country\": \"United Arab Emirates\",\n    \"mobile\": \"0561277913\",\n    \"email\": \"tariq.bashir@example.com\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://ccaas.agmcgroup.ae/api/intake/cases",
+          "protocol": "https",
+          "host": [
+            "ccaas",
+            "agmcgroup",
+            "ae"
+          ],
+          "path": [
+            "api",
+            "intake",
+            "cases"
+          ]
+        },
+        "description": "Creates the customer and opens their enquiry. The callback result carries customerId and enquiryId. Email, area, city and country are required; postcode, dob, nationality, model and purchaseType are optional."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Case status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const s = pm.response.json();\nconsole.log(s.status, s.errorCode || '', s.errorMessage || '', JSON.stringify(s.result || null));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-Api-Key",
+            "value": "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187"
+          }
+        ],
+        "url": {
+          "raw": "https://ccaas.agmcgroup.ae/api/intake/cases/{{taskId}}",
+          "protocol": "https",
+          "host": [
+            "ccaas",
+            "agmcgroup",
+            "ae"
+          ],
+          "path": [
+            "api",
+            "intake",
+            "cases",
+            "{{taskId}}"
+          ]
+        },
+        "description": "QUEUED, CLAIMED (running), COMPLETED or FAILED, with result or errorCode/errorMessage. Uses the taskId set by the last accepted case."
+      },
+      "response": []
+    },
+    {
+      "name": "BMW- Demo Cancellation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('accepted', function () { pm.response.to.have.status(200); });\nif (pm.response.code === 200) { const b = pm.response.json(); pm.collectionVariables.set('taskId', b.taskId); console.log('task', b.taskId, b.status); }\nelse { console.log('refused:', pm.response.text()); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Api-Key",
+            "value": "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"caseType\": \"CANCEL_DEMO_VEHICLE\",\n  \"callbackUrl\": \"http://localhost:9999/hook\",\n  \"createdBy\": \"{{createdBy}}\",\n  \"details\": {\n    \"enquiryId\": \"567977\",\n    \"group\": \"BMW\",\n    \"reason\": \"\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://ccaas.agmcgroup.ae/api/intake/cases",
+          "protocol": "https",
+          "host": [
+            "ccaas",
+            "agmcgroup",
+            "ae"
+          ],
+          "path": [
+            "api",
+            "intake",
+            "cases"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BMW - Showroom Appointment",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('accepted', function () { pm.response.to.have.status(200); });\nif (pm.response.code === 200) { const b = pm.response.json(); pm.collectionVariables.set('taskId', b.taskId); console.log('task', b.taskId, b.status); }\nelse { console.log('refused:', pm.response.text()); }"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Api-Key",
+            "value": "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"caseType\": \"BOOK_SHOWROOM_APPOINTMENT\",\n  \"callbackUrl\": \"http://localhost:9999/hook\",\n  \"createdBy\": \"{{createdBy}}\",\n  \"details\": {\n    \"enquiryId\": \"567983\",\n    \"group\": \"BMW\",\n    \"manufacturer\": \"BMW\",\n    \"branch\": \"10 - Sheikh Zayed Rd\",\n    \"requestedAt\": \"2026-10-13T11:00\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://ccaas.agmcgroup.ae/api/intake/cases",
+          "protocol": "https",
+          "host": [
+            "ccaas",
+            "agmcgroup",
+            "ae"
+          ],
+          "path": [
+            "api",
+            "intake",
+            "cases"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "BMW Customer to Enquiry",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Api-Key",
+            "value": "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"caseType\": \"CONVERT_PROSPECT_TO_ENQUIRY\",\n  \"callbackUrl\": \"\",\n  \"createdBy\": \"genesys\",\n  \"details\": {\n    \"group\": \"BMW\",\n    \"customerId\": \"462429\",\n    \"customerName\": \"Adeeb Khab\",\n    \"branch\": \"10 - Sheikh Zayed Rd\",\n    \"vehicleType\": \"new\",\n    \"manufacturer\": \"BMW\",\n    \"model\": \"X5 M (F95)\"\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://ccaas.agmcgroup.ae/api/intake/cases",
+          "protocol": "https",
+          "host": [
+            "ccaas",
+            "agmcgroup",
+            "ae"
+          ],
+          "path": [
+            "api",
+            "intake",
+            "cases"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Requested times must be in the future and inside working hours, so blank dates roll forward.",
+          "function day(offset) { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().slice(0, 10); }",
+          "const demo = pm.collectionVariables.get('demoDate') || day(1);",
+          "const resched = pm.collectionVariables.get('rescheduleDate') || day(2);",
+          "const appt = pm.collectionVariables.get('appointmentDate') || day(1);",
+          "pm.collectionVariables.set('resolvedDemoStartAt', demo + 'T' + pm.collectionVariables.get('demoTimeFrom'));",
+          "pm.collectionVariables.set('resolvedDemoEndAt', demo + 'T' + pm.collectionVariables.get('demoTimeTo'));",
+          "pm.collectionVariables.set('resolvedRescheduleStartAt', resched + 'T' + pm.collectionVariables.get('rescheduleTimeFrom'));",
+          "pm.collectionVariables.set('resolvedRescheduleEndAt', resched + 'T' + pm.collectionVariables.get('rescheduleTimeTo'));",
+          "pm.collectionVariables.set('resolvedAppointmentAt', appt + 'T' + pm.collectionVariables.get('appointmentTime'));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "description": "Backend address for the environment"
+    },
+    {
+      "key": "apiKey",
+      "value": "",
+      "description": "Value of RPA_INTAKE_API_KEY on the backend"
+    },
+    {
+      "key": "callbackUrl",
+      "value": "http://localhost:9999/hook",
+      "description": "Where the outcome is POSTed; blank to poll instead"
+    },
+    {
+      "key": "createdBy",
+      "value": "genesys",
+      "description": "Name of the sending system"
+    },
+    {
+      "key": "enquiryId",
+      "value": "99646",
+      "description": "Autoline enquiry number for the booking cases"
+    },
+    {
+      "key": "salesExecutiveId",
+      "value": "kunnath",
+      "description": "Autoline user id of the sales executive"
+    },
+    {
+      "key": "vehicleId",
+      "value": "13705",
+      "description": "Autoline vehicle number for a test drive"
+    },
+    {
+      "key": "branch",
+      "value": "0220",
+      "description": "Four-digit branch code: 0220, 0240 or 0290"
+    },
+    {
+      "key": "demoDate",
+      "value": "",
+      "description": "yyyy-MM-dd; blank = tomorrow"
+    },
+    {
+      "key": "demoTimeFrom",
+      "value": "17:00"
+    },
+    {
+      "key": "demoTimeTo",
+      "value": "17:30"
+    },
+    {
+      "key": "rescheduleDate",
+      "value": "",
+      "description": "yyyy-MM-dd; blank = the day after tomorrow"
+    },
+    {
+      "key": "rescheduleTimeFrom",
+      "value": "12:00"
+    },
+    {
+      "key": "rescheduleTimeTo",
+      "value": "12:30"
+    },
+    {
+      "key": "appointmentDate",
+      "value": "",
+      "description": "yyyy-MM-dd; blank = tomorrow"
+    },
+    {
+      "key": "appointmentTime",
+      "value": "10:00"
+    },
+    {
+      "key": "taskId",
+      "value": "",
+      "description": "Set by the last accepted case"
+    },
+    {
+      "key": "resolvedDemoStartAt",
+      "value": "",
+      "description": "computed"
+    },
+    {
+      "key": "resolvedDemoEndAt",
+      "value": "",
+      "description": "computed"
+    },
+    {
+      "key": "resolvedRescheduleStartAt",
+      "value": "",
+      "description": "computed"
+    },
+    {
+      "key": "resolvedRescheduleEndAt",
+      "value": "",
+      "description": "computed"
+    },
+    {
+      "key": "resolvedAppointmentAt",
+      "value": "",
+      "description": "computed"
+    },
+    {
+      "key": "prospectId",
+      "value": "",
+      "description": "Autoline prospect number to convert"
+    },
+    {
+      "key": "customerId",
+      "value": "",
+      "description": "Autoline customer number"
+    },
+    {
+      "key": "model",
+      "value": "COOLRAY"
+    },
+    {
+      "key": "branchCaption",
+      "value": "10 - Geely Group - SZR",
+      "description": "Branch caption for the conversion and the script picker"
+    }
+  ]
+}

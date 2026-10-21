@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useCustomer } from '../context/CustomerContext';
+import { getBranchesForGroup } from '../data/brandModels';
 import { 
   FaUserPlus, 
   FaEdit, 
@@ -14,20 +15,16 @@ import {
   FaExclamationTriangle, 
   FaSpinner, 
   FaArrowLeft,
-  FaSave
+  FaSave,
+  FaCopy,
+  FaTimes,
+  FaCheckCircle,
+  FaCommentAlt,
+  FaWhatsapp
 } from 'react-icons/fa';
 
 const GROUP_OPTIONS = ['BMW', 'MINI', 'ROLLS-ROYCE', 'GEELY'];
 const TITLE_OPTIONS = ['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Eng.', 'Sheikh', 'Sheikha'];
-const BRANCH_OPTIONS = [
-  '10 - Sheikh Zayed Rd',
-  '20 - Deira',
-  '30 - Sharjah',
-  '40 - Ras Al Khaimah',
-  '50 - Fujairah',
-  '60 - Al Ain',
-  '70 - Dubai Investment Park'
-];
 const CITY_OPTIONS = [
   'Dubai',
   'Abu Dhabi',
@@ -45,7 +42,9 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     currentMobile, 
     currentGroup, 
     createCustomer, 
-    updateCustomer 
+    updateCustomer,
+    showToast,
+    hideToast
   } = useCustomer();
 
   const [formData, setFormData] = useState({
@@ -58,14 +57,66 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     city: 'Dubai',
     country: 'United Arab Emirates',
     mobile: '',
-    email: ''
+    email: '',
+    consents: {
+      phone: true,
+      email: false,
+      sms: true,
+      whatsapp: true
+    }
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [copiedTaskId, setCopiedTaskId] = useState(false);
+  const [countdown, setCountdown] = useState(null);
+
+  const countdownIntervalRef = useRef(null);
+  const autoCloseTimerRef = useRef(null);
+
+  // Clear timers on component unmount
+  useEffect(() => {
+    return () => {
+      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+    };
+  }, []);
+
+  const handleCopyTaskId = (id) => {
+    if (!id) return;
+    try {
+      navigator.clipboard.writeText(id);
+      setCopiedTaskId(true);
+      setTimeout(() => setCopiedTaskId(false), 2000);
+    } catch (e) {
+      console.warn("Clipboard copy failed:", e);
+    }
+  };
+
+  const handleDismissSuccess = () => {
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+    setFeedback(null);
+    if (hideToast) hideToast();
+    if (onClose) onClose();
+  };
+
+  const handleGroupChange = (newGroup) => {
+    const branches = getBranchesForGroup(newGroup);
+    const defBranch = branches[0] ? `${branches[0].code} - ${branches[0].name}` : '10 - Sheikh Zayed Rd';
+    setFormData(prev => ({ ...prev, group: newGroup, branch: defBranch }));
+  };
+
+  const currentBranches = getBranchesForGroup(formData.group);
 
   useEffect(() => {
+    // If submission is in progress or success feedback is already shown, do NOT reset or wipe feedback
+    if (isSubmitting || feedback?.type === 'success') {
+      return;
+    }
+
     if (mode === 'edit' && customer) {
+      const emailVal = customer.email && !customer.email.includes('***') ? customer.email : '';
       setFormData({
         group: customer.keyloopGroup || currentGroup || 'BMW',
         branch: customer.preferredBranch || (customer.branchCode ? `${customer.branchCode} - Sheikh Zayed Rd` : '10 - Sheikh Zayed Rd'),
@@ -76,24 +127,36 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         city: customer.location?.city || 'Dubai',
         country: customer.nationality || 'United Arab Emirates',
         mobile: customer.mobileRaw || (customer.mobile ? customer.mobile.replace(/\D/g, '') : (currentMobile ? currentMobile.replace(/\D/g, '') : '')),
-        email: customer.email && !customer.email.includes('***') ? customer.email : ''
+        email: emailVal,
+        consents: customer.consents || {
+          phone: true,
+          email: Boolean(emailVal && emailVal.includes('@')),
+          sms: true,
+          whatsapp: true
+        }
       });
-    } else {
-      setFormData({
-        group: currentGroup || customer?.keyloopGroup || 'BMW',
-        branch: customer?.preferredBranch || '10 - Sheikh Zayed Rd',
-        titleCode: 'Mr.',
-        firstName: '',
-        surname: '',
-        area: 'Deira',
-        city: 'Dubai',
-        country: 'United Arab Emirates',
-        mobile: currentMobile ? currentMobile.replace(/\D/g, '') : '',
-        email: ''
-      });
+      setFeedback(null);
+    } else if (mode === 'create') {
+      setFormData(prev => ({
+        group: currentGroup || prev.group || 'BMW',
+        branch: prev.branch || '10 - Sheikh Zayed Rd',
+        titleCode: prev.titleCode || 'Mr.',
+        firstName: prev.firstName || '',
+        surname: prev.surname || '',
+        area: prev.area || 'Deira',
+        city: prev.city || 'Dubai',
+        country: prev.country || 'United Arab Emirates',
+        mobile: prev.mobile || (currentMobile ? currentMobile.replace(/\D/g, '') : ''),
+        email: prev.email || '',
+        consents: prev.consents || {
+          phone: true,
+          email: false,
+          sms: true,
+          whatsapp: true
+        }
+      }));
     }
-    setFeedback(null);
-  }, [mode, customer, currentGroup, currentMobile]);
+  }, [mode, currentGroup, currentMobile]);
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -113,26 +176,79 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
       if (mode === 'create') {
         const res = await createCustomer(formData);
         if (res && res.ok) {
-          setFeedback({
+          const taskId = res.taskId || res.customer?.rpaTaskId;
+          const custNo = res.customer?.customerNumber;
+          const isConfirmed = Boolean(custNo && custNo.trim() !== '' && custNo !== 'PROSPECT');
+
+          const toastData = {
             type: 'success',
-            message: `Customer ${res.customer.fullName} registered successfully with Customer ID #${res.customer.customerNumber}!`
-          });
-          setTimeout(() => {
+            title: 'New customer registration successful!',
+            taskId: taskId || null,
+            customerNumber: isConfirmed ? custNo : null,
+            customerName: res.customer?.fullName || formData.firstName,
+            message: taskId 
+              ? `New customer registration successful! This is your Task ID: ${taskId}` 
+              : 'New customer registration successful!',
+            duration: 10
+          };
+
+          setFeedback(toastData);
+          if (showToast) {
+            showToast(toastData);
+          }
+
+          // Stay visible for 10 seconds with real-time countdown
+          setCountdown(10);
+
+          if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = setInterval(() => {
+            setCountdown(prev => {
+              if (prev === null || prev <= 1) {
+                clearInterval(countdownIntervalRef.current);
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+
+          if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+          autoCloseTimerRef.current = setTimeout(() => {
             if (onClose) onClose();
-          }, 1400);
+          }, 10000);
         } else {
           setFeedback({ type: 'error', message: 'Failed to create customer record.' });
         }
       } else {
         const res = await updateCustomer(formData);
         if (res && res.ok) {
-          setFeedback({
+          const toastData = {
             type: 'success',
-            message: `Customer profile updated successfully!`
-          });
-          setTimeout(() => {
+            title: 'Customer profile updated successfully!',
+            message: 'Customer profile updated successfully in Keyloop CRM!',
+            duration: 6
+          };
+
+          setFeedback(toastData);
+          if (showToast) {
+            showToast(toastData);
+          }
+          setCountdown(6);
+
+          if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = setInterval(() => {
+            setCountdown(prev => {
+              if (prev === null || prev <= 1) {
+                clearInterval(countdownIntervalRef.current);
+                return 0;
+              }
+              return prev - 1;
+            });
+          }, 1000);
+
+          if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+          autoCloseTimerRef.current = setTimeout(() => {
             if (onClose) onClose();
-          }, 1400);
+          }, 6000);
         } else {
           setFeedback({ type: 'error', message: 'Failed to update customer record.' });
         }
@@ -145,7 +261,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 relative">
       {/* 1. Header Card */}
       <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-200 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -189,13 +305,56 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
       {/* 2. Main Form Card (Page Component) */}
       <div className="bg-white rounded-xl p-5 sm:p-6 shadow-sm border border-gray-200 flex flex-col gap-5">
         {feedback && (
-          <div className={`p-3.5 rounded-lg border text-xs flex items-center gap-2.5 ${
+          <div className={`p-4 rounded-xl border text-xs flex flex-col gap-2.5 ${
             feedback.type === 'success' 
-              ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
-              : 'bg-rose-50 text-rose-800 border-rose-200'
+              ? 'bg-emerald-50 text-emerald-900 border-emerald-200' 
+              : 'bg-rose-50 text-rose-900 border-rose-200'
           }`}>
-            {feedback.type === 'success' ? <FaCheck className="text-emerald-600 text-sm shrink-0" /> : <FaExclamationTriangle className="text-rose-600 text-sm shrink-0" />}
-            <span className="font-semibold text-xs">{feedback.message}</span>
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {feedback.type === 'success' ? <FaCheckCircle className="text-emerald-600 text-base shrink-0" /> : <FaExclamationTriangle className="text-rose-600 text-base shrink-0" />}
+                <span className="font-bold text-sm">
+                  {feedback.title || (feedback.type === 'success' ? 'New customer registration successful!' : 'Error')}
+                </span>
+              </div>
+              {countdown !== null && countdown > 0 && (
+                <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
+                  Auto-closing in {countdown}s
+                </span>
+              )}
+            </div>
+
+            {feedback.taskId && (
+              <div className="p-2.5 bg-white/90 border border-emerald-300 rounded-lg flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <span className="text-[10px] uppercase font-bold text-emerald-700 block tracking-wider">This is your Task ID:</span>
+                  <span className="font-mono text-xs font-bold text-emerald-950 truncate block select-all">
+                    {feedback.taskId}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleCopyTaskId(feedback.taskId)}
+                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-[11px] font-bold rounded flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer shadow-2xs"
+                >
+                  {copiedTaskId ? (
+                    <>
+                      <FaCheck className="text-[10px]" />
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaCopy className="text-[10px]" />
+                      <span>Copy Task ID</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+            
+            {feedback.message && !feedback.taskId && (
+              <p className="font-medium text-xs">{feedback.message}</p>
+            )}
           </div>
         )}
 
@@ -218,7 +377,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 </label>
                 <select
                   value={formData.group}
-                  onChange={(e) => setFormData(prev => ({ ...prev, group: e.target.value }))}
+                  onChange={(e) => handleGroupChange(e.target.value)}
                   className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors shadow-2xs"
                 >
                   {GROUP_OPTIONS.map(grp => (
@@ -307,7 +466,18 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <input
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    const hasValid = Boolean(val && val.includes('@'));
+                    setFormData(prev => ({
+                      ...prev,
+                      email: val,
+                      consents: {
+                        ...prev.consents,
+                        email: hasValid ? prev.consents.email || true : false
+                      }
+                    }));
+                  }}
                   placeholder="e.g. tariq.bashir@example.com"
                   className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors shadow-2xs"
                 />
@@ -335,9 +505,12 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                   onChange={(e) => setFormData(prev => ({ ...prev, branch: e.target.value }))}
                   className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors shadow-2xs"
                 >
-                  {BRANCH_OPTIONS.map(br => (
-                    <option key={br} value={br}>{br}</option>
-                  ))}
+                  {currentBranches.map(br => {
+                    const val = `${br.code} - ${br.name}`;
+                    return (
+                      <option key={br.code} value={val}>{val}</option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -384,6 +557,88 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                   className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors shadow-2xs"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Section 4: Communication Consents */}
+          <div>
+            <div className="pb-2 mb-3 border-b border-gray-100 flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                4. Communication Consents & Channel Permissions
+              </span>
+              <span className="text-[11px] text-gray-400">Opt-in marketing and notification channels</span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <label className="p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg flex items-center gap-2.5 cursor-pointer transition-all">
+                <input
+                  type="checkbox"
+                  checked={formData.consents.phone}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    consents: { ...prev.consents, phone: e.target.checked }
+                  }))}
+                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                />
+                <div className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
+                  <FaPhoneAlt className="text-blue-500 text-[10px]" />
+                  <span>Phone Calls</span>
+                </div>
+              </label>
+
+              <label className="p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg flex items-center gap-2.5 cursor-pointer transition-all">
+                <input
+                  type="checkbox"
+                  checked={formData.consents.sms}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    consents: { ...prev.consents, sms: e.target.checked }
+                  }))}
+                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                />
+                <div className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
+                  <FaCommentAlt className="text-blue-500 text-[10px]" />
+                  <span>SMS</span>
+                </div>
+              </label>
+
+              <label className="p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg flex items-center gap-2.5 cursor-pointer transition-all">
+                <input
+                  type="checkbox"
+                  checked={formData.consents.whatsapp}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    consents: { ...prev.consents, whatsapp: e.target.checked }
+                  }))}
+                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                />
+                <div className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
+                  <FaWhatsapp className="text-emerald-500 text-xs" />
+                  <span>WhatsApp</span>
+                </div>
+              </label>
+
+              <label className={`p-2.5 border rounded-lg flex items-center gap-2.5 transition-all ${
+                formData.email && formData.email.includes('@') 
+                  ? 'bg-gray-50 hover:bg-gray-100 border-gray-200 cursor-pointer' 
+                  : 'bg-gray-100/70 border-gray-200 opacity-60 cursor-not-allowed'
+              }`}>
+                <input
+                  type="checkbox"
+                  disabled={!formData.email || !formData.email.includes('@')}
+                  checked={Boolean(formData.email && formData.email.includes('@') && formData.consents.email)}
+                  onChange={(e) => setFormData(prev => ({
+                    ...prev,
+                    consents: { ...prev.consents, email: e.target.checked }
+                  }))}
+                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
+                />
+                <div className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
+                  <FaEnvelope className="text-blue-500 text-[10px]" />
+                  <span>Email {(!formData.email || !formData.email.includes('@')) && <span className="text-[10px] text-gray-400 font-normal">(N/A)</span>}</span>
+                </div>
+              </label>
             </div>
           </div>
 

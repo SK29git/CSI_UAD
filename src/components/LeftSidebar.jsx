@@ -186,12 +186,12 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
   }
 
   return (
-    <div className="w-full lg:w-[310px] xl:w-[330px] flex-shrink-0 flex flex-col gap-4 transition-all duration-300">
+    <div className="w-full sm:w-[260px] lg:w-[275px] xl:w-[295px] flex-shrink-0 flex flex-col gap-2.5 transition-all duration-300">
       {/* 0. Top Action Button: Create New Customer */}
       <button
         type="button"
         onClick={() => openCustomerForm('create')}
-        className="w-full py-2.5 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs hover:shadow flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+        className="w-full py-2 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs rounded-lg shadow-2xs hover:shadow-xs flex items-center justify-center gap-1.5 transition-all active:scale-[0.98] cursor-pointer"
         title="Create a new customer profile"
       >
         <FaUserPlus className="text-xs" />
@@ -206,15 +206,15 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Mobile, Email, VIN, Plate, Cust #, Prospect..."
-            className="w-full pl-3 pr-16 py-2 bg-white hover:border-gray-400 focus:bg-white border border-gray-300 focus:border-blue-600 rounded-xl text-xs font-semibold text-gray-800 placeholder-gray-400 focus:outline-none transition-all shadow-2xs"
+            placeholder="Search Phone, Email, VIN, Cust #..."
+            className="w-full pl-2.5 pr-14 py-1.5 bg-white hover:border-gray-400 focus:bg-white border border-slate-200/90 focus:border-blue-600 rounded-lg text-xs font-semibold text-gray-800 placeholder-gray-400 focus:outline-none transition-all shadow-2xs"
           />
-          <div className="absolute right-1.5 flex items-center gap-1">
+          <div className="absolute right-1 flex items-center gap-1">
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => { setSearchQuery(''); setSearchStatus(null); }}
-                className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 text-[10px] transition-colors"
+                className="p-0.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 text-[9px] transition-colors"
                 title="Clear"
               >
                 ✕
@@ -223,24 +223,24 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
             <button
               type="submit"
               disabled={isSearching || !searchQuery.trim()}
-              className="w-7 h-7 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-lg transition-colors shadow-2xs cursor-pointer flex items-center justify-center shrink-0"
+              className="w-6 h-6 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-md transition-colors shadow-2xs cursor-pointer flex items-center justify-center shrink-0"
               title="Search Mobile, Email, Plate, VIN, Cust #, or Prospect #"
             >
-              {isSearching ? <FaSpinner className="animate-spin text-xs" /> : <FaSearch className="text-xs" />}
+              {isSearching ? <FaSpinner className="animate-spin text-[10px]" /> : <FaSearch className="text-[10px]" />}
             </button>
           </div>
         </form>
 
         {/* Search Result Feedback Popover */}
         {searchStatus && (
-          <div className={`absolute top-full left-0 right-0 mt-1.5 z-30 px-3 py-1.5 rounded-lg shadow-md border text-[11px] font-semibold flex items-center justify-between gap-1.5 animate-in fade-in slide-in-from-top-1 ${
+          <div className={`absolute top-full left-0 right-0 mt-1 z-30 px-2.5 py-1 rounded-lg shadow-md border text-[11px] font-semibold flex items-center justify-between gap-1 animate-in fade-in slide-in-from-top-1 ${
             searchStatus.type === 'success' 
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200' 
               : 'bg-rose-50 text-rose-800 border-rose-200'
           }`}>
             <div className="flex items-center gap-1.5 truncate">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${searchStatus.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-              <span className="truncate">{searchStatus.message}</span>
+              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${searchStatus.type === 'success' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              <span className="truncate text-[10px]">{searchStatus.message}</span>
             </div>
             <button 
               type="button" 
@@ -254,30 +254,32 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
       </div>
 
       {/* 1. Profile Overview Card */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 relative">
+      <div className="bg-white rounded-xl p-3 shadow-xs border border-slate-200/90 relative">
         {/* Collapse Toggle Button */}
         {onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
-            className="absolute top-3 right-3 w-7 h-7 rounded-lg bg-gray-100 text-gray-500 hover:bg-blue-600 hover:text-white flex items-center justify-center transition-colors shadow-2xs z-10"
+            className="absolute top-2.5 right-2.5 w-6 h-6 rounded-md bg-gray-100 hover:bg-blue-600 hover:text-white text-gray-400 flex items-center justify-center transition-colors shadow-2xs z-10 cursor-pointer"
             title="Collapse Left Panel"
           >
-            <FaChevronLeft className="text-xs" />
+            <FaChevronLeft className="text-[10px]" />
           </button>
         )}
 
         {loading ? (
-          <div className="py-6 flex flex-col items-center justify-center gap-2 text-gray-500 text-xs">
-            <FaSpinner className="animate-spin text-blue-600 text-lg" />
-            <span>Fetching Customer Details...</span>
+          <div className="py-4 flex flex-col items-center justify-center gap-1.5 text-gray-500 text-xs">
+            <FaSpinner className="animate-spin text-blue-600 text-base" />
+            <span className="text-[11px]">Fetching Customer Details...</span>
           </div>
         ) : !customer ? (
-          <div className="py-6 flex flex-col items-center justify-center gap-2 text-gray-500 text-xs text-center">
-            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-1">
-              <FaUser className="text-base" />
+          <div className="py-3 px-1 flex flex-col items-center justify-center gap-1 text-gray-500 text-xs text-center">
+            <div className="w-8 h-8 rounded-full bg-blue-50/80 border border-blue-100/70 flex items-center justify-center text-blue-500 mb-0.5 shadow-2xs">
+              <FaUser className="text-xs" />
             </div>
-            <span className="font-bold text-gray-800 text-sm">No Customer Profile</span>
-            <span className="text-[11px] text-gray-400">Search with a valid phone, email, plate, or customer/prospect ID</span>
+            <span className="font-bold text-gray-900 text-xs">No Customer Profile</span>
+            <span className="text-[10px] text-gray-400 max-w-[210px] leading-tight">
+              Search by phone, email, VIN, plate, or customer ID
+            </span>
           </div>
         ) : (
           <div className="flex flex-col gap-2.5 mb-3">
@@ -324,7 +326,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                     <span>Edit</span>
                   </button>
 
-                  {customer?.isProspect ? (
+                  {customer?.isProspect && !customer?.isNewRegistration && customer?.customerType !== 'CUSTOMER' ? (
                     <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs flex items-center gap-1 ${
                       customer?.customerType === 'CONVERTED_PROSPECT'
                         ? 'bg-emerald-600 text-white'
@@ -336,12 +338,15 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                     </span>
                   ) : (
                     <>
+                      <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs flex items-center gap-1">
+                        <span>✓</span> {customer?.isNewRegistration || !customer?.customerNumber ? 'NEW CUSTOMER' : 'CUSTOMER'}
+                      </span>
                       {customer?.vip === true && (
                         <span className="bg-amber-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase flex items-center gap-1 shadow-xs">
                           <FaCrown className="text-[9px]" /> VIP
                         </span>
                       )}
-                      {loyaltyTier !== 'N/A' && (
+                      {loyaltyTier !== 'N/A' && loyaltyTier !== 'NEW' && (
                         <span className="bg-purple-700 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
                           {loyaltyTier}
                         </span>
@@ -378,12 +383,18 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 text-xs">
           <div className="grid grid-cols-2 gap-y-3 gap-x-2">
             <div>
-              <span className="text-gray-400 block text-[11px]">{customer?.isProspect ? 'Prospect Since' : 'Customer Since'}</span>
+              <span className="text-gray-400 block text-[11px]">
+                {customer?.isProspect && !customer?.isNewRegistration && customer?.customerType !== 'CUSTOMER' ? 'Prospect Since' : 'Customer Since'}
+              </span>
               <span className="font-semibold text-gray-800">{customerSince}</span>
             </div>
             <div>
-              <span className="text-gray-400 block text-[11px]">{customer?.isProspect ? 'Prospect / Lead ID' : 'Customer ID'}</span>
-              <span className="font-semibold text-gray-800">{customer?.prospectNumber || customerId}</span>
+              <span className="text-gray-400 block text-[11px]">
+                {customer?.isProspect && !customer?.isNewRegistration && customer?.customerType !== 'CUSTOMER' ? 'Prospect / Lead ID' : 'Customer ID'}
+              </span>
+              <span className="font-semibold text-gray-800">
+                {customer?.customerNumber || (customer?.rpaTaskId ? `Pending (#${customer.rpaTaskId.slice(0, 8)})` : (customer?.isNewRegistration ? 'Pending Keyloop ID' : (customer?.prospectNumber || customerId || 'Pending')))}
+              </span>
             </div>
 
             <div>
@@ -395,15 +406,30 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <span className="font-semibold text-gray-800">{getFormattedDate ? getFormattedDate(customer?.lastUpdated) : (customer?.lastUpdated || 'N/A')}</span>
             </div>
 
-            {customer?.isProspect ? (
+            {customer?.isProspect && !customer?.isNewRegistration && customer?.customerType !== 'CUSTOMER' ? (
               <>
                 <div>
                   <span className="text-gray-400 block text-[11px]">Lead Source</span>
-                  <span className="font-semibold text-indigo-700 truncate block">{customer?.leadSource || 'Web / Inbound'}</span>
+                  <span className="font-semibold text-indigo-700 truncate block">{customer?.leadSource || 'Inbound'}</span>
                 </div>
                 <div>
                   <span className="text-gray-400 block text-[11px]">Lead Status</span>
                   <span className="font-semibold text-amber-700">{customer?.status || 'OPEN'}</span>
+                </div>
+              </>
+            ) : (customer?.isNewRegistration || !customer?.customerNumber) ? (
+              <>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Registration Source</span>
+                  <span className="font-semibold text-indigo-700 truncate block">
+                    {customer?.leadSource && !customer.leadSource.toLowerCase().includes('agent inbound') ? customer.leadSource : 'Inbound'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Account Status</span>
+                  <span className="font-semibold text-blue-700">
+                    {customer?.status || 'QUEUED'}
+                  </span>
                 </div>
               </>
             ) : (

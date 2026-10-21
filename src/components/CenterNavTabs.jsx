@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCustomer } from '../context/CustomerContext';
+import { useCustomer, isExistingCustomer } from '../context/CustomerContext';
 import { 
   FaThLarge,
   FaCar, 
@@ -86,7 +86,8 @@ export default function CenterNavTabs({
   const getSubTabIcon = (id) => {
     switch (id) {
       case 'Overview': return <FaHome className="text-xs" />;
-      case 'New Lead': return <FaUserPlus className="text-xs" />;
+      case 'New Lead':
+      case 'New Enquiry': return <FaUserPlus className="text-xs" />;
       case 'Enquiries': return <FaClipboardList className="text-xs" />;
       case 'Test Drive': return <FaCarSide className="text-xs" />;
       case 'Vehicle Orders': return <FaTruck className="text-xs" />;
@@ -137,9 +138,13 @@ export default function CenterNavTabs({
     { id: 'Open Bookings', label: 'Open Bookings' },
   ];
 
+  const hasCustomer = isExistingCustomer(customer);
+  const leadSubTabLabel = hasCustomer ? 'New Enquiry' : 'New Lead';
+  const leadSubTabId = hasCustomer ? 'New Enquiry' : 'New Lead';
+
   const salesSubTabs = [
     { id: 'Overview', label: 'Overview' },
-    { id: 'New Lead', label: 'New Lead' },
+    { id: leadSubTabId, label: leadSubTabLabel },
     { id: 'Enquiries', label: 'Enquiries' },
     { id: 'Test Drive', label: 'Test Drive' },
     { id: 'Vehicle Orders', label: 'Vehicle Orders' },
@@ -206,15 +211,17 @@ export default function CenterNavTabs({
       </div>
 
       {/* ROW 2: Sub-Navigation Workflow Bar with Visual Pill and Icons */}
-      <div className="flex items-center justify-start sm:justify-center gap-1.5 sm:gap-2 overflow-x-auto text-xs font-medium no-scrollbar py-0.5">
+      <div className="flex items-center justify-start xl:justify-center gap-1 sm:gap-1.5 overflow-x-auto text-xs font-medium no-scrollbar py-0.5 w-full">
         {currentSubTabs.map((tab) => {
-          const isActive = activeSubTab === tab.id;
+          const isLeadOrEnquiryTab = tab.id === 'New Enquiry' || tab.id === 'New Lead';
+          const isLeadOrEnquiryActive = activeSubTab === 'New Enquiry' || activeSubTab === 'New Lead';
+          const isActive = activeSubTab === tab.id || (isLeadOrEnquiryTab && isLeadOrEnquiryActive);
           const tabIcon = getSubTabIcon(tab.id);
           return (
             <button
               key={tab.id}
               onClick={() => setActiveSubTab && setActiveSubTab(tab.id)}
-              className={`px-2.5 py-1 rounded-lg relative flex items-center gap-1.5 whitespace-nowrap cursor-pointer transition-all text-xs ${
+              className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg relative flex items-center gap-1 sm:gap-1.5 whitespace-nowrap cursor-pointer transition-all text-[11px] sm:text-xs shrink-0 ${
                 isActive 
                   ? 'bg-blue-50 text-blue-600 border border-blue-200 font-bold shadow-2xs' 
                   : 'text-gray-600 hover:text-gray-900 font-semibold hover:bg-gray-50/80'

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { apiFetch } from '../utils/api';
+import { apiFetch, executeRpaCase } from '../utils/api';
+import GlobalToast from '../components/GlobalToast';
 
 const CustomerContext = createContext(null);
 
@@ -275,8 +276,22 @@ export const normalizeE00MIRecord = (e, fallbackGroup = 'BMW', fallbackMobile = 
   };
 };
 
+/**
+ * Checks if a customer object represents a confirmed existing Keyloop/Autoline customer
+ * (as opposed to a brand-new lead, queued registration, or unconverted prospect)
+ */
+export const isExistingCustomer = (c) => {
+  if (!c) return false;
+  const custNo = String(c.customerNumber || '').trim();
+  if (!custNo || custNo === 'PROSPECT' || custNo === 'null' || custNo === 'undefined') return false;
+  if (c.isProspect && c.customerType !== 'CONVERTED_PROSPECT') return false;
+  if (c.customerType === 'PROSPECT' || c.customerType === 'NEW_CUSTOMER') return false;
+  if (c.isNewRegistration && !custNo) return false;
+  return true;
+};
+
 export function CustomerProvider({ children }) {
-  const [customer, setCustomer] = useState(PROFILE_DEMO_DATA);
+  const [customer, setCustomer] = useState(null);
   const [customerList, setCustomerList] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -288,6 +303,11 @@ export function CustomerProvider({ children }) {
   const [customerFormMode, setCustomerFormMode] = useState(null); // 'create' | 'edit' | null
   const openCustomerForm = (mode = 'create') => setCustomerFormMode(mode);
   const closeCustomerForm = () => setCustomerFormMode(null);
+
+  // App-wide floating toast notification (persists across views/modals)
+  const [toastNotification, setToastNotification] = useState(null);
+  const showToast = (toast) => setToastNotification(toast);
+  const hideToast = () => setToastNotification(null);
 
   // Group state from URL or detected customer
   const [currentGroup, setCurrentGroup] = useState(() => {
@@ -1364,54 +1384,73 @@ export function CustomerProvider({ children }) {
     }
   };
 
-  // Create New Customer Handler matching Genesys CCaaS payload schema
-  const createCustomer = async (details) => {
+  // Create New Customer Handler matching Keyloop RPA / CCaaS payload schema
+  const createCustomer = async (details, onProgress = null) => {
     setLoading(true);
     setError(null);
-    const payload = {
-      caseType: "CREATE_CUSTOMER",
-      callbackUrl: "https://ccaas.agmcgroup.ae",
-      createdBy: agentId || "genesys",
-      details: {
-        group: details.group || currentGroup || "BMW",
-        branch: details.branch || "10 - Sheikh Zayed Rd",
-        titleCode: details.titleCode || "Mr.",
-        firstName: details.firstName || "",
-        surname: details.surname || "",
-        area: details.area || "",
-        city: details.city || "Dubai",
-        country: details.country || "United Arab Emirates",
-        mobile: details.mobile || "",
-        email: details.email || ""
-      }
+    const grp = details.group || currentGroup || "BMW";
+    const caseDetails = {
+      group: grp,
+      branch: details.branch || (grp.toUpperCase().includes('GEELY') ? "10 - Geely Group - SZR" : "10 - Sheikh Zayed Rd"),
+      titleCode: details.titleCode || "Mr.",
+      firstName: details.firstName || "",
+      surname: details.surname || "",
+      area: details.area || "Deira",
+      city: details.city || "Dubai",
+      country: details.country || "United Arab Emirates",
+      mobile: details.mobile || "",
+      email: details.email || ""
     };
 
-    console.log("Submitting CREATE_CUSTOMER payload:", payload);
+    console.log("Submitting RPA CREATE_CUSTOMER payload:", caseDetails);
 
-    let apiData = null;
+    let rpaResult = null;
+    let rpaTaskId = null;
 
     try {
-      // Attempt backend case creation endpoint
-      const res = await apiFetch('/api/v1/cases', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const res = await executeRpaCase("CREATE_CUSTOMER", caseDetails, {
+        createdBy: agentId || "genesys",
+        callbackUrl: "http://localhost:9999/hook",
+        onProgress: (status, taskData) => {
+          if (taskData?.taskId) rpaTaskId = taskData.taskId;
+          if (onProgress) onProgress(status, taskData);
+        }
       });
       if (res && res.ok) {
-        apiData = res.data;
+        rpaResult = res.result;
+        if (res.taskId) rpaTaskId = res.taskId;
       }
     } catch (e) {
-      console.warn("Backend /api/v1/cases POST error (fallback to local state):", e);
+      console.warn("RPA CREATE_CUSTOMER error (fallback to local state):", e);
     }
 
-    // Generate unique customer ID if not provided by backend
-    const generatedCustNo = apiData?.customerNumber || apiData?.id || String(Math.floor(100000 + Math.random() * 900000));
+    // Capture customerId and enquiryId returned by RPA (never fabricate fake numbers)
+    const autolineCustNo = rpaResult?.customerId || rpaResult?.customerNumber || rpaResult?.id || "";
+    const generatedEnquiryId = rpaResult?.enquiryId || rpaResult?.enquiryNumber || null;
     const branchCodeNum = details.branch ? details.branch.split(' - ')[0].trim() : "10";
 
+    const hasEmail = Boolean(details.email && details.email.trim() && details.email.includes('@'));
+    const hasMobile = Boolean(details.mobile && details.mobile.replace(/\D/g, '').length >= 7);
+
+    const userConsents = details.consents || {};
+    const resolvedConsents = {
+      phone: userConsents.phone !== undefined ? Boolean(userConsents.phone) : hasMobile,
+      sms: userConsents.sms !== undefined ? Boolean(userConsents.sms) : hasMobile,
+      whatsapp: userConsents.whatsapp !== undefined ? Boolean(userConsents.whatsapp) : hasMobile,
+      email: userConsents.email !== undefined ? Boolean(userConsents.email && hasEmail) : hasEmail
+    };
+
     const newProfile = {
-      keyloopGroup: details.group || currentGroup || "BMW",
-      customerNumber: generatedCustNo,
-      customerType: "PROSPECT",
+      keyloopGroup: grp,
+      customerNumber: autolineCustNo,
+      enquiryNumber: generatedEnquiryId,
+      customerType: autolineCustNo ? "CUSTOMER" : "NEW_CUSTOMER",
+      isProspect: false,
+      isNewRegistration: !autolineCustNo,
+      rpaTaskId: rpaTaskId || null,
+      rpaStatus: autolineCustNo ? 'COMPLETED' : 'QUEUED',
+      leadSource: details.leadSource || "Inbound",
+      status: autolineCustNo ? "ACTIVE" : "QUEUED",
       salutation: details.titleCode || "Mr.",
       firstName: details.firstName || "",
       middleName: "",
@@ -1419,9 +1458,9 @@ export function CustomerProvider({ children }) {
       fullName: `${details.titleCode ? details.titleCode + ' ' : ''}${details.firstName || ''} ${details.surname || ''}`.trim(),
       mobile: details.mobile || "",
       mobileRaw: (details.mobile || "").replace(/\D/g, ''),
-      mobileValid: Boolean(details.mobile && details.mobile.length >= 7),
+      mobileValid: hasMobile,
       email: details.email || "",
-      emailValid: Boolean(details.email && details.email.includes('@')),
+      emailValid: hasEmail,
       location: {
         flatBuilding: "N/A",
         area: details.area || "Deira",
@@ -1435,18 +1474,24 @@ export function CustomerProvider({ children }) {
       nationality: details.country || "United Arab Emirates",
       vip: false,
       doNotContact: false,
-      consents: {
-        email: true,
-        phone: true,
-        sms: true,
-        whatsapp: true
-      },
+      consents: resolvedConsents,
       language: "English",
-      loyaltyTier: "STANDARD"
+      loyaltyTier: autolineCustNo ? "STANDARD" : "NEW",
+      vehicles: [],
+      enquiries: generatedEnquiryId ? [{
+        enquiryNumber: generatedEnquiryId,
+        date: new Date().toISOString().split('T')[0],
+        status: "Open",
+        brand: grp,
+        branch: details.branch || "10 - Sheikh Zayed Rd"
+      }] : []
     };
 
     // Update active state
     setCustomer(newProfile);
+    if (generatedEnquiryId) {
+      setEnquiryNumber(generatedEnquiryId);
+    }
     setCustomerList(prev => [newProfile, ...(prev || [])]);
     setSelectedIndex(0);
     setCurrentGroup(newProfile.keyloopGroup);
@@ -1464,7 +1509,14 @@ export function CustomerProvider({ children }) {
     }
 
     setLoading(false);
-    return { ok: true, payload, customer: newProfile };
+    return { 
+      ok: true, 
+      payload: caseDetails, 
+      customer: newProfile,
+      rpaResult,
+      taskId: rpaTaskId,
+      status: autolineCustNo ? 'COMPLETED' : 'QUEUED'
+    };
   };
 
   // Update Customer Handler (edit existing customer name, mobile, email, branch, address, etc.)
@@ -1475,7 +1527,7 @@ export function CustomerProvider({ children }) {
 
     const payload = {
       caseType: "UPDATE_CUSTOMER",
-      callbackUrl: "https://ccaas.agmcgroup.ae",
+      callbackUrl: "http://localhost:9999/hook",
       createdBy: agentId || "genesys",
       customerNumber: customer.customerNumber,
       details: {
@@ -1659,9 +1711,13 @@ export function CustomerProvider({ children }) {
       updateCustomer,
       customerFormMode,
       openCustomerForm,
-      closeCustomerForm
+      closeCustomerForm,
+      toastNotification,
+      showToast,
+      hideToast
     }}>
       {children}
+      <GlobalToast notification={toastNotification} onClose={hideToast} />
     </CustomerContext.Provider>
   );
 }

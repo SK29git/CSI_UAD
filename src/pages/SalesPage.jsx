@@ -10,11 +10,12 @@ import SalesAfterSalesView from '../components/SalesAfterSalesView';
 import SalesEnquiriesView from '../components/SalesEnquiriesView';
 import RightSidebar from '../components/RightSidebar';
 import CustomerFormView from '../components/CustomerFormView';
-import { useCustomer } from '../context/CustomerContext';
+import { useCustomer, isExistingCustomer } from '../context/CustomerContext';
 
 export default function SalesPage() {
-  const { group, customerFormMode, closeCustomerForm } = useCustomer();
-  const [activeSubTab, setActiveSubTab] = useState('New Lead');
+  const { customer, group, customerFormMode, closeCustomerForm } = useCustomer();
+  const hasCustomer = isExistingCustomer(customer);
+  const [activeSubTab, setActiveSubTab] = useState(() => (hasCustomer ? 'New Enquiry' : 'New Lead'));
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -52,10 +53,16 @@ export default function SalesPage() {
     if (modified) {
       window.history.replaceState(null, '', `/sales?${params.toString()}`);
     }
-    if (search.toLowerCase().includes('salesnewlead')) {
-      setActiveSubTab('New Lead');
+    if (search.toLowerCase().includes('salesnewlead') || search.toLowerCase().includes('newenquiry')) {
+      setActiveSubTab(hasCustomer ? 'New Enquiry' : 'New Lead');
     }
-  }, [group]);
+  }, [group, hasCustomer]);
+
+  useEffect(() => {
+    if (activeSubTab === 'New Enquiry' || activeSubTab === 'New Lead') {
+      setActiveSubTab(hasCustomer ? 'New Enquiry' : 'New Lead');
+    }
+  }, [hasCustomer]);
 
   const renderSalesContent = () => {
     if (customerFormMode) {
@@ -65,6 +72,7 @@ export default function SalesPage() {
     switch (activeSubTab) {
       case 'Overview':
         return <SalesOverviewView />;
+      case 'New Enquiry':
       case 'New Lead':
         return <SalesNewLeadView />;
       case 'Enquiries':

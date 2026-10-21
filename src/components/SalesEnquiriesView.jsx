@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
-import { apiFetch } from '../utils/api';
+import { apiFetch, executeRpaCase } from '../utils/api';
+import { getBranchesForGroup } from '../data/brandModels';
 import { 
   FaSearch, 
   FaFilter, 
@@ -20,7 +21,8 @@ import {
   FaChevronUp,
   FaEnvelope,
   FaIdBadge,
-  FaTag
+  FaTag,
+  FaTimes
 } from 'react-icons/fa';
 import { getFullMobileNumber } from '../utils/phoneUtils';
 
@@ -62,6 +64,84 @@ export default function SalesEnquiriesView() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [expandedEnquiryId, setExpandedEnquiryId] = useState(null);
   const [detailCache, setDetailCache] = useState({});
+
+  // Showroom Appointment Modal (RPA: BOOK_SHOWROOM_APPOINTMENT)
+  const [showroomModalOpen, setShowroomModalOpen] = useState(false);
+  const [showroomEnquiryId, setShowroomEnquiryId] = useState("");
+  const [showroomDate, setShowroomDate] = useState("");
+  const [showroomTime, setShowroomTime] = useState("11:00");
+  const [showroomBranch, setShowroomBranch] = useState("");
+  const [showroomManufacturer, setShowroomManufacturer] = useState("");
+  const [actionSubmitting, setActionSubmitting] = useState(false);
+  const [actionProgressStatus, setActionProgressStatus] = useState(null);
+  const [actionToast, setActionToast] = useState(null);
+
+  const handleOpenShowroomAppt = (enq) => {
+    const enqId = String(enq?.enquiryId || enq?.id || '');
+    setShowroomEnquiryId(enqId);
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+    setShowroomDate(tomorrow);
+    setShowroomTime("11:00");
+
+    const dynamicGroup = group || enq?.make || 'BMW';
+    const branches = getBranchesForGroup(dynamicGroup);
+    const defBranch = branches[0] ? `${branches[0].code} - ${branches[0].name}` : '10 - Sheikh Zayed Rd';
+    setShowroomBranch(defBranch);
+    setShowroomManufacturer(enq?.make || dynamicGroup);
+
+    setActionProgressStatus(null);
+    setActionToast(null);
+    setShowroomModalOpen(true);
+  };
+
+  const handleConfirmShowroomAppt = async (e) => {
+    e.preventDefault();
+    if (!showroomEnquiryId.trim()) {
+      setActionToast({ isError: true, message: "Enquiry ID is required to book a showroom appointment." });
+      return;
+    }
+    if (!showroomDate) {
+      setActionToast({ isError: true, message: "Please select a valid date." });
+      return;
+    }
+
+    setActionSubmitting(true);
+    setActionProgressStatus('QUEUED');
+    setActionToast(null);
+
+    const dynamicGroup = group || showroomManufacturer || 'BMW';
+    const requestedAt = `${showroomDate}T${showroomTime}:00`;
+
+    const payload = {
+      enquiryId: showroomEnquiryId.trim(),
+      group: dynamicGroup,
+      manufacturer: showroomManufacturer || dynamicGroup,
+      branch: showroomBranch,
+      requestedAt
+    };
+
+    try {
+      const result = await executeRpaCase("BOOK_SHOWROOM_APPOINTMENT", payload, {
+        createdBy: "genesys",
+        callbackUrl: "http://localhost:9999/hook",
+        onProgress: (status) => setActionProgressStatus(status)
+      });
+
+      setActionToast({
+        isError: false,
+        message: `Showroom appointment for Enquiry #${showroomEnquiryId} booked successfully!`,
+        taskId: result?.taskId
+      });
+      setTimeout(() => {
+        setShowroomModalOpen(false);
+      }, 2500);
+    } catch (err) {
+      console.error("Showroom Appt RPA error:", err);
+      setActionToast({ isError: true, message: err.message || "Failed to book showroom appointment via Keyloop RPA." });
+    } finally {
+      setActionSubmitting(false);
+    }
+  };
 
   const fetchEnquiries = async () => {
     setLoading(true);
@@ -150,6 +230,36 @@ export default function SalesEnquiriesView() {
   return (
     <div className="flex flex-col gap-3 text-xs font-sans">
       
+      {/* Action Notification Toast */}
+      {actionToast && (
+        <div className={`p-3 rounded-xl flex items-center justify-between border shadow-2xs animate-fade-in ${
+          actionToast.isError
+            ? 'bg-rose-50 border-rose-200 text-rose-900'
+            : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+        }`}>
+          <div className="flex items-center gap-2.5">
+            <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold ${
+              actionToast.isError ? 'bg-rose-600' : 'bg-emerald-600'
+            }`}>
+              {actionToast.isError ? '✕' : '✓'}
+            </div>
+            <div>
+              <span className="font-bold block text-xs">{actionToast.message}</span>
+              {actionToast.taskId && (
+                <span className="text-[10px] font-mono text-emerald-700 block">RPA Task ID: #{actionToast.taskId}</span>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionToast(null)}
+            className="text-xs font-bold text-gray-400 hover:text-gray-700 cursor-pointer p-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Header & Filter Bar (Fixed / Stays in view) */}
       <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-2xs flex flex-col gap-3 shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
@@ -288,17 +398,28 @@ export default function SalesEnquiriesView() {
                     )}
                   </div>
 
-                  <button
-                    onClick={() => handleToggleDetails(enq)}
-                    className="text-blue-600 hover:text-blue-800 font-bold text-[11px] flex items-center gap-1 cursor-pointer bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors"
-                  >
-                    <span>{isExpanded ? 'Hide Details' : 'View Details'}</span>
-                    {isExpanded ? (
-                      <FaChevronUp className="text-[9px]" />
-                    ) : (
-                      <FaArrowRight className="text-[9px]" />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenShowroomAppt(enq)}
+                      className="text-purple-700 hover:text-purple-900 font-bold text-[11px] flex items-center gap-1 cursor-pointer bg-purple-50 hover:bg-purple-100 border border-purple-200 px-2.5 py-1 rounded-md transition-colors shadow-2xs"
+                      title="Book Showroom Appointment via Keyloop RPA"
+                    >
+                      <FaUser className="text-[9px]" />
+                      <span>Showroom Appt</span>
+                    </button>
+                    <button
+                      onClick={() => handleToggleDetails(enq)}
+                      className="text-blue-600 hover:text-blue-800 font-bold text-[11px] flex items-center gap-1 cursor-pointer bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors"
+                    >
+                      <span>{isExpanded ? 'Hide Details' : 'View Details'}</span>
+                      {isExpanded ? (
+                        <FaChevronUp className="text-[9px]" />
+                      ) : (
+                        <FaArrowRight className="text-[9px]" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Card Primary Summary Row */}
@@ -607,6 +728,142 @@ export default function SalesEnquiriesView() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ================================================================ */}
+      {/* BOOK SHOWROOM APPOINTMENT MODAL (RPA: BOOK_SHOWROOM_APPOINTMENT) */}
+      {/* ================================================================ */}
+      {showroomModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-xs p-4 animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full overflow-hidden flex flex-col">
+            <div className="bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 text-white p-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
+                  <FaUser className="text-sm" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm leading-tight">Book Showroom Appointment</h3>
+                  <span className="text-[10px] text-gray-400 font-mono">
+                    Enquiry #{showroomEnquiryId} • Group: {group || 'BMW'}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowroomModalOpen(false)}
+                className="w-7 h-7 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <FaTimes className="text-xs" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmShowroomAppt} className="p-5 flex flex-col gap-4 text-xs">
+              <div>
+                <label className="text-gray-600 font-bold block mb-1">
+                  Enquiry ID <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={showroomEnquiryId}
+                  onChange={(e) => setShowroomEnquiryId(e.target.value)}
+                  placeholder="e.g. 567983"
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-mono font-bold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-600 font-bold block mb-1">
+                  Manufacturer / Brand
+                </label>
+                <input
+                  type="text"
+                  value={showroomManufacturer}
+                  onChange={(e) => setShowroomManufacturer(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-bold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-gray-600 font-bold block mb-1">
+                  Showroom Branch <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={showroomBranch}
+                  onChange={(e) => setShowroomBranch(e.target.value)}
+                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                >
+                  {getBranchesForGroup(group || 'BMW').map(b => (
+                    <option key={b.code} value={`${b.code} - ${b.name}`}>
+                      {b.code} - {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-gray-600 font-bold block mb-1">
+                    Appointment Date <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={showroomDate}
+                    onChange={(e) => setShowroomDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-gray-600 font-bold block mb-1">
+                    Requested Time <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={showroomTime}
+                    onChange={(e) => setShowroomTime(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {actionSubmitting && (
+                <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-3 text-xs text-purple-900 animate-pulse">
+                  <FaSpinner className="animate-spin text-purple-600 text-sm shrink-0" />
+                  <div className="flex-1">
+                    <span className="font-bold">
+                      {actionProgressStatus === 'QUEUED' && 'Appointment case queued in RPA broker...'}
+                      {actionProgressStatus === 'CLAIMED' && 'Autoline RPA bot scheduling showroom appointment in Keyloop...'}
+                      {actionProgressStatus === 'COMPLETED' && 'Successfully scheduled!'}
+                      {!actionProgressStatus && 'Submitting showroom appointment case...'}
+                    </span>
+                    <span className="block text-[10px] text-purple-700">Connecting to Keyloop intake API</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  disabled={actionSubmitting}
+                  onClick={() => setShowroomModalOpen(false)}
+                  className="px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 font-semibold cursor-pointer text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={actionSubmitting}
+                  className="px-4 py-1.5 rounded-lg bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white font-bold cursor-pointer text-xs shadow-2xs flex items-center gap-1.5"
+                >
+                  {actionSubmitting ? <FaSpinner className="animate-spin text-xs" /> : <FaCheckCircle className="text-xs" />}
+                  <span>Confirm Showroom Appointment</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 
