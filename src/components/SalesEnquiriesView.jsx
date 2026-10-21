@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useCustomer } from '../context/CustomerContext';
 import { apiFetch, executeRpaCase } from '../utils/api';
 import { getBranchesForGroup } from '../data/brandModels';
@@ -22,7 +23,8 @@ import {
   FaEnvelope,
   FaIdBadge,
   FaTag,
-  FaTimes
+  FaTimes,
+  FaMapMarkerAlt
 } from 'react-icons/fa';
 import { getFullMobileNumber } from '../utils/phoneUtils';
 
@@ -734,34 +736,73 @@ export default function SalesEnquiriesView() {
       {/* ================================================================ */}
       {/* BOOK SHOWROOM APPOINTMENT MODAL (RPA: BOOK_SHOWROOM_APPOINTMENT) */}
       {/* ================================================================ */}
-      {showroomModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 text-white p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
-                  <FaUser className="text-sm" />
+      {showroomModalOpen && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !actionSubmitting) setShowroomModalOpen(false);
+          }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-200/90 max-w-lg w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          >
+            
+            {/* Header */}
+            <div className="bg-white border-b border-gray-100 p-4 sm:p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center font-bold shadow-2xs shrink-0">
+                  <FaCalendarAlt className="text-base" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm leading-tight">Book Showroom Appointment</h3>
-                  <span className="text-[10px] text-gray-400 font-mono">
-                    Enquiry #{showroomEnquiryId} • Group: {group || 'BMW'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-gray-900 text-sm leading-tight">
+                      Book Showroom Appointment
+                    </h3>
+                    <span className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      {group || 'BMW'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Schedule client consultation & showroom visit in Keyloop Autoline
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowroomModalOpen(false)}
-                className="w-7 h-7 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition-colors cursor-pointer text-xs"
               >
-                <FaTimes className="text-xs" />
+                ✕
               </button>
             </div>
 
             <form onSubmit={handleConfirmShowroomAppt} className="p-5 flex flex-col gap-4 text-xs">
+              {/* Customer & Enquiry Context Snapshot */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 border border-purple-200 font-bold flex items-center justify-center text-xs shrink-0">
+                    {customer?.fullName ? customer.fullName.charAt(0).toUpperCase() : 'C'}
+                  </div>
+                  <div className="min-w-0 truncate">
+                    <span className="font-bold text-gray-900 block truncate">{customer?.fullName || 'Active Customer'}</span>
+                    <span className="text-[10px] text-gray-500 font-mono truncate block">
+                      Cust #{customerNumber || 'N/A'} • {mobile || 'No Phone'}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase block">Target Enquiry</span>
+                  <span className="font-mono font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded text-xs inline-block">
+                    #{showroomEnquiryId || 'N/A'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Enquiry ID */}
               <div>
-                <label className="text-gray-600 font-bold block mb-1">
-                  Enquiry ID <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaCalendarAlt className="text-gray-400 text-xs" /> Enquiry ID <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -769,30 +810,32 @@ export default function SalesEnquiriesView() {
                   value={showroomEnquiryId}
                   onChange={(e) => setShowroomEnquiryId(e.target.value)}
                   placeholder="e.g. 567983"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-mono font-bold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-purple-600 focus:bg-white rounded-xl font-mono font-bold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                 />
               </div>
 
+              {/* Manufacturer / Brand */}
               <div>
-                <label className="text-gray-600 font-bold block mb-1">
-                  Manufacturer / Brand
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaCar className="text-gray-400 text-xs" /> Manufacturer / Brand
                 </label>
                 <input
                   type="text"
                   value={showroomManufacturer}
                   onChange={(e) => setShowroomManufacturer(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-bold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-purple-600 focus:bg-white rounded-xl font-bold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                 />
               </div>
 
+              {/* Showroom Branch */}
               <div>
-                <label className="text-gray-600 font-bold block mb-1">
-                  Showroom Branch <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaMapMarkerAlt className="text-gray-400 text-xs" /> Showroom Branch <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={showroomBranch}
                   onChange={(e) => setShowroomBranch(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-purple-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                 >
                   {getBranchesForGroup(group || 'BMW').map(b => (
                     <option key={b.code} value={`${b.code} - ${b.name}`}>
@@ -802,29 +845,30 @@ export default function SalesEnquiriesView() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Date & Time */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-gray-600 font-bold block mb-1">
-                    Appointment Date <span className="text-rose-500">*</span>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaCalendarAlt className="text-gray-400 text-xs" /> Appointment Date <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="date"
                     required
                     value={showroomDate}
                     onChange={(e) => setShowroomDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-purple-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-600 font-bold block mb-1">
-                    Requested Time <span className="text-rose-500">*</span>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaClock className="text-gray-400 text-xs" /> Requested Time <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="time"
                     required
                     value={showroomTime}
                     onChange={(e) => setShowroomTime(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-purple-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                   />
                 </div>
               </div>
@@ -833,30 +877,30 @@ export default function SalesEnquiriesView() {
                 <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-3 text-xs text-purple-900 animate-pulse">
                   <FaSpinner className="animate-spin text-purple-600 text-sm shrink-0" />
                   <div className="flex-1">
-                    <span className="font-bold">
-                      {actionProgressStatus === 'QUEUED' && 'Appointment case queued in RPA broker...'}
+                    <span className="font-bold block">
+                      {actionProgressStatus === 'QUEUED' && 'Appointment case queued in Keyloop broker...'}
                       {actionProgressStatus === 'CLAIMED' && 'Autoline RPA bot scheduling showroom appointment in Keyloop...'}
                       {actionProgressStatus === 'COMPLETED' && 'Successfully scheduled!'}
                       {!actionProgressStatus && 'Submitting showroom appointment case...'}
                     </span>
-                    <span className="block text-[10px] text-purple-700">Connecting to Keyloop intake API</span>
+                    <span className="block text-[10px] text-purple-700 font-mono">POST /api/intake/cases (BOOK_SHOWROOM_APPOINTMENT)</span>
                   </div>
                 </div>
               )}
 
-              <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   disabled={actionSubmitting}
                   onClick={() => setShowroomModalOpen(false)}
-                  className="px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 font-semibold cursor-pointer text-xs"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer shadow-2xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionSubmitting}
-                  className="px-4 py-1.5 rounded-lg bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white font-bold cursor-pointer text-xs shadow-2xs flex items-center gap-1.5"
+                  className="px-5 py-2.5 bg-purple-700 hover:bg-purple-800 active:bg-purple-900 disabled:opacity-50 text-white font-bold cursor-pointer text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2"
                 >
                   {actionSubmitting ? <FaSpinner className="animate-spin text-xs" /> : <FaCheckCircle className="text-xs" />}
                   <span>Confirm Showroom Appointment</span>
@@ -864,7 +908,8 @@ export default function SalesEnquiriesView() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

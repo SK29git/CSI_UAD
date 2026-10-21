@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useCustomer } from '../context/CustomerContext';
 import { apiFetch } from '../utils/api';
 import { 
@@ -697,12 +698,20 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
       )}
 
       {/* Survey Details Modal (Postman API 4: GET /api/v1/feedback/{group}/{feedbackId}) */}
-      {selectedFeedbackDetails && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-2xs animate-fade-in">
-          <div className="bg-white rounded-xl max-w-lg w-full p-5 shadow-2xl border border-gray-200 space-y-4 text-xs">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+      {selectedFeedbackDetails && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setSelectedFeedbackDetails(null);
+          }}
+          className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl max-w-lg w-full p-5 shadow-2xl border border-gray-200/90 space-y-4 text-xs animate-in fade-in zoom-in-95 duration-200"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center font-bold">
                   <FaInfoCircle className="text-sm" />
                 </div>
                 <div>
@@ -714,7 +723,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
               </div>
               <button 
                 onClick={() => setSelectedFeedbackDetails(null)} 
-                className="text-gray-400 hover:text-gray-700 font-bold p-1 cursor-pointer text-sm"
+                className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition-colors cursor-pointer text-xs"
               >
                 ✕
               </button>
@@ -770,7 +779,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
                 <div className="flex justify-end pt-2 border-t border-gray-100">
                   <button
                     onClick={() => setSelectedFeedbackDetails(null)}
-                    className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-lg cursor-pointer"
+                    className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-xl cursor-pointer"
                   >
                     Close
                   </button>
@@ -778,7 +787,8 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

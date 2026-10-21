@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useCustomer } from '../context/CustomerContext';
 import { apiFetch, executeRpaCase } from '../utils/api';
 import { getBranchesForGroup } from '../data/brandModels';
@@ -92,9 +93,26 @@ export default function SalesTestDriveView() {
   const [bookDate, setBookDate] = useState("");
   const [bookStartTime, setBookStartTime] = useState("10:00");
   const [bookEndTime, setBookEndTime] = useState("10:30");
+  const [bookDuration, setBookDuration] = useState("30");
   const [bookBranch, setBookBranch] = useState("");
   const [bookManufacturer, setBookManufacturer] = useState("");
   const [bookModel, setBookModel] = useState("");
+
+  // Reschedule Duration
+  const [rescheduleDuration, setRescheduleDuration] = useState("30");
+
+  const calculateEndTime = (startTime, durationMinutes) => {
+    if (!startTime) return "10:30";
+    try {
+      const [h, m] = startTime.split(':').map(Number);
+      const totalM = h * 60 + m + Number(durationMinutes);
+      const endH = String(Math.floor(totalM / 60) % 24).padStart(2, '0');
+      const endM = String(totalM % 60).padStart(2, '0');
+      return `${endH}:${endM}`;
+    } catch {
+      return "10:30";
+    }
+  };
 
   // Book Showroom Appointment Form Fields (RPA: BOOK_SHOWROOM_APPOINTMENT)
   const [showroomEnquiryId, setShowroomEnquiryId] = useState("");
@@ -1267,106 +1285,87 @@ export default function SalesTestDriveView() {
       {/* ================================================================ */}
       {/* 1. RESCHEDULE TEST DRIVE MODAL (Keyloop RPA: RESCHEDULE_DEMO_VEHICLE) */}
       {/* ================================================================ */}
-      {rescheduleModalOpen && activeBookingForAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
-                  <FaClock className="text-sm" />
+      {rescheduleModalOpen && activeBookingForAction && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !actionSubmitting) setRescheduleModalOpen(false);
+          }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-200/90 max-w-lg w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          >
+            {/* Header */}
+            <div className="bg-white border-b border-gray-100 p-4 sm:p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center font-bold shadow-2xs shrink-0">
+                  <FaClock className="text-base" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm leading-tight">Reschedule Test Drive</h3>
-                  <span className="text-[10px] text-gray-400 font-mono">
-                    Booking #{activeBookingForAction.bookingId || activeBookingForAction.bookingNumber || activeBookingForAction.id} • Group: {group || 'BMW'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-gray-900 text-sm leading-tight">
+                      Reschedule Test Drive
+                    </h3>
+                    <span className="bg-indigo-50 text-indigo-700 border border-indigo-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      Booking #{activeBookingForAction.bookingId || activeBookingForAction.bookingNumber || activeBookingForAction.id}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Update test drive schedule and dealership branch in Keyloop
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setRescheduleModalOpen(false)}
-                className="w-7 h-7 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition-colors cursor-pointer text-xs"
               >
-                <FaTimes className="text-xs" />
+                ✕
               </button>
             </div>
 
+            {/* Body */}
             <form onSubmit={handleConfirmReschedule} className="p-5 flex flex-col gap-4 text-xs">
-              <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl flex items-center justify-between">
+              {/* Current Booking Snapshot Card */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 flex items-center justify-between">
                 <div>
-                  <span className="text-[10px] text-gray-500 font-bold uppercase block">Vehicle</span>
-                  <span className="font-bold text-gray-900">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase block">Vehicle</span>
+                  <span className="font-bold text-gray-900 text-xs">
                     {formatVehicleDisplay(activeBookingForAction.vehicle || activeBookingForAction)}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-gray-500 font-bold uppercase block">Current Slot</span>
-                  <span className="font-mono text-blue-700 font-bold">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase block">Current Slot</span>
+                  <span className="font-mono text-indigo-700 font-bold text-xs bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded inline-block">
                     {activeBookingForAction.slot?.startDate || activeBookingForAction.date || 'Scheduled'} {activeBookingForAction.time || ''}
                   </span>
                 </div>
               </div>
 
+              {/* Enquiry ID */}
               <div>
-                <label className="text-gray-600 font-bold block mb-1">
-                  Enquiry ID <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaCalendarAlt className="text-gray-400 text-xs" /> Target Enquiry ID <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={rescheduleEnquiryId}
                   onChange={(e) => setRescheduleEnquiryId(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-mono font-bold text-gray-800 focus:bg-white focus:border-blue-600 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-indigo-600 focus:bg-white rounded-xl font-mono font-bold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-1">
-                  <label className="text-gray-600 font-bold block mb-1">
-                    New Date <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={rescheduleDate}
-                    onChange={(e) => setRescheduleDate(e.target.value)}
-                    className="w-full px-2 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-blue-600 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-gray-600 font-bold block mb-1">
-                    Start Time
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={rescheduleStartTime}
-                    onChange={(e) => setRescheduleStartTime(e.target.value)}
-                    className="w-full px-2 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-blue-600 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-gray-600 font-bold block mb-1">
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={rescheduleEndTime}
-                    onChange={(e) => setRescheduleEndTime(e.target.value)}
-                    className="w-full px-2 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-blue-600 focus:outline-none"
-                  />
-                </div>
-              </div>
-
+              {/* Branch */}
               <div>
-                <label className="text-gray-600 font-bold block mb-1">
-                  Branch Location <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaMapMarkerAlt className="text-gray-400 text-xs" /> Dealership Branch <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={rescheduleBranch}
                   onChange={(e) => setRescheduleBranch(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-blue-600 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-indigo-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                 >
                   {getBranchesForGroup(group || 'BMW').map(b => (
                     <option key={b.code} value={`${b.code} - ${b.name}`}>
@@ -1376,34 +1375,99 @@ export default function SalesTestDriveView() {
                 </select>
               </div>
 
+              {/* Date & Start Time */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaCalendarAlt className="text-gray-400 text-xs" /> New Date <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={rescheduleDate}
+                    onChange={(e) => setRescheduleDate(e.target.value)}
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-indigo-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaClock className="text-gray-400 text-xs" /> Start Time <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={rescheduleStartTime}
+                    onChange={(e) => {
+                      const newTime = e.target.value;
+                      setRescheduleStartTime(newTime);
+                      setRescheduleEndTime(calculateEndTime(newTime, rescheduleDuration));
+                    }}
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-indigo-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
+                  />
+                </div>
+              </div>
+
+              {/* Slot Duration Chips */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <FaClock className="text-gray-400 text-xs" /> Duration & Calculated Slot
+                  </span>
+                  <span className="font-mono text-indigo-700 font-bold text-[11px]">
+                    {rescheduleStartTime} – {rescheduleEndTime}
+                  </span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['30', '45', '60'].map(dur => (
+                    <button
+                      key={dur}
+                      type="button"
+                      onClick={() => {
+                        setRescheduleDuration(dur);
+                        setRescheduleEndTime(calculateEndTime(rescheduleStartTime, dur));
+                      }}
+                      className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer text-center border ${
+                        rescheduleDuration === dur
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-2xs'
+                          : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      {dur} mins
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Progress Banner */}
               {actionSubmitting && (
-                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3 text-xs text-blue-900 animate-pulse">
-                  <FaSpinner className="animate-spin text-blue-600 text-sm shrink-0" />
+                <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl flex items-center gap-3 text-xs text-indigo-900 animate-pulse">
+                  <FaSpinner className="animate-spin text-indigo-600 text-sm shrink-0" />
                   <div className="flex-1">
-                    <span className="font-bold">
-                      {actionProgressStatus === 'QUEUED' && 'Reschedule case queued in RPA broker...'}
+                    <span className="font-bold block">
+                      {actionProgressStatus === 'QUEUED' && 'Reschedule case queued in Keyloop broker...'}
                       {actionProgressStatus === 'CLAIMED' && 'Autoline RPA bot updating booking in Keyloop...'}
                       {actionProgressStatus === 'COMPLETED' && 'Successfully rescheduled!'}
                       {!actionProgressStatus && 'Submitting reschedule case...'}
                     </span>
-                    <span className="block text-[10px] text-blue-700">Connecting to Keyloop intake API</span>
+                    <span className="block text-[10px] text-indigo-700 font-mono">POST /api/intake/cases (RESCHEDULE_DEMO_VEHICLE)</span>
                   </div>
                 </div>
               )}
 
-              <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
+              {/* Footer */}
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   disabled={actionSubmitting}
                   onClick={() => setRescheduleModalOpen(false)}
-                  className="px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 font-semibold cursor-pointer text-xs"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer shadow-2xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionSubmitting}
-                  className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold cursor-pointer text-xs shadow-2xs flex items-center gap-1.5"
+                  className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:opacity-50 text-white font-bold cursor-pointer text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2"
                 >
                   {actionSubmitting ? <FaSpinner className="animate-spin text-xs" /> : <FaCheckCircle className="text-xs" />}
                   <span>Confirm Reschedule</span>
@@ -1411,76 +1475,97 @@ export default function SalesTestDriveView() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ================================================================ */}
       {/* 2. CANCEL TEST DRIVE MODAL (Keyloop RPA: CANCEL_DEMO_VEHICLE)     */}
       {/* ================================================================ */}
-      {cancelModalOpen && activeBookingForAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 text-white p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center font-bold">
-                  <FaBan className="text-sm" />
+      {cancelModalOpen && activeBookingForAction && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !actionSubmitting) setCancelModalOpen(false);
+          }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-200/90 max-w-lg w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          >
+            {/* Header */}
+            <div className="bg-white border-b border-gray-100 p-4 sm:p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center font-bold shadow-2xs shrink-0">
+                  <FaBan className="text-base" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm leading-tight">Cancel Test Drive Booking</h3>
-                  <span className="text-[10px] text-gray-400 font-mono">
-                    Booking #{activeBookingForAction.bookingId || activeBookingForAction.bookingNumber || activeBookingForAction.id} • Group: {group || 'BMW'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-gray-900 text-sm leading-tight">
+                      Cancel Test Drive Booking
+                    </h3>
+                    <span className="bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      Booking #{activeBookingForAction.bookingId || activeBookingForAction.bookingNumber || activeBookingForAction.id}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Cancel showroom demo booking and release fleet vehicle in Keyloop
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setCancelModalOpen(false)}
-                className="w-7 h-7 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition-colors cursor-pointer text-xs"
               >
-                <FaTimes className="text-xs" />
+                ✕
               </button>
             </div>
 
+            {/* Body */}
             <form onSubmit={handleConfirmCancel} className="p-5 flex flex-col gap-4 text-xs">
-              <div className="p-3 bg-rose-50/70 border border-rose-100 rounded-xl flex items-center gap-2 text-rose-900">
+              <div className="p-3 bg-rose-50/70 border border-rose-200 rounded-xl flex items-center gap-2.5 text-rose-900">
                 <FaExclamationTriangle className="text-rose-600 text-base shrink-0" />
                 <span className="font-bold block">Are you sure you want to cancel this booking in Keyloop?</span>
               </div>
 
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Vehicle:</span>
-                  <span className="font-bold text-gray-800">{formatVehicleDisplay(activeBookingForAction.vehicle || activeBookingForAction)}</span>
+              {/* Booking Summary */}
+              <div className="p-3 bg-slate-50 border border-slate-200/90 rounded-xl space-y-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400 text-[11px] font-bold uppercase">Vehicle</span>
+                  <span className="font-bold text-gray-800 text-xs">{formatVehicleDisplay(activeBookingForAction.vehicle || activeBookingForAction)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Scheduled:</span>
-                  <span className="font-mono text-gray-800 font-bold">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400 text-[11px] font-bold uppercase">Scheduled Slot</span>
+                  <span className="font-mono text-gray-800 font-bold text-xs">
                     {activeBookingForAction.slot?.startDate || activeBookingForAction.date || 'Scheduled'} {activeBookingForAction.time || ''}
                   </span>
                 </div>
               </div>
 
+              {/* Target Enquiry ID */}
               <div>
-                <label className="text-gray-600 font-bold block mb-1">
-                  Enquiry ID <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaCalendarAlt className="text-gray-400 text-xs" /> Target Enquiry ID <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={cancelEnquiryId}
                   onChange={(e) => setCancelEnquiryId(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-mono font-bold text-gray-800 focus:bg-white focus:border-rose-600 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-rose-600 focus:bg-white rounded-xl font-mono font-bold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                 />
               </div>
 
+              {/* Reason */}
               <div>
-                <label className="text-gray-600 font-bold block mb-1">
-                  Cancellation Reason <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaBan className="text-gray-400 text-xs" /> Cancellation Reason <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={cancelReason}
                   onChange={(e) => setCancelReason(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-rose-600 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-rose-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                 >
                   <option value="Customer requested cancellation">Customer requested cancellation</option>
                   <option value="Customer not reachable / No show">Customer not reachable / No show</option>
@@ -1493,7 +1578,7 @@ export default function SalesTestDriveView() {
 
               {cancelReason === 'Other / Custom reason' && (
                 <div>
-                  <label className="text-gray-600 font-bold block mb-1">
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 block">
                     Custom Notes
                   </label>
                   <textarea
@@ -1501,39 +1586,41 @@ export default function SalesTestDriveView() {
                     value={cancelCustomReason}
                     onChange={(e) => setCancelCustomReason(e.target.value)}
                     placeholder="Enter details for cancellation..."
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs focus:bg-white focus:border-rose-600 focus:outline-none"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-rose-600 focus:bg-white rounded-xl text-xs focus:outline-none transition-all shadow-2xs"
                   />
                 </div>
               )}
 
+              {/* Progress Banner */}
               {actionSubmitting && (
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-3 text-xs text-rose-900 animate-pulse">
                   <FaSpinner className="animate-spin text-rose-600 text-sm shrink-0" />
                   <div className="flex-1">
-                    <span className="font-bold">
-                      {actionProgressStatus === 'QUEUED' && 'Cancellation case queued in RPA broker...'}
+                    <span className="font-bold block">
+                      {actionProgressStatus === 'QUEUED' && 'Cancellation case queued in Keyloop broker...'}
                       {actionProgressStatus === 'CLAIMED' && 'Autoline RPA bot cancelling booking in Keyloop...'}
                       {actionProgressStatus === 'COMPLETED' && 'Successfully cancelled!'}
                       {!actionProgressStatus && 'Submitting cancellation case...'}
                     </span>
-                    <span className="block text-[10px] text-rose-700">Connecting to Keyloop intake API</span>
+                    <span className="block text-[10px] text-rose-700 font-mono">POST /api/intake/cases (CANCEL_DEMO_VEHICLE)</span>
                   </div>
                 </div>
               )}
 
-              <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
+              {/* Footer */}
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   disabled={actionSubmitting}
                   onClick={() => setCancelModalOpen(false)}
-                  className="px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 font-semibold cursor-pointer text-xs"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer shadow-2xs"
                 >
                   Keep Booking
                 </button>
                 <button
                   type="submit"
                   disabled={actionSubmitting}
-                  className="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold cursor-pointer text-xs shadow-2xs flex items-center gap-1.5"
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 active:bg-rose-800 disabled:opacity-50 text-white font-bold cursor-pointer text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2"
                 >
                   {actionSubmitting ? <FaSpinner className="animate-spin text-xs" /> : <FaBan className="text-xs" />}
                   <span>Confirm Cancellation</span>
@@ -1541,40 +1628,80 @@ export default function SalesTestDriveView() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ================================================================ */}
       {/* 3. BOOK DEMO VEHICLE MODAL (Keyloop RPA: BOOK_DEMO_VEHICLE)       */}
       {/* ================================================================ */}
-      {bookModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
-                  <FaCar className="text-sm" />
+      {bookModalOpen && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !actionSubmitting) setBookModalOpen(false);
+          }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-200/90 max-w-lg w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          >
+            {/* Header */}
+            <div className="bg-white border-b border-gray-100 p-4 sm:p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center font-bold shadow-2xs shrink-0">
+                  <FaCar className="text-base" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm leading-tight">Book Test Drive (Demo Vehicle)</h3>
-                  <span className="text-[10px] text-gray-400 font-mono">
-                    Keyloop RPA • Group: {group || 'BMW'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-gray-900 text-sm leading-tight">
+                      Book Test Drive (Demo Vehicle)
+                    </h3>
+                    <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      {group || 'BMW'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Schedule showroom demo vehicle booking in Keyloop CRM
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setBookModalOpen(false)}
-                className="w-7 h-7 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition-colors cursor-pointer text-xs"
               >
-                <FaTimes className="text-xs" />
+                ✕
               </button>
             </div>
 
+            {/* Body */}
             <form onSubmit={handleConfirmBook} className="p-5 flex flex-col gap-4 text-xs">
+              {/* Customer & Enquiry Context Snapshot Banner */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 border border-blue-200 font-bold flex items-center justify-center text-xs shrink-0">
+                    {customer?.fullName ? customer.fullName.charAt(0).toUpperCase() : 'C'}
+                  </div>
+                  <div className="min-w-0 truncate">
+                    <span className="font-bold text-gray-900 block truncate">{customer?.fullName || 'Active Customer'}</span>
+                    <span className="text-[10px] text-gray-500 font-mono truncate block">
+                      Cust #{customerNumber || 'N/A'} • {customer?.mobile || 'No Phone'}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase block">Target Enquiry</span>
+                  <span className="font-mono font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded text-xs inline-block">
+                    #{bookEnquiryId || selectedEnquiry || 'N/A'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Enquiry ID */}
               <div>
-                <label className="text-gray-600 font-bold block mb-1">
-                  Enquiry ID <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaCalendarAlt className="text-gray-400 text-xs" /> Enquiry ID <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1582,44 +1709,46 @@ export default function SalesTestDriveView() {
                   value={bookEnquiryId}
                   onChange={(e) => setBookEnquiryId(e.target.value)}
                   placeholder="e.g. 567984"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-mono font-bold text-gray-800 focus:bg-white focus:border-blue-600 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-blue-600 focus:bg-white rounded-xl font-mono font-bold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                 />
               </div>
 
+              {/* Manufacturer & Model */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-gray-600 font-bold block mb-1">
-                    Manufacturer / Brand
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaCar className="text-gray-400 text-xs" /> Brand
                   </label>
                   <input
                     type="text"
                     value={bookManufacturer}
                     onChange={(e) => setBookManufacturer(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-bold text-gray-800 focus:bg-white focus:border-blue-600 focus:outline-none"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-blue-600 focus:bg-white rounded-xl font-bold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-600 font-bold block mb-1">
-                    Model (Optional)
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaCar className="text-gray-400 text-xs" /> Model
                   </label>
                   <input
                     type="text"
                     value={bookModel}
                     onChange={(e) => setBookModel(e.target.value)}
                     placeholder="e.g. X5 M (F95)"
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs text-gray-800 focus:bg-white focus:border-blue-600 focus:outline-none"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-blue-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                   />
                 </div>
               </div>
 
+              {/* Dealership Branch */}
               <div>
-                <label className="text-gray-600 font-bold block mb-1">
-                  Dealership Branch <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaMapMarkerAlt className="text-gray-400 text-xs" /> Dealership Branch <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={bookBranch}
                   onChange={(e) => setBookBranch(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-blue-600 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-blue-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                 >
                   {getBranchesForGroup(group || 'BMW').map(b => (
                     <option key={b.code} value={`${b.code} - ${b.name}`}>
@@ -1629,73 +1758,99 @@ export default function SalesTestDriveView() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
-                <div className="col-span-1">
-                  <label className="text-gray-600 font-bold block mb-1">
-                    Date <span className="text-rose-500">*</span>
+              {/* Date & Start Time */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaCalendarAlt className="text-gray-400 text-xs" /> Date <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="date"
                     required
                     value={bookDate}
                     onChange={(e) => setBookDate(e.target.value)}
-                    className="w-full px-2 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-blue-600 focus:outline-none"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-blue-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-600 font-bold block mb-1">
-                    Start Time
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaClock className="text-gray-400 text-xs" /> Start Time <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="time"
                     required
                     value={bookStartTime}
-                    onChange={(e) => setBookStartTime(e.target.value)}
-                    className="w-full px-2 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-blue-600 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-gray-600 font-bold block mb-1">
-                    End Time
-                  </label>
-                  <input
-                    type="time"
-                    required
-                    value={bookEndTime}
-                    onChange={(e) => setBookEndTime(e.target.value)}
-                    className="w-full px-2 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-blue-600 focus:outline-none"
+                    onChange={(e) => {
+                      const newTime = e.target.value;
+                      setBookStartTime(newTime);
+                      setBookEndTime(calculateEndTime(newTime, bookDuration));
+                    }}
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-blue-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                   />
                 </div>
               </div>
 
+              {/* Slot Duration Chips */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <FaClock className="text-gray-400 text-xs" /> Duration & Calculated Slot
+                  </span>
+                  <span className="font-mono text-blue-700 font-bold text-[11px]">
+                    {bookStartTime} – {bookEndTime}
+                  </span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {['30', '45', '60'].map(dur => (
+                    <button
+                      key={dur}
+                      type="button"
+                      onClick={() => {
+                        setBookDuration(dur);
+                        setBookEndTime(calculateEndTime(bookStartTime, dur));
+                      }}
+                      className={`py-1.5 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer text-center border ${
+                        bookDuration === dur
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
+                          : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'
+                      }`}
+                    >
+                      {dur} mins
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Real-time RPA Progress Display */}
               {actionSubmitting && (
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3 text-xs text-blue-900 animate-pulse">
                   <FaSpinner className="animate-spin text-blue-600 text-sm shrink-0" />
                   <div className="flex-1">
-                    <span className="font-bold">
-                      {actionProgressStatus === 'QUEUED' && 'Booking case queued in RPA broker...'}
+                    <span className="font-bold block">
+                      {actionProgressStatus === 'QUEUED' && 'Booking case queued in Keyloop broker...'}
                       {actionProgressStatus === 'CLAIMED' && 'Autoline RPA bot registering demo booking in Keyloop...'}
                       {actionProgressStatus === 'COMPLETED' && 'Successfully booked!'}
                       {!actionProgressStatus && 'Submitting demo vehicle case...'}
                     </span>
-                    <span className="block text-[10px] text-blue-700">Connecting to Keyloop intake API</span>
+                    <span className="block text-[10px] text-blue-700 font-mono">POST /api/intake/cases (BOOK_DEMO_VEHICLE)</span>
                   </div>
                 </div>
               )}
 
-              <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
+              {/* Footer */}
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   disabled={actionSubmitting}
                   onClick={() => setBookModalOpen(false)}
-                  className="px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 font-semibold cursor-pointer text-xs"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer shadow-2xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionSubmitting}
-                  className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold cursor-pointer text-xs shadow-2xs flex items-center gap-1.5"
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-50 text-white font-bold cursor-pointer text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2"
                 >
                   {actionSubmitting ? <FaSpinner className="animate-spin text-xs" /> : <FaCheckCircle className="text-xs" />}
                   <span>Confirm Test Drive Booking</span>
@@ -1703,40 +1858,80 @@ export default function SalesTestDriveView() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ================================================================ */}
       {/* 4. BOOK SHOWROOM APPOINTMENT MODAL (RPA: BOOK_SHOWROOM_APPT)     */}
       {/* ================================================================ */}
-      {showroomModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 backdrop-blur-xs p-4 animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-lg w-full overflow-hidden flex flex-col">
-            <div className="bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 text-white p-4 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-purple-500/20 text-purple-400 flex items-center justify-center font-bold">
-                  <FaUser className="text-sm" />
+      {showroomModalOpen && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !actionSubmitting) setShowroomModalOpen(false);
+          }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-200/90 max-w-lg w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
+          >
+            {/* Header */}
+            <div className="bg-white border-b border-gray-100 p-4 sm:p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 text-purple-700 flex items-center justify-center font-bold shadow-2xs shrink-0">
+                  <FaUser className="text-base" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm leading-tight">Book Showroom Appointment</h3>
-                  <span className="text-[10px] text-gray-400 font-mono">
-                    Keyloop RPA • Group: {group || 'BMW'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-gray-900 text-sm leading-tight">
+                      Book Showroom Appointment
+                    </h3>
+                    <span className="bg-purple-50 text-purple-700 border border-purple-200 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                      {group || 'BMW'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Schedule customer showroom visit in Keyloop CRM
+                  </p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowroomModalOpen(false)}
-                className="w-7 h-7 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition-colors cursor-pointer text-xs"
               >
-                <FaTimes className="text-xs" />
+                ✕
               </button>
             </div>
 
+            {/* Body */}
             <form onSubmit={handleConfirmShowroomAppt} className="p-5 flex flex-col gap-4 text-xs">
+              {/* Customer & Enquiry Context Snapshot Banner */}
+              <div className="bg-slate-50 border border-slate-200/90 rounded-xl p-3 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 border border-purple-200 font-bold flex items-center justify-center text-xs shrink-0">
+                    {customer?.fullName ? customer.fullName.charAt(0).toUpperCase() : 'C'}
+                  </div>
+                  <div className="min-w-0 truncate">
+                    <span className="font-bold text-gray-900 block truncate">{customer?.fullName || 'Active Customer'}</span>
+                    <span className="text-[10px] text-gray-500 font-mono truncate block">
+                      Cust #{customerNumber || 'N/A'} • {customer?.mobile || 'No Phone'}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-[10px] text-gray-400 font-bold uppercase block">Target Enquiry</span>
+                  <span className="font-mono font-bold text-purple-700 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded text-xs inline-block">
+                    #{showroomEnquiryId || selectedEnquiry || 'N/A'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Enquiry ID */}
               <div>
-                <label className="text-gray-600 font-bold block mb-1">
-                  Enquiry ID <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaCalendarAlt className="text-gray-400 text-xs" /> Target Enquiry ID <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -1744,30 +1939,32 @@ export default function SalesTestDriveView() {
                   value={showroomEnquiryId}
                   onChange={(e) => setShowroomEnquiryId(e.target.value)}
                   placeholder="e.g. 567983"
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-mono font-bold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-purple-600 focus:bg-white rounded-xl font-mono font-bold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                 />
               </div>
 
+              {/* Manufacturer */}
               <div>
-                <label className="text-gray-600 font-bold block mb-1">
-                  Manufacturer / Brand
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaCar className="text-gray-400 text-xs" /> Manufacturer / Brand
                 </label>
                 <input
                   type="text"
                   value={showroomManufacturer}
                   onChange={(e) => setShowroomManufacturer(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-bold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-purple-600 focus:bg-white rounded-xl font-bold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                 />
               </div>
 
+              {/* Showroom Branch */}
               <div>
-                <label className="text-gray-600 font-bold block mb-1">
-                  Showroom Branch <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaMapMarkerAlt className="text-gray-400 text-xs" /> Showroom Branch <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={showroomBranch}
                   onChange={(e) => setShowroomBranch(e.target.value)}
-                  className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-purple-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                 >
                   {getBranchesForGroup(group || 'BMW').map(b => (
                     <option key={b.code} value={`${b.code} - ${b.name}`}>
@@ -1777,61 +1974,64 @@ export default function SalesTestDriveView() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Date & Time */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-gray-600 font-bold block mb-1">
-                    Appointment Date <span className="text-rose-500">*</span>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaCalendarAlt className="text-gray-400 text-xs" /> Appointment Date <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="date"
                     required
                     value={showroomDate}
                     onChange={(e) => setShowroomDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-purple-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                   />
                 </div>
                 <div>
-                  <label className="text-gray-600 font-bold block mb-1">
-                    Requested Time <span className="text-rose-500">*</span>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaClock className="text-gray-400 text-xs" /> Requested Time <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="time"
                     required
                     value={showroomTime}
                     onChange={(e) => setShowroomTime(e.target.value)}
-                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 focus:bg-white focus:border-purple-600 focus:outline-none"
+                    className="w-full p-2.5 bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-purple-600 focus:bg-white rounded-xl font-semibold text-gray-800 text-xs focus:outline-none transition-all shadow-2xs"
                   />
                 </div>
               </div>
 
+              {/* Progress Banner */}
               {actionSubmitting && (
                 <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center gap-3 text-xs text-purple-900 animate-pulse">
                   <FaSpinner className="animate-spin text-purple-600 text-sm shrink-0" />
                   <div className="flex-1">
-                    <span className="font-bold">
-                      {actionProgressStatus === 'QUEUED' && 'Appointment case queued in RPA broker...'}
+                    <span className="font-bold block">
+                      {actionProgressStatus === 'QUEUED' && 'Appointment case queued in Keyloop broker...'}
                       {actionProgressStatus === 'CLAIMED' && 'Autoline RPA bot scheduling showroom appointment in Keyloop...'}
                       {actionProgressStatus === 'COMPLETED' && 'Successfully scheduled!'}
                       {!actionProgressStatus && 'Submitting showroom appointment case...'}
                     </span>
-                    <span className="block text-[10px] text-purple-700">Connecting to Keyloop intake API</span>
+                    <span className="block text-[10px] text-purple-700 font-mono">POST /api/intake/cases (BOOK_SHOWROOM_APPOINTMENT)</span>
                   </div>
                 </div>
               )}
 
-              <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
+              {/* Footer */}
+              <div className="pt-3 border-t border-gray-100 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
                   disabled={actionSubmitting}
                   onClick={() => setShowroomModalOpen(false)}
-                  className="px-3 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 font-semibold cursor-pointer text-xs"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-xl transition-colors cursor-pointer shadow-2xs"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionSubmitting}
-                  className="px-4 py-1.5 rounded-lg bg-purple-700 hover:bg-purple-800 disabled:opacity-50 text-white font-bold cursor-pointer text-xs shadow-2xs flex items-center gap-1.5"
+                  className="px-5 py-2.5 bg-purple-700 hover:bg-purple-800 active:bg-purple-900 disabled:opacity-50 text-white font-bold cursor-pointer text-xs rounded-xl shadow-xs transition-colors flex items-center gap-2"
                 >
                   {actionSubmitting ? <FaSpinner className="animate-spin text-xs" /> : <FaCheckCircle className="text-xs" />}
                   <span>Confirm Showroom Appointment</span>
@@ -1839,7 +2039,8 @@ export default function SalesTestDriveView() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

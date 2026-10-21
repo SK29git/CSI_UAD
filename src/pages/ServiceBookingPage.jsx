@@ -102,7 +102,7 @@ export default function ServiceBookingPage() {
         )}
 
         {/* CENTER COLUMN: Navigation Div & Service Panel */}
-        <main className="flex-1 w-full min-w-0 flex flex-col z-0 transition-all duration-300">
+        <main className="flex-1 w-full min-w-0 flex flex-col transition-all duration-300">
           <CenterNavTabs 
             activeModule="Service" 
             activeSubTab={activeSubTab} 

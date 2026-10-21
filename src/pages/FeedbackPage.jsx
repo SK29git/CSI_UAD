@@ -73,7 +73,7 @@ export default function FeedbackPage() {
         )}
 
         {/* CENTER COLUMN: Navigation Div & Feedback Analytics Dashboard */}
-        <main className="flex-1 w-full min-w-0 flex flex-col z-0 transition-all duration-300">
+        <main className="flex-1 w-full min-w-0 flex flex-col transition-all duration-300">
           <CenterNavTabs 
             activeModule="Feedback" 
             activeSubTab={activeSubTab} 

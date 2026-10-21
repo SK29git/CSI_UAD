@@ -116,7 +116,7 @@ export default function ComplaintsDashboardPage() {
         )}
 
         {/* CENTER COLUMN: Navigation Div & Dashboard Views */}
-        <main className="flex-1 w-full min-w-0 flex flex-col z-0 transition-all duration-300">
+        <main className="flex-1 w-full min-w-0 flex flex-col transition-all duration-300">
           <CenterNavTabs 
             activeModule="Complaints Manager" 
             activeSubTab={activeTab} 
