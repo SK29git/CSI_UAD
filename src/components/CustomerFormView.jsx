@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import { getBranchesForGroup } from '../data/brandModels';
+import { getFullMobileNumber, isFullMobileNumber } from '../utils/phoneUtils';
 import { 
   FaUserPlus, 
   FaEdit, 
@@ -126,7 +127,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         area: customer.location?.area || 'Deira',
         city: customer.location?.city || 'Dubai',
         country: customer.nationality || 'United Arab Emirates',
-        mobile: customer.mobileRaw || (customer.mobile ? customer.mobile.replace(/\D/g, '') : (currentMobile ? currentMobile.replace(/\D/g, '') : '')),
+        mobile: getFullMobileNumber(customer, currentMobile) || (isFullMobileNumber(customer.mobile) ? customer.mobile.replace(/\D/g, '') : (isFullMobileNumber(customer.mobileRaw) ? customer.mobileRaw.replace(/\D/g, '') : '')),
         email: emailVal,
         consents: customer.consents || {
           phone: true,
@@ -146,7 +147,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         area: prev.area || 'Deira',
         city: prev.city || 'Dubai',
         country: prev.country || 'United Arab Emirates',
-        mobile: prev.mobile || (currentMobile ? currentMobile.replace(/\D/g, '') : ''),
+        mobile: prev.mobile || (isFullMobileNumber(currentMobile) ? currentMobile.replace(/\D/g, '') : ''),
         email: prev.email || '',
         consents: prev.consents || {
           phone: true,

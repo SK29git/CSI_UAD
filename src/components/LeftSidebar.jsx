@@ -22,7 +22,7 @@ import {
   FaEdit,
   FaSearch
 } from 'react-icons/fa';
-import { getFullMobileNumber } from '../utils/phoneUtils';
+import { getFullMobileNumber, getDisplayMobileNumber } from '../utils/phoneUtils';
 
 export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
   const { 
@@ -357,7 +357,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                 <div className="mt-1 space-y-1 text-xs text-gray-600">
                   <div className="flex items-center gap-1.5">
                     <FaPhoneAlt className="text-gray-400 text-[11px]" />
-                    <span className="font-medium">{getFullMobileNumber(customer, currentMobile) || customer?.mobile || 'N/A'}</span>
+                    <span className="font-medium">{getDisplayMobileNumber(customer, currentMobile) || 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <FaEnvelope className="text-gray-400 text-[11px]" />

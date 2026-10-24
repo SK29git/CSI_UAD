@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiFetch, executeRpaCase } from '../utils/api';
 import GlobalToast from '../components/GlobalToast';
+import { isFullMobileNumber } from '../utils/phoneUtils';
 
 const CustomerContext = createContext(null);
 
@@ -325,6 +326,65 @@ export function CustomerProvider({ children }) {
       }
     } catch (e) {
       console.warn("Could not sync group to URL:", e);
+    }
+  };
+
+  const syncCustomerToUrl = (cust, grp = null, searchedMobile = null) => {
+    if (typeof window === 'undefined') return;
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      let changed = false;
+
+      // 1. Group
+      const resolvedGroup = grp || cust?.keyloopGroup || currentGroup;
+      if (resolvedGroup && searchParams.get('group') !== resolvedGroup) {
+        searchParams.set('group', resolvedGroup);
+        changed = true;
+      }
+
+      // 2. Customer Number
+      const custNo = cust?.customerNumber || cust?.id;
+      if (custNo) {
+        if (searchParams.get('customerNumber') !== String(custNo)) {
+          searchParams.set('customerNumber', String(custNo));
+          changed = true;
+        }
+      }
+
+      // 3. Mobile Number
+      const fullMobile = searchedMobile || 
+        (isFullMobileNumber(cust?.mobile) ? String(cust.mobile).replace(/\D/g, '') : null) ||
+        (isFullMobileNumber(cust?.mobilePhone) ? String(cust.mobilePhone).replace(/\D/g, '') : null) ||
+        (isFullMobileNumber(cust?.phone) ? String(cust.phone).replace(/\D/g, '') : null);
+
+      if (fullMobile) {
+        if (searchParams.get('mobile') !== fullMobile) {
+          searchParams.set('mobile', fullMobile);
+          changed = true;
+        }
+      } else {
+        // Stale URL mobile check: if URL has mobile, verify if it belongs to this customer
+        const currentUrlMobile = searchParams.get('mobile') || searchParams.get('Complaint') || searchParams.get('Sales');
+        if (currentUrlMobile) {
+          const maskedStr = [cust?.mobile, cust?.mobileRaw, cust?.phone, cust?.telephone].filter(Boolean).join(' ');
+          const suffixMatch = maskedStr.match(/(\d{2,6})(?:\D*)$/);
+          const suffix = suffixMatch ? suffixMatch[1] : '';
+          
+          const cleanUrl = currentUrlMobile.replace(/\D/g, '');
+          if (!suffix || !cleanUrl.endsWith(suffix)) {
+            searchParams.delete('mobile');
+            if (searchParams.has('Complaint')) searchParams.delete('Complaint');
+            if (searchParams.has('Sales')) searchParams.delete('Sales');
+            changed = true;
+          }
+        }
+      }
+
+      if (changed) {
+        window.history.replaceState(null, '', `${window.location.pathname}?${searchParams.toString()}`);
+      }
+    } catch (e) {
+      console.warn("Could not sync customer to URL:", e);
     }
   };
 
@@ -674,8 +734,23 @@ export function CustomerProvider({ children }) {
         const resolvedGroup = prof.keyloopGroup || group || '';
         if (resolvedGroup) {
           setCurrentGroup(resolvedGroup);
-          syncGroupToUrl(resolvedGroup);
         }
+        if (custNo) {
+          setCurrentCustomerNumber(String(custNo));
+        }
+        const resolvedMobile = options?.searchedMobile || 
+          (isFullMobileNumber(prof.mobile) ? prof.mobile : null) ||
+          (isFullMobileNumber(prof.mobileRaw) ? prof.mobileRaw : null) ||
+          (isFullMobileNumber(prof.mobilePhone) ? prof.mobilePhone : null) ||
+          prof.mobile || 
+          prof.mobileRaw || 
+          prof.phone || 
+          prof.telephone || 
+          '';
+        if (resolvedMobile) {
+          setCurrentMobile(resolvedMobile);
+        }
+        syncCustomerToUrl(prof, resolvedGroup, options?.searchedMobile);
         localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(prof));
         fetchOpenComplaintsCount(group, custNo);
 
@@ -715,6 +790,18 @@ export function CustomerProvider({ children }) {
       if (searchItem) {
         syncEnquiriesFromCustomer(searchItem);
         setCustomer(searchItem);
+        if (searchItem.customerNumber || custNo) {
+          setCurrentCustomerNumber(String(searchItem.customerNumber || custNo));
+        }
+        const resolvedMobile = options?.searchedMobile || 
+          searchItem.mobile || 
+          searchItem.mobileRaw || 
+          searchItem.phone || 
+          '';
+        if (resolvedMobile) {
+          setCurrentMobile(resolvedMobile);
+        }
+        syncCustomerToUrl(searchItem, group, options?.searchedMobile);
       }
       fetchOpenComplaintsCount(group, custNo);
       fetchVehiclesByCustomer(group, custNo, options);
@@ -782,11 +869,16 @@ export function CustomerProvider({ children }) {
 
         if (targetItem && targetItem.customerNumber) {
           const detectedGroup = targetItem.keyloopGroup || group || '';
-          await fetchProfileByCustomerNumber(detectedGroup, targetItem.customerNumber, prefix, {}, targetItem);
+          setCurrentCustomerNumber(String(targetItem.customerNumber));
+          setCurrentMobile(cleanedMobile);
+          await fetchProfileByCustomerNumber(detectedGroup, targetItem.customerNumber, prefix, { searchedMobile: cleanedMobile }, targetItem);
           return { ok: true, count: allResults.length, customer: targetItem, group: detectedGroup, isProspect: false };
         } else if (targetItem) {
           syncEnquiriesFromCustomer(targetItem);
           setCustomer(targetItem);
+          setCurrentCustomerNumber(targetItem.customerNumber || '');
+          setCurrentMobile(cleanedMobile);
+          syncCustomerToUrl(targetItem, activeGroup || 'BMW', cleanedMobile);
           return { ok: true, count: allResults.length, customer: targetItem, group: activeGroup || 'BMW', isProspect: false };
         }
       }
@@ -816,11 +908,14 @@ export function CustomerProvider({ children }) {
         setCustomerList(normalized);
         setSelectedIndex(0);
         setCustomer(normalized[0]);
+        const mob = normalized[0].mobile || normalized[0].mobileRaw || '';
+        if (mob) setCurrentMobile(mob);
+        setCurrentCustomerNumber(normalized[0].prospectNumber || normalized[0].customerNumber || '');
         const detectedGroup = normalized[0].keyloopGroup || activeGroup || 'BMW';
         if (detectedGroup) {
           setCurrentGroup(detectedGroup);
-          syncGroupToUrl(detectedGroup);
         }
+        syncCustomerToUrl(normalized[0], detectedGroup);
         setVehicles([]);
         setSelectedVin("");
         setVehicleDetails(null);
@@ -861,11 +956,14 @@ export function CustomerProvider({ children }) {
         setCustomerList(normalized);
         setSelectedIndex(0);
         setCustomer(normalized[0]);
+        const mob = normalized[0].mobile || normalized[0].mobileRaw || '';
+        if (mob) setCurrentMobile(mob);
+        setCurrentCustomerNumber(normalized[0].prospectNumber || normalized[0].customerNumber || '');
         const detectedGroup = normalized[0].keyloopGroup || activeGroup || 'BMW';
         if (detectedGroup) {
           setCurrentGroup(detectedGroup);
-          syncGroupToUrl(detectedGroup);
         }
+        syncCustomerToUrl(normalized[0], detectedGroup);
         setVehicles([]);
         setSelectedVin("");
         setVehicleDetails(null);
@@ -997,11 +1095,14 @@ export function CustomerProvider({ children }) {
         setCustomerList(normalized);
         setSelectedIndex(0);
         setCustomer(normalized[0]);
+        const mob = normalized[0].mobile || normalized[0].mobileRaw || '';
+        if (mob) setCurrentMobile(mob);
+        setCurrentCustomerNumber(normalized[0].prospectNumber || normalized[0].customerNumber || '');
         const detectedGroup = normalized[0].keyloopGroup || activeGroup || 'BMW';
         if (detectedGroup) {
           setCurrentGroup(detectedGroup);
-          syncGroupToUrl(detectedGroup);
         }
+        syncCustomerToUrl(normalized[0], detectedGroup);
         setVehicles([]);
         setSelectedVin("");
         setVehicleDetails(null);
@@ -1096,11 +1197,14 @@ export function CustomerProvider({ children }) {
         setCustomerList(normalized);
         setSelectedIndex(0);
         setCustomer(normalized[0]);
+        const mob = normalized[0].mobile || normalized[0].mobileRaw || '';
+        if (mob) setCurrentMobile(mob);
+        setCurrentCustomerNumber(normalized[0].prospectNumber || normalized[0].customerNumber || '');
         const detectedGroup = normalized[0].keyloopGroup || activeGroup || 'BMW';
         if (detectedGroup) {
           setCurrentGroup(detectedGroup);
-          syncGroupToUrl(detectedGroup);
         }
+        syncCustomerToUrl(normalized[0], detectedGroup);
         setVehicles([]);
         setSelectedVin("");
         setVehicleDetails(null);
@@ -1141,11 +1245,14 @@ export function CustomerProvider({ children }) {
         setCustomerList(normalized);
         setSelectedIndex(0);
         setCustomer(normalized[0]);
+        const mob = normalized[0].mobile || normalized[0].mobileRaw || '';
+        if (mob) setCurrentMobile(mob);
+        setCurrentCustomerNumber(normalized[0].prospectNumber || normalized[0].customerNumber || '');
         const detectedGroup = normalized[0].keyloopGroup || activeGroup || 'BMW';
         if (detectedGroup) {
           setCurrentGroup(detectedGroup);
-          syncGroupToUrl(detectedGroup);
         }
+        syncCustomerToUrl(normalized[0], detectedGroup);
         setVehicles([]);
         setSelectedVin("");
         setVehicleDetails(null);
@@ -1363,9 +1470,13 @@ export function CustomerProvider({ children }) {
       const target = customerList[idx];
       const g = target.keyloopGroup || customer?.keyloopGroup || '';
       const c = target.customerNumber;
+      if (c) setCurrentCustomerNumber(String(c));
+      const mob = target.mobile || target.mobileRaw || target.phone || '';
+      if (mob) setCurrentMobile(mob);
 
       if (target.isProspect) {
         setCustomer(target);
+        syncCustomerToUrl(target, g);
         if (target.customerType === 'CONVERTED_PROSPECT' && target.customerNumber && /^\d+$/.test(target.customerNumber)) {
           fetchProfileByCustomerNumber(g, target.customerNumber, prefix, {}, target);
         } else {
@@ -1376,10 +1487,12 @@ export function CustomerProvider({ children }) {
           setVerificationStatus(null);
         }
       } else if (c) {
+        syncCustomerToUrl(target, g);
         fetchProfileByCustomerNumber(g, c, prefix, {}, target);
       } else {
         syncEnquiriesFromCustomer(target);
         setCustomer(target);
+        syncCustomerToUrl(target, g);
       }
     }
   };
@@ -1665,6 +1778,7 @@ export function CustomerProvider({ children }) {
       setCurrentGroup,
       setGroup: setCurrentGroup,
       syncGroupToUrl,
+      syncCustomerToUrl,
       customerList,
       selectedIndex,
       selectCustomer,

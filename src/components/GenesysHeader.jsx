@@ -13,6 +13,7 @@ import {
   FaStar, 
   FaShieldAlt 
 } from 'react-icons/fa';
+import { getDisplayMobileNumber } from '../utils/phoneUtils';
 
 export default function GenesysHeader() {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ export default function GenesysHeader() {
   const currentPath = location.pathname;
   const { customer, currentMobile, getFormattedName } = useCustomer ? useCustomer() : {};
   const callerName = customer ? (getFormattedName ? getFormattedName() : customer.fullName) : 'Sumedh Kamble';
-  const callerPhone = customer?.mobile || currentMobile || '+971 50 123 4567';
+  const callerPhone = getDisplayMobileNumber(customer, currentMobile) || '+971 50 123 4567';
 
   const [activeSubTab, setActiveSubTab] = useState('Book Service');
 

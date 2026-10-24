@@ -275,12 +275,12 @@ export default function SalesNewLeadView() {
       setFirstname(customer?.firstName || '');
       setSurname(customer?.surname || '');
       setEmail(customer?.email && !customer.email.includes('***') ? customer.email : (customer.email || ''));
-      const fullMobile = getFullMobileNumber(customer);
+      const fullMobile = getFullMobileNumber(customer, currentMobile);
       if (fullMobile) {
         setMobile(fullMobile);
       } else if (customer?.mobile && isFullMobileNumber(customer.mobile)) {
         setMobile(customer.mobile);
-      } else if (currentMobile) {
+      } else if (isFullMobileNumber(currentMobile)) {
         setMobile(currentMobile);
       }
       if (customer?.branchCode) setBranch(customer?.branchCode);
