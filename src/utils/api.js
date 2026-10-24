@@ -395,4 +395,277 @@ export async function executeRpaCase(caseType, details, options = {}) {
   };
 }
 
+/**
+ * Creates an RPA Complaint Case (caseType: 'CREATE_COMPLAINT') via POST /api/intake/cases
+ * @param {object} details - Case payload details matching CCaaS intake schema
+ * @param {object} options - Optional parameters (createdBy, callbackUrl, onProgress)
+ */
+export async function createComplaintCase(details, options = {}) {
+  return await executeRpaCase('CREATE_COMPLAINT', details, {
+    callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,
+    createdBy: options.createdBy || "genesys",
+    ...options
+  });
+}
+
+/* ========================================================================== */
+/* AGMC UNIVERSAL SERVICE BOOKING FLOW APIS (MULTI-BRAND: BMW, MINI, GEELY)  */
+/* Source: AGMC Omnichannel DMS / Service Booking Gateway                     */
+/* ========================================================================== */
+
+export const SERVICE_ENGINE_TENANT_ID = "OTagmcgeel713061";
+export const GEELY_TENANT_ID = SERVICE_ENGINE_TENANT_ID;
+
+/**
+ * 1. Generate Service Gateway Token (GET /api/leads/generate-token/{tenantId})
+ * Caches token in localStorage for 1 hour
+ */
+export async function getServiceEngineToken(tenantId = SERVICE_ENGINE_TENANT_ID, forceRefresh = false) {
+  const CACHE_KEY = `ccaas_service_token_${tenantId}`;
+  const EXPIRY_KEY = `ccaas_service_token_expiry_${tenantId}`;
+
+  if (!forceRefresh) {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      const expiry = localStorage.getItem(EXPIRY_KEY);
+      if (cached && expiry && Date.now() < parseInt(expiry, 10) - 60000) {
+        return cached;
+      }
+    } catch {}
+  }
+
+  const endpoint = `/api/leads/generate-token/${encodeURIComponent(tenantId)}`;
+  const res = await apiFetch(endpoint);
+
+  if (res && res.ok && res.data?.token) {
+    try {
+      localStorage.setItem(CACHE_KEY, res.data.token);
+      localStorage.setItem(EXPIRY_KEY, String(Date.now() + 3600000));
+    } catch {}
+    return res.data.token;
+  }
+
+  // Fallback direct url in case of local proxy edge case
+  const directUrl = `${API_BASE_URL}${endpoint}`;
+  try {
+    const directRes = await fetch(directUrl);
+    if (directRes.ok) {
+      const data = await directRes.json();
+      if (data?.token) {
+        try {
+          localStorage.setItem(CACHE_KEY, data.token);
+          localStorage.setItem(EXPIRY_KEY, String(Date.now() + 3600000));
+        } catch {}
+        return data.token;
+      }
+    }
+  } catch (e) {
+    console.warn("Direct Service token fetch fallback failed:", e);
+  }
+
+  throw new Error(`Failed to generate Service engine token: ${res?.statusText || 'Server error'}`);
+}
+export const getGeelyServiceToken = getServiceEngineToken;
+
+/**
+ * Service API Fetch Helper with automatic Bearer/token injection & 401 retry
+ */
+export async function serviceApiFetch(path, options = {}, useBearer = false) {
+  let token = null;
+  try {
+    token = await getServiceEngineToken();
+  } catch (err) {
+    console.warn("Could not retrieve Service engine token, proceeding with unauthenticated request:", err);
+  }
+
+  const authHeaderValue = token ? (useBearer ? `Bearer ${token}` : token) : '';
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-l10n-locale': 'en',
+    ...(authHeaderValue ? { 'Authorization': authHeaderValue } : {}),
+    ...(options.headers || {})
+  };
+
+  let res = await apiFetch(path, { ...options, headers });
+
+  // If 401 Unauthorized, refresh token once and retry
+  if (res && res.status === 401) {
+    try {
+      token = await getServiceEngineToken(SERVICE_ENGINE_TENANT_ID, true);
+      const retryAuth = token ? (useBearer ? `Bearer ${token}` : token) : '';
+      headers['Authorization'] = retryAuth;
+      res = await apiFetch(path, { ...options, headers });
+    } catch (refreshErr) {
+      console.warn("Token refresh retry failed:", refreshErr);
+    }
+  }
+
+  return res;
+}
+export const geelyApiFetch = serviceApiFetch;
+
+/**
+ * 2. Find Customer across brands (GET /api/service/find-customer?phone={phone})
+ */
+export async function findServiceCustomer(phone) {
+  if (!phone) return { ok: false, error: "Phone number is required" };
+  const cleanPhone = String(phone).replace(/[^\d+]/g, '');
+  return await serviceApiFetch(`/api/service/find-customer?phone=${encodeURIComponent(cleanPhone)}`);
+}
+export const findGeelyCustomer = findServiceCustomer;
+
+/**
+ * 3. Get Customer Details (GET /api/service/getCustomerDetail?customerId={customerId})
+ * Requires Bearer token
+ */
+export async function getServiceCustomerDetail(customerId) {
+  if (!customerId) return { ok: false, error: "Customer ID is required" };
+  return await serviceApiFetch(`/api/service/getCustomerDetail?customerId=${encodeURIComponent(customerId)}`, {}, true);
+}
+export const getGeelyCustomerDetail = getServiceCustomerDetail;
+
+/**
+ * 4. Get Customer Vehicles (GET /api/service/customer-vehicle?customerId={customerId})
+ */
+export async function getServiceCustomerVehicles(customerId) {
+  if (!customerId) return { ok: false, error: "Customer ID is required" };
+  return await serviceApiFetch(`/api/service/customer-vehicle?customerId=${encodeURIComponent(customerId)}`);
+}
+export const getGeelyCustomerVehicles = getServiceCustomerVehicles;
+
+/**
+ * 5. Get Vehicle Details (GET /api/service/vehicle-details?vehicleNumber={vehicleNumber})
+ * Requires Bearer token
+ */
+export async function getServiceVehicleDetails(vehicleNumber) {
+  if (!vehicleNumber) return { ok: false, error: "Vehicle plate/number is required" };
+  return await serviceApiFetch(`/api/service/vehicle-details?vehicleNumber=${encodeURIComponent(vehicleNumber)}`, {}, true);
+}
+export const getGeelyVehicleDetails = getServiceVehicleDetails;
+
+/**
+ * 6. Get Service Locations (GET /api/service-locations?type=workshop)
+ */
+export async function getServiceLocations(type = 'workshop') {
+  return await serviceApiFetch(`/api/service-locations?type=${encodeURIComponent(type)}`);
+}
+export const getGeelyServiceLocations = getServiceLocations;
+
+/**
+ * 7. Get Recommended Services Catalogue (GET /api/service/recommended-services?type=workshop)
+ */
+export async function getServiceRecommendedServices(type = 'workshop') {
+  return await serviceApiFetch(`/api/service/recommended-services?type=${encodeURIComponent(type)}`);
+}
+export const getGeelyRecommendedServices = getServiceRecommendedServices;
+
+/**
+ * 8. Get Advisor List (GET /api/service/advisors?dealershipLocationId={id})
+ */
+export async function getServiceAdvisors(dealershipLocationId) {
+  return await serviceApiFetch(`/api/service/advisors?dealershipLocationId=${encodeURIComponent(dealershipLocationId)}`);
+}
+export const getGeelyAdvisors = getServiceAdvisors;
+
+/**
+ * 9. Get Available Appointment Dates (POST /api/service/appointment-dates)
+ * Supports dynamic make: 'BMW', 'MINI', 'Geely', 'Rolls-Royce', etc.
+ */
+export async function getAppointmentDates({ dealershipLocationId, make = 'BMW', serviceProductIds = [] }) {
+  const pIds = Array.isArray(serviceProductIds) ? serviceProductIds : [serviceProductIds].filter(Boolean);
+  return await serviceApiFetch('/api/service/appointment-dates', {
+    method: 'POST',
+    body: JSON.stringify({
+      dealershipLocationId: Number(dealershipLocationId),
+      make: make || 'BMW',
+      serviceProductIds: pIds
+    })
+  });
+}
+export const getGeelyAppointmentDates = getAppointmentDates;
+
+/**
+ * 10. Get Available Appointment Timeslots (POST /api/service/appointment-time)
+ */
+export async function getAppointmentTimes({ selectedDate, dealershipLocationId, serviceProductIds = [] }) {
+  const pIds = Array.isArray(serviceProductIds) ? serviceProductIds : [serviceProductIds].filter(Boolean);
+  return await serviceApiFetch('/api/service/appointment-time', {
+    method: 'POST',
+    body: JSON.stringify({
+      selectedDate,
+      dealershipLocationId: Number(dealershipLocationId),
+      serviceProductIds: pIds
+    })
+  });
+}
+export const getGeelyAppointmentTimes = getAppointmentTimes;
+
+/**
+ * 11. Create Service Booking (POST /api/service)
+ */
+export async function createServiceBooking(payload) {
+  const pIds = Array.isArray(payload.serviceProductIds) 
+    ? payload.serviceProductIds 
+    : [payload.serviceProductIds].filter(Boolean);
+
+  const bodyPayload = {
+    advisorId: String(payload.advisorId || ''),
+    customerNotes: String(payload.customerNotes || ''),
+    dealershipLocationId: Number(payload.dealershipLocationId) || 40,
+    dropOffTime: payload.dropOffTime, // e.g. "10:15-10:30"
+    licensePlateNo: String(payload.licensePlateNo || '').trim(),
+    mileage: Number(payload.mileage) || 0,
+    mileageUnit: payload.mileageUnit || "KM",
+    serviceProductIds: pIds,
+    startDate: payload.startDate, // e.g. "2026-11-17"
+    vehicleId: Number(payload.vehicleId) || 0,
+    ...(payload.startDateTime ? { startDateTime: payload.startDateTime } : {})
+  };
+
+  return await serviceApiFetch('/api/service', {
+    method: 'POST',
+    body: JSON.stringify(bodyPayload)
+  });
+}
+export const createGeelyServiceBooking = createServiceBooking;
+
+/**
+ * 12. Get Active Appointment List (GET /api/service/appointments?regNumber={plate})
+ */
+export async function getServiceAppointments(regNumber) {
+  if (!regNumber) return { ok: false, error: "Plate/Registration number is required" };
+  return await serviceApiFetch(`/api/service/appointments?regNumber=${encodeURIComponent(regNumber)}`);
+}
+export const getGeelyAppointments = getServiceAppointments;
+
+/**
+ * 13. Get Service History (GET /api/service/history?vinNumber={vin}&page=1&pageSize=50)
+ */
+export async function getServiceHistory(vinNumber, page = 1, pageSize = 50) {
+  if (!vinNumber) return { ok: false, error: "VIN number is required" };
+  return await serviceApiFetch(`/api/service/history?vinNumber=${encodeURIComponent(vinNumber)}&page=${page}&pageSize=${pageSize}`);
+}
+export const getGeelyServiceHistory = getServiceHistory;
+
+/**
+ * 14. Get Service History Details (GET /api/service/history-by-Id/{serviceHistoryId})
+ */
+export async function getServiceHistoryDetail(serviceHistoryId) {
+  if (!serviceHistoryId) return { ok: false, error: "Service history ID is required" };
+  return await serviceApiFetch(`/api/service/history-by-Id/${encodeURIComponent(serviceHistoryId)}`);
+}
+export const getGeelyServiceHistoryDetail = getServiceHistoryDetail;
+
+/**
+ * 15. Delete / Cancel Appointment (DELETE /api/service/appointments?appointmentId={appointmentId})
+ */
+export async function deleteServiceAppointment(appointmentId) {
+  if (!appointmentId) return { ok: false, error: "Appointment ID is required" };
+  return await serviceApiFetch(`/api/service/appointments?appointmentId=${encodeURIComponent(appointmentId)}`, {
+    method: 'DELETE'
+  });
+}
+export const deleteGeelyAppointment = deleteServiceAppointment;
+
+
 

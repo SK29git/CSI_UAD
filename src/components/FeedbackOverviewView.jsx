@@ -292,7 +292,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
       {showSubmitModal && (
         <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-4 text-xs animate-fade-in space-y-3">
           <div className="flex items-center justify-between pb-2 border-b border-blue-200">
-            <span className="font-bold text-blue-950 text-xs">Submit Survey Response Payload</span>
+            <span className="font-bold text-blue-950 text-xs">Submit Survey Response</span>
             <button onClick={() => setShowSubmitModal(false)} className="text-gray-400 hover:text-gray-600 font-bold cursor-pointer">✕</button>
           </div>
 

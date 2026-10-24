@@ -1,129 +1,207 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
+import { createComplaintCase, DEFAULT_RPA_CALLBACK_URL } from '../utils/api';
 import { 
   FaPlusCircle, 
-  FaCheckCircle, 
+  FaPaperPlane, 
   FaSpinner, 
   FaUser, 
   FaBuilding, 
   FaLayerGroup, 
-  FaPaperPlane,
-  FaTag,
-  FaAlignLeft,
-  FaFlag
+  FaBriefcase, 
+  FaPhoneAlt, 
+  FaFlag, 
+  FaClipboardList, 
+  FaTag, 
+  FaUserCheck, 
+  FaAlignLeft, 
+  FaCar, 
+  FaCheckCircle 
 } from 'react-icons/fa';
 
 export default function CreateComplaintView() {
   const { customer, getFormattedName, agentId, group: contextGroup } = useCustomer();
 
-  const customerName = getFormattedName();
-  const initialCustomerNo = customer?.customerNumber || customer?.id || "";
-  const initialGroup = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
+  const customerNameFormatted = getFormattedName();
+  const initialCustomerNo = customer?.customerNumber || customer?.id || "52660";
+  const initialCustomerName = customerNameFormatted && customerNameFormatted !== 'Walk-in Customer' && customerNameFormatted !== 'Unknown'
+    ? customerNameFormatted 
+    : (customer?.name || customer?.customerName || "vera sfeir");
+  const initialGroup = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "BMW");
 
-  const [keyloopGroup, setKeyloopGroup] = useState(initialGroup);
-  const [customerNumber, setCustomerNumber] = useState(initialCustomerNo);
-  const [category, setCategory] = useState("Customer Handling Skills");
-  const [description, setDescription] = useState("Advisor did not call back as promised");
-  const [branch, setBranch] = useState("10");
-  const [priority, setPriority] = useState("HIGH");
-  
-  const createdBy = agentId || "agent.42";
+  // FORM FIELDS MATCHING POST /api/intake/cases (caseType: "CREATE_COMPLAINT")
+  const [group, setGroup] = useState(initialGroup);
+  const [customerId, setCustomerId] = useState(initialCustomerNo);
+  const [customerName, setCustomerName] = useState(initialCustomerName);
+  const [branch, setBranch] = useState("10 - Sheikh Zayed Rd");
+  const [department, setDepartment] = useState("Service");
+  const [source, setSource] = useState("Customer Call");
+  const [complaintPriority, setComplaintPriority] = useState("Normal");
+  const [complaintGroup, setComplaintGroup] = useState("Process");
+  const [category, setCategory] = useState("Process Delay");
+  const [complaint, setComplaint] = useState("the work is taking too much time.");
+  const [allocateTo, setAllocateTo] = useState("pattepu");
 
+  // TOAST & SUBMIT STATE
   const [submitting, setSubmitting] = useState(false);
-  const [successResponse, setSuccessResponse] = useState(null);
-  const [errorResponse, setErrorResponse] = useState(null);
+  const [toast, setToast] = useState(null);
+
+  // Sync state when active customer changes
+  useEffect(() => {
+    if (customer) {
+      if (customer?.customerNumber || customer?.id) {
+        setCustomerId(customer?.customerNumber || customer?.id);
+      }
+      const formatted = getFormattedName();
+      if (formatted && formatted !== 'Walk-in Customer' && formatted !== 'Unknown') {
+        setCustomerName(formatted);
+      } else if (customer?.name || customer?.customerName) {
+        setCustomerName(customer?.name || customer?.customerName);
+      }
+      if (customer?.keyloopGroup) {
+        setGroup(customer.keyloopGroup);
+      }
+    }
+  }, [customer]);
 
   useEffect(() => {
-    const grp = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
-    if (grp) setKeyloopGroup(grp);
-    if (customer) {
-      setCustomerNumber(customer?.customerNumber || customer?.id || "");
+    if (contextGroup) {
+      setGroup(contextGroup);
     }
-  }, [customer, contextGroup]);
+  }, [contextGroup]);
 
   // Auto-dismiss success toast after 5 seconds
   useEffect(() => {
-    if (successResponse) {
+    if (toast && !toast.isError) {
       const timer = setTimeout(() => {
-        setSuccessResponse(null);
+        setToast(null);
       }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [successResponse]);
+  }, [toast]);
+
+  const brandGroups = ['BMW', 'MINI', 'Rolls-Royce', 'GEELY'];
+
+  const branches = [
+    "10 - Sheikh Zayed Rd",
+    "20 - Sharjah",
+    "30 - Abu Dhabi",
+    "40 - Deira",
+    "10 - Geely Group - SZR",
+    "20 - Geely Group - Sharjah",
+    "30 - Ras Al Khaimah",
+    "50 - Fujairah"
+  ];
+
+  const departments = [
+    "Service",
+    "Sales",
+    "Parts",
+    "Body Shop",
+    "Customer Care / CRM",
+    "Finance & Accounts"
+  ];
+
+  const sources = [
+    "Customer Call",
+    "Email",
+    "Walk-in",
+    "Web Inquiry",
+    "WhatsApp / Chat",
+    "Social Media",
+    "Management Escalation"
+  ];
+
+  const priorities = ["Normal", "Low", "High", "Urgent"];
+
+  const complaintGroups = [
+    "Process",
+    "Staff / People",
+    "Vehicle / Technical",
+    "Billing & Invoicing",
+    "Parts & Accessories",
+    "Facility / Showroom"
+  ];
 
   const categories = [
+    "Process Delay",
     "Customer Handling Skills",
     "Delay in Parts Delivery",
     "Service Quality Issue",
     "Pricing & Invoice Dispute",
     "Staff Conduct & Behavior",
     "Vehicle Repair Quality",
-    "Facility / Branch Issue",
+    "Communication Gap",
     "Other Complaint"
   ];
 
-  const branches = [
-    { code: "10", name: "10 - Sheikh Zayed Road" },
-    { code: "20", name: "20 - Sharjah Branch" },
-    { code: "30", name: "30 - Abu Dhabi Branch" },
+  const complaintTemplates = [
+    "the work is taking too much time.",
+    "Advisor did not call back as promised.",
+    "Vehicle repair delayed without advance notification.",
+    "Invoice amount differs from initial cost estimate.",
+    "Quality of repair unsatisfactory upon vehicle collection.",
+    "Delay in spare parts procurement from central warehouse.",
+    "Staff behavior during customer reception was unprofessional."
+  ];
+
+  const allocateOptions = [
+    { value: "pattepu", label: "pattepu (Primary Assignee)" },
+    { value: "service.manager", label: "service.manager (Workshop Manager)" },
+    { value: "crm.escalations", label: "crm.escalations (Customer Relations Lead)" },
+    { value: "advisor.lead", label: "advisor.lead (Senior Service Advisor)" },
+    { value: "unassigned", label: "unassigned (Queue Dispatch)" }
   ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
-    setSuccessResponse(null);
-    setErrorResponse(null);
+    if (!complaint.trim() || !customerId.trim() || !customerName.trim()) {
+      setToast({ isError: true, message: "Please fill in Customer ID, Customer Name, and Complaint description." });
+      return;
+    }
 
-    const payload = {
-      keyloopGroup,
-      customerNumber,
-      category,
-      description,
-      branch,
-      priority,
-      createdBy: createdBy,
-      agentId: createdBy
+    setSubmitting(true);
+    setToast(null);
+
+    const details = {
+      group: group || "BMW",
+      customerId: String(customerId || "").trim(),
+      customerName: String(customerName || "").trim(),
+      branch: branch || "10 - Sheikh Zayed Rd",
+      department: department || "Service",
+      source: source || "Customer Call",
+      complaintPriority: complaintPriority || "Normal",
+      complaintGroup: complaintGroup || "Process",
+      category: category || "Process Delay",
+      complaint: String(complaint || "").trim(),
+      allocateTo: String(allocateTo || "pattepu").trim()
     };
 
     try {
-      let res;
-      try {
-        res = await fetch('/api/v1/complaints', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      } catch {
-        res = await fetch('https://ccaas.agmcgroup.ae/api/v1/complaints', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      }
+      const res = await createComplaintCase(details, {
+        createdBy: agentId || "genesys",
+        callbackUrl: DEFAULT_RPA_CALLBACK_URL
+      });
 
-      if (res && (res.ok || res.status === 201 || res.status === 200)) {
-        let resData = {};
-        try {
-          resData = await res.json();
-        } catch {
-          resData = { message: "Complaint registered successfully!" };
-        }
-        setSuccessResponse({
-          complaintId: resData.complaintId || resData.id || resData.complaintNumber || `CMP-${customerNumber}-${Math.floor(100 + Math.random() * 900)}`,
-          message: resData.message || "Complaint registered successfully!"
+      if (res && res.ok) {
+        setToast({
+          isError: false,
+          message: "Complaint registered successfully!",
+          taskId: res.taskId || res.result?.taskId || null
         });
+        // Clear complaint description for next entry
+        setComplaint("");
       } else {
-        // Fallback simulate success
-        setSuccessResponse({
-          complaintId: `CMP-${customerNumber}-${Math.floor(100 + Math.random() * 900)}`,
-          message: "Complaint registered successfully!"
+        setToast({
+          isError: true,
+          message: res?.errorMessage || "Failed to create complaint ticket"
         });
       }
     } catch (err) {
-      console.warn("Complaint POST error, fallback response:", err.message);
-      setSuccessResponse({
-        complaintId: `CMP-${customerNumber}-${Math.floor(100 + Math.random() * 900)}`,
-        message: "Complaint registered successfully!"
+      console.error("Create Complaint error:", err);
+      setToast({
+        isError: true,
+        message: err.message || "Failed to submit complaint ticket"
       });
     } finally {
       setSubmitting(false);
@@ -131,156 +209,355 @@ export default function CreateComplaintView() {
   };
 
   return (
-    <div className="flex flex-col gap-4 text-xs w-full">
+    <div className="flex flex-col gap-3 text-xs w-full">
       
-      {/* Toast Notification */}
-      {successResponse && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3 rounded-xl flex items-center justify-between shadow-xs animate-fade-in">
+      {/* TOAST MESSAGE (Appears on API 200 or Error) */}
+      {toast && (
+        <div className={`p-3 rounded-xl flex items-center justify-between shadow-xs border transition-all animate-fade-in ${
+          toast.isError
+            ? "bg-rose-50 border-rose-200 text-rose-900"
+            : "bg-emerald-50 border-emerald-200 text-emerald-900"
+        }`}>
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-xs">
-              ✓
+            <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] text-white shadow-2xs ${
+              toast.isError ? "bg-rose-500" : "bg-emerald-600"
+            }`}>
+              {toast.isError ? "✕" : "✓"}
             </div>
             <div>
-              <h4 className="font-bold text-xs">{successResponse.message}</h4>
-              <p className="text-[11px] text-emerald-600">Complaint ID: <span className="font-mono font-bold text-gray-900">{successResponse.complaintId}</span></p>
+              <h4 className="font-bold text-xs">{toast.message}</h4>
+              {toast.taskId && (
+                <span className="text-[10px] text-emerald-700 font-mono font-semibold block">
+                  RPA Task Reference: #{toast.taskId}
+                </span>
+              )}
             </div>
           </div>
+          <button 
+            type="button"
+            onClick={() => setToast(null)} 
+            className="text-gray-400 hover:text-gray-700 font-bold p-1 cursor-pointer"
+          >
+            ✕
+          </button>
         </div>
       )}
 
-      {/* Main Complaint Form Card */}
-      <div className="bg-white rounded-xl p-5 sm:p-6 shadow-sm border border-gray-200 flex flex-col gap-4">
-        <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+      {/* MAIN ENQUIRY-STYLE COMPLAINT FORM CARD */}
+      <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+        
+        {/* Header Bar matching New Enquiry */}
+        <div className="bg-slate-50/80 px-4 py-3 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center font-bold">
-              <FaPlusCircle className="text-base" />
+            <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
+              <FaPlusCircle />
             </div>
             <div>
-              <h2 className="font-bold text-gray-900 text-sm leading-tight">Create Customer Complaint</h2>
-              <p className="text-[11px] text-gray-400">Register new escalation ticket for {customerName || `Customer #${customerNumber}`}</p>
+              <h2 className="font-bold text-gray-900 text-xs leading-tight">Create Customer Complaint</h2>
+              <p className="text-[10px] text-gray-400">
+                Register an escalation for <span className="font-semibold text-gray-700">{customerName}</span>
+              </p>
             </div>
           </div>
-          <span className="bg-indigo-50 text-indigo-600 border border-indigo-200 font-bold text-[10px] px-2.5 py-0.5 rounded-full uppercase">
-            New Ticket
-          </span>
+
+          <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+            <span className="text-[10px] text-gray-500 font-medium">
+              Group: <span className="font-bold text-gray-800">{group}</span> | <span className="font-bold text-gray-800">Customer #{customerId}</span>
+            </span>
+            <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-2xs shrink-0">
+              <FaCar className="text-[10px]" />
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+        {/* Form Body with Clean 3-Column Grid matching New Enquiry */}
+        <form onSubmit={handleSubmit} className="p-4 sm:p-5 flex flex-col gap-4">
           
-          {/* ROW 1: Brand Group & Customer Number */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            
+            {/* 1. Brand / Group (Dynamic Dropdown) */}
             <div>
-              <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
-                <FaLayerGroup className="text-gray-400" /> Keyloop Group <span className="text-rose-500">*</span>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Automotive Group <span className="text-rose-500 font-bold">*</span>
               </label>
-              <select 
-                value={keyloopGroup}
-                onChange={(e) => setKeyloopGroup(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
-              >
-                <option value="BMW">BMW</option>
-                <option value="MINI">MINI</option>
-                <option value="Motorrad">Motorrad</option>
-                <option value="Rolls-Royce">Rolls-Royce</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
-                <FaUser className="text-gray-400" /> Customer Number <span className="text-rose-500">*</span>
-              </label>
-              <input 
-                type="text"
-                value={customerNumber}
-                onChange={(e) => setCustomerNumber(e.target.value)}
-                placeholder="e.g. 80496"
-                required
-                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500 font-mono"
-              />
-            </div>
-          </div>
-
-          {/* ROW 2: Category & Branch */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
-                <FaTag className="text-gray-400" /> Complaint Category <span className="text-rose-500">*</span>
-              </label>
-              <select 
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
-              >
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
-                <FaBuilding className="text-gray-400" /> Branch Code <span className="text-rose-500">*</span>
-              </label>
-              <select 
-                value={branch}
-                onChange={(e) => setBranch(e.target.value)}
-                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
-              >
-                {branches.map(b => (
-                  <option key={b.code} value={b.code}>{b.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* ROW 3: Priority Level */}
-          <div>
-            <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
-              <FaFlag className="text-gray-400" /> Priority Level <span className="text-rose-500">*</span>
-            </label>
-            <div className="flex items-center gap-2 max-w-xl">
-              {['HIGH', 'MEDIUM', 'LOW', 'CRITICAL'].map((p) => (
-                <button
-                  type="button"
-                  key={p}
-                  onClick={() => setPriority(p)}
-                  className={`flex-1 py-2 px-3 rounded-lg font-bold text-[11px] border transition-all cursor-pointer ${
-                    priority === p
-                      ? p === 'HIGH' || p === 'CRITICAL'
-                        ? 'bg-rose-50 text-rose-700 border-rose-300 shadow-2xs'
-                        : p === 'MEDIUM'
-                        ? 'bg-amber-50 text-amber-700 border-amber-300 shadow-2xs'
-                        : 'bg-blue-50 text-blue-700 border-blue-300 shadow-2xs'
-                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
-                  }`}
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaLayerGroup />
+                </div>
+                <select
+                  value={group}
+                  onChange={(e) => setGroup(e.target.value)}
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
                 >
-                  {p}
-                </button>
-              ))}
+                  {brandGroups.map(bg => (
+                    <option key={bg} value={bg}>{bg}</option>
+                  ))}
+                  {!brandGroups.includes(group) && (
+                    <option value={group}>{group}</option>
+                  )}
+                </select>
+              </div>
+            </div>
+
+            {/* 2. Customer ID */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Customer ID <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaUser />
+                </div>
+                <input
+                  type="text"
+                  value={customerId}
+                  onChange={(e) => setCustomerId(e.target.value)}
+                  placeholder="e.g. 52660"
+                  required
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs font-mono placeholder:text-gray-400"
+                />
+              </div>
+            </div>
+
+            {/* 3. Customer Name */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Customer Name <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaUserCheck />
+                </div>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  placeholder="e.g. vera sfeir"
+                  required
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs placeholder:text-gray-400"
+                />
+              </div>
+            </div>
+
+            {/* 4. Branch Location */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Branch Location <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaBuilding />
+                </div>
+                <select
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
+                >
+                  {branches.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 5. Department */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Department <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaBriefcase />
+                </div>
+                <select
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
+                >
+                  {departments.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 6. Complaint Source */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Complaint Source <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaPhoneAlt />
+                </div>
+                <select
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
+                >
+                  {sources.map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 7. Complaint Priority */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Priority <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaFlag />
+                </div>
+                <select
+                  value={complaintPriority}
+                  onChange={(e) => setComplaintPriority(e.target.value)}
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
+                >
+                  {priorities.map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 8. Complaint Group */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Complaint Group <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaClipboardList />
+                </div>
+                <select
+                  value={complaintGroup}
+                  onChange={(e) => setComplaintGroup(e.target.value)}
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
+                >
+                  {complaintGroups.map(cg => (
+                    <option key={cg} value={cg}>{cg}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 9. Category */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Category <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaTag />
+                </div>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
+                >
+                  {categories.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+          </div>
+
+          {/* 10. Allocate To (Dropdown with option to type custom ID) */}
+          <div className="pt-0.5">
+            <div className="flex items-center justify-between mb-0.5">
+              <label className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                Allocate To <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <span className="text-[10px] text-gray-400 font-mono">Assignee: {allocateTo}</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaUserCheck />
+                </div>
+                <select
+                  value={allocateOptions.some(o => o.value === allocateTo) ? allocateTo : 'custom'}
+                  onChange={(e) => {
+                    if (e.target.value !== 'custom') {
+                      setAllocateTo(e.target.value);
+                    }
+                  }}
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
+                >
+                  {allocateOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                  <option value="custom">-- Custom Staff ID --</option>
+                </select>
+              </div>
+
+              {/* Direct Text Input for AllocateTo */}
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <input
+                  type="text"
+                  value={allocateTo}
+                  onChange={(e) => setAllocateTo(e.target.value)}
+                  placeholder="Enter custom staff username or ID..."
+                  required
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs font-mono placeholder:text-gray-400"
+                />
+              </div>
             </div>
           </div>
 
-          {/* ROW 4: Description */}
-          <div>
-            <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
-              <FaAlignLeft className="text-gray-400" /> Detailed Description <span className="text-rose-500">*</span>
-            </label>
-            <textarea 
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Provide detailed description of the complaint..."
-              required
-              className="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg font-medium text-gray-800 focus:outline-none focus:border-blue-500 leading-relaxed"
-            />
+          {/* 11. Complaint Description (Textarea + Quick Templates Dropdown) */}
+          <div className="pt-0.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+              <label className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                <FaAlignLeft className="text-blue-500 text-[10px]" />
+                <span>Complaint Description</span>
+                <span className="text-rose-500 font-bold">*</span>
+              </label>
+
+              {/* Quick Template Dropdown */}
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-medium text-gray-400">Template:</span>
+                <select
+                  onChange={(e) => {
+                    if (e.target.value) setComplaint(e.target.value);
+                  }}
+                  defaultValue=""
+                  className="h-6 px-2 bg-white border border-slate-200/90 rounded-md text-[11px] font-medium text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer shadow-2xs"
+                >
+                  <option value="" disabled>-- Select Quick Template --</option>
+                  {complaintTemplates.map((tmpl, idx) => (
+                    <option key={idx} value={tmpl}>{tmpl}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="relative w-full bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs transition-all p-2">
+              <textarea
+                rows={3}
+                value={complaint}
+                onChange={(e) => setComplaint(e.target.value)}
+                placeholder="Enter detailed description of customer complaint..."
+                required
+                className="w-full bg-transparent border-0 focus:outline-none text-xs font-semibold text-gray-800 leading-relaxed resize-none placeholder:text-gray-400"
+              />
+              <div className="text-right text-[10px] text-gray-400 select-none pt-0.5">
+                {complaint.length} characters
+              </div>
+            </div>
           </div>
 
-          {/* Submit Action Row */}
-          <div className="pt-3 flex items-center justify-end border-t border-gray-100">
-            <button 
+          {/* Form Submit Action Row matching New Enquiry */}
+          <div className="pt-1 flex items-center justify-end border-t border-gray-100">
+            <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-2 cursor-pointer transition-colors disabled:opacity-50"
+              className="h-8.5 px-5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-50"
             >
               {submitting ? (
                 <>
@@ -290,7 +567,7 @@ export default function CreateComplaintView() {
               ) : (
                 <>
                   <FaPaperPlane className="text-xs" />
-                  <span>Create Complaint Ticket</span>
+                  <span>Create Complaint</span>
                 </>
               )}
             </button>

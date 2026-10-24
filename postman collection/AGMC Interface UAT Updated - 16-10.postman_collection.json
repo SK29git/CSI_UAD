@@ -1,0 +1,2640 @@
+{
+  "info": {
+    "_postman_id": "dc851705-d942-487e-9449-09f3655d19a2",
+    "name": "AGMC Interface UAT Updated - 16/10",
+    "description": "Middleware between the brand websites (BMW, Geely, ...) and Keyloop / Genesys",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "50201511",
+    "_collection_link": "https://go.postman.co/collection/50201511-dc851705-d942-487e-9449-09f3655d19a2?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "actuator",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Sales Screen (agent desktop)",
+      "item": [
+        {
+          "name": "Search by mobile (caller id)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers?mobile={{mobile}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "mobile",
+                  "value": "{{mobile}}"
+                }
+              ]
+            },
+            "description": "Any UAE mobile format works: 0501234567, 971501234567, +971 50 123 4567. When nothing matches the registered mobile, every other phone number Keyloop holds for the customer (Phone1-3, landlines, foreign numbers) is tried digit-for-digit - the spec's \"search by another phone number\" for a caller on an unregistered line. Add `group=BMW` to restrict to one dealer group; `limit` defaults to 20 (max 100)."
+          },
+          "response": []
+        },
+        {
+          "name": "Search by e-mail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers?email={{email}}&group={{group}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "email",
+                  "value": "{{email}}"
+                },
+                {
+                  "key": "group",
+                  "value": "{{group}}"
+                }
+              ]
+            },
+            "description": "Case-insensitive exact match on the customer's e-mail."
+          },
+          "response": []
+        },
+        {
+          "name": "Search by customer number",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers?customerNumber={{customerNumber}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "customerNumber",
+                  "value": "{{customerNumber}}"
+                }
+              ]
+            },
+            "description": "Keyloop customer number, across groups unless `group` is given. At least one of mobile / email / customerNumber is required (400 otherwise)."
+          },
+          "response": []
+        },
+        {
+          "name": "Customer profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{group}}",
+                "{{customerNumber}}",
+                "profile"
+              ]
+            },
+            "description": "Customer profile section: name, mobile (E.164 when it is a UAE mobile, plus the raw value), e-mail, address, branch, customer since, type (LOYAL / CONQUEST...), VIP, do-not-contact, consent flags. 404 when the group + number does not exist."
+          },
+          "response": []
+        },
+        {
+          "name": "Vehicle Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{group}}",
+                "{{customerNumber}}",
+                "vehicles"
+              ]
+            },
+            "description": "The customer's vehicles, newest registration first. Found through the VIN on one of their invoiced enquiries (`linkedVia` = `INVOICED_ENQUIRY`). The \"Customer Number\" on Keyloop's vehicle export is not followed - on the real files it does not identify the car's owner. Keyloop's vehicle export has no engine or transmission column. `mileageKm` is the last odometer reading (Keyloop's 0 = no reading, omitted)."
+          },
+          "response": []
+        },
+        {
+          "name": "Insurance Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/insurance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{group}}",
+                "{{customerNumber}}",
+                "insurance"
+              ]
+            },
+            "description": "Insurance contracts on the cars the customer owns or bought, from Keyloop's contract export: contractNumber (Keyloop's own contract number - the insurer's Policy No. and the Coverage are in red font on the spec and are not in the export), provider, start and expiry dates, Keyloop status plus a normalised state (ACTIVE / EXPIRED / INACTIVE) and days to expiry. Lost-sale enquiries are never followed."
+          },
+          "response": []
+        },
+        {
+          "name": "Finance Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/finance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{group}}",
+                "{{customerNumber}}",
+                "finance"
+              ]
+            },
+            "description": "The customer's financed orders from Keyloop's finance export (core.finance, arrived 2026-09-18): provider (the bank the order was invoiced to), loan amount, monthly payment (EMI), number of payments (tenure), invoice date, the car. Cash sales (Keyloop writes zeros) are left out unless includeCash=true. Outstanding Amount and Status have no source."
+          },
+          "response": []
+        },
+        {
+          "name": "Trade-in History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/trade-in-history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{group}}",
+                "{{customerNumber}}",
+                "trade-in-history"
+              ]
+            },
+            "description": "From Keyloop's trade-in export (core.tradein): previous vehicle, trade-in date (appraisal date, or valuation date when there was no appraisal), value (total offer; omitted on cancelled trade-ins where Keyloop writes 0), status Completed / Cancelled."
+          },
+          "response": []
+        },
+        {
+          "name": "Complaint Activity Timeline",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/complaints?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{group}}",
+                "{{customerNumber}}",
+                "complaints"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "The customer's cases from Keyloop's complaint export (core.complaint), newest first: complaint id, category, department, status (OPEN until Keyloop records a closed date), owner (allocated to), resolution (closure text), created / closed date-times, source, vehicle. Escalation has no source."
+          },
+          "response": []
+        },
+        {
+          "name": "Customer Risk Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/risk-overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{group}}",
+                "{{customerNumber}}",
+                "risk-overview"
+              ]
+            },
+            "description": "Only what Keyloop can answer: the last complaint date and its id. Risk Level, Risk Score and Repeat Complaint Count are in red font on the spec - Genesys derives them from the complaint report."
+          },
+          "response": []
+        },
+        {
+          "name": "Overall agent desktop",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/sales-screen",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "customers",
+                "{{group}}",
+                "{{customerNumber}}",
+                "sales-screen"
+              ]
+            },
+            "description": "Every white section in one call: profile, vehicles, insurance, finance, trade-in history, complaints (10 most recent), risk overview. Rows that are red on the spec are not included."
+          },
+          "response": []
+        }
+      ],
+      "description": "Read-only API behind the Genesys agent desktop's Sales Screen, one request per section of the screen spec. Answered from the core.* tables (Keyloop's typed mirror); nothing is written back. Only the rows left white on the spec have an endpoint, and red-font fields inside a white row are returned empty (\"\"). Fully red rows - Trade-in Eligibility, Documents, Accessories, Recent Sales Activities, SLA Countdown, Customer Sentiment, AI Assistant, Activity Timeline, Complaint Manager, Notes - are Genesys's or another system's and are not routed.\n\nA customer is addressed by Keyloop group + customer number (`{{group}}` / `{{customerNumber}}`) because the number is only unique within a dealer group. Start with a search (by the caller's mobile, an e-mail, or the number) - it returns both.\n\nFields Keyloop leaves empty are omitted from the JSON rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
+    },
+    {
+      "name": "Sales New Lead Screen",
+      "item": [
+        {
+          "name": "2. Test drive",
+          "item": [
+            {
+              "name": "Get test-drive slots (Vehicle, Branch)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/test-drives/vehicles?group={{group}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "test-drives",
+                    "vehicles"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "branchCode",
+                      "value": "{{branchCode}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "The demo vehicles seen in bookings over the last sinceDays (default 180), with the branch of their latest booking. Date, Slot ID, Advisor and Date/Time are red font - Genesys runs the roster. Drop branchCode for all branches; it accepts 10 or 0010."
+              },
+              "response": []
+            },
+            {
+              "name": "Test drives for a lead",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/test-drives?group={{group}}&enquiryNumber={{enquiryNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "test-drives"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "enquiryNumber",
+                      "value": "{{enquiryNumber}}"
+                    }
+                  ]
+                },
+                "description": "A lead's bookings; also customerNumber=, or date= (with optional branchCode=) for everything on a day. Optional status=."
+              },
+              "response": []
+            },
+            {
+              "name": "Confirm booking (read)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/test-drives/{{group}}/{{bookingNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "test-drives",
+                    "{{group}}",
+                    "{{bookingNumber}}"
+                  ]
+                },
+                "description": "Customer, Vehicle, Slot, Advisor, Booking ID, Status. Writing a booking into Keyloop is not possible from here."
+              },
+              "response": []
+            },
+            {
+              "name": "Booking confirmation communication",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/test-drives/{{group}}/{{bookingNumber}}/confirmation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "test-drives",
+                    "{{group}}",
+                    "{{bookingNumber}}",
+                    "confirmation"
+                  ]
+                },
+                "description": "Booking ID, Customer, Vehicle (with the slot and branch). Message ID and Status are red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "3. Vehicle order",
+          "item": [
+            {
+              "name": "Find orders",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders?group={{group}}&customerNumber={{customerNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "customerNumber",
+                      "value": "{{customerNumber}}"
+                    }
+                  ]
+                },
+                "description": "Enquiries that became orders (Provisional order, Confirmed order, Invoiced) by customerNumber or vin, joined to the car. enquiryNumber= returns that enquiry whatever its status."
+              },
+              "response": []
+            },
+            {
+              "name": "Get order",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders/{{group}}/{{enquiryNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders",
+                    "{{group}}",
+                    "{{enquiryNumber}}"
+                  ]
+                },
+                "description": "The order (Keyloop enquiry number) with its dates, sales executive and the vehicle record."
+              },
+              "response": []
+            },
+            {
+              "name": "Get production status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders/{{group}}/{{enquiryNumber}}/production",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders",
+                    "{{group}}",
+                    "{{enquiryNumber}}",
+                    "production"
+                  ]
+                },
+                "description": "Booking/Vehicle ID and the dates Keyloop holds (supplier order, order confirmed, planned delivery) plus its stock flag. Production Status is red font."
+              },
+              "response": []
+            },
+            {
+              "name": "Get shipment status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders/{{group}}/{{enquiryNumber}}/shipment",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders",
+                    "{{group}}",
+                    "{{enquiryNumber}}",
+                    "shipment"
+                  ]
+                },
+                "description": "Vehicle ID and where Keyloop says the car is now. Shipment Status and Tracking No. are red font; Keyloop has no tracking number."
+              },
+              "response": []
+            },
+            {
+              "name": "Get registration status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders/{{group}}/{{enquiryNumber}}/registration",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders",
+                    "{{group}}",
+                    "{{enquiryNumber}}",
+                    "registration"
+                  ]
+                },
+                "description": "Vehicle ID, registration date and plate. Registration Status is red font."
+              },
+              "response": []
+            },
+            {
+              "name": "Send milestone updates",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders/{{group}}/{{enquiryNumber}}/milestones",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders",
+                    "{{group}}",
+                    "{{enquiryNumber}}",
+                    "milestones"
+                  ]
+                },
+                "description": "Customer (number, name, mobile) and Vehicle, with the order's own dates. Milestone, Template, Message ID and Delivery Status are red font."
+              },
+              "response": []
+            },
+            {
+              "name": "Detect vehicle ready",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/orders/{{group}}/{{enquiryNumber}}/vehicle-ready",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "orders",
+                    "{{group}}",
+                    "{{enquiryNumber}}",
+                    "vehicle-ready"
+                  ]
+                },
+                "description": "Vehicle ID with Keyloop's stock flag and delivery date to judge from. Status and Trigger Status are red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "4. After-sales",
+          "item": [
+            {
+              "name": "Identify customers due for service",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/segments/service-due?group={{group}}&withinDays=30",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "segments",
+                    "service-due"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "withinDays",
+                      "value": "30"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Customer, Vehicle, Mileage, Last Service Date for cars whose next service date falls within withinDays (overdueDays= also looks back). Page with limit (default 100, max 1000) and offset until a page comes back short. Segment ID and Record Count are in red font on the spec: returned empty (\"\")."
+              },
+              "response": []
+            },
+            {
+              "name": "Detect service booking",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/service-bookings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "service-bookings"
+                  ]
+                },
+                "description": "Customer, Vehicle, Booking/WIP, Booking Status: Keyloop's open workshop WIPs across the customer's cars. Also /api/v1/vehicles/{group}/{vin}/service-bookings."
+              },
+              "response": []
+            },
+            {
+              "name": "Send appointment confirmation",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/service-bookings/{{group}}/{{wipNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "service-bookings",
+                    "{{group}}",
+                    "{{wipNumber}}"
+                  ]
+                },
+                "description": "Booking, Advisor (bookedBy), Branch, Date/Time for one WIP. Message ID and Status are red font."
+              },
+              "response": []
+            },
+            {
+              "name": "Send service progress",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/service-bookings/{{group}}/{{wipNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "service-bookings",
+                    "{{group}}",
+                    "{{wipNumber}}"
+                  ]
+                },
+                "description": "WIP, Vehicle, Service Status for one WIP. Message ID and Delivery Status are red font."
+              },
+              "response": []
+            },
+            {
+              "name": "Trigger feedback (service)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/service-bookings/{{group}}/{{wipNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "service-bookings",
+                    "{{group}}",
+                    "{{wipNumber}}"
+                  ]
+                },
+                "description": "Customer, WIP, Completion Date (dueOutDate) for one WIP. Trigger Status is red font."
+              },
+              "response": []
+            },
+            {
+              "name": "Send offer (Customer, Vehicle)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles?group={{group}}&customerNumber={{customerNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "customerNumber",
+                      "value": "{{customerNumber}}"
+                    }
+                  ]
+                },
+                "description": "Black fields are Customer and Vehicle: the customer's cars. Eligibility, Offer, Message ID and Delivery Status are red font."
+              },
+              "response": []
+            },
+            {
+              "name": "Retrieve customer/vehicle details - customer",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers?mobile={{mobile}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "query": [
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}"
+                    }
+                  ]
+                },
+                "description": "Customer ID / Mobile, Customer, Contact Details. Then .../profile for the full record."
+              },
+              "response": []
+            },
+            {
+              "name": "Retrieve customer/vehicle details - vehicles",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles?group={{group}}&customerNumber={{customerNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "customerNumber",
+                      "value": "{{customerNumber}}"
+                    }
+                  ]
+                },
+                "description": "Vehicle and VIN for every car the customer owns or bought."
+              },
+              "response": []
+            },
+            {
+              "name": "Get service packages (Vehicle, Mileage)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles",
+                    "{{group}}",
+                    "{{vin}}"
+                  ]
+                },
+                "description": "Black fields are Vehicle and Mileage: the vehicle summary. Service Type, Package, Price and Eligibility are red font - no package data exists in Keyloop."
+              },
+              "response": []
+            },
+            {
+              "name": "Create service appointment (read)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}/service-bookings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles",
+                    "{{group}}",
+                    "{{vin}}",
+                    "service-bookings"
+                  ]
+                },
+                "description": "Customer, Vehicle, Booking/WIP No., Status. Package and Slot are red font, and writing an appointment into Keyloop is not possible from here."
+              },
+              "response": []
+            },
+            {
+              "name": "Identify customers with no service",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/segments/no-service?group={{group}}&months=18",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "segments",
+                    "no-service"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "months",
+                      "value": "18"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Customer, Vehicle, Last Service Date for delivered cars whose last service (or delivery, if never serviced) is over months old. Page with limit (default 100, max 1000) and offset until a page comes back short. Segment ID and Record Count are in red font on the spec: returned empty (\"\")."
+              },
+              "response": []
+            },
+            {
+              "name": "Update reactivated customer (read)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/segments/reactivated?group={{group}}&months=18",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "segments",
+                    "reactivated"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "months",
+                      "value": "18"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Customer, Vehicle, WIP, Date: a lapsed car (as above) that now has an open workshop booking. Update Status is red font and nothing can be written back to Keyloop. Page with limit (default 100, max 1000) and offset until a page comes back short. Segment ID and Record Count are in red font on the spec: returned empty (\"\")."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "5. Segments",
+          "item": [
+            {
+              "name": "Identify upgrade customers",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/segments/upgrade?group={{group}}&minMileageKm=60000&minAgeYears=4",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "segments",
+                    "upgrade"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "minMileageKm",
+                      "value": "60000"
+                    },
+                    {
+                      "key": "minAgeYears",
+                      "value": "4"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Customer, Vehicle, Mileage for delivered cars at or over a mileage, or registered at least minAgeYears ago. Age is red font. Page with limit (default 100, max 1000) and offset until a page comes back short. Segment ID and Record Count are in red font on the spec: returned empty (\"\")."
+              },
+              "response": []
+            },
+            {
+              "name": "Identify expiring insurance",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/segments/insurance-expiring?group={{group}}&withinDays=30",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "segments",
+                    "insurance-expiring"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "withinDays",
+                      "value": "30"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Customer, Vehicle, Expiry Date, Insurance Details (provider, contract number) for active contracts expiring within withinDays. Days to Expiry is red font. Page with limit (default 100, max 1000) and offset until a page comes back short. Segment ID and Record Count are in red font on the spec: returned empty (\"\")."
+              },
+              "response": []
+            },
+            {
+              "name": "Push renewal customers",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/segments/insurance-expiring?group={{group}}&withinDays=30",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "segments",
+                    "insurance-expiring"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "withinDays",
+                      "value": "30"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Customer and Mobile of the same expiring-insurance population. Page with limit (default 100, max 1000) and offset until a page comes back short. Segment ID and Record Count are in red font on the spec: returned empty (\"\")."
+              },
+              "response": []
+            },
+            {
+              "name": "Birthday customer extraction",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/segments/birthdays?group={{group}}&month=9",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "segments",
+                    "birthdays"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "month",
+                      "value": "9"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Date Range/Month, Customer, Birthday, Contact. month (1-12) with optional day, or from= / to= dates with the year ignored (a range across new year works). Page with limit (default 100, max 1000) and offset until a page comes back short. Segment ID and Record Count are in red font on the spec: returned empty (\"\")."
+              },
+              "response": []
+            },
+            {
+              "name": "Identify EV customers",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/segments/ev-customers?group={{group}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "segments",
+                    "ev-customers"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Customer, Vehicle, Fuel Type from Keyloop's own electric-vehicle export (folder EV, table core.electric_vehicle) - the main vehicle export leaves Fuel Type blank on almost every car, so EVs cannot be told from it. A car's customer is the buyer on its latest invoiced enquiry, matched by vehicle number; cars never invoiced to anyone (stock, demo, open orders) are left out. The EV row's own Customer Number does not identify the car's owner and its Enquiry Number only repeats the Vehicle Number, so neither is followed. A car without a chassis yet has no vin. Optional fuelTypes=E narrows by Keyloop's fuel-type code. Ownership Date is red font. Page with limit (default 100, max 1000) and offset; Segment ID and Record Count are red font: returned empty (\"\")."
+              },
+              "response": []
+            },
+            {
+              "name": "Identify inactive leads",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/segments/inactive-leads?group={{group}}&olderThanDays=30",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "segments",
+                    "inactive-leads"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "olderThanDays",
+                      "value": "30"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Lead ID: open, unconverted prospects older than olderThanDays with no test drive booked. Last Interaction Date and Days Inactive are red font - interactions live in Genesys. Page with limit (default 100, max 1000) and offset until a page comes back short. Segment ID and Record Count are in red font on the spec: returned empty (\"\")."
+              },
+              "response": []
+            },
+            {
+              "name": "Identify VIP customers",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/segments/vip-customers?group={{group}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "segments",
+                    "vip-customers"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Customer and VIP Flag (Keyloop's own flag). Spend and Purchase Count are red font. Page with limit (default 100, max 1000) and offset until a page comes back short. Segment ID and Record Count are in red font on the spec: returned empty (\"\")."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "6. Complaints",
+          "item": [
+            {
+              "name": "Send acknowledgement",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{complaintReference}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "complaints",
+                    "{{group}}",
+                    "{{complaintReference}}"
+                  ]
+                },
+                "description": "Complaint ID, Customer, Mobile for one Keyloop complaint. Template, Message ID and Status are red font."
+              },
+              "response": []
+            },
+            {
+              "name": "Monitor complaint status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{complaintReference}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "complaints",
+                    "{{group}}",
+                    "{{complaintReference}}"
+                  ]
+                },
+                "description": "Complaint ID with OPEN or CLOSED - Keyloop records only a closed date, so In Progress and Re-opened (red font) do not exist. For all of a customer's complaints use .../customers/{group}/{customerNumber}/complaints."
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "description": "One request per white row of the Sales New Lead Screen (2026-09-18 version). Each serves the fields that are in black on its row; red-font fields (message ids, delivery and trigger statuses, templates, slot lists, ratings, production / shipment / registration statuses, tracking number, segment id, record count...) are Genesys's or another system's: they are returned empty (\"\").\n\nFully red rows have no request: Get showroom slots, Create showroom appointment, Return customer response, Get service slots, Anniversary extraction, Push campaign segment, Stop communication after 6 months, Assign relationship manager, Fast-track VIP service.\n\nRead-only over core.* (Keyloop's typed mirror) and the leads table, except the complaint ticket, which writes to a table of our own. Writing bookings or appointments into Keyloop is not possible - they only arrive as Keyloop's exports. Times are dealer-local (+04:00). Fields Keyloop leaves empty are omitted. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
+    },
+    {
+      "name": "Service Booking Screen",
+      "item": [
+        {
+          "name": "1. Get Customer Details",
+          "item": [
+            {
+              "name": "Search customer by mobile (caller id)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers?mobile={{mobile}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "query": [
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}"
+                    }
+                  ]
+                },
+                "description": "Registered mobile first, then any other phone Keyloop holds (the spec's \"search by another phone number\"). Also email= or customerNumber=."
+              },
+              "response": []
+            },
+            {
+              "name": "Customer details",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "profile"
+                  ]
+                },
+                "description": "Customer ID, name, mobile, e-mail, location, customer since. Language is in red font: returned empty (\"\")."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "2. Get Vehicle Summary",
+          "item": [
+            {
+              "name": "Vehicle summary by Vehicle ID (VIN)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles",
+                    "{{group}}",
+                    "{{vin}}"
+                  ]
+                },
+                "description": "Model, VIN, mileage, last service date, next service due and the insurance contracts on the car. Warranty Status and Service Contract have no Keyloop feed (the contract export is insurance only)."
+              },
+              "response": []
+            },
+            {
+              "name": "Vehicle summaries by Customer ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles?group={{group}}&customerNumber={{customerNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "customerNumber",
+                      "value": "{{customerNumber}}"
+                    }
+                  ]
+                },
+                "description": "Every car the customer bought (VIN on one of their invoiced enquiries), newest registration first."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "3. Service Eligibility / Warranty Check (501)",
+          "item": [
+            {
+              "name": "Service eligibility / warranty check",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}/service-eligibility",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles",
+                    "{{group}}",
+                    "{{vin}}",
+                    "service-eligibility"
+                  ]
+                },
+                "description": "BSI / BRI / ASI: no Keyloop feed carries warranty or service contracts, so this answers 501 after the usual 404 check. Service Type and Eligibility are in red font anyway."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "5. Modify / Reschedule Booking (read)",
+          "item": [
+            {
+              "name": "Booking by WIP number",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/service-bookings/{{group}}/{{wipNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "service-bookings",
+                    "{{group}}",
+                    "{{wipNumber}}"
+                  ]
+                },
+                "description": "Booking ID, WIP / Job Card No. and Booking Status - the fields in black. New Slot, New Date/Time, Advisor and Confirmation Time are in red font, so there is nothing to write."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "6. Save Customer Complaints / Requests (read / write)",
+          "item": [
+            {
+              "name": "List a customer's complaints and requests",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/requests",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "requests"
+                  ]
+                },
+                "description": "Newest first; limit (default 50, max 200)."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "7. Booking Confirmation",
+          "item": [
+            {
+              "name": "Booking confirmation",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/service-bookings/{{group}}/{{wipNumber}}/confirmation",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "service-bookings",
+                    "{{group}}",
+                    "{{wipNumber}}",
+                    "confirmation"
+                  ]
+                },
+                "description": "Booking ID, Customer ID, customer name, Mobile and the appointment (date, time, branch, service, car, status). Message ID and Delivery Status are in red font - Genesys sends the message. The customer is the buyer on the car's latest invoiced enquiry: Keyloop's booking export names none."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "8. Service Reminder",
+          "item": [
+            {
+              "name": "Service reminder",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/service-bookings/{{group}}/{{wipNumber}}/reminder",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "service-bookings",
+                    "{{group}}",
+                    "{{wipNumber}}",
+                    "reminder"
+                  ]
+                },
+                "description": "Booking ID, Customer ID and the appointment being reminded of. Reminder Date, Message ID and Delivery Status are in red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "9. Get Service Feedback",
+          "item": [
+            {
+              "name": "Service feedback for a customer",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/service-feedback",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "service-feedback"
+                  ]
+                },
+                "description": "Customer ID, Feedback, Date of the SERVICE and CSI feedback submitted through POST /api/v1/feedback (Feedback Screen) - no Keyloop feed carries feedback. Booking ID and Rating are in red font. Optional bookingId=, from=, to=, limit=."
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "description": "The rows of the Service Booking Screen that are not fully red (sheet of 2026-09-20), with red-font fields kept in each row's response but always empty (\"\").\n\nFully red, no endpoint: Get Trade-in Eligibility (was yellow, removed), Get Service Types, Get Workshop Availability, Get Service Slots, Get Available Service Advisors, Cancel Booking, Get Recommended Service Packages, Get Package Details, Calculate Service Estimate, Check Additional Services, Get Customer Activity (removed), AI Service Recommendation.\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
+    },
+    {
+      "name": "Service Overview Screen",
+      "item": [
+        {
+          "name": "1. Get Customer Details",
+          "item": [
+            {
+              "name": "Search customer by mobile (caller id)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers?mobile={{mobile}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "query": [
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}"
+                    }
+                  ]
+                },
+                "description": "Registered mobile first, then any other phone Keyloop holds (the spec's \"search by another phone number\"). Also email= or customerNumber=."
+              },
+              "response": []
+            },
+            {
+              "name": "Customer details",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "profile"
+                  ]
+                },
+                "description": "Customer ID, name, mobile, e-mail, location, customer type (LOYAL / CONQUEST...). Language is in red font: returned empty (\"\")."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "2. Get Verification Status (501)",
+          "item": [
+            {
+              "name": "Verification status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/verification",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "verification"
+                  ]
+                },
+                "description": "Identity verification is recorded in Genesys when the agent does it and no feed of it reaches this side: answers 501 after the usual 404 check. Verified By and Verification Date are in red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "3. Get Vehicle Summary",
+          "item": [
+            {
+              "name": "Vehicle summary by Vehicle ID (VIN)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles",
+                    "{{group}}",
+                    "{{vin}}"
+                  ]
+                },
+                "description": "VIN, registration, model, year, mileage, fuel type, colour, service dates and the insurance contracts on the car. Engine and Transmission are not in Keyloop's vehicle export."
+              },
+              "response": []
+            },
+            {
+              "name": "Vehicle summaries by Customer ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles?group={{group}}&customerNumber={{customerNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "customerNumber",
+                      "value": "{{customerNumber}}"
+                    }
+                  ]
+                },
+                "description": "Every car the customer bought, newest registration first."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "4. Get Warranty Status (501)",
+          "item": [
+            {
+              "name": "Warranty status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}/warranty",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles",
+                    "{{group}}",
+                    "{{vin}}",
+                    "warranty"
+                  ]
+                },
+                "description": "No Keyloop feed carries warranties (the contract export is insurance only): 501 after the usual 404 check."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "5. Get Service Contract (501)",
+          "item": [
+            {
+              "name": "Service contract",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}/service-contract",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles",
+                    "{{group}}",
+                    "{{vin}}",
+                    "service-contract"
+                  ]
+                },
+                "description": "No Keyloop feed carries service plans (BSI / BRI / ASI): 501 after the usual 404 check."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "6. Get Next Service Due",
+          "item": [
+            {
+              "name": "Next service due",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}/next-service",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles",
+                    "{{group}}",
+                    "{{vin}}",
+                    "next-service"
+                  ]
+                },
+                "description": "Mileage, Next Service Date and Due Mileage from the vehicle record. Remaining Days/KM is in red font, so nothing is computed against today - no remaining figures and no overdue / due-soon status."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "7. Get Last Service Details",
+          "item": [
+            {
+              "name": "Last service details",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}/last-service",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles",
+                    "{{group}}",
+                    "{{vin}}",
+                    "last-service"
+                  ]
+                },
+                "description": "Last service date and mileage from the vehicle record; branch and service type from the latest closed workshop booking when Keyloop's export has one (source WORKSHOP_BOOKING), else source VEHICLE without them."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "8. Get Open Bookings",
+          "item": [
+            {
+              "name": "Open workshop bookings by Vehicle ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}/service-bookings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles",
+                    "{{group}}",
+                    "{{vin}}",
+                    "service-bookings"
+                  ]
+                },
+                "description": "Booking ID, Service Type, Date, Time, Branch, Status from Keyloop's open-WIP export. Loan Car is in red font: returned empty (\"\"). includeClosed=true for every exported WIP."
+              },
+              "response": []
+            },
+            {
+              "name": "Open workshop bookings by Customer ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/service-bookings",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "service-bookings"
+                  ]
+                },
+                "description": "The same across every car the customer bought. Optional from= / to= bound the appointment date."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "9. Get Service History",
+          "item": [
+            {
+              "name": "Service history for a vehicle",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}/service-history?from=2025-01-01&to=2026-12-31",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles",
+                    "{{group}}",
+                    "{{vin}}",
+                    "service-history"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2025-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-12-31"
+                    }
+                  ]
+                },
+                "description": "Service Date, Mileage, Service Type, Branch, Status: every workshop visit Keyloop exported for the car (source WORKSHOP_BOOKING) plus the last service on the vehicle record when no exported visit falls on that day (source VEHICLE). Cost is in red font. Keyloop's booking export is the OPEN-WIP list, so until a closed-WIP history feed exists most cars show the vehicle record's last service and whatever is currently booked. from / to are optional."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "10. Get Warranty Claims/History (501)",
+          "item": [
+            {
+              "name": "Warranty claims",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/vehicles/{{group}}/{{vin}}/warranty-claims",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "vehicles",
+                    "{{group}}",
+                    "{{vin}}",
+                    "warranty-claims"
+                  ]
+                },
+                "description": "Claim ID and Date are in black, but no Keyloop feed carries warranty claims or workshop invoices: 501 after the usual 404 check."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "11. Get CSI / Service Feedback",
+          "item": [
+            {
+              "name": "Service feedback for a customer",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/service-feedback",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "service-feedback"
+                  ]
+                },
+                "description": "Customer ID, Feedback, Date of the SERVICE and CSI feedback submitted through POST /api/v1/feedback. Rating and Score are in red font. Optional bookingId=, from=, to=, limit=."
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "description": "The rows of the Service Overview Screen that are not fully red (sheet of 2026-09-20), with red-font fields kept in each row's response but always empty (\"\").\n\nFully red, no endpoint: Get Cancelled Bookings, Get Active Service Cases (removed), Get Roadside Assistance Cases, Get Vehicle Documents, Get Customer Activity (removed), Get Communication History, Get Customer Requests, Get Trade-in Eligibility (removed), Get Customer Risk, Get AI Recommendation.\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
+    },
+    {
+      "name": "Complaint Screen",
+      "item": [
+        {
+          "name": "1. Get Customer Details",
+          "item": [
+            {
+              "name": "Search customer by mobile (caller id)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers?mobile={{mobile}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "query": [
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}"
+                    }
+                  ]
+                },
+                "description": "Registered mobile first, then any other phone Keyloop holds (the spec's \"search by another phone number\"). Also email= or customerNumber=."
+              },
+              "response": []
+            },
+            {
+              "name": "Customer details",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "profile"
+                  ]
+                },
+                "description": "Customer ID, name, mobile, e-mail. ID, Loyalty Tier, Preferred Branch and Communication Preference are in red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "2. Get Verification Status (501)",
+          "item": [
+            {
+              "name": "Verification status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/verification",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "verification"
+                  ]
+                },
+                "description": "Identity verification is recorded in Genesys when the agent does it and no feed of it reaches this side: answers 501 after the usual 404 check. Verified By and Verification Date are in red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "3. Get Open Complaints",
+          "item": [
+            {
+              "name": "Open complaints for a customer",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/complaints?group={{group}}&customerNumber={{customerNumber}}&status=open",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "complaints"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "customerNumber",
+                      "value": "{{customerNumber}}"
+                    },
+                    {
+                      "key": "status",
+                      "value": "open"
+                    },
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}",
+                      "disabled": true
+                    }
+                  ]
+                },
+                "description": "Complaint ID, Category, Priority, Open Date across both origins, newest first. status=open (default) or all. Status (it is the filter) and SLA Due are in red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "5. Get Complaint Summary",
+          "item": [
+            {
+              "name": "Complaint summary",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/complaints/summary?group={{group}}&branch={{branchCode}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "complaints",
+                    "summary"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "branch",
+                      "value": "{{branchCode}}"
+                    }
+                  ]
+                },
+                "description": "Open Complaints and Resolved Today (dealer time zone) by branch / date range (from=, to= on the opened date) / user (Keyloop's allocated-to or raised-by, the desktop's createdBy). branch accepts the code (10 or 0010), the name or Keyloop's whole label. Escalated Cases has no source on either side; SLA Breaches is in red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "8. Get Recovery Actions",
+          "item": [
+            {
+              "name": "Recovery actions on a complaint",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{complaintId}}/recovery-actions",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "complaints",
+                    "{{group}}",
+                    "{{complaintId}}",
+                    "recovery-actions"
+                  ]
+                },
+                "description": "Action ID, Action Type, Owner, Status, Due Date. Actions are ours (app.complaint_action) and can hang off a Keyloop complaint or one created here."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "10. Resolve Complaint",
+          "item": [
+            {
+              "name": "Resolution of a complaint",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{complaintId}}/resolution",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "complaints",
+                    "{{group}}",
+                    "{{complaintId}}",
+                    "resolution"
+                  ]
+                },
+                "description": "Resolution Code, Resolution Notes, Resolution Status (OPEN / RESOLVED), Resolved Date. For a Keyloop complaint the code is Keyloop's closure text and there are no notes. Resolution ID is in red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "4. Get Complaint Details",
+          "item": [
+            {
+              "name": "Complaint by Complaint ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/complaints/{{group}}/{{complaintId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "complaints",
+                    "{{group}}",
+                    "{{complaintId}}"
+                  ]
+                },
+                "description": "Complaint ID, Category, Branch (location), Priority, Status, Opened On, with the customer's name and mobile. Works for a Keyloop reference and for AGMC-<id>. Subcategory and Assigned Team are in red font. Set {{complaintId}} to {{desktopComplaintId}} to read one created here."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "11. Get Complaint Report",
+          "item": [
+            {
+              "name": "Complaint report",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/complaints/report?group={{group}}&from=2025-01-01&to=2025-12-31",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "complaints",
+                    "report"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "from",
+                      "value": "2025-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2025-12-31"
+                    }
+                  ]
+                },
+                "description": "Complaint Count by Branch, Category and Status across both origins, largest first. Optional branch=, category=, status= (OPEN / IN_PROGRESS / CLOSED). Resolution Time, SLA Breaches and Escalations are in red font."
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "description": "The rows of the Complaint Screen that are not fully red. A complaint has one of two origins: KEYLOOP (core.complaint, Keyloop's export, read-only, Complaint ID = Keyloop's reference) or DESKTOP (created here, app.customer_request, Complaint ID = AGMC-<id>). Nothing is written back to Keyloop, so updating or resolving a Keyloop complaint answers 409. Keyloop records no priority.\n\nRed font, returned empty (\"\"): subcategory, assigned team, SLA due / breaches, escalations, resolution time, resolution id, loyalty tier, preferred branch, communication preference.\n\nFully red, no endpoint: Assign Complaint, Get Escalation Details, Escalate Complaint, Get SLA Status, Get SLA Breaches, Get Root Cause, Update Root Cause, Get Compensation Details, Approve Compensation, Send Customer Update, Get Complaint Activity, Get Complaint Feedback, Get Complaint Risk/Sentiment, Notify Internal Team.\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
+    },
+    {
+      "name": "Feedback Screen",
+      "item": [
+        {
+          "name": "1. Get Customer Details",
+          "item": [
+            {
+              "name": "Search customer by mobile (caller id)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers?mobile={{mobile}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers"
+                  ],
+                  "query": [
+                    {
+                      "key": "mobile",
+                      "value": "{{mobile}}"
+                    }
+                  ]
+                },
+                "description": "Registered mobile first, then any other phone Keyloop holds (the spec's \"search by another phone number\"). Also email= or customerNumber=."
+              },
+              "response": []
+            },
+            {
+              "name": "Customer details",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/profile",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "profile"
+                  ]
+                },
+                "description": "Customer ID, name, mobile, e-mail, branch. Loyalty Tier is in red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "2. Get Verification Status (501)",
+          "item": [
+            {
+              "name": "Verification status",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/verification",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "verification"
+                  ]
+                },
+                "description": "Identity verification is recorded in Genesys when the agent does it and no feed of it reaches this side: answers 501 after the usual 404 check. Verified By and Verification Date are in red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "3. Get Recent Feedback",
+          "item": [
+            {
+              "name": "Recent feedback for a customer",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 200) {",
+                      "    const rows = pm.response.json();",
+                      "    if (rows.length) {",
+                      "        pm.collectionVariables.set('feedbackId', rows[0].feedbackId);",
+                      "        console.log('Saved feedbackId:', rows[0].feedbackId);",
+                      "    }",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/feedback?from=2026-01-01&to=2027-12-31",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "feedback"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2027-12-31"
+                    }
+                  ]
+                },
+                "description": "Feedback ID, Type (CSI / SERVICE / SALES / COMPLAINT / GENERAL), Comments, Date, newest first. from / to / limit optional. Channel, Reference and Score are in red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "4. Get Feedback Details",
+          "item": [
+            {
+              "name": "Feedback by Feedback ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/feedback/{{group}}/{{feedbackId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "feedback",
+                    "{{group}}",
+                    "{{feedbackId}}"
+                  ]
+                },
+                "description": "Feedback Type, Comments, Date. Score, Channel and Interaction ID are in red font. 404 until a feedback exists: submit one, then run \"Recent feedback for a customer\", which fills {{feedbackId}}."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "5. Get CSI Score",
+          "item": [
+            {
+              "name": "CSI score",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/feedback/csi-score?group={{group}}&customerNumber={{customerNumber}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "feedback",
+                    "csi-score"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "customerNumber",
+                      "value": "{{customerNumber}}"
+                    }
+                  ]
+                },
+                "description": "Every output on this row (CSI Score, Rating, Response Count, Trend) is in red font - scores are not held on this side - so the answer echoes what was asked (group, customerNumber, branch, from, to) with csiScore, rating, responseCount and trend returned empty (\"\"). group is required."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "6. Get CSI Responses",
+          "item": [
+            {
+              "name": "CSI responses for a customer",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/csi-responses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "csi-responses"
+                  ]
+                },
+                "description": "Comments and Date of the customer's CSI feedback. Response ID, Score and Channel are in red font. from / to / limit optional."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "7. Get Lost Sales Reasons",
+          "item": [
+            {
+              "name": "Lost sales reasons",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/lost-sales/reasons?group={{group}}&branch={{branchCode}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "lost-sales",
+                    "reasons"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "branch",
+                      "value": "{{branchCode}}"
+                    }
+                  ]
+                },
+                "description": "Keyloop's lost event codes (L01, L26...) in use on \"Lost sale\" enquiries, by branch and lost date (from=, to=), one row each: reasons[].reason. The export carries no description for the codes. Count and Percentage are in red font: reasons[].count and reasons[].percentage are returned empty (\"\")."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "8. Get Lost Sales Details",
+          "item": [
+            {
+              "name": "Lost sales for a customer / date range",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/lost-sales?group={{group}}&customerNumber={{customerNumber}}&from=2012-01-01&to=2025-12-31",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "lost-sales"
+                  ],
+                  "query": [
+                    {
+                      "key": "group",
+                      "value": "{{group}}"
+                    },
+                    {
+                      "key": "customerNumber",
+                      "value": "{{customerNumber}}"
+                    },
+                    {
+                      "key": "from",
+                      "value": "2012-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2025-12-31"
+                    }
+                  ]
+                },
+                "description": "Lead / Opportunity ID (the enquiry number), Reason (lost event code), Date (lost date), with the model and branch. customerNumber, branch, from, to are all optional; page with limit (default 100, max 1000) and offset. Value and Competitor / Outcome are in red font."
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "9. Get Open Bookings",
+          "item": [
+            {
+              "name": "Open workshop bookings by Customer ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/customers/{{group}}/{{customerNumber}}/service-bookings?from=2026-01-01&to=2026-12-31",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "customers",
+                    "{{group}}",
+                    "{{customerNumber}}",
+                    "service-bookings"
+                  ],
+                  "query": [
+                    {
+                      "key": "from",
+                      "value": "2026-01-01"
+                    },
+                    {
+                      "key": "to",
+                      "value": "2026-12-31"
+                    }
+                  ]
+                },
+                "description": "Booking ID, Service Type, Date, Branch, Status from Keyloop's open-WIP export, across every car the customer bought. from / to bound the appointment date (a booking with no date only shows when neither is given)."
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "description": "The rows of the Feedback Screen that are not fully red. No Keyloop feed carries feedback, so feedback is what is submitted here (app.feedback_response). The lost-sales rows are Keyloop's \"Lost sale\" enquiries.\n\nRed font, returned empty (\"\"): scores, ratings, channels, references, interaction ids, response ids, submission status, counts and percentages, value, competitor / outcome, loyalty tier.\n\nFully red, no endpoint: Get NPS Score, Get NPS Responses, Get NPS Trend, Get Lost Sales Summary, Get Cancelled Bookings, Get Feedback Trend, Get Feedback Sentiment, Get Feedback Activity, Send Feedback Survey, Feedback Dashboard.\n\nTimes and dates are dealer-local (+04:00). Fields with no value are omitted rather than sent as null. No authentication yet.\n\nRed-font fields of a row are part of its response but always empty (\"\") - they do not come from Keyloop."
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "referenceId",
+      "value": ""
+    },
+    {
+      "key": "brandCode",
+      "value": "AUDI"
+    },
+    {
+      "key": "group",
+      "value": "BMW"
+    },
+    {
+      "key": "customerNumber",
+      "value": "80496"
+    },
+    {
+      "key": "mobile",
+      "value": "0501234567"
+    },
+    {
+      "key": "email",
+      "value": "someone@example.com"
+    },
+    {
+      "key": "prospectNumber",
+      "value": "165011"
+    },
+    {
+      "key": "vin",
+      "value": "WBA31HC04SFT82888"
+    },
+    {
+      "key": "bookingNumber",
+      "value": "148050"
+    },
+    {
+      "key": "enquiryNumber",
+      "value": "567953"
+    },
+    {
+      "key": "wipNumber",
+      "value": "38187"
+    },
+    {
+      "key": "complaintReference",
+      "value": "29082025GUND"
+    },
+    {
+      "key": "branchCode",
+      "value": "10"
+    },
+    {
+      "key": "complaintId",
+      "value": "29082025GUND"
+    },
+    {
+      "key": "actionId",
+      "value": "1"
+    },
+    {
+      "key": "feedbackId",
+      "value": "1"
+    },
+    {
+      "key": "desktopComplaintId",
+      "value": "AGMC-1"
+    }
+  ]
+}
