@@ -9,8 +9,10 @@ import {
   FaShieldAlt,
   FaFileAlt,
   FaHistory,
-  FaRedo
+  FaRedo,
+  FaExchangeAlt
 } from 'react-icons/fa';
+import VehicleOwnershipTransferModal from './VehicleOwnershipTransferModal';
 
 export default function ServiceOverviewView() {
   const { 
@@ -39,6 +41,7 @@ export default function ServiceOverviewView() {
   const [warrantyData, setWarrantyData] = useState(null);
   const [contractData, setContractData] = useState(null);
   const [loadingOverviewApis, setLoadingOverviewApis] = useState(false);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
   // Combined vehicle list prioritizing the direct API response
   const allVehicles = customerVehicleList.length > 0 ? customerVehicleList : (vehicles || []);
@@ -276,6 +279,16 @@ export default function ServiceOverviewView() {
                 </select>
               </div>
             )}
+            
+            <button
+              type="button"
+              onClick={() => setIsTransferModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 border border-blue-200 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer"
+              title="Transfer / Link Vehicle Ownership to Existing or New Customer"
+            >
+              <FaExchangeAlt className="text-[11px]" />
+              <span className="hidden sm:inline">Transfer Ownership</span>
+            </button>
             
             <button 
               onClick={handleRefreshAll}
@@ -636,6 +649,17 @@ export default function ServiceOverviewView() {
         )}
 
       </div>
+
+      {/* Vehicle Ownership Transfer / Link Modal */}
+      <VehicleOwnershipTransferModal
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        initialVin={vin}
+        initialGroup={group}
+        onSuccess={() => {
+          handleRefreshAll();
+        }}
+      />
 
     </div>
   );

@@ -186,7 +186,7 @@ export async function submitLeadIntake(payload) {
  * Handles asynchronous RPA case submission and task status polling
  * Compatible with all brand groups (BMW, GEELY, MINI, etc.)
  */
-export const RPA_API_KEY = "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187";
+export const RPA_API_KEY = "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187a";
 
 export const DEFAULT_RPA_CALLBACK_URL = "http://localhost:9999/hook";
 
@@ -402,6 +402,20 @@ export async function executeRpaCase(caseType, details, options = {}) {
  */
 export async function createComplaintCase(details, options = {}) {
   return await executeRpaCase('CREATE_COMPLAINT', details, {
+    callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,
+    createdBy: options.createdBy || "genesys",
+    ...options
+  });
+}
+
+/**
+ * Links / Transfers vehicle ownership to a customer (existing or new)
+ * Case Type: 'LINK_VEHICLE_TO_CUSTOMER' via POST /api/intake/cases
+ * @param {object} details - Case payload details matching CCaaS intake schema
+ * @param {object} options - Optional parameters (createdBy, callbackUrl, onProgress)
+ */
+export async function linkVehicleToCustomer(details, options = {}) {
+  return await executeRpaCase('LINK_VEHICLE_TO_CUSTOMER', details, {
     callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,
     createdBy: options.createdBy || "genesys",
     ...options

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCustomer } from '../context/CustomerContext';
+import VehicleOwnershipTransferModal from './VehicleOwnershipTransferModal';
 import { 
   FaPhoneAlt, 
   FaWhatsapp, 
@@ -15,7 +16,8 @@ import {
   FaExternalLinkAlt,
   FaChevronRight,
   FaChevronLeft,
-  FaUser
+  FaUser,
+  FaExchangeAlt
 } from 'react-icons/fa';
 
 export default function ServiceCustomerVehicleCard({ isCollapsed = false, onToggleCollapse }) {
@@ -44,6 +46,7 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
   const loyaltyTier = getLoyaltyTier();
   const locationStr = getFormattedLocation();
   const currentVehicle = vehicleDetails || (vehicles && vehicles.length > 0 ? vehicles[0] : null);
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
   // Dynamic Trade-in data strictly from API response (if present)
   const hasTradeInApi = Array.isArray(tradeInHistory) && tradeInHistory.length > 0;
@@ -271,19 +274,30 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
             <h4 className="font-extrabold text-gray-900 text-xs flex items-center gap-1.5">
               <FaCar className="text-blue-600" /> Vehicle Summary
             </h4>
-            {vehicles && vehicles.length > 1 && (
-              <select
-                value={selectedVin || currentVehicle.vin}
-                onChange={(e) => selectVehicleByVin(e.target.value)}
-                className="bg-blue-600 text-white text-[10px] font-extrabold rounded px-2 py-1 focus:outline-none cursor-pointer shadow-2xs"
+            <div className="flex items-center gap-1.5 ml-auto">
+              <button
+                type="button"
+                onClick={() => setIsTransferModalOpen(true)}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 transition-colors shadow-2xs cursor-pointer"
+                title="Transfer / Link Vehicle Ownership to Existing or New Customer"
               >
-                {vehicles.map((v) => (
-                  <option key={v.vin} value={v.vin}>
-                    {v.description || `${v.brand || ''} ${v.model || ''}`}
-                  </option>
-                ))}
-              </select>
-            )}
+                <FaExchangeAlt className="text-[9px]" />
+                <span>Transfer</span>
+              </button>
+              {vehicles && vehicles.length > 1 && (
+                <select
+                  value={selectedVin || currentVehicle.vin}
+                  onChange={(e) => selectVehicleByVin(e.target.value)}
+                  className="bg-blue-600 text-white text-[10px] font-extrabold rounded px-2 py-1 focus:outline-none cursor-pointer shadow-2xs"
+                >
+                  {vehicles.map((v) => (
+                    <option key={v.vin} value={v.vin}>
+                      {v.description || `${v.brand || ''} ${v.model || ''}`}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
           </div>
 
           <div className="p-4 bg-slate-50/40 space-y-3">
@@ -395,6 +409,14 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
           </div>
         </div>
       )}
+
+      {/* Vehicle Ownership Transfer / Link Modal */}
+      <VehicleOwnershipTransferModal
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        initialVin={currentVehicle?.vin || selectedVin || ''}
+        initialGroup={group}
+      />
 
     </div>
   );
