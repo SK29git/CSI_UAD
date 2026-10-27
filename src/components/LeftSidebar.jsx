@@ -20,7 +20,8 @@ import {
   FaSpinner,
   FaUserPlus,
   FaEdit,
-  FaSearch
+  FaSearch,
+  FaCheckDouble
 } from 'react-icons/fa';
 import { getFullMobileNumber, getDisplayMobileNumber } from '../utils/phoneUtils';
 
@@ -42,6 +43,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     riskOverview,
     verificationStatus,
     openCustomerForm,
+    openVerificationModal,
     fetchCustomerByPlateOrVin,
     fetchCustomerByEmail,
     fetchCustomerByCustomerNumber,
@@ -325,6 +327,15 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                     <FaEdit className="text-[10px]" />
                     <span>Edit</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => openVerificationModal && openVerificationModal()}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 border border-emerald-300 transition-colors shadow-2xs"
+                    title="Customer Data Verification (RPA Intake)"
+                  >
+                    <FaCheckDouble className="text-[10px]" />
+                    <span>Verify</span>
+                  </button>
 
                   {customer?.isProspect && !customer?.isNewRegistration && customer?.customerType !== 'CUSTOMER' ? (
                     <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs flex items-center gap-1 ${
@@ -510,10 +521,20 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
             <span className="font-bold text-gray-800 flex items-center gap-1.5">
               Verification Status
             </span>
-            <div className="flex items-center gap-1 text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full text-[11px]">
-              <FaCheckCircle className="text-xs" />
-              <span>{verificationStatus.status || 'Verified'}</span>
-              <FaInfoCircle className="text-gray-400 ml-1 text-[10px]" />
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full text-[11px]">
+                <FaCheckCircle className="text-xs" />
+                <span>{verificationStatus.status || 'Verified'}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => openVerificationModal && openVerificationModal()}
+                title="Customer Data Verification (RPA Intake)"
+                className="text-emerald-700 hover:text-emerald-800 px-1.5 py-0.5 rounded hover:bg-emerald-50 border border-emerald-300 transition-colors flex items-center gap-1 text-[11px]"
+              >
+                <FaCheckDouble className="text-[10px]" />
+                <span className="font-bold">Verify</span>
+              </button>
             </div>
           </div>
 

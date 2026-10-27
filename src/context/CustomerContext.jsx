@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { apiFetch, executeRpaCase } from '../utils/api';
+import { apiFetch, executeRpaCase, updateCustomerCase } from '../utils/api';
 import GlobalToast from '../components/GlobalToast';
+import CustomerVerificationModal from '../components/CustomerVerificationModal';
 import { isFullMobileNumber } from '../utils/phoneUtils';
 
 const CustomerContext = createContext(null);
@@ -304,6 +305,11 @@ export function CustomerProvider({ children }) {
   const [customerFormMode, setCustomerFormMode] = useState(null); // 'create' | 'edit' | null
   const openCustomerForm = (mode = 'create') => setCustomerFormMode(mode);
   const closeCustomerForm = () => setCustomerFormMode(null);
+
+  // Customer Data Verification Modal (RPA UPDATE_CUSTOMER)
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
+  const openVerificationModal = () => setIsVerificationModalOpen(true);
+  const closeVerificationModal = () => setIsVerificationModalOpen(false);
 
   // App-wide floating toast notification (persists across views/modals)
   const [toastNotification, setToastNotification] = useState(null);
@@ -1639,28 +1645,24 @@ export function CustomerProvider({ children }) {
     const branchCodeNum = details.branch ? details.branch.split(' - ')[0].trim() : (customer.branchCode || "10");
 
     const payload = {
-      caseType: "UPDATE_CUSTOMER",
-      callbackUrl: "http://localhost:9999/hook",
-      createdBy: agentId || "genesys",
       customerNumber: customer.customerNumber,
       details: {
-        group: details.group || customer.keyloopGroup || "BMW",
+        group: details.group || customer.keyloopGroup || currentGroup || "BMW",
         branch: details.branch || customer.preferredBranch || "10 - Sheikh Zayed Rd",
         titleCode: details.titleCode || customer.salutation || "Mr.",
         firstName: details.firstName !== undefined ? details.firstName : customer.firstName,
         surname: details.surname !== undefined ? details.surname : customer.surname,
-        area: details.area !== undefined ? details.area : customer.location?.area || "",
-        city: details.city !== undefined ? details.city : customer.location?.city || "Dubai",
-        country: details.country !== undefined ? details.country : customer.nationality || "United Arab Emirates",
+        area: details.area !== undefined ? details.area : (customer.location?.area || ""),
+        city: details.city !== undefined ? details.city : (customer.location?.city || "Dubai"),
+        country: details.country !== undefined ? details.country : (customer.nationality || "United Arab Emirates"),
         mobile: details.mobile !== undefined ? details.mobile : customer.mobile,
         email: details.email !== undefined ? details.email : customer.email
       }
     };
 
-    console.log("Submitting UPDATE_CUSTOMER payload:", payload);
+    console.log("Submitting customer profile update:", payload);
 
     try {
-      // Attempt backend update endpoint
       await apiFetch(`/api/v1/customers/${encodeURIComponent(payload.details.group)}/${encodeURIComponent(customer.customerNumber)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -1711,6 +1713,98 @@ export function CustomerProvider({ children }) {
     }
 
     return { ok: true, payload, customer: updatedProfile };
+  };
+
+  // Submit Customer Data Verification via RPA Intake (caseType: "UPDATE_CUSTOMER")
+  const verifyCustomer = async (details) => {
+    if (!customer && !details.customerId) return { ok: false, error: "No active customer to verify" };
+
+    const cleanGroup = details.group || customer?.keyloopGroup || currentGroup || "BMW";
+    const custNo = details.customerId || customer?.customerNumber || customer?.id || "";
+    const fullName = details.customerName || 
+      customer?.fullName || 
+      `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() || 
+      "Customer";
+
+    const currentMonthYear = `${String(new Date().getMonth() + 1).padStart(2, '0')}/${String(new Date().getFullYear()).slice(-2)}`;
+    const verifiedCode = details.dataVerified || `DV ${currentMonthYear}`;
+
+    // Schema matching POST /api/intake/cases (caseType: "UPDATE_CUSTOMER")
+    const caseDetails = {
+      group: cleanGroup,
+      customerId: String(custNo).trim(),
+      customerName: String(fullName).trim(),
+      sourceOfInformation: String(details.sourceOfInformation || details.source || "Walk-in").trim(),
+      personalId: String(details.personalId || details.idCardNumber || customer?.personalId || customer?.nationalId || "").trim(),
+      dataVerified: String(verifiedCode).trim(),
+      area: String(details.area !== undefined ? details.area : (customer?.location?.area || "")).trim(),
+      city: String(details.city !== undefined ? details.city : (customer?.location?.city || "Dubai")).trim(),
+      country: String(details.country !== undefined ? details.country : (customer?.nationality || "United Arab Emirates")).trim(),
+      postcode: String(details.postcode !== undefined ? details.postcode : (customer?.location?.postcode || "")).trim(),
+      mobile: String(details.mobile !== undefined ? details.mobile : (customer?.mobile || "")).trim(),
+      email: String(details.email !== undefined ? details.email : (customer?.email || "")).trim(),
+      preferredPhone: String(details.preferredPhone !== undefined ? details.preferredPhone : (details.mobile || customer?.mobile || "")).trim(),
+      preferredEmail: String(details.preferredEmail !== undefined ? details.preferredEmail : (details.email || customer?.email || "")).trim(),
+      nationality: String(details.nationality !== undefined ? details.nationality : (customer?.nationality || "")).trim()
+    };
+
+    console.log("Submitting UPDATE_CUSTOMER RPA intake payload:", caseDetails);
+
+    const rpaRes = await updateCustomerCase(caseDetails, {
+      createdBy: agentId || "genesys",
+      callbackUrl: "http://localhost:9999/hook"
+    });
+
+    const updatedVerification = {
+      ...(customer?.verificationStatus || {}),
+      status: caseDetails.dataVerified,
+      lastVerifiedOn: new Date().toISOString().split('T')[0],
+      lastVerifiedBy: agentId || "genesys",
+      lastEditedOn: new Date().toISOString().split('T')[0],
+      lastEditedBy: agentId || "genesys"
+    };
+
+    if (customer) {
+      const updatedProfile = {
+        ...customer,
+        personalId: caseDetails.personalId,
+        dataVerified: caseDetails.dataVerified,
+        sourceOfInformation: caseDetails.sourceOfInformation,
+        nationality: caseDetails.nationality || customer.nationality,
+        mobile: caseDetails.mobile || customer.mobile,
+        mobileRaw: (caseDetails.mobile || customer.mobile || "").replace(/\D/g, ''),
+        email: caseDetails.email || customer.email,
+        preferredPhone: caseDetails.preferredPhone,
+        preferredEmail: caseDetails.preferredEmail,
+        location: {
+          ...(customer.location || {}),
+          area: caseDetails.area,
+          city: caseDetails.city,
+          postcode: caseDetails.postcode
+        },
+        verificationStatus: updatedVerification,
+        lastUpdated: new Date().toISOString().split('T')[0]
+      };
+
+      setCustomer(updatedProfile);
+      setCustomerList(prev => {
+        if (!Array.isArray(prev) || prev.length === 0) return [updatedProfile];
+        return prev.map(c => (c.customerNumber === custNo || c.id === custNo) ? { ...c, ...updatedProfile } : c);
+      });
+
+      try {
+        localStorage.setItem('complaint_customer_profile_data', JSON.stringify(updatedProfile));
+        localStorage.setItem('sales_customer_profile_data', JSON.stringify(updatedProfile));
+      } catch (err) {
+        console.warn("LocalStorage update error:", err);
+      }
+    }
+
+    if (setVerificationStatus) {
+      setVerificationStatus(updatedVerification);
+    }
+
+    return { ok: true, data: rpaRes, taskId: rpaRes?.taskId };
   };
 
   // Helper getters strictly based on profile API response fields
@@ -1823,15 +1917,23 @@ export function CustomerProvider({ children }) {
       fetchCustomerExtraDetails,
       createCustomer,
       updateCustomer,
+      verifyCustomer,
       customerFormMode,
       openCustomerForm,
       closeCustomerForm,
+      isVerificationModalOpen,
+      openVerificationModal,
+      closeVerificationModal,
       toastNotification,
       showToast,
       hideToast
     }}>
       {children}
       <GlobalToast notification={toastNotification} onClose={hideToast} />
+      <CustomerVerificationModal 
+        isOpen={isVerificationModalOpen} 
+        onClose={closeVerificationModal} 
+      />
     </CustomerContext.Provider>
   );
 }

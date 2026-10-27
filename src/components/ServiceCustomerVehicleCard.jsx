@@ -37,6 +37,7 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
     vehicleDetails,
     selectVehicleByVin,
     verificationStatus,
+    openVerificationModal,
     tradeInHistory,
     group: contextGroup
   } = useCustomer();
@@ -194,9 +195,19 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
             <div className="pt-3 border-t border-gray-200 text-[11px] space-y-1.5">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 font-semibold">Verification Status</span>
-                <span className="text-emerald-700 font-extrabold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300">
-                  <FaCheckCircle className="text-[10px]" /> {verificationStatus.status || 'Verified'}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-emerald-700 font-extrabold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300">
+                    <FaCheckCircle className="text-[10px]" /> {verificationStatus.status || 'Verified'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => openVerificationModal && openVerificationModal()}
+                    className="text-[10px] font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-1.5 py-0.5 rounded transition-colors cursor-pointer"
+                    title="Customer Data Verification (RPA Intake)"
+                  >
+                    Verify
+                  </button>
+                </div>
               </div>
               {verificationStatus.lastVerifiedOn && (
                 <div className="flex justify-between text-gray-600">

@@ -118,6 +118,10 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
 
     if (mode === 'edit' && customer) {
       const emailVal = customer.email && !customer.email.includes('***') ? customer.email : '';
+      const resolvedMobile = getFullMobileNumber(customer, currentMobile) || 
+        (isFullMobileNumber(customer.mobile) ? customer.mobile.replace(/\D/g, '') : 
+        (isFullMobileNumber(customer.mobileRaw) ? customer.mobileRaw.replace(/\D/g, '') : ''));
+
       setFormData({
         group: customer.keyloopGroup || currentGroup || 'BMW',
         branch: customer.preferredBranch || (customer.branchCode ? `${customer.branchCode} - Sheikh Zayed Rd` : '10 - Sheikh Zayed Rd'),
@@ -127,7 +131,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         area: customer.location?.area || 'Deira',
         city: customer.location?.city || 'Dubai',
         country: customer.nationality || 'United Arab Emirates',
-        mobile: getFullMobileNumber(customer, currentMobile) || (isFullMobileNumber(customer.mobile) ? customer.mobile.replace(/\D/g, '') : (isFullMobileNumber(customer.mobileRaw) ? customer.mobileRaw.replace(/\D/g, '') : '')),
+        mobile: resolvedMobile,
         email: emailVal,
         consents: customer.consents || {
           phone: true,
@@ -224,34 +228,22 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         if (res && res.ok) {
           const toastData = {
             type: 'success',
-            title: 'Customer profile updated successfully!',
-            message: 'Customer profile updated successfully in Keyloop CRM!',
-            duration: 6
+            title: 'Customer Profile Updated',
+            customerName: res.customer?.fullName || formData.firstName,
+            message: 'Customer profile updated successfully!',
+            duration: 4
           };
 
           setFeedback(toastData);
           if (showToast) {
             showToast(toastData);
           }
-          setCountdown(6);
 
-          if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-          countdownIntervalRef.current = setInterval(() => {
-            setCountdown(prev => {
-              if (prev === null || prev <= 1) {
-                clearInterval(countdownIntervalRef.current);
-                return 0;
-              }
-              return prev - 1;
-            });
-          }, 1000);
-
-          if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
-          autoCloseTimerRef.current = setTimeout(() => {
+          setTimeout(() => {
             if (onClose) onClose();
-          }, 6000);
+          }, 1500);
         } else {
-          setFeedback({ type: 'error', message: 'Failed to update customer record.' });
+          setFeedback({ type: 'error', message: res?.error || 'Failed to update customer record.' });
         }
       }
     } catch (err) {

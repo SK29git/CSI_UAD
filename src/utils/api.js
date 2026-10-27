@@ -422,6 +422,20 @@ export async function linkVehicleToCustomer(details, options = {}) {
   });
 }
 
+/**
+ * Updates Customer & Data Verification via RPA Intake (caseType: 'UPDATE_CUSTOMER')
+ * POST /api/intake/cases
+ * @param {object} details - Case payload details matching CCaaS intake schema
+ * @param {object} options - Optional parameters (createdBy, callbackUrl, onProgress)
+ */
+export async function updateCustomerCase(details, options = {}) {
+  return await executeRpaCase('UPDATE_CUSTOMER', details, {
+    callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,
+    createdBy: options.createdBy || "genesys",
+    ...options
+  });
+}
+
 /* ========================================================================== */
 /* AGMC UNIVERSAL SERVICE BOOKING FLOW APIS (MULTI-BRAND: BMW, MINI, GEELY)  */
 /* Source: AGMC Omnichannel DMS / Service Booking Gateway                     */
