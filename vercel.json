@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/sms-gateway/:path*",
+      "destination": "https://agmcutil.agmcgroup.ae/:path*"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://ccaas.agmcgroup.ae/api/:path*"
     },
