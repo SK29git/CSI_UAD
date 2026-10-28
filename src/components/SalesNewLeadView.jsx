@@ -422,16 +422,16 @@ export default function SalesNewLeadView() {
           isError: false,
           referenceId: res.data.referenceId || "AGMC-SUCCESS",
           status: res.data.status || "RECEIVED",
-          message: res.data.message || "Lead received and is being forwarded to Keyloop and Genesys"
+          message: res.data.message || "Enquiry received and is being forwarded to Keyloop and Genesys"
         });
       }
     } catch (err) {
-      console.error("Failed to submit sales lead:", err);
+      console.error("Failed to submit enquiry:", err);
       setLeadResponseToast({
         isError: true,
         referenceId: "FAILED",
         status: "ERROR",
-        message: err.message || "Failed to submit sales lead. Please check required fields."
+        message: err.message || "Failed to submit enquiry. Please check required fields."
       });
     } finally {
       setSubmittingLead(false);
@@ -686,12 +686,12 @@ export default function SalesNewLeadView() {
               </div>
               <div>
                 <h2 className="text-xs sm:text-sm font-extrabold text-gray-900 leading-tight">
-                  {hasCustomer ? 'New Enquiry' : 'New Lead'}
+                  New Enquiry
                 </h2>
                 <p className="text-[10px] text-gray-400 font-medium">
                   {hasCustomer 
                     ? `Create new enquiry for Customer #${customerNumber}` 
-                    : 'Capture customer details to create a new sales lead'}
+                    : 'Capture customer details to create a new enquiry'}
                 </p>
               </div>
 
@@ -720,7 +720,7 @@ export default function SalesNewLeadView() {
                 className="ml-0 sm:ml-1.5 px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center gap-1 border border-slate-200/80 cursor-pointer shadow-2xs transition-all"
               >
                 <FaUserPlus className="text-blue-600 text-[9px]" />
-                <span>{hasCustomer ? 'New Enquiry' : 'New Lead'}</span>
+                <span>New Enquiry</span>
               </button>
             </>
           )}
@@ -729,7 +729,7 @@ export default function SalesNewLeadView() {
         {/* Right: Group / Customer badge and Circular Car Icon */}
         <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
           <span className="text-[10px] text-gray-500 font-medium">
-            Group : <span className="font-bold text-gray-700">{group || 'BMW'}</span> | <span className="font-bold text-gray-700">{hasCustomer ? `Customer #${customerNumber}` : 'New Lead'}</span>
+            Group : <span className="font-bold text-gray-700">{group || 'BMW'}</span> | <span className="font-bold text-gray-700">{hasCustomer ? `Customer #${customerNumber}` : 'New Enquiry'}</span>
           </span>
           <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-2xs shrink-0">
             <FaCar className="text-[10px]" />
@@ -1024,12 +1024,12 @@ export default function SalesNewLeadView() {
                 {submittingLead ? (
                   <>
                     <FaSpinner className="animate-spin text-xs" />
-                    <span>{hasCustomer ? 'Creating Enquiry...' : 'Submitting Lead...'}</span>
+                    <span>{hasCustomer ? 'Creating Enquiry...' : 'Submitting Enquiry...'}</span>
                   </>
                 ) : (
                   <>
                     <FaPaperPlane className="text-xs" />
-                    <span>{hasCustomer ? `Create Enquiry #${customerNumber}` : 'Create Sales Lead'}</span>
+                    <span>{hasCustomer ? `Create Enquiry #${customerNumber}` : 'Create Enquiry'}</span>
                   </>
                 )}
               </button>

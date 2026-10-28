@@ -139,12 +139,12 @@ export default function CenterNavTabs({
   ];
 
   const hasCustomer = isExistingCustomer(customer);
-  const leadSubTabLabel = hasCustomer ? 'New Enquiry' : 'New Lead';
-  const leadSubTabId = hasCustomer ? 'New Enquiry' : 'New Lead';
+  const leadSubTabLabel = 'New Enquiry';
+  const leadSubTabId = 'New Enquiry';
 
   const salesSubTabs = [
     { id: 'Overview', label: 'Overview' },
-    { id: leadSubTabId, label: leadSubTabLabel },
+    { id: 'New Enquiry', label: 'New Enquiry' },
     { id: 'Enquiries', label: 'Enquiries' },
     { id: 'Test Drive', label: 'Test Drive' },
     { id: 'Vehicle Orders', label: 'Vehicle Orders' },

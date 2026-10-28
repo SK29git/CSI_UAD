@@ -1534,9 +1534,9 @@ export function CustomerProvider({ children }) {
       country: details.country || "United Arab Emirates",
       mobile: details.mobile || "",
       email: details.email || "",
-      idCardNumber: details.idCardNumber || "",
-      idIssuingAuthority: details.idIssuingAuthority || "Dubai",
-      idExpiryDate: details.idExpiryDate || ""
+      sourceOfInformation: details.sourceOfInformation || "Walk-in",
+      personalId: details.personalId || "",
+      nationality: details.nationality || ""
     };
 
     console.log("Submitting RPA CREATE_CUSTOMER payload:", caseDetails);
@@ -1598,10 +1598,10 @@ export function CustomerProvider({ children }) {
       mobileValid: hasMobile,
       email: details.email || "",
       emailValid: hasEmail,
-      idCardNumber: details.idCardNumber || "",
-      idIssuingAuthority: details.idIssuingAuthority || "Dubai",
-      idExpiryDate: details.idExpiryDate || "",
-      personalId: details.idCardNumber || "",
+      idCardNumber: details.personalId || "",
+      personalId: details.personalId || "",
+      sourceOfInformation: details.sourceOfInformation || "Walk-in",
+      nationality: details.nationality || "",
       location: {
         flatBuilding: "N/A",
         area: details.area || "Deira",
@@ -1675,12 +1675,12 @@ export function CustomerProvider({ children }) {
       surname: details.surname !== undefined ? details.surname : (customer.surname || ""),
       area: details.area !== undefined ? details.area : (customer.location?.area || "Deira"),
       city: details.city !== undefined ? details.city : (customer.location?.city || "Dubai"),
-      country: details.country !== undefined ? details.country : (customer.nationality || "United Arab Emirates"),
+      country: details.country !== undefined ? details.country : (customer.country || customer.nationality || "United Arab Emirates"),
       mobile: details.mobile !== undefined ? details.mobile : (customer.mobile || ""),
       email: details.email !== undefined ? details.email : (customer.email || ""),
-      idCardNumber: details.idCardNumber !== undefined ? details.idCardNumber : (customer.idCardNumber || customer.personalId || ""),
-      idIssuingAuthority: details.idIssuingAuthority !== undefined ? details.idIssuingAuthority : (customer.idIssuingAuthority || "Dubai"),
-      idExpiryDate: details.idExpiryDate !== undefined ? details.idExpiryDate : (customer.idExpiryDate || "")
+      sourceOfInformation: details.sourceOfInformation !== undefined ? details.sourceOfInformation : (customer.sourceOfInformation || "Walk-in"),
+      personalId: details.personalId !== undefined ? details.personalId : (customer.personalId || ""),
+      nationality: details.nationality !== undefined ? details.nationality : (customer.nationality || "")
     };
 
     console.log("Submitting RPA CREATE_CUSTOMER on customer edit:", caseDetails);
@@ -1718,10 +1718,9 @@ export function CustomerProvider({ children }) {
       mobile: caseDetails.mobile,
       mobileRaw: (caseDetails.mobile || "").replace(/\D/g, ''),
       email: caseDetails.email,
-      idCardNumber: caseDetails.idCardNumber,
-      idIssuingAuthority: caseDetails.idIssuingAuthority,
-      idExpiryDate: caseDetails.idExpiryDate,
-      personalId: caseDetails.idCardNumber || customer.personalId,
+      personalId: caseDetails.personalId || customer.personalId,
+      sourceOfInformation: caseDetails.sourceOfInformation,
+      nationality: caseDetails.nationality,
       location: {
         ...(customer.location || {}),
         area: caseDetails.area,
@@ -1729,7 +1728,7 @@ export function CustomerProvider({ children }) {
       },
       branchCode: branchCodeNum,
       preferredBranch: caseDetails.branch,
-      nationality: caseDetails.country,
+      country: caseDetails.country,
       lastUpdated: new Date().toISOString().split('T')[0],
       rpaTaskId: rpaTaskId || customer.rpaTaskId
     };
@@ -1782,10 +1781,7 @@ export function CustomerProvider({ children }) {
       customerId: String(custNo).trim(),
       customerName: String(fullName).trim(),
       sourceOfInformation: String(details.sourceOfInformation || details.source || "Walk-in").trim(),
-      personalId: String(details.idCardNumber || details.personalId || customer?.idCardNumber || customer?.personalId || customer?.nationalId || "").trim(),
-      idCardNumber: String(details.idCardNumber || details.personalId || customer?.idCardNumber || customer?.personalId || "").trim(),
-      idIssuingAuthority: String(details.idIssuingAuthority || customer?.idIssuingAuthority || "Dubai").trim(),
-      idExpiryDate: String(details.idExpiryDate || customer?.idExpiryDate || "").trim(),
+      personalId: String(details.personalId || details.idCardNumber || customer?.personalId || customer?.idCardNumber || customer?.nationalId || "").trim(),
       dataVerified: String(verifiedCode).trim(),
       area: String(details.area !== undefined ? details.area : (customer?.location?.area || "")).trim(),
       city: String(details.city !== undefined ? details.city : (customer?.location?.city || "Dubai")).trim(),
@@ -1818,9 +1814,6 @@ export function CustomerProvider({ children }) {
       const updatedProfile = {
         ...customer,
         personalId: caseDetails.personalId,
-        idCardNumber: caseDetails.idCardNumber,
-        idIssuingAuthority: caseDetails.idIssuingAuthority,
-        idExpiryDate: caseDetails.idExpiryDate,
         dataVerified: caseDetails.dataVerified,
         sourceOfInformation: caseDetails.sourceOfInformation,
         nationality: caseDetails.nationality || customer.nationality,

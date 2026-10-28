@@ -10,15 +10,13 @@ import {
   FaEnvelope, 
   FaMapMarkerAlt, 
   FaGlobe, 
-  FaBuilding, 
   FaSpinner, 
   FaTimes, 
   FaCopy, 
   FaCheck, 
   FaInfoCircle, 
   FaLayerGroup,
-  FaShieldAlt,
-  FaCalendarAlt
+  FaShieldAlt
 } from 'react-icons/fa';
 
 const GROUP_OPTIONS = ['BMW', 'MINI', 'ROLLS-ROYCE', 'GEELY'];
@@ -31,16 +29,6 @@ const SOURCE_OPTIONS = [
   'Showroom Visit',
   'Campaign',
   'Referral'
-];
-const AUTHORITY_OPTIONS = [
-  'Dubai',
-  'Abu Dhabi',
-  'Sharjah',
-  'Ajman',
-  'Ras Al Khaimah',
-  'Fujairah',
-  'Umm Al Quwain',
-  'Federal'
 ];
 const CITY_OPTIONS = [
   'Dubai',
@@ -72,9 +60,6 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
     customerName: '',
     sourceOfInformation: 'Walk-in',
     personalId: '',
-    idCardNumber: '',
-    idIssuingAuthority: 'Dubai',
-    idExpiryDate: '',
     dataVerified: `DV ${currentMonthYear}`,
     area: '',
     city: 'Dubai',
@@ -124,9 +109,7 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
       const existingVerified = customer.dataVerified || 
         (customer.verificationStatus?.status ? String(customer.verificationStatus.status) : `DV ${currentMonthYear}`);
 
-      const resolvedIdCard = customer.idCardNumber || customer.personalId || customer.nationalId || '';
-      const resolvedAuthority = customer.idIssuingAuthority || 'Dubai';
-      const resolvedExpiry = customer.idExpiryDate || '';
+      const resolvedPersonalId = customer.personalId || customer.idCardNumber || customer.nationalId || '';
       const resolvedNationality = customer.nationality || customer.nation || customer.countryOfOrigin || '';
 
       setFormData({
@@ -134,10 +117,7 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
         customerId: String(custNo),
         customerName: custName,
         sourceOfInformation: customer.sourceOfInformation || 'Walk-in',
-        personalId: resolvedIdCard,
-        idCardNumber: resolvedIdCard,
-        idIssuingAuthority: resolvedAuthority,
-        idExpiryDate: resolvedExpiry,
+        personalId: resolvedPersonalId,
         dataVerified: existingVerified,
         area: customer.location?.area || '',
         city: customer.location?.city || 'Dubai',
@@ -467,50 +447,17 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
                   </select>
                 </div>
 
-                {/* ID Number */}
+                {/* Personal ID */}
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
-                    <FaIdCard className="text-gray-400 text-xs" /> ID Number
+                    <FaIdCard className="text-gray-400 text-xs" /> Personal ID
                   </label>
                   <input
                     type="text"
-                    value={formData.idCardNumber}
-                    onChange={(e) => setFormData(prev => ({ 
-                      ...prev, 
-                      idCardNumber: e.target.value,
-                      personalId: e.target.value 
-                    }))}
-                    placeholder="e.g. 784199112345678"
+                    value={formData.personalId}
+                    onChange={(e) => setFormData(prev => ({ ...prev, personalId: e.target.value }))}
+                    placeholder="e.g. 784-200-1122334-5"
                     className="w-full p-2.5 bg-white border border-gray-300 rounded-lg font-mono font-semibold text-gray-900 text-xs focus:outline-none focus:border-emerald-500 shadow-2xs"
-                  />
-                </div>
-
-                {/* ID Issuing Authority */}
-                <div>
-                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
-                    <FaBuilding className="text-gray-400 text-xs" /> ID Issuing Authority
-                  </label>
-                  <select
-                    value={formData.idIssuingAuthority}
-                    onChange={(e) => setFormData(prev => ({ ...prev, idIssuingAuthority: e.target.value }))}
-                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg font-semibold text-gray-800 text-xs focus:outline-none focus:border-emerald-500 cursor-pointer shadow-2xs"
-                  >
-                    {AUTHORITY_OPTIONS.map(a => (
-                      <option key={a} value={a}>{a}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* ID Expiry Date */}
-                <div>
-                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
-                    <FaCalendarAlt className="text-gray-400 text-xs" /> ID Expiry Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.idExpiryDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, idExpiryDate: e.target.value }))}
-                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg font-semibold text-gray-900 text-xs focus:outline-none focus:border-emerald-500 cursor-pointer shadow-2xs"
                   />
                 </div>
 

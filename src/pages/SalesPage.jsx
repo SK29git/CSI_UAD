@@ -15,7 +15,7 @@ import { useCustomer, isExistingCustomer } from '../context/CustomerContext';
 export default function SalesPage() {
   const { customer, group, customerFormMode, closeCustomerForm } = useCustomer();
   const hasCustomer = isExistingCustomer(customer);
-  const [activeSubTab, setActiveSubTab] = useState(() => (hasCustomer ? 'New Enquiry' : 'New Lead'));
+  const [activeSubTab, setActiveSubTab] = useState('New Enquiry');
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -54,15 +54,15 @@ export default function SalesPage() {
       window.history.replaceState(null, '', `/sales?${params.toString()}`);
     }
     if (search.toLowerCase().includes('salesnewlead') || search.toLowerCase().includes('newenquiry')) {
-      setActiveSubTab(hasCustomer ? 'New Enquiry' : 'New Lead');
+      setActiveSubTab('New Enquiry');
     }
   }, [group, hasCustomer]);
 
   useEffect(() => {
-    if (activeSubTab === 'New Enquiry' || activeSubTab === 'New Lead') {
-      setActiveSubTab(hasCustomer ? 'New Enquiry' : 'New Lead');
+    if (activeSubTab === 'New Lead') {
+      setActiveSubTab('New Enquiry');
     }
-  }, [hasCustomer]);
+  }, [activeSubTab]);
 
   const renderSalesContent = () => {
     if (customerFormMode) {

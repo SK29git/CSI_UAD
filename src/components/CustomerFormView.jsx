@@ -22,8 +22,7 @@ import {
   FaCheckCircle,
   FaCommentAlt,
   FaWhatsapp,
-  FaIdCard,
-  FaCalendarAlt
+  FaIdCard
 } from 'react-icons/fa';
 
 const GROUP_OPTIONS = ['BMW', 'MINI', 'ROLLS-ROYCE', 'GEELY'];
@@ -38,15 +37,15 @@ const CITY_OPTIONS = [
   'Umm Al Quwain',
   'Al Ain'
 ];
-const AUTHORITY_OPTIONS = [
-  'Dubai',
-  'Abu Dhabi',
-  'Sharjah',
-  'Ajman',
-  'Ras Al Khaimah',
-  'Fujairah',
-  'Umm Al Quwain',
-  'Federal'
+const SOURCE_OF_INFORMATION_OPTIONS = [
+  'Walk-in',
+  'Phone Call',
+  'Email',
+  'Website',
+  'Social Media',
+  'Referral',
+  'Event',
+  'Other'
 ];
 
 export default function CustomerFormView({ mode = 'create', onClose }) {
@@ -66,9 +65,9 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     titleCode: 'Mr.',
     firstName: '',
     surname: '',
-    idCardNumber: '',
-    idIssuingAuthority: 'Dubai',
-    idExpiryDate: '',
+    sourceOfInformation: 'Walk-in',
+    personalId: '',
+    nationality: '',
     area: 'Deira',
     city: 'Dubai',
     country: 'United Arab Emirates',
@@ -143,12 +142,12 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         titleCode: customer.salutation || 'Mr.',
         firstName: customer.firstName || '',
         surname: customer.surname || '',
-        idCardNumber: customer.idCardNumber || customer.personalId || customer.nationalId || '',
-        idIssuingAuthority: customer.idIssuingAuthority || 'Dubai',
-        idExpiryDate: customer.idExpiryDate || '',
+        sourceOfInformation: customer.sourceOfInformation || 'Walk-in',
+        personalId: customer.personalId || customer.nationalId || '',
+        nationality: customer.nationality || '',
         area: customer.location?.area || 'Deira',
         city: customer.location?.city || 'Dubai',
-        country: customer.nationality || 'United Arab Emirates',
+        country: customer.country || customer.nationality || 'United Arab Emirates',
         mobile: resolvedMobile,
         email: emailVal,
         consents: customer.consents || {
@@ -166,9 +165,9 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         titleCode: prev.titleCode || 'Mr.',
         firstName: prev.firstName || '',
         surname: prev.surname || '',
-        idCardNumber: prev.idCardNumber || '',
-        idIssuingAuthority: prev.idIssuingAuthority || 'Dubai',
-        idExpiryDate: prev.idExpiryDate || '',
+        sourceOfInformation: prev.sourceOfInformation || 'Walk-in',
+        personalId: prev.personalId || '',
+        nationality: prev.nationality || '',
         area: prev.area || 'Deira',
         city: prev.city || 'Dubai',
         country: prev.country || 'United Arab Emirates',
@@ -468,46 +467,47 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 />
               </div>
 
-              {/* ID Number */}
-              <div className="sm:col-span-2 lg:col-span-2">
+              {/* Source of Information */}
+              <div className="sm:col-span-2">
                 <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
-                  <FaIdCard className="text-gray-400 text-xs" /> ID Number
-                </label>
-                <input
-                  type="text"
-                  value={formData.idCardNumber}
-                  onChange={(e) => setFormData(prev => ({ ...prev, idCardNumber: e.target.value }))}
-                  placeholder="e.g. 784199112345678"
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-mono font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors shadow-2xs"
-                />
-              </div>
-
-              {/* ID Issuing Authority */}
-              <div>
-                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
-                  <FaBuilding className="text-gray-400 text-xs" /> ID Issuing Authority
+                  <FaBuilding className="text-gray-400 text-xs" /> Source of Information
                 </label>
                 <select
-                  value={formData.idIssuingAuthority}
-                  onChange={(e) => setFormData(prev => ({ ...prev, idIssuingAuthority: e.target.value }))}
+                  value={formData.sourceOfInformation}
+                  onChange={(e) => setFormData(prev => ({ ...prev, sourceOfInformation: e.target.value }))}
                   className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors shadow-2xs"
                 >
-                  {AUTHORITY_OPTIONS.map(a => (
-                    <option key={a} value={a}>{a}</option>
+                  {SOURCE_OF_INFORMATION_OPTIONS.map(s => (
+                    <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
               </div>
 
-              {/* ID Expiry Date */}
+              {/* Personal ID */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
-                  <FaCalendarAlt className="text-gray-400 text-xs" /> ID Expiry Date
+                  <FaIdCard className="text-gray-400 text-xs" /> Personal ID
                 </label>
                 <input
-                  type="date"
-                  value={formData.idExpiryDate}
-                  onChange={(e) => setFormData(prev => ({ ...prev, idExpiryDate: e.target.value }))}
-                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors shadow-2xs cursor-pointer"
+                  type="text"
+                  value={formData.personalId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, personalId: e.target.value }))}
+                  placeholder="e.g. 784-200-1122334-5"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-mono font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors shadow-2xs"
+                />
+              </div>
+
+              {/* Nationality */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaGlobe className="text-gray-400 text-xs" /> Nationality
+                </label>
+                <input
+                  type="text"
+                  value={formData.nationality}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nationality: e.target.value }))}
+                  placeholder="e.g. India"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors shadow-2xs"
                 />
               </div>
             </div>
