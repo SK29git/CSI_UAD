@@ -5,30 +5,35 @@
 export const API_BASE_URL = "https://ccaas.agmcgroup.ae";
 
 export async function apiFetch(path, options = {}) {
-  const relativeUrl = path.startsWith('/') ? path : `/${path}`;
-  const directUrl = path.startsWith('http') ? path : `${API_BASE_URL}${relativeUrl}`;
+  const relativeUrl = path.startsWith("/") ? path : `/${path}`;
+  const directUrl = path.startsWith("http")
+    ? path
+    : `${API_BASE_URL}${relativeUrl}`;
 
   // 1. Try relative endpoint (uses Vite local proxy or Vercel rewrite)
   try {
     const res = await fetch(relativeUrl, options);
-    const contentType = res.headers.get('content-type') || '';
-    
+    const contentType = res.headers.get("content-type") || "";
+
     // If response is valid JSON (not an HTML fallback page)
-    if (res.ok && contentType.includes('application/json')) {
+    if (res.ok && contentType.includes("application/json")) {
       const data = await res.json();
       return { ok: true, data, status: res.status };
     }
   } catch (err) {
-    console.warn(`Relative fetch to ${relativeUrl} failed, falling back to direct URL:`, err);
+    console.warn(
+      `Relative fetch to ${relativeUrl} failed, falling back to direct URL:`,
+      err,
+    );
   }
 
   // 2. Direct fetch fallback to https://ccaas.agmcgroup.ae
   try {
     const directRes = await fetch(directUrl, options);
-    const contentType = directRes.headers.get('content-type') || '';
-    
+    const contentType = directRes.headers.get("content-type") || "";
+
     if (directRes.ok) {
-      if (contentType.includes('application/json')) {
+      if (contentType.includes("application/json")) {
         const data = await directRes.json();
         return { ok: true, data, status: directRes.status };
       }
@@ -52,14 +57,18 @@ export async function apiFetch(path, options = {}) {
  * (Default token expiry is 18000s / 5 hours)
  */
 export async function getLeadIntakeToken(forceRefresh = false) {
-  const CACHE_KEY = 'ccaas_lead_intake_token';
-  const EXPIRY_KEY = 'ccaas_lead_intake_token_expiry';
+  const CACHE_KEY = "ccaas_lead_intake_token";
+  const EXPIRY_KEY = "ccaas_lead_intake_token_expiry";
 
   if (!forceRefresh) {
     try {
       const cachedToken = localStorage.getItem(CACHE_KEY);
       const cachedExpiry = localStorage.getItem(EXPIRY_KEY);
-      if (cachedToken && cachedExpiry && Date.now() < parseInt(cachedExpiry, 10) - 60000) {
+      if (
+        cachedToken &&
+        cachedExpiry &&
+        Date.now() < parseInt(cachedExpiry, 10) - 60000
+      ) {
         return cachedToken;
       }
     } catch {
@@ -67,11 +76,11 @@ export async function getLeadIntakeToken(forceRefresh = false) {
     }
   }
 
-  const endpoint = '/api/v1/lead-intake/token';
+  const endpoint = "/api/v1/lead-intake/token";
   const directUrl = `${API_BASE_URL}${endpoint}`;
   const credentials = {
     username: "Genesys",
-    password: "okICXPfBMO9aoqxiCNaqe58GQeGPdpzK"
+    password: "okICXPfBMO9aoqxiCNaqe58GQeGPdpzK",
   };
 
   let tokenData = null;
@@ -79,23 +88,26 @@ export async function getLeadIntakeToken(forceRefresh = false) {
   // Try relative proxy first
   try {
     const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credentials),
     });
     if (res.ok) {
       tokenData = await res.json();
     }
   } catch (err) {
-    console.warn("Relative lead-intake token fetch failed, falling back to direct URL:", err);
+    console.warn(
+      "Relative lead-intake token fetch failed, falling back to direct URL:",
+      err,
+    );
   }
 
   // Fallback to direct URL if needed
   if (!tokenData || !tokenData.token) {
     const res = await fetch(directUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(credentials)
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credentials),
     });
     if (!res.ok) {
       throw new Error(`Failed to obtain lead intake token: ${res.statusText}`);
@@ -123,17 +135,17 @@ export async function getLeadIntakeToken(forceRefresh = false) {
  */
 export async function submitLeadIntake(payload) {
   let token = await getLeadIntakeToken();
-  const endpoint = '/api/v1/lead-intake';
+  const endpoint = "/api/v1/lead-intake";
   const directUrl = `${API_BASE_URL}${endpoint}`;
 
   const sendRequest = async (authToken, url) => {
     return await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${authToken}`,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
   };
 
@@ -154,9 +166,9 @@ export async function submitLeadIntake(payload) {
     }
   }
 
-  const contentType = res.headers.get('content-type') || '';
+  const contentType = res.headers.get("content-type") || "";
   let data = null;
-  if (contentType.includes('application/json')) {
+  if (contentType.includes("application/json")) {
     data = await res.json();
   } else {
     const text = await res.text();
@@ -170,9 +182,13 @@ export async function submitLeadIntake(payload) {
   if (!res.ok) {
     let errMsg = data?.message;
     if (data?.errors) {
-      errMsg = Object.entries(data.errors).map(([k, v]) => `${k}: ${v}`).join(' | ');
+      errMsg = Object.entries(data.errors)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(" | ");
     }
-    const error = new Error(errMsg || `Submission failed with status ${res.status}`);
+    const error = new Error(
+      errMsg || `Submission failed with status ${res.status}`,
+    );
     error.status = res.status;
     error.data = data;
     throw error;
@@ -186,7 +202,8 @@ export async function submitLeadIntake(payload) {
  * Handles asynchronous RPA case submission and task status polling
  * Compatible with all brand groups (BMW, GEELY, MINI, etc.)
  */
-export const RPA_API_KEY = "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187a";
+export const RPA_API_KEY =
+  "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187";
 
 export const DEFAULT_RPA_CALLBACK_URL = "http://localhost:9999/hook";
 
@@ -197,23 +214,26 @@ export const DEFAULT_RPA_CALLBACK_URL = "http://localhost:9999/hook";
  * @param {object} options - Optional parameters (callbackUrl, createdBy)
  */
 export async function submitRpaCase(caseType, details, options = {}) {
-  const endpoint = '/api/intake/cases';
+  const endpoint = "/api/intake/cases";
   const directUrl = `${API_BASE_URL}${endpoint}`;
   const payload = {
     caseType,
-    callbackUrl: options.callbackUrl !== undefined ? options.callbackUrl : DEFAULT_RPA_CALLBACK_URL,
+    callbackUrl:
+      options.callbackUrl !== undefined
+        ? options.callbackUrl
+        : DEFAULT_RPA_CALLBACK_URL,
     createdBy: options.createdBy || "genesys",
-    details: details || {}
+    details: details || {},
   };
 
   const send = async (url) => {
     return await fetch(url, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'X-Api-Key': RPA_API_KEY
+        "Content-Type": "application/json",
+        "X-Api-Key": RPA_API_KEY,
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
     });
   };
 
@@ -224,17 +244,25 @@ export async function submitRpaCase(caseType, details, options = {}) {
     res = await send(directUrl);
   }
 
-  const contentType = res.headers.get('content-type') || '';
+  const contentType = res.headers.get("content-type") || "";
   let data = null;
-  if (contentType.includes('application/json')) {
+  if (contentType.includes("application/json")) {
     data = await res.json();
   } else {
     const text = await res.text();
-    try { data = JSON.parse(text); } catch { data = { message: text }; }
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
   }
 
   if (!res.ok) {
-    const errMsg = data?.errorMessage || data?.message || data?.error || `RPA submission refused (${res.status})`;
+    const errMsg =
+      data?.errorMessage ||
+      data?.message ||
+      data?.error ||
+      `RPA submission refused (${res.status})`;
     const err = new Error(errMsg);
     err.status = res.status;
     err.data = data;
@@ -256,14 +284,14 @@ export async function getRpaCaseStatus(taskId) {
   let res;
   try {
     res = await fetch(endpoint, {
-      method: 'GET',
-      headers: { 'X-Api-Key': RPA_API_KEY }
+      method: "GET",
+      headers: { "X-Api-Key": RPA_API_KEY },
     });
   } catch {
     try {
       res = await fetch(directUrl, {
-        method: 'GET',
-        headers: { 'X-Api-Key': RPA_API_KEY }
+        method: "GET",
+        headers: { "X-Api-Key": RPA_API_KEY },
       });
     } catch {
       return null;
@@ -285,7 +313,12 @@ export async function getRpaCaseStatus(taskId) {
  * @param {number} intervalMs - Poll interval (default 3s)
  * @param {function} onProgress - Callback receiving (status, taskData)
  */
-export async function pollRpaCaseStatus(taskId, maxWaitMs = 10000, intervalMs = 3000, onProgress = null) {
+export async function pollRpaCaseStatus(
+  taskId,
+  maxWaitMs = 10000,
+  intervalMs = 3000,
+  onProgress = null,
+) {
   if (!taskId) {
     throw new Error("No taskId provided for RPA status check");
   }
@@ -295,23 +328,30 @@ export async function pollRpaCaseStatus(taskId, maxWaitMs = 10000, intervalMs = 
   while (Date.now() - startTime < maxWaitMs) {
     const data = await getRpaCaseStatus(taskId);
     if (data) {
-      const status = (data?.status || '').toUpperCase();
+      const status = (data?.status || "").toUpperCase();
 
       if (onProgress) {
-        try { onProgress(status, data); } catch (e) { console.warn("onProgress error:", e); }
+        try {
+          onProgress(status, data);
+        } catch (e) {
+          console.warn("onProgress error:", e);
+        }
       }
 
-      if (status === 'COMPLETED' || status === 'SUCCESS') {
-        return { 
-          ok: true, 
-          status: 'COMPLETED', 
-          result: data.result || data, 
-          taskId 
+      if (status === "COMPLETED" || status === "SUCCESS") {
+        return {
+          ok: true,
+          status: "COMPLETED",
+          result: data.result || data,
+          taskId,
         };
       }
 
-      if (status === 'FAILED' || status === 'ERROR') {
-        const errMsg = data.errorMessage || data.errorCode || 'RPA task execution failed in Keyloop';
+      if (status === "FAILED" || status === "ERROR") {
+        const errMsg =
+          data.errorMessage ||
+          data.errorCode ||
+          "RPA task execution failed in Keyloop";
         const err = new Error(errMsg);
         err.errorCode = data.errorCode;
         err.data = data;
@@ -320,10 +360,10 @@ export async function pollRpaCaseStatus(taskId, maxWaitMs = 10000, intervalMs = 
     }
 
     // Task is still QUEUED or CLAIMED (running)
-    await new Promise(resolve => setTimeout(resolve, intervalMs));
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
 
-  return { ok: true, status: 'QUEUED', taskId };
+  return { ok: true, status: "QUEUED", taskId };
 }
 
 /**
@@ -341,31 +381,34 @@ export async function executeRpaCase(caseType, details, options = {}) {
   }
 
   if (options.onProgress) {
-    options.onProgress(submission.status || 'QUEUED', submission);
+    options.onProgress(submission.status || "QUEUED", submission);
   }
 
   // 2. Perform at most ONE single check after 1.5s in case the bot completed immediately
   if (options.checkOnce !== false) {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     try {
       const check = await getRpaCaseStatus(submission.taskId);
       if (check) {
-        const status = (check.status || '').toUpperCase();
+        const status = (check.status || "").toUpperCase();
         if (options.onProgress) {
           options.onProgress(status, check);
         }
 
-        if (status === 'COMPLETED' || status === 'SUCCESS') {
+        if (status === "COMPLETED" || status === "SUCCESS") {
           return {
             ok: true,
-            status: 'COMPLETED',
+            status: "COMPLETED",
             result: check.result || check,
-            taskId: submission.taskId
+            taskId: submission.taskId,
           };
         }
 
-        if (status === 'FAILED' || status === 'ERROR') {
-          const errMsg = check.errorMessage || check.errorCode || 'RPA task execution failed in Keyloop';
+        if (status === "FAILED" || status === "ERROR") {
+          const errMsg =
+            check.errorMessage ||
+            check.errorCode ||
+            "RPA task execution failed in Keyloop";
           const err = new Error(errMsg);
           err.errorCode = check.errorCode;
           err.data = check;
@@ -376,11 +419,11 @@ export async function executeRpaCase(caseType, details, options = {}) {
           ok: true,
           status,
           result: check.result || null,
-          taskId: submission.taskId
+          taskId: submission.taskId,
         };
       }
     } catch (err) {
-      if (err.errorCode || err.message?.includes('failed in Keyloop')) {
+      if (err.errorCode || err.message?.includes("failed in Keyloop")) {
         throw err;
       }
     }
@@ -389,9 +432,9 @@ export async function executeRpaCase(caseType, details, options = {}) {
   // 3. Return accepted / queued task immediately without spamming the backend
   return {
     ok: true,
-    status: submission.status || 'QUEUED',
+    status: submission.status || "QUEUED",
     result: null,
-    taskId: submission.taskId
+    taskId: submission.taskId,
   };
 }
 
@@ -401,10 +444,10 @@ export async function executeRpaCase(caseType, details, options = {}) {
  * @param {object} options - Optional parameters (createdBy, callbackUrl, onProgress)
  */
 export async function createComplaintCase(details, options = {}) {
-  return await executeRpaCase('CREATE_COMPLAINT', details, {
+  return await executeRpaCase("CREATE_COMPLAINT", details, {
     callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,
     createdBy: options.createdBy || "genesys",
-    ...options
+    ...options,
   });
 }
 
@@ -415,10 +458,10 @@ export async function createComplaintCase(details, options = {}) {
  * @param {object} options - Optional parameters (createdBy, callbackUrl, onProgress)
  */
 export async function linkVehicleToCustomer(details, options = {}) {
-  return await executeRpaCase('LINK_VEHICLE_TO_CUSTOMER', details, {
+  return await executeRpaCase("LINK_VEHICLE_TO_CUSTOMER", details, {
     callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,
     createdBy: options.createdBy || "genesys",
-    ...options
+    ...options,
   });
 }
 
@@ -429,11 +472,128 @@ export async function linkVehicleToCustomer(details, options = {}) {
  * @param {object} options - Optional parameters (createdBy, callbackUrl, onProgress)
  */
 export async function updateCustomerCase(details, options = {}) {
-  return await executeRpaCase('UPDATE_CUSTOMER', details, {
+  return await executeRpaCase("UPDATE_CUSTOMER", details, {
     callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,
     createdBy: options.createdBy || "genesys",
-    ...options
+    ...options,
   });
+}
+
+/* ========================================================================== */
+/* AGMC SMS GATEWAY SERVICE (POST https://agmcutil.agmcgroup.ae/api/v1/sms/send)*/
+/* ========================================================================== */
+
+export const SMS_API_BASE_URL = "https://agmcutil.agmcgroup.ae";
+export const SMS_API_KEY =
+  "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187a";
+
+/**
+ * Sends an SMS text message to a customer via the AGMC SMS Gateway
+ * @param {object} params - { senderId, recipient, message, reference }
+ */
+export async function sendCustomerSmsMessage({
+  senderId = "AGMC",
+  recipient,
+  message,
+  reference,
+}) {
+  if (!recipient || String(recipient).trim() === "") {
+    return { ok: false, error: "Recipient mobile number is required" };
+  }
+  if (!message || String(message).trim() === "") {
+    return { ok: false, error: "Message content cannot be empty" };
+  }
+
+  // Format recipient: clean non-digits. If starting with 05, format to 9715 standard
+  let cleanRecipient = String(recipient).replace(/[^\d]/g, "");
+  if (cleanRecipient.startsWith("05") && cleanRecipient.length === 10) {
+    cleanRecipient = "971" + cleanRecipient.slice(1);
+  } else if (cleanRecipient.startsWith("5") && cleanRecipient.length === 9) {
+    cleanRecipient = "971" + cleanRecipient;
+  }
+
+  // Ensure unique reference so the gateway never returns duplicate: true
+  const uniqueReference =
+    reference && String(reference).trim() !== ""
+      ? String(reference).trim()
+      : `GEN-${Date.now().toString().slice(-6)}${Math.floor(100 + Math.random() * 900)}`;
+
+  const bodyPayload = {
+    senderId: senderId || "AGMC",
+    recipient: cleanRecipient,
+    message: String(message).trim(),
+    reference: uniqueReference,
+  };
+
+  const headers = {
+    "Content-Type": "application/json",
+    "X-API-Key": SMS_API_KEY,
+  };
+
+  // 1. Try local proxy first (/sms-gateway/api/v1/sms/send)
+  try {
+    const res = await fetch("/sms-gateway/api/v1/sms/send", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(bodyPayload),
+    });
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const data = await res.json();
+      if (res.ok) {
+        return {
+          ok: true,
+          data,
+          status: res.status,
+          reference: uniqueReference,
+          recipient: cleanRecipient,
+        };
+      } else {
+        return {
+          ok: false,
+          error: data?.message || data?.error || `HTTP ${res.status}`,
+          status: res.status,
+          data,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn(
+      "Relative fetch to /sms-gateway failed, attempting direct fetch:",
+      err,
+    );
+  }
+
+  // 2. Direct fetch fallback to https://agmcutil.agmcgroup.ae/api/v1/sms/send
+  try {
+    const directRes = await fetch(`${SMS_API_BASE_URL}/api/v1/sms/send`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(bodyPayload),
+    });
+    const data = await directRes.json();
+    if (directRes.ok) {
+      return {
+        ok: true,
+        data,
+        status: directRes.status,
+        reference: uniqueReference,
+        recipient: cleanRecipient,
+      };
+    }
+    return {
+      ok: false,
+      error: data?.message || data?.error || `HTTP ${directRes.status}`,
+      status: directRes.status,
+      data,
+    };
+  } catch (err) {
+    console.error("Direct SMS send error:", err);
+    return {
+      ok: false,
+      error: err.message || "Failed to connect to AGMC SMS Gateway",
+    };
+  }
 }
 
 /* ========================================================================== */
@@ -448,7 +608,10 @@ export const GEELY_TENANT_ID = SERVICE_ENGINE_TENANT_ID;
  * 1. Generate Service Gateway Token (GET /api/leads/generate-token/{tenantId})
  * Caches token in localStorage for 1 hour
  */
-export async function getServiceEngineToken(tenantId = SERVICE_ENGINE_TENANT_ID, forceRefresh = false) {
+export async function getServiceEngineToken(
+  tenantId = SERVICE_ENGINE_TENANT_ID,
+  forceRefresh = false,
+) {
   const CACHE_KEY = `ccaas_service_token_${tenantId}`;
   const EXPIRY_KEY = `ccaas_service_token_expiry_${tenantId}`;
 
@@ -491,7 +654,9 @@ export async function getServiceEngineToken(tenantId = SERVICE_ENGINE_TENANT_ID,
     console.warn("Direct Service token fetch fallback failed:", e);
   }
 
-  throw new Error(`Failed to generate Service engine token: ${res?.statusText || 'Server error'}`);
+  throw new Error(
+    `Failed to generate Service engine token: ${res?.statusText || "Server error"}`,
+  );
 }
 export const getGeelyServiceToken = getServiceEngineToken;
 
@@ -503,15 +668,18 @@ export async function serviceApiFetch(path, options = {}, useBearer = false) {
   try {
     token = await getServiceEngineToken();
   } catch (err) {
-    console.warn("Could not retrieve Service engine token, proceeding with unauthenticated request:", err);
+    console.warn(
+      "Could not retrieve Service engine token, proceeding with unauthenticated request:",
+      err,
+    );
   }
 
-  const authHeaderValue = token ? (useBearer ? `Bearer ${token}` : token) : '';
+  const authHeaderValue = token ? (useBearer ? `Bearer ${token}` : token) : "";
   const headers = {
-    'Content-Type': 'application/json',
-    'x-l10n-locale': 'en',
-    ...(authHeaderValue ? { 'Authorization': authHeaderValue } : {}),
-    ...(options.headers || {})
+    "Content-Type": "application/json",
+    "x-l10n-locale": "en",
+    ...(authHeaderValue ? { Authorization: authHeaderValue } : {}),
+    ...(options.headers || {}),
   };
 
   let res = await apiFetch(path, { ...options, headers });
@@ -520,8 +688,8 @@ export async function serviceApiFetch(path, options = {}, useBearer = false) {
   if (res && res.status === 401) {
     try {
       token = await getServiceEngineToken(SERVICE_ENGINE_TENANT_ID, true);
-      const retryAuth = token ? (useBearer ? `Bearer ${token}` : token) : '';
-      headers['Authorization'] = retryAuth;
+      const retryAuth = token ? (useBearer ? `Bearer ${token}` : token) : "";
+      headers["Authorization"] = retryAuth;
       res = await apiFetch(path, { ...options, headers });
     } catch (refreshErr) {
       console.warn("Token refresh retry failed:", refreshErr);
@@ -537,8 +705,10 @@ export const geelyApiFetch = serviceApiFetch;
  */
 export async function findServiceCustomer(phone) {
   if (!phone) return { ok: false, error: "Phone number is required" };
-  const cleanPhone = String(phone).replace(/[^\d+]/g, '');
-  return await serviceApiFetch(`/api/service/find-customer?phone=${encodeURIComponent(cleanPhone)}`);
+  const cleanPhone = String(phone).replace(/[^\d+]/g, "");
+  return await serviceApiFetch(
+    `/api/service/find-customer?phone=${encodeURIComponent(cleanPhone)}`,
+  );
 }
 export const findGeelyCustomer = findServiceCustomer;
 
@@ -548,7 +718,11 @@ export const findGeelyCustomer = findServiceCustomer;
  */
 export async function getServiceCustomerDetail(customerId) {
   if (!customerId) return { ok: false, error: "Customer ID is required" };
-  return await serviceApiFetch(`/api/service/getCustomerDetail?customerId=${encodeURIComponent(customerId)}`, {}, true);
+  return await serviceApiFetch(
+    `/api/service/getCustomerDetail?customerId=${encodeURIComponent(customerId)}`,
+    {},
+    true,
+  );
 }
 export const getGeelyCustomerDetail = getServiceCustomerDetail;
 
@@ -557,7 +731,9 @@ export const getGeelyCustomerDetail = getServiceCustomerDetail;
  */
 export async function getServiceCustomerVehicles(customerId) {
   if (!customerId) return { ok: false, error: "Customer ID is required" };
-  return await serviceApiFetch(`/api/service/customer-vehicle?customerId=${encodeURIComponent(customerId)}`);
+  return await serviceApiFetch(
+    `/api/service/customer-vehicle?customerId=${encodeURIComponent(customerId)}`,
+  );
 }
 export const getGeelyCustomerVehicles = getServiceCustomerVehicles;
 
@@ -566,24 +742,33 @@ export const getGeelyCustomerVehicles = getServiceCustomerVehicles;
  * Requires Bearer token
  */
 export async function getServiceVehicleDetails(vehicleNumber) {
-  if (!vehicleNumber) return { ok: false, error: "Vehicle plate/number is required" };
-  return await serviceApiFetch(`/api/service/vehicle-details?vehicleNumber=${encodeURIComponent(vehicleNumber)}`, {}, true);
+  if (!vehicleNumber)
+    return { ok: false, error: "Vehicle plate/number is required" };
+  return await serviceApiFetch(
+    `/api/service/vehicle-details?vehicleNumber=${encodeURIComponent(vehicleNumber)}`,
+    {},
+    true,
+  );
 }
 export const getGeelyVehicleDetails = getServiceVehicleDetails;
 
 /**
  * 6. Get Service Locations (GET /api/service-locations?type=workshop)
  */
-export async function getServiceLocations(type = 'workshop') {
-  return await serviceApiFetch(`/api/service-locations?type=${encodeURIComponent(type)}`);
+export async function getServiceLocations(type = "workshop") {
+  return await serviceApiFetch(
+    `/api/service-locations?type=${encodeURIComponent(type)}`,
+  );
 }
 export const getGeelyServiceLocations = getServiceLocations;
 
 /**
  * 7. Get Recommended Services Catalogue (GET /api/service/recommended-services?type=workshop)
  */
-export async function getServiceRecommendedServices(type = 'workshop') {
-  return await serviceApiFetch(`/api/service/recommended-services?type=${encodeURIComponent(type)}`);
+export async function getServiceRecommendedServices(type = "workshop") {
+  return await serviceApiFetch(
+    `/api/service/recommended-services?type=${encodeURIComponent(type)}`,
+  );
 }
 export const getGeelyRecommendedServices = getServiceRecommendedServices;
 
@@ -591,7 +776,9 @@ export const getGeelyRecommendedServices = getServiceRecommendedServices;
  * 8. Get Advisor List (GET /api/service/advisors?dealershipLocationId={id})
  */
 export async function getServiceAdvisors(dealershipLocationId) {
-  return await serviceApiFetch(`/api/service/advisors?dealershipLocationId=${encodeURIComponent(dealershipLocationId)}`);
+  return await serviceApiFetch(
+    `/api/service/advisors?dealershipLocationId=${encodeURIComponent(dealershipLocationId)}`,
+  );
 }
 export const getGeelyAdvisors = getServiceAdvisors;
 
@@ -599,15 +786,21 @@ export const getGeelyAdvisors = getServiceAdvisors;
  * 9. Get Available Appointment Dates (POST /api/service/appointment-dates)
  * Supports dynamic make: 'BMW', 'MINI', 'Geely', 'Rolls-Royce', etc.
  */
-export async function getAppointmentDates({ dealershipLocationId, make = 'BMW', serviceProductIds = [] }) {
-  const pIds = Array.isArray(serviceProductIds) ? serviceProductIds : [serviceProductIds].filter(Boolean);
-  return await serviceApiFetch('/api/service/appointment-dates', {
-    method: 'POST',
+export async function getAppointmentDates({
+  dealershipLocationId,
+  make = "BMW",
+  serviceProductIds = [],
+}) {
+  const pIds = Array.isArray(serviceProductIds)
+    ? serviceProductIds
+    : [serviceProductIds].filter(Boolean);
+  return await serviceApiFetch("/api/service/appointment-dates", {
+    method: "POST",
     body: JSON.stringify({
       dealershipLocationId: Number(dealershipLocationId),
-      make: make || 'BMW',
-      serviceProductIds: pIds
-    })
+      make: make || "BMW",
+      serviceProductIds: pIds,
+    }),
   });
 }
 export const getGeelyAppointmentDates = getAppointmentDates;
@@ -615,15 +808,21 @@ export const getGeelyAppointmentDates = getAppointmentDates;
 /**
  * 10. Get Available Appointment Timeslots (POST /api/service/appointment-time)
  */
-export async function getAppointmentTimes({ selectedDate, dealershipLocationId, serviceProductIds = [] }) {
-  const pIds = Array.isArray(serviceProductIds) ? serviceProductIds : [serviceProductIds].filter(Boolean);
-  return await serviceApiFetch('/api/service/appointment-time', {
-    method: 'POST',
+export async function getAppointmentTimes({
+  selectedDate,
+  dealershipLocationId,
+  serviceProductIds = [],
+}) {
+  const pIds = Array.isArray(serviceProductIds)
+    ? serviceProductIds
+    : [serviceProductIds].filter(Boolean);
+  return await serviceApiFetch("/api/service/appointment-time", {
+    method: "POST",
     body: JSON.stringify({
       selectedDate,
       dealershipLocationId: Number(dealershipLocationId),
-      serviceProductIds: pIds
-    })
+      serviceProductIds: pIds,
+    }),
   });
 }
 export const getGeelyAppointmentTimes = getAppointmentTimes;
@@ -632,27 +831,27 @@ export const getGeelyAppointmentTimes = getAppointmentTimes;
  * 11. Create Service Booking (POST /api/service)
  */
 export async function createServiceBooking(payload) {
-  const pIds = Array.isArray(payload.serviceProductIds) 
-    ? payload.serviceProductIds 
+  const pIds = Array.isArray(payload.serviceProductIds)
+    ? payload.serviceProductIds
     : [payload.serviceProductIds].filter(Boolean);
 
   const bodyPayload = {
-    advisorId: String(payload.advisorId || ''),
-    customerNotes: String(payload.customerNotes || ''),
+    advisorId: String(payload.advisorId || ""),
+    customerNotes: String(payload.customerNotes || ""),
     dealershipLocationId: Number(payload.dealershipLocationId) || 40,
     dropOffTime: payload.dropOffTime, // e.g. "10:15-10:30"
-    licensePlateNo: String(payload.licensePlateNo || '').trim(),
+    licensePlateNo: String(payload.licensePlateNo || "").trim(),
     mileage: Number(payload.mileage) || 0,
     mileageUnit: payload.mileageUnit || "KM",
     serviceProductIds: pIds,
     startDate: payload.startDate, // e.g. "2026-11-17"
     vehicleId: Number(payload.vehicleId) || 0,
-    ...(payload.startDateTime ? { startDateTime: payload.startDateTime } : {})
+    ...(payload.startDateTime ? { startDateTime: payload.startDateTime } : {}),
   };
 
-  return await serviceApiFetch('/api/service', {
-    method: 'POST',
-    body: JSON.stringify(bodyPayload)
+  return await serviceApiFetch("/api/service", {
+    method: "POST",
+    body: JSON.stringify(bodyPayload),
   });
 }
 export const createGeelyServiceBooking = createServiceBooking;
@@ -661,8 +860,11 @@ export const createGeelyServiceBooking = createServiceBooking;
  * 12. Get Active Appointment List (GET /api/service/appointments?regNumber={plate})
  */
 export async function getServiceAppointments(regNumber) {
-  if (!regNumber) return { ok: false, error: "Plate/Registration number is required" };
-  return await serviceApiFetch(`/api/service/appointments?regNumber=${encodeURIComponent(regNumber)}`);
+  if (!regNumber)
+    return { ok: false, error: "Plate/Registration number is required" };
+  return await serviceApiFetch(
+    `/api/service/appointments?regNumber=${encodeURIComponent(regNumber)}`,
+  );
 }
 export const getGeelyAppointments = getServiceAppointments;
 
@@ -671,7 +873,9 @@ export const getGeelyAppointments = getServiceAppointments;
  */
 export async function getServiceHistory(vinNumber, page = 1, pageSize = 50) {
   if (!vinNumber) return { ok: false, error: "VIN number is required" };
-  return await serviceApiFetch(`/api/service/history?vinNumber=${encodeURIComponent(vinNumber)}&page=${page}&pageSize=${pageSize}`);
+  return await serviceApiFetch(
+    `/api/service/history?vinNumber=${encodeURIComponent(vinNumber)}&page=${page}&pageSize=${pageSize}`,
+  );
 }
 export const getGeelyServiceHistory = getServiceHistory;
 
@@ -679,8 +883,11 @@ export const getGeelyServiceHistory = getServiceHistory;
  * 14. Get Service History Details (GET /api/service/history-by-Id/{serviceHistoryId})
  */
 export async function getServiceHistoryDetail(serviceHistoryId) {
-  if (!serviceHistoryId) return { ok: false, error: "Service history ID is required" };
-  return await serviceApiFetch(`/api/service/history-by-Id/${encodeURIComponent(serviceHistoryId)}`);
+  if (!serviceHistoryId)
+    return { ok: false, error: "Service history ID is required" };
+  return await serviceApiFetch(
+    `/api/service/history-by-Id/${encodeURIComponent(serviceHistoryId)}`,
+  );
 }
 export const getGeelyServiceHistoryDetail = getServiceHistoryDetail;
 
@@ -689,11 +896,11 @@ export const getGeelyServiceHistoryDetail = getServiceHistoryDetail;
  */
 export async function deleteServiceAppointment(appointmentId) {
   if (!appointmentId) return { ok: false, error: "Appointment ID is required" };
-  return await serviceApiFetch(`/api/service/appointments?appointmentId=${encodeURIComponent(appointmentId)}`, {
-    method: 'DELETE'
-  });
+  return await serviceApiFetch(
+    `/api/service/appointments?appointmentId=${encodeURIComponent(appointmentId)}`,
+    {
+      method: "DELETE",
+    },
+  );
 }
 export const deleteGeelyAppointment = deleteServiceAppointment;
-
-
-

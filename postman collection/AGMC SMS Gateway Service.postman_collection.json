@@ -1,0 +1,66 @@
+{
+  "info": {
+    "_postman_id": "07e77211-d620-4221-88be-faaee86e544a",
+    "name": "AGMC SMS Gateway Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "50201511",
+    "_collection_link": "https://go.postman.co/collection/50201511-07e77211-d620-4221-88be-faaee86e544a?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Send SMS",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const j = pm.response.json();\nif (j.requestId) pm.collectionVariables.set('requestId', j.requestId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "X-API-Key",
+            "value": "{{apiKey}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"senderId\": \"AGMC\",\n  \"recipient\": \"0501234567\",\n  \"message\": \"Your vehicle is ready for pickup.\",\n  \"reference\": \"GEN-12345\"\n}",
+          "options": {
+            "raw": {
+              "language": "text"
+            }
+          }
+        },
+        "url": {
+          "raw": "https://agmcutil.agmcgroup.ae/api/v1/sms/send",
+          "protocol": "https",
+          "host": [
+            "agmcutil",
+            "agmcgroup",
+            "ae"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "sms",
+            "send"
+          ]
+        }
+      },
+      "response": []
+    }
+  ]
+}

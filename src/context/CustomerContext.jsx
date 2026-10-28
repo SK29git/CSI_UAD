@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { apiFetch, executeRpaCase, updateCustomerCase } from '../utils/api';
+import { apiFetch, executeRpaCase, updateCustomerCase, sendCustomerSmsMessage } from '../utils/api';
 import GlobalToast from '../components/GlobalToast';
 import CustomerVerificationModal from '../components/CustomerVerificationModal';
+import FloatingSmsWidget from '../components/FloatingSmsWidget';
 import { isFullMobileNumber } from '../utils/phoneUtils';
 
 const CustomerContext = createContext(null);
@@ -310,6 +311,20 @@ export function CustomerProvider({ children }) {
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
   const openVerificationModal = () => setIsVerificationModalOpen(true);
   const closeVerificationModal = () => setIsVerificationModalOpen(false);
+
+  // Floating SMS Dispatcher Widget (AGMC SMS Gateway)
+  const [isSmsWidgetOpen, setIsSmsWidgetOpen] = useState(false);
+  const [isSmsWidgetMinimized, setIsSmsWidgetMinimized] = useState(false);
+  const openSmsWidget = () => {
+    setIsSmsWidgetOpen(true);
+    setIsSmsWidgetMinimized(false);
+  };
+  const closeSmsWidget = () => setIsSmsWidgetOpen(false);
+  const toggleMinimizeSmsWidget = () => setIsSmsWidgetMinimized(prev => !prev);
+
+  const sendSms = async (smsData) => {
+    return await sendCustomerSmsMessage(smsData);
+  };
 
   // App-wide floating toast notification (persists across views/modals)
   const [toastNotification, setToastNotification] = useState(null);
@@ -1924,6 +1939,12 @@ export function CustomerProvider({ children }) {
       isVerificationModalOpen,
       openVerificationModal,
       closeVerificationModal,
+      isSmsWidgetOpen,
+      isSmsWidgetMinimized,
+      openSmsWidget,
+      closeSmsWidget,
+      toggleMinimizeSmsWidget,
+      sendSms,
       toastNotification,
       showToast,
       hideToast
@@ -1934,6 +1955,7 @@ export function CustomerProvider({ children }) {
         isOpen={isVerificationModalOpen} 
         onClose={closeVerificationModal} 
       />
+      <FloatingSmsWidget />
     </CustomerContext.Provider>
   );
 }

@@ -16,6 +16,12 @@ export default defineConfig({
         target: 'https://ccaas.agmcgroup.ae',
         changeOrigin: true,
         secure: false,
+      },
+      '/sms-gateway': {
+        target: 'https://agmcutil.agmcgroup.ae',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/sms-gateway/, '')
       }
     }
   }
