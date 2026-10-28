@@ -53,13 +53,28 @@ const formatDate = (dateStr) => {
 };
 
 export default function SalesEnquiriesView() {
-  const { customer, currentMobile, group: contextGroup } = useCustomer();
-  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
+  const { 
+    customer, 
+    currentMobile, 
+    group: contextGroup, 
+    enquiryNumber: contextEnquiryNumber, 
+    enquiries: contextEnquiries 
+  } = useCustomer();
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "BMW");
   const customerNumber = customer?.customerNumber || customer?.id || '';
   const mobile = getFullMobileNumber(customer, currentMobile);
 
-  const [enquiries, setEnquiries] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const customerEnquiries = (customer?.enquiries && Array.isArray(customer.enquiries) && customer.enquiries.length > 0)
+    ? customer.enquiries
+    : (contextEnquiries && Array.isArray(contextEnquiries) && contextEnquiries.length > 0)
+      ? contextEnquiries
+      : [];
+
+  const initialEnquiryNo = customer?.enquiryNumber || contextEnquiryNumber || (customerEnquiries[0]?.enquiryNumber) || '';
+
+  const [enquiries, setEnquiries] = useState(customerEnquiries);
+  const [loading, setLoading] = useState(false);
+  const [searchEnquiryNumber, setSearchEnquiryNumber] = useState(initialEnquiryNo);
   const [searchMobile, setSearchMobile] = useState(mobile);
   const [searchMake, setSearchMake] = useState(group);
   const [searchModel, setSearchModel] = useState('');
@@ -79,7 +94,7 @@ export default function SalesEnquiriesView() {
   const [actionToast, setActionToast] = useState(null);
 
   const handleOpenShowroomAppt = (enq) => {
-    const enqId = String(enq?.enquiryId || enq?.id || '');
+    const enqId = String(enq?.enquiryNumber || enq?.enquiryId || enq?.id || '');
     setShowroomEnquiryId(enqId);
     const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
     setShowroomDate(tomorrow);
@@ -145,22 +160,26 @@ export default function SalesEnquiriesView() {
     }
   };
 
-  const fetchEnquiries = async () => {
+  const fetchEnquiries = async (overrideEnquiryNo = null) => {
     setLoading(true);
     try {
       let endpoint = '';
       const params = new URLSearchParams();
       params.set('group', group);
 
-      if (searchMobile.trim()) {
+      const targetEnquiryNo = overrideEnquiryNo !== null ? overrideEnquiryNo : searchEnquiryNumber;
+
+      if (targetEnquiryNo && targetEnquiryNo.trim()) {
+        endpoint = `/api/v1/enquiries/${group}/${targetEnquiryNo.trim()}`;
+      } else if (searchMobile && searchMobile.trim()) {
         params.set('mobile', searchMobile.trim().replace(/[^0-9]/g, ''));
-        if (searchMake.trim()) params.set('make', searchMake.trim());
-        if (searchModel.trim()) params.set('model', searchModel.trim());
+        if (searchMake && searchMake.trim()) params.set('make', searchMake.trim());
+        if (searchModel && searchModel.trim()) params.set('model', searchModel.trim());
         if (statusFilter !== 'all') params.set('status', statusFilter);
         endpoint = `/api/v1/enquiries?${params.toString()}`;
       } else if (customerNumber) {
         params.set('customerNumber', customerNumber);
-        if (searchMake.trim()) params.set('make', searchMake.trim());
+        if (searchMake && searchMake.trim()) params.set('make', searchMake.trim());
         endpoint = `/api/v1/enquiries?${params.toString()}`;
       } else {
         params.set('status', 'open');
@@ -168,25 +187,52 @@ export default function SalesEnquiriesView() {
       }
 
       const res = await apiFetch(endpoint);
-      if (res && res.ok && Array.isArray(res.data)) {
-        setEnquiries(res.data);
+      if (res && res.ok && res.data) {
+        const list = Array.isArray(res.data) ? res.data : [res.data];
+        if (list.length > 0) {
+          setEnquiries(list);
+        } else if (customerEnquiries.length > 0) {
+          setEnquiries(customerEnquiries);
+        } else {
+          setEnquiries([]);
+        }
+      } else if (customerEnquiries.length > 0) {
+        setEnquiries(customerEnquiries);
       } else {
         setEnquiries([]);
       }
     } catch (err) {
       console.warn('Failed to fetch enquiries:', err);
-      setEnquiries([]);
+      if (customerEnquiries.length > 0) {
+        setEnquiries(customerEnquiries);
+      } else {
+        setEnquiries([]);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEnquiries();
-  }, [group, customerNumber]);
+    if (customerEnquiries.length > 0) {
+      setEnquiries(customerEnquiries);
+    }
+    const currentEnqNo = customer?.enquiryNumber || contextEnquiryNumber || customerEnquiries[0]?.enquiryNumber || '';
+    if (currentEnqNo) {
+      setSearchEnquiryNumber(currentEnqNo);
+    }
+    if (mobile) {
+      setSearchMobile(mobile);
+    }
+    if (group) {
+      setSearchMake(group);
+    }
+    fetchEnquiries(currentEnqNo || null);
+  }, [customerNumber, group, customer?.enquiries?.length]);
 
   const handleToggleDetails = async (enq) => {
-    const id = enq.enquiryId;
+    const id = String(enq?.enquiryNumber || enq?.enquiryId || enq?.id || '');
+    if (!id) return;
     if (expandedEnquiryId === id) {
       setExpandedEnquiryId(null);
       return;
@@ -297,8 +343,19 @@ export default function SalesEnquiriesView() {
         {/* Filters Grid */}
         <form 
           onSubmit={(e) => { e.preventDefault(); fetchEnquiries(); }}
-          className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5 pt-1"
         >
+          <div>
+            <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Enquiry #</label>
+            <input
+              type="text"
+              value={searchEnquiryNumber}
+              onChange={(e) => setSearchEnquiryNumber(e.target.value)}
+              placeholder="e.g. 564774"
+              className="w-full bg-gray-50 border border-gray-200 rounded px-2.5 py-1.5 font-mono font-semibold text-xs text-gray-800 focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
           <div>
             <label className="block text-[10px] font-bold text-gray-600 uppercase mb-1">Mobile #</label>
             <input
@@ -346,6 +403,53 @@ export default function SalesEnquiriesView() {
             </button>
           </div>
         </form>
+
+        {/* Customer Enquiries Quick Select Badges (from Customer Group API) */}
+        {customerEnquiries.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap pt-2.5 border-t border-gray-100">
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1">
+              <FaFileInvoiceDollar className="text-blue-500 text-[10px]" />
+              Customer Enquiries ({customerEnquiries.length}):
+            </span>
+            {customerEnquiries.map((item, i) => {
+              const num = String(item.enquiryNumber || item.enquiryId || item.id || '');
+              const isSelected = searchEnquiryNumber === num;
+              return (
+                <button
+                  key={num || i}
+                  type="button"
+                  onClick={() => {
+                    setSearchEnquiryNumber(num);
+                    fetchEnquiries(num);
+                  }}
+                  className={`text-[11px] px-2.5 py-1 rounded-lg border font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                    isSelected
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                      : 'bg-white hover:bg-blue-50 text-gray-700 border-gray-300'
+                  }`}
+                >
+                  <span className="font-mono">#{num}</span>
+                  {item.make && item.model && (
+                    <span className="text-[10px] font-medium opacity-90 truncate max-w-[150px]">
+                      {item.make} {item.model}
+                    </span>
+                  )}
+                  {item.outcome && (
+                    <span className={`text-[9px] px-1 py-0.2 rounded font-extrabold uppercase ${
+                      item.outcome.toUpperCase() === 'WON' 
+                        ? (isSelected ? 'bg-emerald-500 text-white' : 'bg-emerald-100 text-emerald-800')
+                        : item.outcome.toUpperCase() === 'LOST' 
+                          ? (isSelected ? 'bg-rose-500 text-white' : 'bg-rose-100 text-rose-800') 
+                          : (isSelected ? 'bg-blue-500 text-white' : 'bg-blue-100 text-blue-800')
+                    }`}>
+                      {item.outcome}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Enquiries List Section with Internal Scrollbar (Single Page) */}
@@ -373,30 +477,48 @@ export default function SalesEnquiriesView() {
           }}
         >
           {enquiries.map((enq, idx) => {
-            const merged = { ...enq, ...(detailCache[enq.enquiryId] || {}) };
-            const veh = merged.vehicle || {};
-            const ord = merged.order || {};
-            const cust = merged.customer || {};
+            const enqId = String(enq.enquiryNumber || enq.enquiryId || enq.id || `ENQ-${idx+1}`);
+            const merged = { ...enq, ...(detailCache[enqId] || detailCache[enq.enquiryId] || {}) };
+            const veh = merged.vehicle || {
+              make: merged.make || group,
+              model: merged.model || '',
+              modelYear: merged.createdDate ? String(merged.createdDate).slice(0, 4) : ''
+            };
+            const ord = merged.order || {
+              status: merged.status || '',
+              salesOrderNumber: merged.salesOrderNumber || merged.orderNumber || ''
+            };
+            const cust = merged.customer || {
+              name: customer?.fullName || `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() || 'N/A',
+              customerNumber: customer?.customerNumber || customer?.id || '',
+              mobile: customer?.mobile || currentMobile || ''
+            };
             const adv = merged.advisor || {};
-            const isExpanded = expandedEnquiryId === enq.enquiryId;
+            const isExpanded = expandedEnquiryId === enqId;
 
             return (
               <div 
-                key={enq.enquiryId || idx}
+                key={enqId || idx}
                 className="bg-white rounded-xl p-4 border border-gray-200 hover:border-blue-300 shadow-2xs flex flex-col gap-3 transition-all"
               >
                 {/* Card Summary Header */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2.5">
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <span className="font-mono font-bold text-blue-700 text-xs bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                      Enquiry #{enq.enquiryId}
+                      Enquiry #{enqId}
                     </span>
                     {getOutcomeBadge(enq.outcome, enq.status)}
                     <span className="text-xs font-bold text-gray-800">
-                      {enq.make} {enq.model}
+                      {enq.make || group} {enq.model || ''}
                     </span>
                     {enq.modelCode && (
                       <span className="text-[10px] text-gray-400 font-mono">[{enq.modelCode}]</span>
+                    )}
+                    {enq.createdDate && (
+                      <span className="text-[10px] text-gray-500 font-medium flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded">
+                        <FaCalendarAlt className="text-gray-400 text-[9px]" />
+                        Created: {enq.createdDate}
+                      </span>
                     )}
                   </div>
 
@@ -494,7 +616,7 @@ export default function SalesEnquiriesView() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-xs text-blue-900 flex items-center gap-1.5">
                           <FaInfoCircle className="text-blue-600 text-xs" />
-                          Full Enquiry Record #{merged.enquiryId}
+                          Full Enquiry Record #{merged.enquiryNumber || merged.enquiryId || enqId}
                         </span>
                         <span className="bg-blue-100 text-blue-800 text-[10px] font-mono px-2 py-0.5 rounded font-semibold border border-blue-200">
                           Group: {merged.keyloopGroup || group}
