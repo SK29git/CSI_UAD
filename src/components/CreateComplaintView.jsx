@@ -27,7 +27,6 @@ import {
   FaCar, 
   FaCheckCircle,
   FaShieldAlt,
-  FaChevronRight,
   FaMapMarkerAlt
 } from 'react-icons/fa';
 
@@ -506,19 +505,6 @@ export default function CreateComplaintView() {
                   ))}
                 </select>
               </div>
-            </div>
-
-            {/* Cascading Breadcrumb Visualizer */}
-            <div className="sm:col-span-2 lg:col-span-3 bg-slate-50 border border-slate-200/80 rounded-lg px-3 py-2 flex flex-wrap items-center gap-2 text-xs">
-              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Classification Path:</span>
-              <span className="font-semibold text-gray-800 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">{department}</span>
-              <FaChevronRight className="text-[9px] text-slate-400" />
-              <span className="font-semibold text-gray-800 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">{complaintGroup}</span>
-              <FaChevronRight className="text-[9px] text-slate-400" />
-              <span className="font-bold text-blue-900 bg-white px-2 py-0.5 rounded border border-blue-200 shadow-2xs">{category}</span>
-              <span className="text-[10px] text-slate-500 ml-auto font-medium">
-                {availableCategories.length} categories available in {complaintGroup}
-              </span>
             </div>
 
             {/* 10. Complaint Source */}
