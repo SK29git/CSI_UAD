@@ -207,7 +207,7 @@ export const normalizeProspectRecord = (p, fallbackGroup = 'BMW', fallbackMobile
     customerSince: p.createdAt ? p.createdAt.split('T')[0] : (p.createdDate || new Date().toISOString().split('T')[0]),
     lastUpdated: p.lastEditedDate || (p.createdAt ? p.createdAt.split('T')[0] : (p.createdDate || new Date().toISOString().split('T')[0])),
     dateOfBirth: '',
-    nationality: p.nationality || 'United Arab Emirates',
+    nationality: p.nationality || p.nation || '',
     vip: false,
     doNotContact: false,
     consents: p.consents || {
@@ -263,7 +263,7 @@ export const normalizeE00MIRecord = (e, fallbackGroup = 'BMW', fallbackMobile = 
     customerSince: e.createdDate || new Date().toISOString().split('T')[0],
     lastUpdated: e.createdDate || new Date().toISOString().split('T')[0],
     dateOfBirth: '',
-    nationality: 'United Arab Emirates',
+    nationality: e.nationality || '',
     vip: false,
     doNotContact: false,
     consents: {
@@ -1533,7 +1533,10 @@ export function CustomerProvider({ children }) {
       city: details.city || "Dubai",
       country: details.country || "United Arab Emirates",
       mobile: details.mobile || "",
-      email: details.email || ""
+      email: details.email || "",
+      idCardNumber: details.idCardNumber || "",
+      idIssuingAuthority: details.idIssuingAuthority || "Dubai",
+      idExpiryDate: details.idExpiryDate || ""
     };
 
     console.log("Submitting RPA CREATE_CUSTOMER payload:", caseDetails);
@@ -1595,6 +1598,10 @@ export function CustomerProvider({ children }) {
       mobileValid: hasMobile,
       email: details.email || "",
       emailValid: hasEmail,
+      idCardNumber: details.idCardNumber || "",
+      idIssuingAuthority: details.idIssuingAuthority || "Dubai",
+      idExpiryDate: details.idExpiryDate || "",
+      personalId: details.idCardNumber || "",
       location: {
         flatBuilding: "N/A",
         area: details.area || "Deira",
@@ -1653,59 +1660,78 @@ export function CustomerProvider({ children }) {
     };
   };
 
-  // Update Customer Handler (edit existing customer name, mobile, email, branch, address, etc.)
-  const updateCustomer = async (details) => {
+  // Update Customer Handler using CREATE_CUSTOMER RPA Intake Case
+  const updateCustomer = async (details, onProgress = null) => {
     if (!customer) return { ok: false, error: "No active customer to update" };
 
     const branchCodeNum = details.branch ? details.branch.split(' - ')[0].trim() : (customer.branchCode || "10");
+    const grp = details.group || customer.keyloopGroup || currentGroup || "BMW";
 
-    const payload = {
-      customerNumber: customer.customerNumber,
-      details: {
-        group: details.group || customer.keyloopGroup || currentGroup || "BMW",
-        branch: details.branch || customer.preferredBranch || "10 - Sheikh Zayed Rd",
-        titleCode: details.titleCode || customer.salutation || "Mr.",
-        firstName: details.firstName !== undefined ? details.firstName : customer.firstName,
-        surname: details.surname !== undefined ? details.surname : customer.surname,
-        area: details.area !== undefined ? details.area : (customer.location?.area || ""),
-        city: details.city !== undefined ? details.city : (customer.location?.city || "Dubai"),
-        country: details.country !== undefined ? details.country : (customer.nationality || "United Arab Emirates"),
-        mobile: details.mobile !== undefined ? details.mobile : customer.mobile,
-        email: details.email !== undefined ? details.email : customer.email
-      }
+    const caseDetails = {
+      group: grp,
+      branch: details.branch || customer.preferredBranch || (grp.toUpperCase().includes('GEELY') ? "10 - Geely Group - SZR" : "10 - Sheikh Zayed Rd"),
+      titleCode: details.titleCode || customer.salutation || "Mr.",
+      firstName: details.firstName !== undefined ? details.firstName : (customer.firstName || ""),
+      surname: details.surname !== undefined ? details.surname : (customer.surname || ""),
+      area: details.area !== undefined ? details.area : (customer.location?.area || "Deira"),
+      city: details.city !== undefined ? details.city : (customer.location?.city || "Dubai"),
+      country: details.country !== undefined ? details.country : (customer.nationality || "United Arab Emirates"),
+      mobile: details.mobile !== undefined ? details.mobile : (customer.mobile || ""),
+      email: details.email !== undefined ? details.email : (customer.email || ""),
+      idCardNumber: details.idCardNumber !== undefined ? details.idCardNumber : (customer.idCardNumber || customer.personalId || ""),
+      idIssuingAuthority: details.idIssuingAuthority !== undefined ? details.idIssuingAuthority : (customer.idIssuingAuthority || "Dubai"),
+      idExpiryDate: details.idExpiryDate !== undefined ? details.idExpiryDate : (customer.idExpiryDate || "")
     };
 
-    console.log("Submitting customer profile update:", payload);
+    console.log("Submitting RPA CREATE_CUSTOMER on customer edit:", caseDetails);
+
+    let rpaResult = null;
+    let rpaTaskId = null;
 
     try {
-      await apiFetch(`/api/v1/customers/${encodeURIComponent(payload.details.group)}/${encodeURIComponent(customer.customerNumber)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const res = await executeRpaCase("CREATE_CUSTOMER", caseDetails, {
+        createdBy: agentId || "genesys",
+        callbackUrl: "http://localhost:9999/hook",
+        onProgress: (status, taskData) => {
+          if (taskData?.taskId) rpaTaskId = taskData.taskId;
+          if (onProgress) onProgress(status, taskData);
+        }
       });
+      if (res && res.ok) {
+        rpaResult = res.result;
+        if (res.taskId) rpaTaskId = res.taskId;
+      }
     } catch (e) {
-      console.warn("Backend update error (applying local state update):", e);
+      console.warn("RPA CREATE_CUSTOMER on edit error (applying local state update):", e);
     }
+
+    const updatedCustNo = rpaResult?.customerId || rpaResult?.customerNumber || customer.customerNumber;
 
     const updatedProfile = {
       ...customer,
-      keyloopGroup: payload.details.group,
-      salutation: payload.details.titleCode,
-      firstName: payload.details.firstName,
-      surname: payload.details.surname,
-      fullName: `${payload.details.titleCode ? payload.details.titleCode + ' ' : ''}${payload.details.firstName || ''} ${payload.details.surname || ''}`.trim(),
-      mobile: payload.details.mobile,
-      mobileRaw: (payload.details.mobile || "").replace(/\D/g, ''),
-      email: payload.details.email,
+      keyloopGroup: grp,
+      customerNumber: updatedCustNo,
+      salutation: caseDetails.titleCode,
+      firstName: caseDetails.firstName,
+      surname: caseDetails.surname,
+      fullName: `${caseDetails.titleCode ? caseDetails.titleCode + ' ' : ''}${caseDetails.firstName || ''} ${caseDetails.surname || ''}`.trim(),
+      mobile: caseDetails.mobile,
+      mobileRaw: (caseDetails.mobile || "").replace(/\D/g, ''),
+      email: caseDetails.email,
+      idCardNumber: caseDetails.idCardNumber,
+      idIssuingAuthority: caseDetails.idIssuingAuthority,
+      idExpiryDate: caseDetails.idExpiryDate,
+      personalId: caseDetails.idCardNumber || customer.personalId,
       location: {
         ...(customer.location || {}),
-        area: payload.details.area,
-        city: payload.details.city
+        area: caseDetails.area,
+        city: caseDetails.city
       },
       branchCode: branchCodeNum,
-      preferredBranch: payload.details.branch,
-      nationality: payload.details.country,
-      lastUpdated: new Date().toISOString().split('T')[0]
+      preferredBranch: caseDetails.branch,
+      nationality: caseDetails.country,
+      lastUpdated: new Date().toISOString().split('T')[0],
+      rpaTaskId: rpaTaskId || customer.rpaTaskId
     };
 
     setCustomer(updatedProfile);
@@ -1714,9 +1740,9 @@ export function CustomerProvider({ children }) {
       return prev.map(c => c.customerNumber === customer.customerNumber ? { ...c, ...updatedProfile } : c);
     });
 
-    if (payload.details.group !== currentGroup) {
-      setCurrentGroup(payload.details.group);
-      syncGroupToUrl(payload.details.group);
+    if (grp !== currentGroup) {
+      setCurrentGroup(grp);
+      syncGroupToUrl(grp);
     }
 
     // Persist to local storage
@@ -1727,7 +1753,13 @@ export function CustomerProvider({ children }) {
       console.warn("LocalStorage update error:", err);
     }
 
-    return { ok: true, payload, customer: updatedProfile };
+    return { 
+      ok: true, 
+      payload: caseDetails, 
+      customer: updatedProfile, 
+      rpaResult, 
+      taskId: rpaTaskId 
+    };
   };
 
   // Submit Customer Data Verification via RPA Intake (caseType: "UPDATE_CUSTOMER")
@@ -1750,11 +1782,14 @@ export function CustomerProvider({ children }) {
       customerId: String(custNo).trim(),
       customerName: String(fullName).trim(),
       sourceOfInformation: String(details.sourceOfInformation || details.source || "Walk-in").trim(),
-      personalId: String(details.personalId || details.idCardNumber || customer?.personalId || customer?.nationalId || "").trim(),
+      personalId: String(details.idCardNumber || details.personalId || customer?.idCardNumber || customer?.personalId || customer?.nationalId || "").trim(),
+      idCardNumber: String(details.idCardNumber || details.personalId || customer?.idCardNumber || customer?.personalId || "").trim(),
+      idIssuingAuthority: String(details.idIssuingAuthority || customer?.idIssuingAuthority || "Dubai").trim(),
+      idExpiryDate: String(details.idExpiryDate || customer?.idExpiryDate || "").trim(),
       dataVerified: String(verifiedCode).trim(),
       area: String(details.area !== undefined ? details.area : (customer?.location?.area || "")).trim(),
       city: String(details.city !== undefined ? details.city : (customer?.location?.city || "Dubai")).trim(),
-      country: String(details.country !== undefined ? details.country : (customer?.nationality || "United Arab Emirates")).trim(),
+      country: String(details.country !== undefined ? details.country : (customer?.country || customer?.location?.country || "")).trim(),
       postcode: String(details.postcode !== undefined ? details.postcode : (customer?.location?.postcode || "")).trim(),
       mobile: String(details.mobile !== undefined ? details.mobile : (customer?.mobile || "")).trim(),
       email: String(details.email !== undefined ? details.email : (customer?.email || "")).trim(),
@@ -1783,6 +1818,9 @@ export function CustomerProvider({ children }) {
       const updatedProfile = {
         ...customer,
         personalId: caseDetails.personalId,
+        idCardNumber: caseDetails.idCardNumber,
+        idIssuingAuthority: caseDetails.idIssuingAuthority,
+        idExpiryDate: caseDetails.idExpiryDate,
         dataVerified: caseDetails.dataVerified,
         sourceOfInformation: caseDetails.sourceOfInformation,
         nationality: caseDetails.nationality || customer.nationality,

@@ -303,9 +303,6 @@ export default function FloatingSmsWidget() {
             </span>
           )}
         </div>
-        <span className="text-[10px] text-slate-400 font-mono">
-          agmcutil gateway
-        </span>
       </div>
 
       {/* Main Form Body */}

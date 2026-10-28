@@ -377,22 +377,9 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                   )}
                 </div>
                 <div className="mt-1 space-y-1 text-xs text-gray-600">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <FaPhoneAlt className="text-gray-400 text-[11px]" />
-                      <span className="font-medium truncate">{getDisplayMobileNumber(customer, currentMobile) || 'N/A'}</span>
-                    </div>
-                    {customer && (
-                      <button
-                        type="button"
-                        onClick={() => openSmsWidget && openSmsWidget()}
-                        className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:text-blue-800 font-bold px-1.5 py-0.2 rounded hover:bg-blue-50 transition-colors cursor-pointer"
-                        title="Send SMS to customer"
-                      >
-                        <FaPaperPlane className="text-[8px]" />
-                        <span>SMS</span>
-                      </button>
-                    )}
+                  <div className="flex items-center gap-1.5">
+                    <FaPhoneAlt className="text-gray-400 text-[11px]" />
+                    <span className="font-medium truncate">{getDisplayMobileNumber(customer, currentMobile) || 'N/A'}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <FaEnvelope className="text-gray-400 text-[11px]" />
@@ -518,22 +505,16 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                     return (
                       <span 
                         key={c.key} 
-                        onClick={c.key === 'sms' ? () => openSmsWidget && openSmsWidget() : undefined}
                         className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 border transition-all ${
-                          c.key === 'sms' ? 'cursor-pointer hover:border-blue-400 hover:shadow-2xs' : ''
-                        } ${
                           active 
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-300' 
                             : 'bg-gray-50 text-gray-400 border-gray-200 opacity-60'
                         }`}
-                        title={c.key === 'sms' ? 'Click to compose and send SMS to customer' : `${c.label} Consent: ${active ? 'Opted In' : 'Opted Out'}`}
+                        title={`${c.label} Consent: ${active ? 'Opted In' : 'Opted Out'}`}
                       >
                         <IconComp className="text-[9px]" />
                         <span>{c.label}:</span>
                         <span className={active ? 'text-emerald-800' : 'text-gray-400'}>{active ? 'YES' : 'NO'}</span>
-                        {c.key === 'sms' && (
-                          <FaPaperPlane className="text-[8px] text-blue-600 ml-1" />
-                        )}
                       </span>
                     );
                   })}

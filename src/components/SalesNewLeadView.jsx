@@ -243,7 +243,7 @@ export default function SalesNewLeadView() {
   const [title, setTitle] = useState(() => (customer?.salutation ? customer.salutation.replace(/\.$/, '').trim() : 'Mr'));
   const [firstname, setFirstname] = useState(() => customer?.firstName || '');
   const [surname, setSurname] = useState(() => customer?.surname || '');
-  const [email, setEmail] = useState(() => (customer?.email && !customer.email.includes('***') ? customer.email : (customer?.email || '')));
+  const [email, setEmail] = useState(() => customer?.email || customer?.emailRaw || '');
   const [mobile, setMobile] = useState(() => getFullMobileNumber(customer) || currentMobile || '');
   const [origin, setOrigin] = useState(group ? `${group} Test Drive - EN` : 'Test Drive - EN');
   const [source, setSource] = useState(LEAD_SOURCES[0]);
@@ -274,7 +274,7 @@ export default function SalesNewLeadView() {
       }
       setFirstname(customer?.firstName || '');
       setSurname(customer?.surname || '');
-      setEmail(customer?.email && !customer.email.includes('***') ? customer.email : (customer.email || ''));
+      setEmail(customer?.email || customer?.emailRaw || '');
       const fullMobile = getFullMobileNumber(customer, currentMobile);
       if (fullMobile) {
         setMobile(fullMobile);

@@ -21,7 +21,9 @@ import {
   FaTimes,
   FaCheckCircle,
   FaCommentAlt,
-  FaWhatsapp
+  FaWhatsapp,
+  FaIdCard,
+  FaCalendarAlt
 } from 'react-icons/fa';
 
 const GROUP_OPTIONS = ['BMW', 'MINI', 'ROLLS-ROYCE', 'GEELY'];
@@ -35,6 +37,16 @@ const CITY_OPTIONS = [
   'Fujairah',
   'Umm Al Quwain',
   'Al Ain'
+];
+const AUTHORITY_OPTIONS = [
+  'Dubai',
+  'Abu Dhabi',
+  'Sharjah',
+  'Ajman',
+  'Ras Al Khaimah',
+  'Fujairah',
+  'Umm Al Quwain',
+  'Federal'
 ];
 
 export default function CustomerFormView({ mode = 'create', onClose }) {
@@ -54,6 +66,9 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     titleCode: 'Mr.',
     firstName: '',
     surname: '',
+    idCardNumber: '',
+    idIssuingAuthority: 'Dubai',
+    idExpiryDate: '',
     area: 'Deira',
     city: 'Dubai',
     country: 'United Arab Emirates',
@@ -117,7 +132,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     }
 
     if (mode === 'edit' && customer) {
-      const emailVal = customer.email && !customer.email.includes('***') ? customer.email : '';
+      const emailVal = customer.email || customer.emailRaw || '';
       const resolvedMobile = getFullMobileNumber(customer, currentMobile) || 
         (isFullMobileNumber(customer.mobile) ? customer.mobile.replace(/\D/g, '') : 
         (isFullMobileNumber(customer.mobileRaw) ? customer.mobileRaw.replace(/\D/g, '') : ''));
@@ -128,6 +143,9 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         titleCode: customer.salutation || 'Mr.',
         firstName: customer.firstName || '',
         surname: customer.surname || '',
+        idCardNumber: customer.idCardNumber || customer.personalId || customer.nationalId || '',
+        idIssuingAuthority: customer.idIssuingAuthority || 'Dubai',
+        idExpiryDate: customer.idExpiryDate || '',
         area: customer.location?.area || 'Deira',
         city: customer.location?.city || 'Dubai',
         country: customer.nationality || 'United Arab Emirates',
@@ -148,6 +166,9 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         titleCode: prev.titleCode || 'Mr.',
         firstName: prev.firstName || '',
         surname: prev.surname || '',
+        idCardNumber: prev.idCardNumber || '',
+        idIssuingAuthority: prev.idIssuingAuthority || 'Dubai',
+        idExpiryDate: prev.idExpiryDate || '',
         area: prev.area || 'Deira',
         city: prev.city || 'Dubai',
         country: prev.country || 'United Arab Emirates',
@@ -161,7 +182,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         }
       }));
     }
-  }, [mode, currentGroup, currentMobile]);
+  }, [mode, customer, currentGroup, currentMobile]);
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
@@ -226,12 +247,16 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
       } else {
         const res = await updateCustomer(formData);
         if (res && res.ok) {
+          const taskId = res.taskId || res.customer?.rpaTaskId;
           const toastData = {
             type: 'success',
-            title: 'Customer Profile Updated',
+            title: 'Customer profile updated successfully!',
+            taskId: taskId || null,
             customerName: res.customer?.fullName || formData.firstName,
-            message: 'Customer profile updated successfully!',
-            duration: 4
+            message: taskId 
+              ? `Customer profile updated successfully! This is your Task ID: ${taskId}` 
+              : 'Customer profile updated successfully!',
+            duration: taskId ? 10 : 4
           };
 
           setFeedback(toastData);
@@ -239,9 +264,28 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
             showToast(toastData);
           }
 
-          setTimeout(() => {
-            if (onClose) onClose();
-          }, 1500);
+          if (taskId) {
+            setCountdown(10);
+            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = setInterval(() => {
+              setCountdown(prev => {
+                if (prev === null || prev <= 1) {
+                  clearInterval(countdownIntervalRef.current);
+                  return 0;
+                }
+                return prev - 1;
+              });
+            }, 1000);
+
+            if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+            autoCloseTimerRef.current = setTimeout(() => {
+              if (onClose) onClose();
+            }, 10000);
+          } else {
+            setTimeout(() => {
+              if (onClose) onClose();
+            }, 1500);
+          }
         } else {
           setFeedback({ type: 'error', message: res?.error || 'Failed to update customer record.' });
         }
@@ -421,6 +465,49 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                   onChange={(e) => setFormData(prev => ({ ...prev, surname: e.target.value }))}
                   placeholder="e.g. Bashir"
                   className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors shadow-2xs"
+                />
+              </div>
+
+              {/* ID Number */}
+              <div className="sm:col-span-2 lg:col-span-2">
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaIdCard className="text-gray-400 text-xs" /> ID Number
+                </label>
+                <input
+                  type="text"
+                  value={formData.idCardNumber}
+                  onChange={(e) => setFormData(prev => ({ ...prev, idCardNumber: e.target.value }))}
+                  placeholder="e.g. 784199112345678"
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-mono font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors shadow-2xs"
+                />
+              </div>
+
+              {/* ID Issuing Authority */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaBuilding className="text-gray-400 text-xs" /> ID Issuing Authority
+                </label>
+                <select
+                  value={formData.idIssuingAuthority}
+                  onChange={(e) => setFormData(prev => ({ ...prev, idIssuingAuthority: e.target.value }))}
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors shadow-2xs"
+                >
+                  {AUTHORITY_OPTIONS.map(a => (
+                    <option key={a} value={a}>{a}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* ID Expiry Date */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                  <FaCalendarAlt className="text-gray-400 text-xs" /> ID Expiry Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.idExpiryDate}
+                  onChange={(e) => setFormData(prev => ({ ...prev, idExpiryDate: e.target.value }))}
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors shadow-2xs cursor-pointer"
                 />
               </div>
             </div>

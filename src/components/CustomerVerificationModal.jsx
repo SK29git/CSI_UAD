@@ -17,7 +17,8 @@ import {
   FaCheck, 
   FaInfoCircle, 
   FaLayerGroup,
-  FaShieldAlt
+  FaShieldAlt,
+  FaCalendarAlt
 } from 'react-icons/fa';
 
 const GROUP_OPTIONS = ['BMW', 'MINI', 'ROLLS-ROYCE', 'GEELY'];
@@ -30,6 +31,16 @@ const SOURCE_OPTIONS = [
   'Showroom Visit',
   'Campaign',
   'Referral'
+];
+const AUTHORITY_OPTIONS = [
+  'Dubai',
+  'Abu Dhabi',
+  'Sharjah',
+  'Ajman',
+  'Ras Al Khaimah',
+  'Fujairah',
+  'Umm Al Quwain',
+  'Federal'
 ];
 const CITY_OPTIONS = [
   'Dubai',
@@ -61,6 +72,9 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
     customerName: '',
     sourceOfInformation: 'Walk-in',
     personalId: '',
+    idCardNumber: '',
+    idIssuingAuthority: 'Dubai',
+    idExpiryDate: '',
     dataVerified: `DV ${currentMonthYear}`,
     area: '',
     city: 'Dubai',
@@ -101,7 +115,7 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
     }
 
     if (customer) {
-      const emailVal = customer.email && !customer.email.includes('***') ? customer.email : '';
+      const emailVal = customer.email || customer.emailRaw || '';
       const resolvedMobile = getFullMobileNumber(customer, currentMobile) || 
         (isFullMobileNumber(customer.mobile) ? customer.mobile.replace(/\D/g, '') : 
         (isFullMobileNumber(customer.mobileRaw) ? customer.mobileRaw.replace(/\D/g, '') : ''));
@@ -110,22 +124,30 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
       const existingVerified = customer.dataVerified || 
         (customer.verificationStatus?.status ? String(customer.verificationStatus.status) : `DV ${currentMonthYear}`);
 
+      const resolvedIdCard = customer.idCardNumber || customer.personalId || customer.nationalId || '';
+      const resolvedAuthority = customer.idIssuingAuthority || 'Dubai';
+      const resolvedExpiry = customer.idExpiryDate || '';
+      const resolvedNationality = customer.nationality || customer.nation || customer.countryOfOrigin || '';
+
       setFormData({
         group: customer.keyloopGroup || currentGroup || 'BMW',
         customerId: String(custNo),
         customerName: custName,
         sourceOfInformation: customer.sourceOfInformation || 'Walk-in',
-        personalId: customer.personalId || customer.nationalId || customer.idCardNumber || '',
+        personalId: resolvedIdCard,
+        idCardNumber: resolvedIdCard,
+        idIssuingAuthority: resolvedAuthority,
+        idExpiryDate: resolvedExpiry,
         dataVerified: existingVerified,
         area: customer.location?.area || '',
         city: customer.location?.city || 'Dubai',
-        country: customer.nationality || customer.country || 'United Arab Emirates',
+        country: customer.country || customer.location?.country || '',
         postcode: customer.location?.postcode || customer.postcode || '',
         mobile: resolvedMobile,
         email: emailVal,
         preferredPhone: customer.preferredPhone || resolvedMobile,
         preferredEmail: customer.preferredEmail || emailVal,
-        nationality: customer.nationality || ''
+        nationality: resolvedNationality
       });
       setFeedback(null);
     }
@@ -445,17 +467,50 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
                   </select>
                 </div>
 
-                {/* Personal ID / Emirates ID */}
+                {/* ID Number */}
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
-                    <FaIdCard className="text-gray-400 text-xs" /> Personal / Emirates ID
+                    <FaIdCard className="text-gray-400 text-xs" /> ID Number
                   </label>
                   <input
                     type="text"
-                    value={formData.personalId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, personalId: e.target.value }))}
-                    placeholder="e.g. 784198812345671"
+                    value={formData.idCardNumber}
+                    onChange={(e) => setFormData(prev => ({ 
+                      ...prev, 
+                      idCardNumber: e.target.value,
+                      personalId: e.target.value 
+                    }))}
+                    placeholder="e.g. 784199112345678"
                     className="w-full p-2.5 bg-white border border-gray-300 rounded-lg font-mono font-semibold text-gray-900 text-xs focus:outline-none focus:border-emerald-500 shadow-2xs"
+                  />
+                </div>
+
+                {/* ID Issuing Authority */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaBuilding className="text-gray-400 text-xs" /> ID Issuing Authority
+                  </label>
+                  <select
+                    value={formData.idIssuingAuthority}
+                    onChange={(e) => setFormData(prev => ({ ...prev, idIssuingAuthority: e.target.value }))}
+                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg font-semibold text-gray-800 text-xs focus:outline-none focus:border-emerald-500 cursor-pointer shadow-2xs"
+                  >
+                    {AUTHORITY_OPTIONS.map(a => (
+                      <option key={a} value={a}>{a}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* ID Expiry Date */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaCalendarAlt className="text-gray-400 text-xs" /> ID Expiry Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.idExpiryDate}
+                    onChange={(e) => setFormData(prev => ({ ...prev, idExpiryDate: e.target.value }))}
+                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg font-semibold text-gray-900 text-xs focus:outline-none focus:border-emerald-500 cursor-pointer shadow-2xs"
                   />
                 </div>
 
