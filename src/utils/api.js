@@ -484,8 +484,7 @@ export async function updateCustomerCase(details, options = {}) {
 /* ========================================================================== */
 
 export const SMS_API_BASE_URL = "https://agmcutil.agmcgroup.ae";
-export const SMS_API_KEY =
-  "d2c00eecad3637ef2ae729208ab12236103fe0afe399f6a84d3ec55b51644187a";
+export const SMS_API_KEY = "sgw_xJp-uS1wWvLsyi_R0F8z4LCTY22lXlnhEEVkmMtIsxo";
 
 /**
  * Sends an SMS text message to a customer via the AGMC SMS Gateway
