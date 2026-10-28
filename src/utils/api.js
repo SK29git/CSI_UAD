@@ -473,6 +473,7 @@ export async function createComplaintCase(details, options = {}) {
     source: details.source || "Customer Call",
     complaintGroup: details.complaintGroup || "Customer",
     externalRef: uniqueRef,
+    ...(details.branch ? { branch: details.branch } : {}),
   };
 
   const headers = {

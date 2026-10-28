@@ -2,6 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import { createComplaintCase } from '../utils/api';
 import { 
+  COMPLAINT_BRANCHES,
+  COMPLAINT_DEPARTMENTS,
+  COMPLAINT_SOURCES,
+  COMPLAINT_PRIORITIES,
+  getGroupsForDepartment,
+  getCategoriesForDepartmentAndGroup
+} from '../data/complaintHierarchy';
+import { 
   FaPlusCircle, 
   FaPaperPlane, 
   FaSpinner, 
@@ -18,7 +26,9 @@ import {
   FaAlignLeft, 
   FaCar, 
   FaCheckCircle,
-  FaShieldAlt
+  FaShieldAlt,
+  FaChevronRight,
+  FaMapMarkerAlt
 } from 'react-icons/fa';
 
 export default function CreateComplaintView() {
@@ -33,19 +43,48 @@ export default function CreateComplaintView() {
   const initialPhone = customer?.mobile || currentMobile || "971454378907";
   const initialEmail = customer?.email || "ahmedali@agmc.com";
 
-  // FORM FIELDS MATCHING POST /api/v1/complaints
+  // Match initial branch with customer's branch code if available
+  const initialBranch = (customer?.branchCode && COMPLAINT_BRANCHES.find(b => b.startsWith(String(customer.branchCode))))
+    || COMPLAINT_BRANCHES[0];
+
+  // FORM FIELDS MATCHING POST /api/v1/complaints & EXCEL HIERARCHY
   const [group, setGroup] = useState(initialGroup);
   const [customerId, setCustomerId] = useState(initialCustomerNo);
   const [customerName, setCustomerName] = useState(initialCustomerName);
   const [customerPhone, setCustomerPhone] = useState(initialPhone);
   const [customerEmail, setCustomerEmail] = useState(initialEmail);
-  const [department, setDepartment] = useState("Service");
-  const [source, setSource] = useState("Customer Call");
-  const [complaintPriority, setComplaintPriority] = useState("Urgent");
-  const [complaintGroup, setComplaintGroup] = useState("Customer");
-  const [category, setCategory] = useState("Service Delay");
+  const [branch, setBranch] = useState(initialBranch);
+
+  // Cascading classification state
+  const [department, setDepartment] = useState(COMPLAINT_DEPARTMENTS[0]); // "Service"
+  const initialGroups = getGroupsForDepartment(COMPLAINT_DEPARTMENTS[0]);
+  const [complaintGroup, setComplaintGroup] = useState(initialGroups[0] || "Process");
+  const initialCategories = getCategoriesForDepartmentAndGroup(COMPLAINT_DEPARTMENTS[0], initialGroups[0] || "Process");
+  const [category, setCategory] = useState(initialCategories[0] || "Service Delay");
+
+  const [source, setSource] = useState(COMPLAINT_SOURCES[0]); // "Customer Call"
+  const [complaintPriority, setComplaintPriority] = useState(COMPLAINT_PRIORITIES[0]); // "Urgent"
   const [complaint, setComplaint] = useState("Car not ready on the promised date");
   const [externalRef, setExternalRef] = useState(`GENESYS-000${Math.floor(10 + Math.random() * 90)}`);
+
+  // Cascading change handlers
+  const handleDepartmentChange = (newDept) => {
+    setDepartment(newDept);
+    const groups = getGroupsForDepartment(newDept);
+    const nextGroup = groups[0] || "";
+    setComplaintGroup(nextGroup);
+    const cats = getCategoriesForDepartmentAndGroup(newDept, nextGroup);
+    setCategory(cats[0] || "");
+  };
+
+  const handleGroupChange = (newGroup) => {
+    setComplaintGroup(newGroup);
+    const cats = getCategoriesForDepartmentAndGroup(department, newGroup);
+    setCategory(cats[0] || "");
+  };
+
+  const availableGroups = getGroupsForDepartment(department);
+  const availableCategories = getCategoriesForDepartmentAndGroup(department, complaintGroup);
 
   // TOAST & SUBMIT STATE
   const [submitting, setSubmitting] = useState(false);
@@ -72,6 +111,10 @@ export default function CreateComplaintView() {
       if (customer?.keyloopGroup) {
         setGroup(customer.keyloopGroup);
       }
+      if (customer?.branchCode) {
+        const matchingBranch = COMPLAINT_BRANCHES.find(b => b.startsWith(String(customer.branchCode)));
+        if (matchingBranch) setBranch(matchingBranch);
+      }
     }
   }, [customer, currentMobile]);
 
@@ -92,50 +135,6 @@ export default function CreateComplaintView() {
   }, [toast]);
 
   const brandGroups = ['Geely', 'BMW', 'MINI', 'Rolls-Royce'];
-
-  const departments = [
-    "Service",
-    "Sales",
-    "Parts",
-    "Body Shop",
-    "Customer Care / CRM",
-    "Finance & Accounts"
-  ];
-
-  const sources = [
-    "Customer Call",
-    "Email",
-    "Walk-in",
-    "Web Inquiry",
-    "WhatsApp / Chat",
-    "Social Media",
-    "Management Escalation"
-  ];
-
-  const priorities = ["Urgent", "High", "Normal", "Low"];
-
-  const complaintGroups = [
-    "Customer",
-    "Process",
-    "Staff / People",
-    "Vehicle / Technical",
-    "Billing & Invoicing",
-    "Parts & Accessories",
-    "Facility / Showroom"
-  ];
-
-  const categories = [
-    "Service Delay",
-    "Process Delay",
-    "Customer Handling Skills",
-    "Delay in Parts Delivery",
-    "Service Quality Issue",
-    "Pricing & Invoice Dispute",
-    "Staff Conduct & Behavior",
-    "Vehicle Repair Quality",
-    "Communication Gap",
-    "Other Complaint"
-  ];
 
   const complaintTemplates = [
     "Car not ready on the promised date",
@@ -164,12 +163,13 @@ export default function CreateComplaintView() {
       customerName: String(customerName || "").trim(),
       customerPhone: String(customerPhone || "").trim(),
       customerEmail: String(customerEmail || "").trim(),
+      branch: branch || COMPLAINT_BRANCHES[0],
       complaint: String(complaint || "").trim(),
-      category: category || "Service Delay",
+      category: category || availableCategories[0] || "Service Delay",
       complaintPriority: complaintPriority || "Urgent",
       department: department || "Service",
       source: source || "Customer Call",
-      complaintGroup: complaintGroup || "Customer",
+      complaintGroup: complaintGroup || availableGroups[0] || "Process",
       externalRef: String(externalRef || "").trim() || `GENESYS-000${Math.floor(10 + Math.random() * 90)}`
     };
 
@@ -424,7 +424,28 @@ export default function CreateComplaintView() {
               </div>
             </div>
 
-            {/* 6. Department */}
+            {/* 6. Branch (From Official AGMC Classification) */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Branch <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaBuilding />
+                </div>
+                <select
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer truncate"
+                >
+                  {COMPLAINT_BRANCHES.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 7. Department (Cascading root) */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                 Department <span className="text-rose-500 font-bold">*</span>
@@ -435,17 +456,72 @@ export default function CreateComplaintView() {
                 </div>
                 <select
                   value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
+                  onChange={(e) => handleDepartmentChange(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
                 >
-                  {departments.map(d => (
+                  {COMPLAINT_DEPARTMENTS.map(d => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            {/* 7. Complaint Source */}
+            {/* 8. Complaint Group (Cascading level 2) */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Complaint Group <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaClipboardList />
+                </div>
+                <select
+                  value={complaintGroup}
+                  onChange={(e) => handleGroupChange(e.target.value)}
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
+                >
+                  {availableGroups.map(cg => (
+                    <option key={cg} value={cg}>{cg}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 9. Category (Cascading level 3) */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Category <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaTag />
+                </div>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer truncate"
+                >
+                  {availableCategories.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Cascading Breadcrumb Visualizer */}
+            <div className="sm:col-span-2 lg:col-span-3 bg-slate-50 border border-slate-200/80 rounded-lg px-3 py-2 flex flex-wrap items-center gap-2 text-xs">
+              <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Classification Path:</span>
+              <span className="font-semibold text-gray-800 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">{department}</span>
+              <FaChevronRight className="text-[9px] text-slate-400" />
+              <span className="font-semibold text-gray-800 bg-white px-2 py-0.5 rounded border border-slate-200 shadow-2xs">{complaintGroup}</span>
+              <FaChevronRight className="text-[9px] text-slate-400" />
+              <span className="font-bold text-blue-900 bg-white px-2 py-0.5 rounded border border-blue-200 shadow-2xs">{category}</span>
+              <span className="text-[10px] text-slate-500 ml-auto font-medium">
+                {availableCategories.length} categories available in {complaintGroup}
+              </span>
+            </div>
+
+            {/* 10. Complaint Source */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                 Complaint Source <span className="text-rose-500 font-bold">*</span>
@@ -457,16 +533,16 @@ export default function CreateComplaintView() {
                 <select
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
-                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer truncate"
                 >
-                  {sources.map(s => (
+                  {COMPLAINT_SOURCES.map(s => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            {/* 8. Complaint Priority */}
+            {/* 11. Priority */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                 Priority <span className="text-rose-500 font-bold">*</span>
@@ -480,59 +556,17 @@ export default function CreateComplaintView() {
                   onChange={(e) => setComplaintPriority(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
                 >
-                  {priorities.map(p => (
+                  {COMPLAINT_PRIORITIES.map(p => (
                     <option key={p} value={p}>{p}</option>
                   ))}
                 </select>
               </div>
             </div>
 
-            {/* 9. Complaint Group */}
+            {/* 12. External Reference */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                Complaint Group <span className="text-rose-500 font-bold">*</span>
-              </label>
-              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
-                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
-                  <FaClipboardList />
-                </div>
-                <select
-                  value={complaintGroup}
-                  onChange={(e) => setComplaintGroup(e.target.value)}
-                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
-                >
-                  {complaintGroups.map(cg => (
-                    <option key={cg} value={cg}>{cg}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* 10. Category */}
-            <div>
-              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                Category <span className="text-rose-500 font-bold">*</span>
-              </label>
-              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
-                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
-                  <FaTag />
-                </div>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
-                >
-                  {categories.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* 11. External Reference */}
-            <div className="sm:col-span-2">
-              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                External Reference <span className="text-gray-400 font-normal">(Auto-generated or custom)</span>
+                External Reference <span className="text-gray-400 font-normal">(Auto-generated)</span>
               </label>
               <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
                 <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
