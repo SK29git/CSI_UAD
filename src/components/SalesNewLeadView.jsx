@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useCustomer, isExistingCustomer } from '../context/CustomerContext';
-import { apiFetch, submitLeadIntake, executeRpaCase } from '../utils/api';
+import { apiFetch, submitLeadIntake, executeRpaCase, createComplaintCase } from '../utils/api';
 import { 
   FaUserPlus,
   FaUserCheck,
@@ -592,31 +592,35 @@ export default function SalesNewLeadView() {
     setComplaintToast(null);
 
     const payload = {
-      keyloopGroup: group,
-      customerNumber,
-      category: complaintCategory,
-      description: complaintDescription,
-      vin: complaintVin || vin,
-      createdBy: "agent.42"
+      company: group || "Geely",
+      customerId: customerNumber || "123456",
+      customerName: customer?.fullName || "Customer",
+      customerPhone: customer?.mobile || currentMobile || "",
+      customerEmail: customer?.email || "",
+      complaint: complaintDescription,
+      category: complaintCategory || "Service Delay",
+      complaintPriority: "Normal",
+      department: "Sales",
+      source: "Customer Call",
+      complaintGroup: "Customer"
     };
 
     try {
-      const res = await apiFetch('/api/v1/complaints', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const res = await createComplaintCase(payload);
 
-      if (res && res.ok && res.data) {
-        const newRef = res.data.complaintId || res.data.id || res.data.reference || "AGMC-CREATED";
+      if (res && res.ok) {
+        const newRef = res.ticketNumber || res.referenceId || "AGMC-CREATED";
         setSelectedComplaintRef(newRef);
-        setComplaintToast({ ok: true, message: `Complaint Ticket created successfully with Reference #${newRef}` });
+        setComplaintToast({ 
+          ok: true, 
+          message: `Complaint Ticket created successfully! Ref #${res.referenceId}${res.ticketNumber ? ` | CXPulse #${res.ticketNumber}` : ''}` 
+        });
         setComplaintDescription("");
         fetchCustomerComplaints();
         // Automatically fetch and show acknowledgement for the newly created complaint
         handleTriggerComplaintAction('ack', newRef);
       } else {
-        setComplaintToast({ ok: false, message: res?.statusText || "Failed to create complaint ticket" });
+        setComplaintToast({ ok: false, message: res?.errorMessage || "Failed to create complaint ticket" });
       }
     } catch (err) {
       setComplaintToast({ ok: false, message: err.message || "Failed to submit complaint ticket" });

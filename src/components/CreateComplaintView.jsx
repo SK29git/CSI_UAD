@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
-import { createComplaintCase, DEFAULT_RPA_CALLBACK_URL } from '../utils/api';
+import { createComplaintCase } from '../utils/api';
 import { 
   FaPlusCircle, 
   FaPaperPlane, 
@@ -10,37 +10,42 @@ import {
   FaLayerGroup, 
   FaBriefcase, 
   FaPhoneAlt, 
+  FaEnvelope,
   FaFlag, 
   FaClipboardList, 
   FaTag, 
   FaUserCheck, 
   FaAlignLeft, 
   FaCar, 
-  FaCheckCircle 
+  FaCheckCircle,
+  FaShieldAlt
 } from 'react-icons/fa';
 
 export default function CreateComplaintView() {
-  const { customer, getFormattedName, agentId, group: contextGroup } = useCustomer();
+  const { customer, getFormattedName, agentId, group: contextGroup, currentMobile } = useCustomer();
 
   const customerNameFormatted = getFormattedName();
-  const initialCustomerNo = customer?.customerNumber || customer?.id || "52660";
+  const initialCustomerNo = customer?.customerNumber || customer?.id || "123456";
   const initialCustomerName = customerNameFormatted && customerNameFormatted !== 'Walk-in Customer' && customerNameFormatted !== 'Unknown'
     ? customerNameFormatted 
-    : (customer?.name || customer?.customerName || "vera sfeir");
-  const initialGroup = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "BMW");
+    : (customer?.name || customer?.customerName || "Ahmed Ali");
+  const initialGroup = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "Geely");
+  const initialPhone = customer?.mobile || currentMobile || "971454378907";
+  const initialEmail = customer?.email || "ahmedali@agmc.com";
 
-  // FORM FIELDS MATCHING POST /api/intake/cases (caseType: "CREATE_COMPLAINT")
+  // FORM FIELDS MATCHING POST /api/v1/complaints
   const [group, setGroup] = useState(initialGroup);
   const [customerId, setCustomerId] = useState(initialCustomerNo);
   const [customerName, setCustomerName] = useState(initialCustomerName);
-  const [branch, setBranch] = useState("10 - Sheikh Zayed Rd");
+  const [customerPhone, setCustomerPhone] = useState(initialPhone);
+  const [customerEmail, setCustomerEmail] = useState(initialEmail);
   const [department, setDepartment] = useState("Service");
   const [source, setSource] = useState("Customer Call");
-  const [complaintPriority, setComplaintPriority] = useState("Normal");
-  const [complaintGroup, setComplaintGroup] = useState("Process");
-  const [category, setCategory] = useState("Process Delay");
-  const [complaint, setComplaint] = useState("the work is taking too much time.");
-  const [allocateTo, setAllocateTo] = useState("pattepu");
+  const [complaintPriority, setComplaintPriority] = useState("Urgent");
+  const [complaintGroup, setComplaintGroup] = useState("Customer");
+  const [category, setCategory] = useState("Service Delay");
+  const [complaint, setComplaint] = useState("Car not ready on the promised date");
+  const [externalRef, setExternalRef] = useState(`GENESYS-000${Math.floor(10 + Math.random() * 90)}`);
 
   // TOAST & SUBMIT STATE
   const [submitting, setSubmitting] = useState(false);
@@ -58,11 +63,17 @@ export default function CreateComplaintView() {
       } else if (customer?.name || customer?.customerName) {
         setCustomerName(customer?.name || customer?.customerName);
       }
+      if (customer?.mobile || currentMobile) {
+        setCustomerPhone(customer?.mobile || currentMobile);
+      }
+      if (customer?.email) {
+        setCustomerEmail(customer?.email);
+      }
       if (customer?.keyloopGroup) {
         setGroup(customer.keyloopGroup);
       }
     }
-  }, [customer]);
+  }, [customer, currentMobile]);
 
   useEffect(() => {
     if (contextGroup) {
@@ -70,28 +81,17 @@ export default function CreateComplaintView() {
     }
   }, [contextGroup]);
 
-  // Auto-dismiss success toast after 5 seconds
+  // Auto-dismiss success toast after 8 seconds
   useEffect(() => {
     if (toast && !toast.isError) {
       const timer = setTimeout(() => {
         setToast(null);
-      }, 5000);
+      }, 8000);
       return () => clearTimeout(timer);
     }
   }, [toast]);
 
-  const brandGroups = ['BMW', 'MINI', 'Rolls-Royce', 'GEELY'];
-
-  const branches = [
-    "10 - Sheikh Zayed Rd",
-    "20 - Sharjah",
-    "30 - Abu Dhabi",
-    "40 - Deira",
-    "10 - Geely Group - SZR",
-    "20 - Geely Group - Sharjah",
-    "30 - Ras Al Khaimah",
-    "50 - Fujairah"
-  ];
+  const brandGroups = ['Geely', 'BMW', 'MINI', 'Rolls-Royce'];
 
   const departments = [
     "Service",
@@ -112,9 +112,10 @@ export default function CreateComplaintView() {
     "Management Escalation"
   ];
 
-  const priorities = ["Normal", "Low", "High", "Urgent"];
+  const priorities = ["Urgent", "High", "Normal", "Low"];
 
   const complaintGroups = [
+    "Customer",
     "Process",
     "Staff / People",
     "Vehicle / Technical",
@@ -124,6 +125,7 @@ export default function CreateComplaintView() {
   ];
 
   const categories = [
+    "Service Delay",
     "Process Delay",
     "Customer Handling Skills",
     "Delay in Parts Delivery",
@@ -136,6 +138,7 @@ export default function CreateComplaintView() {
   ];
 
   const complaintTemplates = [
+    "Car not ready on the promised date",
     "the work is taking too much time.",
     "Advisor did not call back as promised.",
     "Vehicle repair delayed without advance notification.",
@@ -143,14 +146,6 @@ export default function CreateComplaintView() {
     "Quality of repair unsatisfactory upon vehicle collection.",
     "Delay in spare parts procurement from central warehouse.",
     "Staff behavior during customer reception was unprofessional."
-  ];
-
-  const allocateOptions = [
-    { value: "pattepu", label: "pattepu (Primary Assignee)" },
-    { value: "service.manager", label: "service.manager (Workshop Manager)" },
-    { value: "crm.escalations", label: "crm.escalations (Customer Relations Lead)" },
-    { value: "advisor.lead", label: "advisor.lead (Senior Service Advisor)" },
-    { value: "unassigned", label: "unassigned (Queue Dispatch)" }
   ];
 
   const handleSubmit = async (e) => {
@@ -164,32 +159,38 @@ export default function CreateComplaintView() {
     setToast(null);
 
     const details = {
-      group: group || "BMW",
+      company: group || "Geely",
       customerId: String(customerId || "").trim(),
       customerName: String(customerName || "").trim(),
-      branch: branch || "10 - Sheikh Zayed Rd",
+      customerPhone: String(customerPhone || "").trim(),
+      customerEmail: String(customerEmail || "").trim(),
+      complaint: String(complaint || "").trim(),
+      category: category || "Service Delay",
+      complaintPriority: complaintPriority || "Urgent",
       department: department || "Service",
       source: source || "Customer Call",
-      complaintPriority: complaintPriority || "Normal",
-      complaintGroup: complaintGroup || "Process",
-      category: category || "Process Delay",
-      complaint: String(complaint || "").trim(),
-      allocateTo: String(allocateTo || "pattepu").trim()
+      complaintGroup: complaintGroup || "Customer",
+      externalRef: String(externalRef || "").trim() || `GENESYS-000${Math.floor(10 + Math.random() * 90)}`
     };
 
     try {
-      const res = await createComplaintCase(details, {
-        createdBy: agentId || "genesys",
-        callbackUrl: DEFAULT_RPA_CALLBACK_URL
-      });
+      const res = await createComplaintCase(details);
 
       if (res && res.ok) {
         setToast({
           isError: false,
-          message: "Complaint registered successfully!",
-          taskId: res.taskId || res.result?.taskId || null
+          message: "Complaint ticket registered successfully!",
+          referenceId: res.referenceId,
+          ticketNumber: res.ticketNumber,
+          keyloopStatus: res.keyloopStatus,
+          cxpulseStatus: res.cxpulseStatus,
+          keyloopRef: res.keyloopRef,
+          company: res.company,
+          data: res.data
         });
-        // Clear complaint description for next entry
+        // Generate fresh externalRef for the next complaint
+        setExternalRef(`GENESYS-000${Math.floor(10 + Math.random() * 90)}`);
+        // Clear complaint description
         setComplaint("");
       } else {
         setToast({
@@ -213,37 +214,82 @@ export default function CreateComplaintView() {
       
       {/* TOAST MESSAGE (Appears on API 200 or Error) */}
       {toast && (
-        <div className={`p-3 rounded-xl flex items-center justify-between shadow-xs border transition-all animate-fade-in ${
+        <div className={`p-4 rounded-xl flex flex-col gap-2.5 shadow-xs border transition-all animate-fade-in ${
           toast.isError
             ? "bg-rose-50 border-rose-200 text-rose-900"
-            : "bg-emerald-50 border-emerald-200 text-emerald-900"
+            : "bg-emerald-50 border-emerald-200 text-emerald-950"
         }`}>
-          <div className="flex items-center gap-2.5">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] text-white shadow-2xs ${
-              toast.isError ? "bg-rose-500" : "bg-emerald-600"
-            }`}>
-              {toast.isError ? "✕" : "✓"}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] text-white shadow-2xs ${
+                toast.isError ? "bg-rose-500" : "bg-emerald-600"
+              }`}>
+                {toast.isError ? "✕" : "✓"}
+              </div>
+              <div>
+                <h4 className="font-bold text-xs">{toast.message}</h4>
+              </div>
             </div>
-            <div>
-              <h4 className="font-bold text-xs">{toast.message}</h4>
-              {toast.taskId && (
-                <span className="text-[10px] text-emerald-700 font-mono font-semibold block">
-                  RPA Task Reference: #{toast.taskId}
-                </span>
-              )}
-            </div>
+            <button 
+              type="button"
+              onClick={() => setToast(null)} 
+              className="text-gray-400 hover:text-gray-700 font-bold p-1 cursor-pointer"
+            >
+              ✕
+            </button>
           </div>
-          <button 
-            type="button"
-            onClick={() => setToast(null)} 
-            className="text-gray-400 hover:text-gray-700 font-bold p-1 cursor-pointer"
-          >
-            ✕
-          </button>
+
+          {!toast.isError && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-emerald-200/80 text-xs">
+              {toast.referenceId && (
+                <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-200 shadow-2xs">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase block">Reference ID</span>
+                  <span className="font-mono font-bold text-emerald-900 text-xs block truncate">{toast.referenceId}</span>
+                  {toast.company && (
+                    <span className="text-[10px] text-gray-500">Company: <strong>{toast.company}</strong></span>
+                  )}
+                </div>
+              )}
+              <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-200 shadow-2xs">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase block">CXPulse CRM</span>
+                  {toast.cxpulseStatus && (
+                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-extrabold uppercase ${
+                      toast.cxpulseStatus === 'CREATED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {toast.cxpulseStatus}
+                    </span>
+                  )}
+                </div>
+                {toast.ticketNumber ? (
+                  <span className="font-mono font-bold text-blue-900 text-xs block">Ticket #{toast.ticketNumber}</span>
+                ) : (
+                  <span className="text-[11px] text-gray-500">Ticket Queued</span>
+                )}
+              </div>
+              <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-200 shadow-2xs">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] font-bold text-gray-500 uppercase block">Keyloop DMS</span>
+                  {toast.keyloopStatus && (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 font-extrabold uppercase">
+                      {toast.keyloopStatus}
+                    </span>
+                  )}
+                </div>
+                {toast.keyloopRef ? (
+                  <span className="font-mono text-[10px] text-gray-700 block truncate" title={toast.keyloopRef}>
+                    Ref: {toast.keyloopRef}
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-gray-500">{toast.keyloopStatus || 'Handled'}</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* MAIN ENQUIRY-STYLE COMPLAINT FORM CARD */}
+      {/* MAIN COMPLAINT FORM CARD */}
       <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
         
         {/* Header Bar matching New Enquiry */}
@@ -262,7 +308,7 @@ export default function CreateComplaintView() {
 
           <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
             <span className="text-[10px] text-gray-500 font-medium">
-              Group: <span className="font-bold text-gray-800">{group}</span> | <span className="font-bold text-gray-800">Customer #{customerId}</span>
+              Company: <span className="font-bold text-gray-800">{group}</span> | <span className="font-bold text-gray-800">Customer #{customerId}</span>
             </span>
             <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-2xs shrink-0">
               <FaCar className="text-[10px]" />
@@ -270,15 +316,15 @@ export default function CreateComplaintView() {
           </div>
         </div>
 
-        {/* Form Body with Clean 3-Column Grid matching New Enquiry */}
+        {/* Form Body with Clean 3-Column Grid */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 flex flex-col gap-4">
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
             
-            {/* 1. Brand / Group (Dynamic Dropdown) */}
+            {/* 1. Company / Brand */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                Automotive Group <span className="text-rose-500 font-bold">*</span>
+                Company / Brand <span className="text-rose-500 font-bold">*</span>
               </label>
               <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
                 <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
@@ -312,7 +358,7 @@ export default function CreateComplaintView() {
                   type="text"
                   value={customerId}
                   onChange={(e) => setCustomerId(e.target.value)}
-                  placeholder="e.g. 52660"
+                  placeholder="e.g. 123456"
                   required
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs font-mono placeholder:text-gray-400"
                 />
@@ -332,35 +378,53 @@ export default function CreateComplaintView() {
                   type="text"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  placeholder="e.g. vera sfeir"
+                  placeholder="e.g. Ahmed Ali"
                   required
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs placeholder:text-gray-400"
                 />
               </div>
             </div>
 
-            {/* 4. Branch Location */}
+            {/* 4. Customer Phone */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                Branch Location <span className="text-rose-500 font-bold">*</span>
+                Customer Phone <span className="text-rose-500 font-bold">*</span>
               </label>
               <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
                 <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
-                  <FaBuilding />
+                  <FaPhoneAlt />
                 </div>
-                <select
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
-                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
-                >
-                  {branches.map(b => (
-                    <option key={b} value={b}>{b}</option>
-                  ))}
-                </select>
+                <input
+                  type="tel"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                  placeholder="e.g. 971454378907"
+                  required
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs font-mono placeholder:text-gray-400"
+                />
               </div>
             </div>
 
-            {/* 5. Department */}
+            {/* 5. Customer Email */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Customer Email
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaEnvelope />
+                </div>
+                <input
+                  type="email"
+                  value={customerEmail}
+                  onChange={(e) => setCustomerEmail(e.target.value)}
+                  placeholder="e.g. ahmedali@agmc.com"
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs placeholder:text-gray-400"
+                />
+              </div>
+            </div>
+
+            {/* 6. Department */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                 Department <span className="text-rose-500 font-bold">*</span>
@@ -381,7 +445,7 @@ export default function CreateComplaintView() {
               </div>
             </div>
 
-            {/* 6. Complaint Source */}
+            {/* 7. Complaint Source */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                 Complaint Source <span className="text-rose-500 font-bold">*</span>
@@ -402,7 +466,7 @@ export default function CreateComplaintView() {
               </div>
             </div>
 
-            {/* 7. Complaint Priority */}
+            {/* 8. Complaint Priority */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                 Priority <span className="text-rose-500 font-bold">*</span>
@@ -423,7 +487,7 @@ export default function CreateComplaintView() {
               </div>
             </div>
 
-            {/* 8. Complaint Group */}
+            {/* 9. Complaint Group */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                 Complaint Group <span className="text-rose-500 font-bold">*</span>
@@ -444,7 +508,7 @@ export default function CreateComplaintView() {
               </div>
             </div>
 
-            {/* 9. Category */}
+            {/* 10. Category */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                 Category <span className="text-rose-500 font-bold">*</span>
@@ -465,52 +529,28 @@ export default function CreateComplaintView() {
               </div>
             </div>
 
-          </div>
-
-          {/* 10. Allocate To (Dropdown with option to type custom ID) */}
-          <div className="pt-0.5">
-            <div className="flex items-center justify-between mb-0.5">
-              <label className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
-                Allocate To <span className="text-rose-500 font-bold">*</span>
+            {/* 11. External Reference */}
+            <div className="sm:col-span-2">
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                External Reference <span className="text-gray-400 font-normal">(Auto-generated or custom)</span>
               </label>
-              <span className="text-[10px] text-gray-400 font-mono">Assignee: {allocateTo}</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
                 <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
-                  <FaUserCheck />
+                  <FaTag />
                 </div>
-                <select
-                  value={allocateOptions.some(o => o.value === allocateTo) ? allocateTo : 'custom'}
-                  onChange={(e) => {
-                    if (e.target.value !== 'custom') {
-                      setAllocateTo(e.target.value);
-                    }
-                  }}
-                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
-                >
-                  {allocateOptions.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                  <option value="custom">-- Custom Staff ID --</option>
-                </select>
-              </div>
-
-              {/* Direct Text Input for AllocateTo */}
-              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
                 <input
                   type="text"
-                  value={allocateTo}
-                  onChange={(e) => setAllocateTo(e.target.value)}
-                  placeholder="Enter custom staff username or ID..."
-                  required
+                  value={externalRef}
+                  onChange={(e) => setExternalRef(e.target.value)}
+                  placeholder="e.g. GENESYS-00029"
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs font-mono placeholder:text-gray-400"
                 />
               </div>
             </div>
+
           </div>
 
-          {/* 11. Complaint Description (Textarea + Quick Templates Dropdown) */}
+          {/* 12. Complaint Description (Textarea + Quick Templates Dropdown) */}
           <div className="pt-0.5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
               <label className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
@@ -552,7 +592,7 @@ export default function CreateComplaintView() {
             </div>
           </div>
 
-          {/* Form Submit Action Row matching New Enquiry */}
+          {/* Form Submit Action Row */}
           <div className="pt-1 flex items-center justify-end border-t border-gray-100">
             <button
               type="submit"
@@ -567,7 +607,7 @@ export default function CreateComplaintView() {
               ) : (
                 <>
                   <FaPaperPlane className="text-xs" />
-                  <span>Create Complaint</span>
+                  <span>Create Complaint Ticket</span>
                 </>
               )}
             </button>

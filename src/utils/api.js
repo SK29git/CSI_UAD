@@ -438,17 +438,116 @@ export async function executeRpaCase(caseType, details, options = {}) {
   };
 }
 
+export const COMPLAINT_API_KEY =
+  "appuaaf5f0f304ff2ec2r63e5055c484fd739325cfb0cd3c3456ce8b55357e5b";
+
 /**
- * Creates an RPA Complaint Case (caseType: 'CREATE_COMPLAINT') via POST /api/intake/cases
- * @param {object} details - Case payload details matching CCaaS intake schema
- * @param {object} options - Optional parameters (createdBy, callbackUrl, onProgress)
+ * Creates a Customer Complaint ticket via CCaaS Complaints API (POST /api/v1/complaints)
+ * Integrates simultaneously with CXPulse CRM and Keyloop DMS.
+ * @param {object} details - { company, customerId, customerName, customerPhone, customerEmail, complaint, category, complaintPriority, department, source, complaintGroup, externalRef }
  */
 export async function createComplaintCase(details, options = {}) {
-  return await executeRpaCase("CREATE_COMPLAINT", details, {
-    callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,
-    createdBy: options.createdBy || "genesys",
-    ...options,
-  });
+  // Format phone number to international 971 standard if UAE local format
+  let cleanPhone = String(details.customerPhone || details.mobile || "").replace(/[^\d]/g, "");
+  if (cleanPhone.startsWith("05") && cleanPhone.length === 10) {
+    cleanPhone = "971" + cleanPhone.slice(1);
+  } else if (cleanPhone.startsWith("5") && cleanPhone.length === 9) {
+    cleanPhone = "971" + cleanPhone;
+  }
+
+  const uniqueRef =
+    details.externalRef && String(details.externalRef).trim() !== ""
+      ? String(details.externalRef).trim()
+      : `GENESYS-${Date.now().toString().slice(-5)}${Math.floor(100 + Math.random() * 900)}`;
+
+  const payload = {
+    company: details.company || details.group || "Geely",
+    customerId: String(details.customerId || "").trim(),
+    customerName: String(details.customerName || "").trim(),
+    customerPhone: cleanPhone || "971501234567",
+    customerEmail: String(details.customerEmail || details.email || "").trim(),
+    complaint: String(details.complaint || details.description || "").trim(),
+    category: details.category || "Service Delay",
+    complaintPriority: details.complaintPriority || details.priority || "Normal",
+    department: details.department || "Service",
+    source: details.source || "Customer Call",
+    complaintGroup: details.complaintGroup || "Customer",
+    externalRef: uniqueRef,
+  };
+
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Api-Key": COMPLAINT_API_KEY,
+  };
+
+  const endpoint = "/api/v1/complaints";
+  const directUrl = `${API_BASE_URL}${endpoint}`;
+
+  let res;
+  try {
+    res = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+  } catch (err) {
+    console.warn("Relative fetch to /api/v1/complaints failed, trying direct URL:", err);
+    res = await fetch(directUrl, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  let data = null;
+  if (contentType.includes("application/json")) {
+    data = await res.json();
+  } else {
+    const text = await res.text();
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { raw: text };
+    }
+  }
+
+  if (!res.ok) {
+    return {
+      ok: false,
+      status: res.status,
+      errorMessage: data?.message || data?.error || data?.detail || `HTTP ${res.status}`,
+      data,
+    };
+  }
+
+  // Parse CXPulse ticket details if present
+  let cxpulseDetail = null;
+  if (data?.cxpulse?.detail) {
+    try {
+      cxpulseDetail =
+        typeof data.cxpulse.detail === "string"
+          ? JSON.parse(data.cxpulse.detail)
+          : data.cxpulse.detail;
+    } catch {}
+  }
+
+  const ticketNumber =
+    cxpulseDetail?.ticketNumber || data?.cxpulse?.reference || null;
+  const keyloopRef = data?.keyloop?.reference || null;
+
+  return {
+    ok: true,
+    status: res.status,
+    data,
+    referenceId: data?.referenceId || uniqueRef,
+    company: data?.company || payload.company,
+    ticketNumber,
+    keyloopRef,
+    keyloopStatus: data?.keyloop?.status || null,
+    cxpulseStatus: data?.cxpulse?.status || null,
+    cxpulseDetail,
+  };
 }
 
 /**
