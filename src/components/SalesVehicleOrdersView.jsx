@@ -271,28 +271,34 @@ export default function SalesVehicleOrdersView() {
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
               {orders.map((row, idx) => {
-                const enquiryNo = row.enquiryNumber || row.id || `ENQ-${idx+1}`;
+                const enquiryNo = row.enquiryNumber || row.orderId || row.id || `ENQ-${idx+1}`;
                 const isSelected = selectedEnquiryNo === enquiryNo;
+                const orderDate = row.orderConfirmedDate || row.invoiceDate || row.orderDate || row.date;
+                const vehicleModel = row.vehicle?.description || row.modelDescription || row.model || row.vehicle;
+                const prodStage = row.vehicle?.stockProgress || row.productionStage || row.productionStatus;
+                const shipLocation = row.vehicle?.locationDescription || row.shipmentStatus;
+                const statusBadge = row.enquiryStatus || row.status || 'Active';
+
                 return (
                   <tr key={idx} className={`hover:bg-emerald-50/40 transition-colors ${isSelected ? 'bg-emerald-50/60 font-semibold' : ''}`}>
                     <td className="py-3 px-3 font-mono font-bold text-emerald-700">{renderSafeVal(enquiryNo)}</td>
-                    <td className="py-3 px-3 font-mono text-gray-600">{renderSafeVal(row.orderDate || row.date)}</td>
-                    <td className="py-3 px-3 font-bold text-gray-900">{renderSafeVal(row.model || row.vehicleDescription || row.vehicle)}</td>
-                    <td className="py-3 px-3 text-gray-800">{renderSafeVal(row.productionStage || row.productionStatus)}</td>
-                    <td className="py-3 px-3 text-gray-800">{renderSafeVal(row.shipmentStatus)}</td>
+                    <td className="py-3 px-3 font-mono text-gray-600">{renderSafeVal(orderDate)}</td>
+                    <td className="py-3 px-3 font-bold text-gray-900">{renderSafeVal(vehicleModel)}</td>
+                    <td className="py-3 px-3 text-gray-800">{renderSafeVal(prodStage)}</td>
+                    <td className="py-3 px-3 text-gray-800">{renderSafeVal(shipLocation)}</td>
                     <td className="py-3 px-3">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        row.status === 'DELIVERED' || row.status === 'COMPLETED'
+                        statusBadge.toUpperCase() === 'INVOICED' || statusBadge.toUpperCase() === 'DELIVERED' || statusBadge.toUpperCase() === 'COMPLETED'
                           ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                           : 'bg-blue-100 text-blue-800 border border-blue-300'
                       }`}>
-                        {renderSafeVal(row.status)}
+                        {renderSafeVal(statusBadge)}
                       </span>
                     </td>
                     <td className="py-3 px-3 text-right">
                       <button 
                         onClick={() => fetchFullOrderMilestones(enquiryNo)}
-                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold cursor-pointer transition-colors"
+                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold cursor-pointer transition-colors shadow-2xs"
                       >
                         Track Milestones
                       </button>
@@ -367,10 +373,13 @@ export default function SalesVehicleOrdersView() {
                 <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs text-emerald-700">
                   <FaCar /> Order & Vehicle Details
                 </span>
-                <p className="text-[11px] text-gray-700">Model: <strong>{formatDisplay(orderDetails.model || orderDetails.vehicle)}</strong></p>
-                <p className="text-[10px] text-gray-500">Order Date: <strong>{renderSafeVal(orderDetails.orderDate || orderDetails.date)}</strong></p>
+                <p className="text-[11px] text-gray-700">Model: <strong>{formatDisplay(orderDetails.vehicle?.description || orderDetails.modelDescription || orderDetails.model || orderDetails.vehicle)}</strong></p>
+                <p className="text-[10px] text-gray-500">Order Date: <strong>{renderSafeVal(orderDetails.orderConfirmedDate || orderDetails.invoiceDate || orderDetails.orderDate || orderDetails.date)}</strong></p>
                 {orderDetails.salesExecutive && (
                   <p className="text-[10px] text-gray-500">Sales Executive: <strong>{renderSafeVal(orderDetails.salesExecutive)}</strong></p>
+                )}
+                {orderDetails.invoiceNumber && (
+                  <p className="text-[10px] text-gray-500">Invoice: <strong className="font-mono text-emerald-800">#{orderDetails.invoiceNumber}</strong></p>
                 )}
               </div>
             )}
@@ -381,10 +390,10 @@ export default function SalesVehicleOrdersView() {
                 <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs text-blue-700">
                   <FaIndustry /> Production Status
                 </span>
-                <p className="text-[11px] text-gray-700">Stage: <strong>{renderSafeVal(productionDetails.stage || productionDetails.productionStatus)}</strong></p>
-                <p className="text-[10px] text-gray-500">Status: <strong className="text-blue-700">{renderSafeVal(productionDetails.status)}</strong></p>
-                {productionDetails.plannedDelivery && (
-                  <p className="text-[10px] text-gray-500">Planned Delivery: <strong>{renderSafeVal(productionDetails.plannedDelivery)}</strong></p>
+                <p className="text-[11px] text-gray-700">Stage: <strong>{renderSafeVal(productionDetails.stockProgress || productionDetails.stage || productionDetails.productionStatus || 'Completed')}</strong></p>
+                <p className="text-[10px] text-gray-500">Status: <strong className="text-blue-700">{renderSafeVal(productionDetails.orderConfirmedDate ? `Confirmed (${productionDetails.orderConfirmedDate})` : (productionDetails.status || 'Completed'))}</strong></p>
+                {(productionDetails.plannedDeliveryDate || productionDetails.plannedDelivery) && (
+                  <p className="text-[10px] text-gray-500">Planned Delivery: <strong>{renderSafeVal(productionDetails.plannedDeliveryDate || productionDetails.plannedDelivery)}</strong></p>
                 )}
               </div>
             )}
@@ -395,8 +404,8 @@ export default function SalesVehicleOrdersView() {
                 <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs text-indigo-700">
                   <FaTruck /> Shipment Status
                 </span>
-                <p className="text-[11px] text-gray-700">Location: <strong>{renderSafeVal(shipmentDetails.vessel || shipmentDetails.location || shipmentDetails.shipmentStatus)}</strong></p>
-                <p className="text-[10px] text-gray-500">Status: <strong className="text-indigo-700">{renderSafeVal(shipmentDetails.status)}</strong></p>
+                <p className="text-[11px] text-gray-700">Location: <strong>{renderSafeVal(shipmentDetails.locationDescription || shipmentDetails.locationCode || shipmentDetails.vessel || shipmentDetails.location || shipmentDetails.shipmentStatus)}</strong></p>
+                <p className="text-[10px] text-gray-500">Status: <strong className="text-indigo-700">{renderSafeVal(shipmentDetails.stockProgress || shipmentDetails.status || 'At Dealership')}</strong></p>
                 {shipmentDetails.eta && (
                   <p className="text-[10px] text-gray-500">ETA: <strong>{renderSafeVal(shipmentDetails.eta)}</strong></p>
                 )}
@@ -409,8 +418,11 @@ export default function SalesVehicleOrdersView() {
                 <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs text-purple-700">
                   <FaClipboardCheck /> RTA Registration Status
                 </span>
-                <p className="text-[11px] text-gray-700">File/Plate: <strong>{renderSafeVal(registrationDetails.rtaFileNo || registrationDetails.plate || registrationDetails.registrationStatus)}</strong></p>
-                <p className="text-[10px] text-gray-500">Status: <strong className="text-purple-700">{renderSafeVal(registrationDetails.status)}</strong></p>
+                <p className="text-[11px] text-gray-700">File/Plate: <strong>{renderSafeVal(registrationDetails.registrationNumber || registrationDetails.plate || registrationDetails.rtaFileNo)}</strong></p>
+                <p className="text-[10px] text-gray-500">Status: <strong className="text-purple-700">{renderSafeVal(registrationDetails.registrationNumber ? 'Registered' : (registrationDetails.status || registrationDetails.registrationStatus))}</strong></p>
+                {registrationDetails.registrationDate && (
+                  <p className="text-[10px] text-gray-500">Reg Date: <strong>{renderSafeVal(registrationDetails.registrationDate)}</strong></p>
+                )}
               </div>
             )}
 
@@ -420,8 +432,8 @@ export default function SalesVehicleOrdersView() {
                 <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs text-amber-700">
                   <FaPaperPlane /> Milestone Updates
                 </span>
-                <p className="text-[11px] text-gray-700">Milestone: <strong>{renderSafeVal(milestonesDetails.milestone || milestonesDetails.template)}</strong></p>
-                <p className="text-[10px] text-gray-500">Delivery Status: <strong className="text-amber-700">{renderSafeVal(milestonesDetails.status || milestonesDetails.deliveryStatus)}</strong></p>
+                <p className="text-[11px] text-gray-700">Milestone: <strong>{renderSafeVal(milestonesDetails.milestone || milestonesDetails.template || (milestonesDetails.deliveryDateStatus ? `Delivery ${milestonesDetails.deliveryDateStatus}` : 'Order Confirmed'))}</strong></p>
+                <p className="text-[10px] text-gray-500">Delivery Status: <strong className="text-amber-700">{renderSafeVal(milestonesDetails.deliveryDateStatus || milestonesDetails.status || milestonesDetails.deliveryStatus || 'Confirmed')}</strong></p>
               </div>
             )}
 
@@ -431,7 +443,10 @@ export default function SalesVehicleOrdersView() {
                 <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs text-emerald-700">
                   <FaCheckCircle /> Vehicle Readiness
                 </span>
-                <p className="text-[11px] text-gray-700">Handover Ready: <strong>{renderSafeVal(vehicleReadyDetails.isReady ? 'READY FOR HANDOVER' : vehicleReadyDetails.status)}</strong></p>
+                <p className="text-[11px] text-gray-700">Handover Ready: <strong className="text-emerald-700">{renderSafeVal(vehicleReadyDetails.deliveryDateStatus === 'Confirmed' || vehicleReadyDetails.stockProgress === 'Closed' || vehicleReadyDetails.isReady ? 'READY FOR HANDOVER' : (vehicleReadyDetails.status || 'In Preparation'))}</strong></p>
+                {vehicleReadyDetails.deliveryDate && (
+                  <p className="text-[10px] text-gray-500">Delivery Date: <strong>{renderSafeVal(vehicleReadyDetails.deliveryDate)} ({renderSafeVal(vehicleReadyDetails.deliveryDateStatus || 'Confirmed')})</strong></p>
+                )}
               </div>
             )}
 
