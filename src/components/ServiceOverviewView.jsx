@@ -13,6 +13,7 @@ import {
   FaExchangeAlt,
   FaBoxes,
   FaSearch,
+  FaWrench,
 } from "react-icons/fa";
 import VehicleOwnershipTransferModal from "./VehicleOwnershipTransferModal";
 import VehiclePackagesModal from "./VehiclePackagesModal";
@@ -47,6 +48,8 @@ export default function ServiceOverviewView() {
   const [lastServiceData, setLastServiceData] = useState(null);
   const [warrantyData, setWarrantyData] = useState(null);
   const [contractData, setContractData] = useState(null);
+  const [activeBooking, setActiveBooking] = useState(null);
+  const [bookingBatteryId, setBookingBatteryId] = useState("");
   const [loadingOverviewApis, setLoadingOverviewApis] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isPackagesModalOpen, setIsPackagesModalOpen] = useState(false);
@@ -142,6 +145,8 @@ export default function ServiceOverviewView() {
     setLastServiceData(null);
     setWarrantyData(null);
     setContractData(null);
+    setActiveBooking(null);
+    setBookingBatteryId("");
 
     // A. Vehicle Summary by Vehicle ID (VIN) API: GET /api/v1/vehicles/{group}/{vin}
     apiFetch(`/api/v1/vehicles/${group}/${vin}`)
@@ -222,6 +227,74 @@ export default function ServiceOverviewView() {
       })
       .finally(() => {
         setLoadingOverviewApis(false);
+      });
+
+    // F. Open Service Bookings API (to retrieve Battery ID & Active Workshop Appointment)
+    apiFetch(`/api/v1/vehicles/${group}/${vin}/service-bookings`)
+      .then((res) => {
+        let list = [];
+        if (res && res.ok && res.data) {
+          list = Array.isArray(res.data) ? res.data : [res.data];
+        }
+        if (list.length > 0) {
+          const b = list[0];
+          setActiveBooking(b);
+          const bId =
+            b.batteryId ||
+            b.batteryID ||
+            b.battery_id ||
+            b.vehicle?.batteryId ||
+            b.vehicle?.batteryID ||
+            "";
+          if (bId) setBookingBatteryId(bId);
+        } else if (customerNumber) {
+          apiFetch(`/api/v1/customers/${group}/${customerNumber}/service-bookings`)
+            .then((cRes) => {
+              let cList = [];
+              if (cRes && cRes.ok && cRes.data) {
+                cList = Array.isArray(cRes.data) ? cRes.data : [cRes.data];
+              }
+              const match = cList.find(
+                (item) => (item.vin && vin && item.vin === vin) || item.batteryId || item.batteryID,
+              );
+              if (match) {
+                setActiveBooking(match);
+                const bId =
+                  match.batteryId ||
+                  match.batteryID ||
+                  match.battery_id ||
+                  match.vehicle?.batteryId ||
+                  "";
+                if (bId) setBookingBatteryId(bId);
+              }
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {
+        if (customerNumber) {
+          apiFetch(`/api/v1/customers/${group}/${customerNumber}/service-bookings`)
+            .then((cRes) => {
+              let cList = [];
+              if (cRes && cRes.ok && cRes.data) {
+                cList = Array.isArray(cRes.data) ? cRes.data : [cRes.data];
+              }
+              const match = cList.find(
+                (item) => (item.vin && vin && item.vin === vin) || item.batteryId || item.batteryID,
+              );
+              if (match) {
+                setActiveBooking(match);
+                const bId =
+                  match.batteryId ||
+                  match.batteryID ||
+                  match.battery_id ||
+                  match.vehicle?.batteryId ||
+                  "";
+                if (bId) setBookingBatteryId(bId);
+              }
+            })
+            .catch(() => {});
+        }
       });
   };
 
@@ -305,6 +378,12 @@ export default function ServiceOverviewView() {
   const stockProgress = currentVehicle?.stockProgress || "";
   const eligibility = currentVehicle?.eligibility || "";
   const batteryId =
+    bookingBatteryId ||
+    activeBooking?.batteryId ||
+    activeBooking?.batteryID ||
+    activeBooking?.battery_id ||
+    activeBooking?.vehicle?.batteryId ||
+    activeBooking?.vehicle?.batteryID ||
     currentVehicle?.batteryId ||
     currentVehicle?.batteryID ||
     currentVehicle?.battery_id ||
@@ -506,9 +585,52 @@ export default function ServiceOverviewView() {
           </div>
         )}
 
-        {/* Next & Last Service Banner Grid - Rendered conditionally when backend returns data */}
-        {(hasNextService || hasLastService) && (
+        {/* Next, Last Service & Active Booking Banner Grid */}
+        {(hasNextService || hasLastService || activeBooking) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Active Open Workshop Booking Box (with Battery ID) */}
+            {activeBooking && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50/70 p-3.5 rounded-xl border border-blue-200 flex flex-col gap-1.5 sm:col-span-2 shadow-2xs">
+                <div className="flex items-center justify-between text-blue-900 font-bold text-xs flex-wrap gap-1">
+                  <span className="flex items-center gap-1.5">
+                    <FaWrench className="text-blue-600" /> Open Workshop Booking #{activeBooking.bookingId || activeBooking.jobNumber}
+                  </span>
+                  <span className="bg-blue-600 text-white font-bold text-[10px] px-2 py-0.5 rounded uppercase">
+                    {activeBooking.status || 'Booked'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] pt-1">
+                  {activeBooking.date && (
+                    <div>
+                      <span className="text-gray-500 block text-[10px]">Booking Date:</span>
+                      <span className="font-bold text-gray-900">
+                        {activeBooking.date} {activeBooking.time ? `at ${activeBooking.time}:00` : ''}
+                      </span>
+                    </div>
+                  )}
+                  {activeBooking.branch?.name && (
+                    <div>
+                      <span className="text-gray-500 block text-[10px]">Branch:</span>
+                      <span className="font-bold text-gray-900 truncate block">{activeBooking.branch.name}</span>
+                    </div>
+                  )}
+                  {activeBooking.odometerKm && (
+                    <div>
+                      <span className="text-gray-500 block text-[10px]">Booking Mileage:</span>
+                      <span className="font-bold text-gray-900">{Number(activeBooking.odometerKm).toLocaleString()} KM</span>
+                    </div>
+                  )}
+                  {batteryId && (
+                    <div>
+                      <span className="text-blue-900 block text-[10px] font-bold">Battery ID:</span>
+                      <span className="font-mono font-extrabold text-blue-800 bg-white px-2 py-0.5 rounded border border-blue-300 inline-block text-[11px]">
+                        {batteryId}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             {/* Next Service Due Box */}
             {hasNextService && (
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50/60 p-3.5 rounded-xl border border-blue-100 flex flex-col gap-1.5">

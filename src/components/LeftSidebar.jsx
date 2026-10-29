@@ -75,7 +75,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     setIsSearching(false);
     if (res && res.ok) {
       const typeLabel = res.isProspect 
-        ? (res.isWebLead ? 'Web Lead' : 'Prospect') 
+        ? 'Prospect' 
         : 'Customer';
       const idLabel = res.customer?.prospectNumber 
         ? `Prospect #${res.customer.prospectNumber}` 
@@ -352,11 +352,9 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                     <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs flex items-center gap-1 ${
                       customer?.customerType === 'CONVERTED_PROSPECT'
                         ? 'bg-emerald-600 text-white'
-                        : customer?.isWebLead
-                          ? 'bg-cyan-700 text-white'
-                          : 'bg-amber-600 text-white'
+                        : 'bg-amber-600 text-white'
                     }`}>
-                      <span>★</span> {customer?.customerType === 'CONVERTED_PROSPECT' ? 'CONVERTED' : (customer?.isWebLead ? 'WEB LEAD' : 'PROSPECT')}
+                      <span>★</span> {customer?.customerType === 'CONVERTED_PROSPECT' ? 'CONVERTED' : 'PROSPECT'}
                     </span>
                   ) : (
                     <>

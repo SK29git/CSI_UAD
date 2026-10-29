@@ -390,6 +390,15 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
                 </div>
               )}
 
+              {(currentVehicle.batteryId || currentVehicle.batteryID || currentVehicle.battery_id) && (
+                <div className="col-span-2 pt-2 border-t border-gray-200 flex justify-between items-center">
+                  <span className="text-gray-500 block text-[10px] font-semibold">Battery ID</span>
+                  <span className="font-mono font-extrabold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-[11px]">
+                    {currentVehicle.batteryId || currentVehicle.batteryID || currentVehicle.battery_id}
+                  </span>
+                </div>
+              )}
+
               {currentVehicle.packages && currentVehicle.packages.length > 0 && (
                 <div className="col-span-2 pt-2 border-t border-gray-200 flex items-center justify-between">
                   <div>

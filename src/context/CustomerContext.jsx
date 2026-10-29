@@ -333,9 +333,9 @@ export const normalizeProspectRecord = (p, fallbackGroup = 'BMW', fallbackMobile
 export const normalizeE00MIRecord = (e, fallbackGroup = 'BMW', fallbackMobile = '') => {
   const g = e.keyloopGroup || fallbackGroup || 'BMW';
   const nameParts = (e.customerName || '').trim().split(/\s+/);
-  const fName = nameParts[0] || 'Web Lead';
+  const fName = nameParts[0] || 'Prospect';
   const sName = nameParts.slice(1).join(' ') || '';
-  const combinedName = e.customerName || `${fName} ${sName}`.trim() || 'Web Lead / Inquiry';
+  const combinedName = e.customerName || `${fName} ${sName}`.trim() || 'Prospect / Inquiry';
   const phone = e.mobile || fallbackMobile || '';
   const emailVal = e.email || '';
   const isCustLink = e.linkType === 'CU';
@@ -347,9 +347,9 @@ export const normalizeE00MIRecord = (e, fallbackGroup = 'BMW', fallbackMobile = 
     prospectNumber: e.prospectNumber || (isCustLink ? '' : idVal),
     eventKey: e.eventKey || '',
     linkType: e.linkType || 'PR',
-    customerType: isCustLink ? 'CUSTOMER' : 'WEB_LEAD',
+    customerType: isCustLink ? 'CUSTOMER' : 'PROSPECT',
     isProspect: true,
-    isWebLead: true,
+    isWebLead: false,
     salutation: '',
     firstName: fName,
     middleName: '',
@@ -380,8 +380,8 @@ export const normalizeE00MIRecord = (e, fallbackGroup = 'BMW', fallbackMobile = 
       whatsapp: true
     },
     leadSource: e.description || 'Website / Leads Bridge Event',
-    status: isCustLink ? 'Customer Event' : 'Web Lead',
-    loyaltyTier: isCustLink ? 'CUSTOMER' : 'WEB LEAD',
+    status: isCustLink ? 'Customer Event' : 'Prospect',
+    loyaltyTier: isCustLink ? 'CUSTOMER' : 'PROSPECT',
     notes: `Event: ${e.description || 'E00MI Event'} [${e.createdDate || ''} ${e.createdTime || ''}]`
   };
 };
@@ -1103,14 +1103,14 @@ export function CustomerProvider({ children }) {
           customer: normalized[0], 
           group: detectedGroup, 
           isProspect: true,
-          isWebLead: true,
-          type: 'WEB_LEAD'
+          isWebLead: false,
+          type: 'PROSPECT'
         };
       }
 
       setCustomer(null);
       setCustomerList([]);
-      return { ok: false, message: `No customer, prospect, or web lead found for mobile "${mobileNum}"` };
+      return { ok: false, message: `No customer or prospect found for mobile "${mobileNum}"` };
     } catch (err) {
       console.warn("Search mobile error:", err.message);
       setError(err.message);
@@ -1392,8 +1392,8 @@ export function CustomerProvider({ children }) {
           customer: normalized[0], 
           group: detectedGroup, 
           isProspect: true,
-          isWebLead: true,
-          type: 'WEB_LEAD'
+          isWebLead: false,
+          type: 'PROSPECT'
         };
       }
 
@@ -2004,8 +2004,16 @@ export function CustomerProvider({ children }) {
 
   const getLoyaltyTier = () => {
     if (!customer) return 'N/A';
-    if (customer?.loyaltyTier && customer.loyaltyTier.trim() !== '') return customer.loyaltyTier;
-    if (customer?.customerType && customer.customerType.trim() !== '') return customer.customerType;
+    const tier = customer?.loyaltyTier?.trim();
+    if (tier) {
+      if (tier.toUpperCase() === 'WEB LEAD' || tier.toUpperCase() === 'WEB_LEAD') return 'PROSPECT';
+      return tier;
+    }
+    const cType = customer?.customerType?.trim();
+    if (cType) {
+      if (cType.toUpperCase() === 'WEB_LEAD' || cType.toUpperCase() === 'WEB LEAD') return 'PROSPECT';
+      return cType;
+    }
     return 'N/A';
   };
 
