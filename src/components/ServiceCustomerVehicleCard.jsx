@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import VehicleOwnershipTransferModal from './VehicleOwnershipTransferModal';
+import VehiclePackagesModal from './VehiclePackagesModal';
 import { 
   FaPhoneAlt, 
   FaWhatsapp, 
@@ -17,7 +18,8 @@ import {
   FaChevronRight,
   FaChevronLeft,
   FaUser,
-  FaExchangeAlt
+  FaExchangeAlt,
+  FaBoxes
 } from 'react-icons/fa';
 
 export default function ServiceCustomerVehicleCard({ isCollapsed = false, onToggleCollapse }) {
@@ -48,6 +50,7 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
   const locationStr = getFormattedLocation();
   const currentVehicle = vehicleDetails || (vehicles && vehicles.length > 0 ? vehicles[0] : null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isPackagesModalOpen, setIsPackagesModalOpen] = useState(false);
 
   // Dynamic Trade-in data strictly from API response (if present)
   const hasTradeInApi = Array.isArray(tradeInHistory) && tradeInHistory.length > 0;
@@ -386,6 +389,26 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
                   )}
                 </div>
               )}
+
+              {currentVehicle.packages && currentVehicle.packages.length > 0 && (
+                <div className="col-span-2 pt-2 border-t border-gray-200 flex items-center justify-between">
+                  <div>
+                    <span className="text-gray-500 block text-[10px] font-semibold">Factory Packages</span>
+                    <span className="font-extrabold text-blue-700 text-xs">
+                      {currentVehicle.packages.length} Packages Installed
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsPackagesModalOpen(true)}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded text-[10px] font-bold text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 transition-colors shadow-2xs cursor-pointer"
+                    title="View All Factory Packages & Equipment"
+                  >
+                    <FaBoxes className="text-[9px]" />
+                    <span>View All</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -427,6 +450,13 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
         onClose={() => setIsTransferModalOpen(false)}
         initialVin={currentVehicle?.vin || selectedVin || ''}
         initialGroup={group}
+      />
+
+      {/* Vehicle Packages Modal */}
+      <VehiclePackagesModal
+        isOpen={isPackagesModalOpen}
+        onClose={() => setIsPackagesModalOpen(false)}
+        vehicle={currentVehicle}
       />
 
     </div>

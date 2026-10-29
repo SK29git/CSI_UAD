@@ -79,6 +79,113 @@ export const DEMO_VEHICLES = [
       "contractType": "SERVICEINCL",
       "expiryDate": "2024-07-10"
     },
+    "packages": [
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "17\" Lt/Aly wheels V-spoke 778 (Removable)",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "19\" BMW Individual Lt/Aly wheels Y-spokestyle 1038|Bicolour/MT,emerg. run. prop.",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "1 Year Campaign Insurance Premium",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "2 Yrs. Unlimited KM BMW Warranty from Regn.Date",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "5Yr Extended Warranty Cost",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "Adaptive LED headlights",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "Ambient light (Removable)",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "BMW Drive Recorder",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "BMW Live Cockpit Professional",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "BSI Plus 5 Years or 100,000 KM W.E.C.F",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "ConnectedDrive Services",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "Harman Kardon surround sound system",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "M Sport package Pro",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "Parking Assistant Plus",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      },
+      {
+        "vehicleNumber": "167781",
+        "sequenceNumber": "0",
+        "packageDescription": "Storage for wireless charging",
+        "vin": "WBA31HC04SFT82888",
+        "registrationDate": "2024-12-19"
+      }
+    ],
     "serviceType": "",
     "package": "",
     "price": "",

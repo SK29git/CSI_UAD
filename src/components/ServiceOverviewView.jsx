@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import { apiFetch } from '../utils/api';
 import { 
@@ -10,9 +10,12 @@ import {
   FaFileAlt,
   FaHistory,
   FaRedo,
-  FaExchangeAlt
+  FaExchangeAlt,
+  FaBoxes,
+  FaSearch
 } from 'react-icons/fa';
 import VehicleOwnershipTransferModal from './VehicleOwnershipTransferModal';
+import VehiclePackagesModal from './VehiclePackagesModal';
 
 export default function ServiceOverviewView() {
   const { 
@@ -42,11 +45,36 @@ export default function ServiceOverviewView() {
   const [contractData, setContractData] = useState(null);
   const [loadingOverviewApis, setLoadingOverviewApis] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isPackagesModalOpen, setIsPackagesModalOpen] = useState(false);
+  const [isPackagesInlineExpanded, setIsPackagesInlineExpanded] = useState(false);
+  const [packageInlineFilter, setPackageInlineFilter] = useState('');
 
   // Combined vehicle list prioritizing the direct API response
   const allVehicles = customerVehicleList.length > 0 ? customerVehicleList : (vehicles || []);
   const currentVehicle = vehicleSummaryData || (allVehicles.find(v => v.vin === selectedVin)) || vehicleDetails || (allVehicles.length > 0 ? allVehicles[0] : null);
   const vin = selectedVin || currentVehicle?.vin || "";
+
+  // Packages list from current vehicle or summary data
+  const packagesList = useMemo(() => {
+    if (currentVehicle?.packages && Array.isArray(currentVehicle.packages)) {
+      return currentVehicle.packages;
+    }
+    if (vehicleSummaryData?.packages && Array.isArray(vehicleSummaryData.packages)) {
+      return vehicleSummaryData.packages;
+    }
+    return [];
+  }, [currentVehicle, vehicleSummaryData]);
+
+  const filteredInlinePackages = useMemo(() => {
+    return packagesList.filter(p => {
+      if (!packageInlineFilter.trim()) return true;
+      return (p.packageDescription || '').toLowerCase().includes(packageInlineFilter.toLowerCase());
+    });
+  }, [packagesList, packageInlineFilter]);
+
+  const displayedInlinePackages = isPackagesInlineExpanded || packageInlineFilter.trim()
+    ? filteredInlinePackages
+    : filteredInlinePackages.slice(0, 8);
 
   // Fetch Vehicle Summaries by Customer ID (GET /api/v1/vehicles?group={group}&customerNumber={customerNumber})
   const fetchCustomerVehicleSummaries = async () => {
@@ -648,7 +676,116 @@ export default function ServiceOverviewView() {
           </div>
         )}
 
+        {/* Vehicle Packages & Factory Options Section */}
+        {packagesList.length > 0 && (
+          <div className="pt-4 border-t border-gray-100 flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs">
+                  <FaBoxes className="text-blue-600" /> Vehicle Packages &amp; Factory Equipment
+                </span>
+                <span className="bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200">
+                  {packagesList.length} Packages
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPackagesModalOpen(true)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold border border-blue-200 transition cursor-pointer shadow-2xs"
+                >
+                  <FaBoxes className="text-[10px]" />
+                  <span>View All Packages ({packagesList.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsPackagesInlineExpanded(!isPackagesInlineExpanded)}
+                  className="text-xs text-gray-500 hover:text-gray-700 font-semibold px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded cursor-pointer transition"
+                >
+                  {isPackagesInlineExpanded ? 'Show Less' : `Show More (${packagesList.length})`}
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Filter / Search input */}
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 max-w-sm">
+                <FaSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+                <input
+                  type="text"
+                  value={packageInlineFilter}
+                  onChange={(e) => setPackageInlineFilter(e.target.value)}
+                  placeholder="Filter packages (e.g. wheels, sport, BSI, warranty)..."
+                  className="w-full pl-7 pr-3 py-1 bg-gray-50 hover:bg-white focus:bg-white border border-gray-200 focus:border-blue-500 rounded-lg text-xs text-gray-800 placeholder-gray-400 focus:outline-none transition shadow-2xs"
+                />
+              </div>
+              {packageInlineFilter && (
+                <button
+                  onClick={() => setPackageInlineFilter('')}
+                  className="text-xs text-gray-500 hover:text-gray-700 font-bold"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Packages Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 pt-1 text-xs">
+              {displayedInlinePackages.map((pkg, pIdx) => {
+                const desc = pkg.packageDescription || 'Package Option';
+                const isRemovable = desc.includes('(Removable)');
+                const isWarranty = desc.toLowerCase().includes('warranty') || desc.toLowerCase().includes('warr') || desc.toLowerCase().includes('bsi') || desc.toLowerCase().includes('insurance');
+                const cleanDesc = desc.replace(/\s*\(Removable\)\s*/i, '').trim();
+
+                return (
+                  <div
+                    key={pIdx}
+                    onClick={() => setIsPackagesModalOpen(true)}
+                    className="p-2.5 bg-slate-50 hover:bg-blue-50/60 rounded-xl border border-slate-200 hover:border-blue-300 transition cursor-pointer flex flex-col justify-between gap-1 shadow-2xs group"
+                    title="Click to view all packages"
+                  >
+                    <span className="font-bold text-gray-900 text-[11px] leading-tight line-clamp-2 group-hover:text-blue-700">
+                      {cleanDesc}
+                    </span>
+                    <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                      {isRemovable && (
+                        <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.2 rounded border border-amber-200">
+                          Removable
+                        </span>
+                      )}
+                      {isWarranty && (
+                        <span className="text-[9px] bg-purple-100 text-purple-800 font-extrabold px-1.5 py-0.2 rounded border border-purple-200">
+                          BSI/Warranty
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {packagesList.length > 8 && !isPackagesInlineExpanded && !packageInlineFilter && (
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsPackagesModalOpen(true)}
+                  className="text-xs font-bold text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <span>+ {packagesList.length - 8} more packages installed (Click to view full list)</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
+
+      {/* Vehicle Packages Breakdown Modal */}
+      <VehiclePackagesModal
+        isOpen={isPackagesModalOpen}
+        onClose={() => setIsPackagesModalOpen(false)}
+        vehicle={currentVehicle}
+      />
 
       {/* Vehicle Ownership Transfer / Link Modal */}
       <VehicleOwnershipTransferModal

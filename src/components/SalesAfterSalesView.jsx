@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import { apiFetch, createSalesFollowUpCase } from '../utils/api';
+import VehiclePackagesModal from './VehiclePackagesModal';
 import { 
   FaWrench, 
   FaCalendarAlt, 
@@ -24,7 +25,8 @@ import {
   FaClock,
   FaBuilding,
   FaTimes,
-  FaLayerGroup
+  FaLayerGroup,
+  FaBoxes
 } from 'react-icons/fa';
 import { getFullMobileNumber } from '../utils/phoneUtils';
 
@@ -52,6 +54,7 @@ export default function SalesAfterSalesView() {
   // Tabs: 'CustomerVehicles' | 'ServiceBookings' | 'RetentionAlerts'
   const [activeTab, setActiveTab] = useState('CustomerVehicles');
   const [vehiclesList, setVehiclesList] = useState([]);
+  const [selectedVehicleForPackages, setSelectedVehicleForPackages] = useState(null);
   const [bookingsList, setBookingsList] = useState([]);
   const [serviceDueList, setServiceDueList] = useState([]);
   const [noServiceList, setNoServiceList] = useState([]);
@@ -551,6 +554,7 @@ export default function SalesAfterSalesView() {
                   <th className="py-3 px-3 bg-slate-100">Reg #</th>
                   <th className="py-3 px-3 bg-slate-100">Mileage</th>
                   <th className="py-3 px-3 bg-slate-100">Warranty Status</th>
+                  <th className="py-3 px-3 bg-slate-100">Packages</th>
                   <th className="py-3 px-3 bg-slate-100">Insurance</th>
                   <th className="py-3 px-3 bg-slate-100 text-right">Action</th>
                 </tr>
@@ -588,6 +592,21 @@ export default function SalesAfterSalesView() {
                           </span>
                         ) : (
                           <span className="text-gray-400 italic">No warranty</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap">
+                        {v.packages && v.packages.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedVehicleForPackages(v)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 cursor-pointer shadow-2xs transition"
+                            title="View installed vehicle packages"
+                          >
+                            <FaBoxes className="text-[9px]" />
+                            <span>{v.packages.length} Packages</span>
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-[10px] italic">None</span>
                         )}
                       </td>
                       <td className="py-3 px-3 whitespace-nowrap text-[10px]">
@@ -1099,6 +1118,13 @@ export default function SalesAfterSalesView() {
           </div>
         </div>
       )}
+
+      {/* Vehicle Packages Modal */}
+      <VehiclePackagesModal
+        isOpen={Boolean(selectedVehicleForPackages)}
+        onClose={() => setSelectedVehicleForPackages(null)}
+        vehicle={selectedVehicleForPackages}
+      />
 
     </div>
   );
