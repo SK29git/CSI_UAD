@@ -374,7 +374,7 @@ export default function SalesOverviewView() {
                         {fin.enquiryNumber && <div>Enquiry #: <strong className="font-mono text-blue-600">{fin.enquiryNumber}</strong></div>}
                         {fin.vehicleNumber && <div>Vehicle #: <strong className="font-mono text-gray-900">{fin.vehicleNumber}</strong></div>}
                         {fin.vin && <div>VIN: <strong className="font-mono text-gray-900">{fin.vin}</strong></div>}
-                        {fin.vehicle && <div>Vehicle: <strong>{typeof fin.vehicle === 'object' ? (fin.vehicle.description || fin.vehicle.model || JSON.stringify(fin.vehicle)) : String(fin.vehicle)}</strong></div>}
+                        {fin.vehicle && <div>Vehicle: <strong>{typeof fin.vehicle === 'object' ? (fin.vehicle.description || fin.vehicle.model || fin.vehicle.name || 'Vehicle') : String(fin.vehicle)}</strong></div>}
                         {fin.salesOrderType && <div>Order Type: <strong>{fin.salesOrderType}</strong></div>}
                         {fin.loanAmount !== undefined && fin.loanAmount !== null && fin.loanAmount !== "" && (
                           <div>Loan Amount: <strong className="text-gray-900 font-extrabold">AED {Number(fin.loanAmount).toLocaleString()}</strong></div>
@@ -435,7 +435,7 @@ export default function SalesOverviewView() {
                         )}
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs text-gray-700">
-                        {trd.vehicle && <div>Evaluated Vehicle: <strong>{typeof trd.vehicle === 'object' ? (trd.vehicle.description || trd.vehicle.model || JSON.stringify(trd.vehicle)) : String(trd.vehicle)}</strong></div>}
+                        {trd.vehicle && <div>Evaluated Vehicle: <strong>{typeof trd.vehicle === 'object' ? (trd.vehicle.description || trd.vehicle.model || trd.vehicle.name || 'Vehicle') : String(trd.vehicle)}</strong></div>}
                         {trd.vin && <div>VIN: <strong className="font-mono">{trd.vin}</strong></div>}
                         {trd.appraisedValue && <div>Appraised Value: <strong className="text-emerald-700 font-extrabold">{trd.appraisedValue}</strong></div>}
                         {trd.tradeInDate && <div>Trade Date: <span>{trd.tradeInDate}</span></div>}

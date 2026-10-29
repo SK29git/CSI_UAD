@@ -640,7 +640,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                   {Array.isArray(riskOverview.repeatComplaints) ? (
                     riskOverview.repeatComplaints.map((item, idx) => (
                       <div key={idx} className="bg-gray-50 p-1.5 rounded border border-gray-200">
-                        {typeof item === 'object' ? (item.description || item.subject || JSON.stringify(item)) : String(item)}
+                        {typeof item === 'object' ? (item.description || item.subject || item.title || 'Complaint Record') : String(item)}
                       </div>
                     ))
                   ) : (

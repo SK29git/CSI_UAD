@@ -41,7 +41,9 @@ export default function SalesVehicleOrdersView() {
     if (typeof val === 'object') {
       if (val.name) return val.name;
       if (val.description) return val.description;
-      return JSON.stringify(val);
+      if (val.model) return val.model;
+      if (val.status) return val.status;
+      return fallback;
     }
     return String(val);
   };
@@ -434,13 +436,6 @@ export default function SalesVehicleOrdersView() {
             )}
 
           </div>
-
-          <details className="cursor-pointer text-[10px] pt-1 border-t border-gray-200">
-            <summary className="font-bold text-gray-600 hover:text-gray-900">View Milestone JSON Data</summary>
-            <pre className="mt-1 font-mono text-[10px] p-2.5 bg-gray-900 text-emerald-400 rounded-lg overflow-x-auto max-h-48">
-              {JSON.stringify({ orderDetails, productionDetails, shipmentDetails, registrationDetails, milestonesDetails, vehicleReadyDetails }, null, 2)}
-            </pre>
-          </details>
         </div>
       )}
 
@@ -451,6 +446,6 @@ export default function SalesVehicleOrdersView() {
 function formatDisplay(val) {
   if (!val) return 'N/A';
   if (typeof val === 'string') return val;
-  if (typeof val === 'object') return val.description || val.model || val.name || JSON.stringify(val);
+  if (typeof val === 'object') return val.description || val.model || val.name || 'N/A';
   return String(val);
 }

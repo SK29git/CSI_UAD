@@ -552,7 +552,8 @@ export default function SalesNewLeadView() {
     if (typeof val === 'object') {
       if (val.name) return val.name;
       if (val.description) return val.description;
-      return JSON.stringify(val);
+      if (val.title) return val.title;
+      return fallback;
     }
     return String(val);
   };

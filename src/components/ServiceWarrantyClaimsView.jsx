@@ -22,7 +22,7 @@ export default function ServiceWarrantyClaimsView() {
     if (typeof val === 'object') {
       if (val.name) return val.name;
       if (val.description) return val.description;
-      return JSON.stringify(val);
+      return fallback;
     }
     return String(val);
   };
