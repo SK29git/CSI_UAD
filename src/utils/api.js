@@ -579,6 +579,20 @@ export async function updateCustomerCase(details, options = {}) {
   });
 }
 
+/**
+ * Creates a Sales / Advisor Follow-Up Case via Keyloop RPA Intake (caseType: 'CREATE_SALES_FOLLOW_UP')
+ * POST /api/intake/cases
+ * @param {object} details - { group, customerId, customerName, followupId, dueDate, dueTime, branchCode, notes }
+ * @param {object} options - Optional parameters (createdBy, callbackUrl, onProgress)
+ */
+export async function createSalesFollowUpCase(details, options = {}) {
+  return await executeRpaCase("CREATE_SALES_FOLLOW_UP", details, {
+    callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,
+    createdBy: options.createdBy || "genesys",
+    ...options,
+  });
+}
+
 /* ========================================================================== */
 /* AGMC SMS GATEWAY SERVICE (POST https://agmcutil.agmcgroup.ae/api/v1/sms/send)*/
 /* ========================================================================== */
