@@ -442,6 +442,64 @@ export const COMPLAINT_API_KEY =
   "appuaaf5f0f304ff2ec2r63e5055c484fd739325cfb0cd3c3456ce8b55357e5b";
 
 /**
+ * Fetches Customer Complaints from CCaaS API:
+ * GET /api/v1/complaints/{group}/customers/{customerNumber}?status={status}
+ * If status is not passed or blank -> all records returned
+ * If status = 'open' -> open records returned
+ * If status = 'closed' -> closed records returned
+ * @param {string} group - e.g. "BMW"
+ * @param {string} customerNumber - e.g. "178760"
+ * @param {string} status - "" | "open" | "closed"
+ */
+export async function getCustomerComplaintsByStatus(group = "BMW", customerNumber, status = "") {
+  if (!customerNumber) return { ok: true, data: [] };
+
+  const cleanGroup = encodeURIComponent(group || "BMW");
+  const cleanCust = encodeURIComponent(customerNumber);
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  const endpoint = `/api/v1/complaints/${cleanGroup}/customers/${cleanCust}${query}`;
+  const directUrl = `${API_BASE_URL}${endpoint}`;
+
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Api-Key": COMPLAINT_API_KEY,
+  };
+
+  let res;
+  try {
+    res = await fetch(endpoint, {
+      method: "GET",
+      headers,
+    });
+    if (!res.ok && res.status !== 404) {
+      throw new Error(`Proxy status ${res.status}`);
+    }
+  } catch (err) {
+    console.warn(`Relative fetch to ${endpoint} failed, trying direct URL:`, err);
+    try {
+      res = await fetch(directUrl, {
+        method: "GET",
+        headers,
+      });
+    } catch (directErr) {
+      console.error(`Direct fetch to ${directUrl} failed:`, directErr);
+      return { ok: false, error: directErr.message, data: [] };
+    }
+  }
+
+  try {
+    const contentType = res.headers.get("content-type") || "";
+    if (res.ok && contentType.includes("application/json")) {
+      const data = await res.json();
+      return { ok: true, data: Array.isArray(data) ? data : [], status: res.status };
+    }
+    return { ok: false, data: [], status: res?.status };
+  } catch (err) {
+    return { ok: false, error: err.message, data: [] };
+  }
+}
+
+/**
  * Creates a Customer Complaint ticket via CCaaS Complaints API (POST /api/v1/complaints)
  * Integrates simultaneously with CXPulse CRM and Keyloop DMS.
  * @param {object} details - { company, customerId, customerName, customerPhone, customerEmail, complaint, category, complaintPriority, department, source, complaintGroup, externalRef }
