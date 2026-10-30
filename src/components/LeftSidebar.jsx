@@ -348,13 +348,9 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                     <span>SMS</span>
                   </button>
 
-                  {customer?.isProspect && !customer?.isNewRegistration && customer?.customerType !== 'CUSTOMER' ? (
-                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs flex items-center gap-1 ${
-                      customer?.customerType === 'CONVERTED_PROSPECT'
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-amber-600 text-white'
-                    }`}>
-                      <span>★</span> {customer?.customerType === 'CONVERTED_PROSPECT' ? 'CONVERTED' : 'PROSPECT'}
+                  {customer?.isProspect ? (
+                    <span className="bg-amber-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs flex items-center gap-1">
+                      <span>★</span> PROSPECT
                     </span>
                   ) : (
                     <>
@@ -366,7 +362,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                           <FaCrown className="text-[9px]" /> VIP
                         </span>
                       )}
-                      {loyaltyTier !== 'N/A' && loyaltyTier !== 'NEW' && (
+                      {loyaltyTier !== 'N/A' && loyaltyTier !== 'NEW' && loyaltyTier !== 'PROSPECT' && (
                         <span className="bg-purple-700 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">
                           {loyaltyTier}
                         </span>
@@ -404,13 +400,13 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
           <div className="grid grid-cols-2 gap-y-3 gap-x-2">
             <div>
               <span className="text-gray-400 block text-[11px]">
-                {customer?.isProspect && !customer?.isNewRegistration && customer?.customerType !== 'CUSTOMER' ? 'Prospect Since' : 'Customer Since'}
+                {customer?.isProspect ? 'Prospect Since' : 'Customer Since'}
               </span>
               <span className="font-semibold text-gray-800">{customerSince}</span>
             </div>
             <div>
               <span className="text-gray-400 block text-[11px]">
-                {customer?.isProspect && !customer?.isNewRegistration && customer?.customerType !== 'CUSTOMER' ? 'Prospect / Lead ID' : 'Customer ID'}
+                {customer?.isProspect ? 'Prospect ID' : 'Customer ID'}
               </span>
               <span className="font-semibold text-gray-800">
                 {customer?.customerNumber || (customer?.rpaTaskId ? `Pending (#${customer.rpaTaskId.slice(0, 8)})` : (customer?.isNewRegistration ? 'Pending Keyloop ID' : (customer?.prospectNumber || customerId || 'Pending')))}
@@ -426,7 +422,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <span className="font-semibold text-gray-800">{getFormattedDate ? getFormattedDate(customer?.lastUpdated) : (customer?.lastUpdated || 'N/A')}</span>
             </div>
 
-            {customer?.isProspect && !customer?.isNewRegistration && customer?.customerType !== 'CUSTOMER' ? (
+            {customer?.isProspect ? (
               <>
                 <div>
                   <span className="text-gray-400 block text-[11px]">Lead Source</span>

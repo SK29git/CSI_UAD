@@ -291,9 +291,9 @@ export const normalizeProspectRecord = (p, fallbackGroup = 'BMW', fallbackMobile
     customerNumber: custNo,
     prospectNumber: p.prospectNumber || p.leadId || '',
     leadId: p.leadId || '',
-    customerType: isConverted ? 'CONVERTED_PROSPECT' : 'PROSPECT',
+    customerType: 'PROSPECT',
     isProspect: true,
-    isWebLead: Boolean(p.linkType === 'PR' || p.description || p.leadSource),
+    isWebLead: false,
     salutation: p.titleCode || p.salutation || '',
     firstName: fName,
     middleName: '',
@@ -325,7 +325,7 @@ export const normalizeProspectRecord = (p, fallbackGroup = 'BMW', fallbackMobile
     },
     leadSource: p.leadSource || p.description || 'Sales Prospect',
     status: p.status || (isConverted ? 'CONVERTED' : 'OPEN'),
-    loyaltyTier: isConverted ? 'CONVERTED' : 'PROSPECT',
+    loyaltyTier: 'PROSPECT',
     notes: p.notes || ''
   };
 };
@@ -394,7 +394,7 @@ export const isExistingCustomer = (c) => {
   if (!c) return false;
   const custNo = String(c.customerNumber || '').trim();
   if (!custNo || custNo === 'PROSPECT' || custNo === 'null' || custNo === 'undefined') return false;
-  if (c.isProspect && c.customerType !== 'CONVERTED_PROSPECT') return false;
+  if (c.isProspect) return false;
   if (c.customerType === 'PROSPECT' || c.customerType === 'NEW_CUSTOMER') return false;
   if (c.isNewRegistration && !custNo) return false;
   return true;
@@ -2004,6 +2004,7 @@ export function CustomerProvider({ children }) {
 
   const getLoyaltyTier = () => {
     if (!customer) return 'N/A';
+    if (customer?.isProspect) return 'PROSPECT';
     const tier = customer?.loyaltyTier?.trim();
     if (tier) {
       if (tier.toUpperCase() === 'WEB LEAD' || tier.toUpperCase() === 'WEB_LEAD') return 'PROSPECT';

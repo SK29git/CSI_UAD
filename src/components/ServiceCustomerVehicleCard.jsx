@@ -163,11 +163,15 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <h3 className="font-extrabold text-gray-900 text-base leading-tight truncate">{customerName}</h3>
-                  {loyaltyTier && loyaltyTier !== 'N/A' && (
+                  {customer?.isProspect ? (
+                    <span className="bg-amber-600 text-white text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider shadow-2xs">
+                      PROSPECT
+                    </span>
+                  ) : loyaltyTier && loyaltyTier !== 'N/A' && loyaltyTier !== 'PROSPECT' ? (
                     <span className="bg-purple-700 text-white text-[9px] font-extrabold px-2 py-0.5 rounded uppercase tracking-wider shadow-2xs">
                       {loyaltyTier}
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <div className="mt-2 space-y-1 text-[11px] text-gray-700">
                   <div className="flex items-center gap-2">
@@ -253,8 +257,12 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
               </div>
 
               <div>
-                <span className="text-gray-500 block text-[11px] font-semibold">Loyalty Tier</span>
-                <span className="font-extrabold text-gray-900">{loyaltyTier}</span>
+                <span className="text-gray-500 block text-[11px] font-semibold">
+                  {customer?.isProspect ? 'Profile Status' : 'Loyalty Tier'}
+                </span>
+                <span className={`font-extrabold ${customer?.isProspect ? 'text-amber-700' : 'text-gray-900'}`}>
+                  {customer?.isProspect ? 'PROSPECT' : loyaltyTier}
+                </span>
               </div>
               <div>
                 <span className="text-gray-500 block text-[11px] font-semibold">Nationality</span>
