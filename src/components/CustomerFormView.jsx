@@ -20,8 +20,6 @@ import {
   FaCopy,
   FaTimes,
   FaCheckCircle,
-  FaCommentAlt,
-  FaWhatsapp,
   FaIdCard
 } from 'react-icons/fa';
 
@@ -637,88 +635,6 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                   className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg font-semibold text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors shadow-2xs"
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Section 4: Communication Consents */}
-          <div>
-            <div className="pb-2 mb-3 border-b border-gray-100 flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-600"></span>
-                4. Communication Consents & Channel Permissions
-              </span>
-              <span className="text-[11px] text-gray-400">Opt-in marketing and notification channels</span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <label className="p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg flex items-center gap-2.5 cursor-pointer transition-all">
-                <input
-                  type="checkbox"
-                  checked={formData.consents.phone}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    consents: { ...prev.consents, phone: e.target.checked }
-                  }))}
-                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                />
-                <div className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
-                  <FaPhoneAlt className="text-blue-500 text-[10px]" />
-                  <span>Phone Calls</span>
-                </div>
-              </label>
-
-              <label className="p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg flex items-center gap-2.5 cursor-pointer transition-all">
-                <input
-                  type="checkbox"
-                  checked={formData.consents.sms}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    consents: { ...prev.consents, sms: e.target.checked }
-                  }))}
-                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                />
-                <div className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
-                  <FaCommentAlt className="text-blue-500 text-[10px]" />
-                  <span>SMS</span>
-                </div>
-              </label>
-
-              <label className="p-2.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg flex items-center gap-2.5 cursor-pointer transition-all">
-                <input
-                  type="checkbox"
-                  checked={formData.consents.whatsapp}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    consents: { ...prev.consents, whatsapp: e.target.checked }
-                  }))}
-                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
-                />
-                <div className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
-                  <FaWhatsapp className="text-emerald-500 text-xs" />
-                  <span>WhatsApp</span>
-                </div>
-              </label>
-
-              <label className={`p-2.5 border rounded-lg flex items-center gap-2.5 transition-all ${
-                formData.email && formData.email.includes('@') 
-                  ? 'bg-gray-50 hover:bg-gray-100 border-gray-200 cursor-pointer' 
-                  : 'bg-gray-100/70 border-gray-200 opacity-60 cursor-not-allowed'
-              }`}>
-                <input
-                  type="checkbox"
-                  disabled={!formData.email || !formData.email.includes('@')}
-                  checked={Boolean(formData.email && formData.email.includes('@') && formData.consents.email)}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    consents: { ...prev.consents, email: e.target.checked }
-                  }))}
-                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
-                />
-                <div className="text-xs font-semibold text-gray-800 flex items-center gap-1.5">
-                  <FaEnvelope className="text-blue-500 text-[10px]" />
-                  <span>Email {(!formData.email || !formData.email.includes('@')) && <span className="text-[10px] text-gray-400 font-normal">(N/A)</span>}</span>
-                </div>
-              </label>
             </div>
           </div>
 
