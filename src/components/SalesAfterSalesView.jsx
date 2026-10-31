@@ -74,6 +74,8 @@ export default function SalesAfterSalesView() {
   const [followUpGroup, setFollowUpGroup] = useState("BMW");
   const [followUpBranchCode, setFollowUpBranchCode] = useState("10");
   const [followUpAdvisorId, setFollowUpAdvisorId] = useState("kunnath");
+  const [followUpAdvisorName, setFollowUpAdvisorName] = useState("");
+  const [followUpAdvisorDisplay, setFollowUpAdvisorDisplay] = useState("");
   const [followUpDueDate, setFollowUpDueDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -99,14 +101,34 @@ export default function SalesAfterSalesView() {
     const custName = options.customerName || customerName || "Customer Record";
     const grp = options.group || group || "BMW";
     const branchCode = options.branchCode || customer?.branchCode || "10";
-    const defaultNotes = options.notes || "please do a follow up on this customer";
-    const advisor = options.advisorId || "kunnath";
+    const rawAdvisorId = String(options.advisorId || "kunnath").trim();
+    const rawAdvisorName = String(options.advisorName || "").trim();
+
+    // Show name and code both when advisor name is available
+    let displayAdvisor = rawAdvisorId;
+    if (rawAdvisorName && rawAdvisorId) {
+      if (rawAdvisorName.toLowerCase().includes(rawAdvisorId.toLowerCase())) {
+        displayAdvisor = rawAdvisorName;
+      } else if (rawAdvisorName === "Assigned Service Advisor" || rawAdvisorName === "Service Advisor") {
+        displayAdvisor = rawAdvisorId ? `Advisor #${rawAdvisorId}` : rawAdvisorName;
+      } else {
+        displayAdvisor = `${rawAdvisorName} (${rawAdvisorId})`;
+      }
+    } else if (rawAdvisorName) {
+      displayAdvisor = rawAdvisorName;
+    } else if (rawAdvisorId) {
+      displayAdvisor = rawAdvisorId;
+    }
+
+    const defaultNotes = options.notes || `Please follow up on this customer with Service Advisor ${displayAdvisor}`;
 
     setFollowUpCustomerId(custId);
     setFollowUpCustomerName(custName);
     setFollowUpGroup(grp);
     setFollowUpBranchCode(branchCode);
-    setFollowUpAdvisorId(advisor);
+    setFollowUpAdvisorId(rawAdvisorId);
+    setFollowUpAdvisorName(rawAdvisorName);
+    setFollowUpAdvisorDisplay(displayAdvisor);
     setFollowUpNotes(defaultNotes);
     setShowFollowUpModal(true);
   };
@@ -116,11 +138,20 @@ export default function SalesAfterSalesView() {
     setSubmittingFollowUp(true);
     setFollowUpToast(null);
 
+    // Extract advisor ID/code from display string if present
+    let resolvedAdvisorId = String(followUpAdvisorDisplay || followUpAdvisorId || "kunnath").trim();
+    const parensMatch = resolvedAdvisorId.match(/\(([^)]+)\)/);
+    if (parensMatch && parensMatch[1]) {
+      resolvedAdvisorId = parensMatch[1].trim();
+    } else if (resolvedAdvisorId.startsWith("Advisor #")) {
+      resolvedAdvisorId = resolvedAdvisorId.replace("Advisor #", "").trim();
+    }
+
     const payload = {
       group: followUpGroup || group || "BMW",
       customerId: String(followUpCustomerId || customerNumber || "").trim(),
       customerName: String(followUpCustomerName || customerName || "").trim(),
-      followupId: String(followUpAdvisorId || "kunnath").trim(),
+      followupId: resolvedAdvisorId || "kunnath",
       dueDate: followUpDueDate || new Date().toISOString().split('T')[0],
       dueTime: followUpDueTime || "11:00",
       branchCode: followUpBranchCode || "10",
@@ -679,6 +710,8 @@ export default function SalesAfterSalesView() {
                   const veh = b.vehicle || b.vin || 'Customer Vehicle';
                   const date = b.scheduledDate || b.bookingDate || b.date || 'N/A';
                   const status = b.status || b.bookingStatus || 'Open';
+                  const advId = b.advisorId || b.advisor?.code || b.advisorCode || (typeof b.advisor === 'string' && /^\d+$/.test(b.advisor.trim()) ? b.advisor : '');
+                  const advName = b.advisorName || b.advisor?.name || b.serviceAdvisorName || (typeof b.advisor === 'string' && isNaN(b.advisor) ? b.advisor : '');
 
                   return (
                     <tr key={idx} className="hover:bg-teal-50/40 transition-colors">
@@ -702,6 +735,8 @@ export default function SalesAfterSalesView() {
                           <button
                             type="button"
                             onClick={() => handleOpenFollowUp({
+                              advisorId: advId,
+                              advisorName: advName,
                               notes: `Follow up on WIP #${wipNo} (${veh}, Scheduled: ${date})`
                             })}
                             className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-[10px] font-bold cursor-pointer transition-colors inline-flex items-center gap-1"
@@ -1002,15 +1037,24 @@ export default function SalesAfterSalesView() {
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
                     <FaUserTie className="text-blue-500 text-[10px]" />
-                    <span>Follow-Up ID</span>
+                    <span>Service Advisor</span>
                   </label>
                   <input
                     type="text"
-                    value={followUpAdvisorId}
-                    onChange={(e) => setFollowUpAdvisorId(e.target.value)}
-                    placeholder="e.g. kunnath"
+                    value={followUpAdvisorDisplay}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFollowUpAdvisorDisplay(val);
+                      const m = val.match(/\(([^)]+)\)/);
+                      if (m && m[1]) {
+                        setFollowUpAdvisorId(m[1].trim());
+                      } else {
+                        setFollowUpAdvisorId(val.trim());
+                      }
+                    }}
+                    placeholder="e.g. Advisor Name (0776) or kunnath"
                     required
-                    className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-800 focus:outline-none focus:border-blue-500"
+                    className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
                   />
                 </div>
 

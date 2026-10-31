@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useCustomer } from '../context/CustomerContext';
-import { apiFetch, getServiceAppointments, deleteServiceAppointment } from '../utils/api';
+import { apiFetch, getServiceAppointments, deleteServiceAppointment, createSalesFollowUpCase } from '../utils/api';
 import { 
   FaCalendarCheck, 
   FaCar, 
@@ -19,7 +19,12 @@ import {
   FaTag,
   FaBan,
   FaExclamationTriangle,
-  FaCheck
+  FaCheck,
+  FaUserTie,
+  FaCommentDots,
+  FaCalendarPlus,
+  FaPaperPlane,
+  FaClipboardList
 } from 'react-icons/fa';
 
 const formatDate = (dateStr) => {
@@ -81,6 +86,119 @@ export default function ServiceOpenBookingsView() {
   const [loading, setLoading] = useState(true);
   const [fetchMode, setFetchMode] = useState('customer'); // 'customer' or 'vehicle'
   const [expandedBookingId, setExpandedBookingId] = useState(null);
+
+  // Follow-Up RPA State (caseType: 'CREATE_SALES_FOLLOW_UP' via createSalesFollowUpCase - Change 34)
+  const [showFollowUpModal, setShowFollowUpModal] = useState(false);
+  const [followUpCustomerId, setFollowUpCustomerId] = useState("");
+  const [followUpCustomerName, setFollowUpCustomerName] = useState("");
+  const [followUpGroup, setFollowUpGroup] = useState("BMW");
+  const [followUpBranchCode, setFollowUpBranchCode] = useState("10");
+  const [followUpAdvisorId, setFollowUpAdvisorId] = useState("kunnath");
+  const [followUpAdvisorName, setFollowUpAdvisorName] = useState("");
+  const [followUpAdvisorDisplay, setFollowUpAdvisorDisplay] = useState("");
+  const [followUpWipNo, setFollowUpWipNo] = useState("");
+  const [followUpDueDate, setFollowUpDueDate] = useState(() => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split('T')[0];
+  });
+  const [followUpDueTime, setFollowUpDueTime] = useState("11:00");
+  const [followUpNotes, setFollowUpNotes] = useState("Please follow up on workshop service booking");
+  const [submittingFollowUp, setSubmittingFollowUp] = useState(false);
+  const [followUpFeedback, setFollowUpFeedback] = useState(null);
+
+  const handleOpenFollowUp = (options = {}) => {
+    const custId = options.customerId || customerNumber || "120023";
+    const custName = options.customerName || customer?.fullName || `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() || "Customer Record";
+    const grp = options.group || group || "BMW";
+    const branchCode = options.branchCode || customer?.branchCode || "10";
+    const rawAdvisorId = String(options.advisorId || "kunnath").trim();
+    const rawAdvisorName = String(options.advisorName || "").trim();
+    const wipNo = options.wipNo || options.jobNumber || options.bookingId || "";
+
+    // Show name and code both when advisor name is available
+    let displayAdvisor = rawAdvisorId;
+    if (rawAdvisorName && rawAdvisorId) {
+      if (rawAdvisorName.toLowerCase().includes(rawAdvisorId.toLowerCase())) {
+        displayAdvisor = rawAdvisorName;
+      } else if (rawAdvisorName === "Assigned Service Advisor" || rawAdvisorName === "Service Advisor") {
+        displayAdvisor = rawAdvisorId ? `Advisor #${rawAdvisorId}` : rawAdvisorName;
+      } else {
+        displayAdvisor = `${rawAdvisorName} (${rawAdvisorId})`;
+      }
+    } else if (rawAdvisorName) {
+      displayAdvisor = rawAdvisorName;
+    } else if (rawAdvisorId) {
+      displayAdvisor = rawAdvisorId;
+    }
+
+    const defaultNotes = options.notes || (wipNo ? `Follow up on WIP #${wipNo} with Service Advisor ${displayAdvisor}` : `Please follow up on workshop booking with Service Advisor ${displayAdvisor}`);
+
+    setFollowUpCustomerId(custId);
+    setFollowUpCustomerName(custName);
+    setFollowUpGroup(grp);
+    setFollowUpBranchCode(branchCode);
+    setFollowUpAdvisorId(rawAdvisorId);
+    setFollowUpAdvisorName(rawAdvisorName);
+    setFollowUpAdvisorDisplay(displayAdvisor);
+    setFollowUpWipNo(wipNo);
+    setFollowUpNotes(defaultNotes);
+    setFollowUpFeedback(null);
+    setShowFollowUpModal(true);
+  };
+
+  const handleFollowUpSubmit = async (e) => {
+    e.preventDefault();
+    setSubmittingFollowUp(true);
+    setFollowUpFeedback(null);
+
+    // Extract advisor ID/code from display string if present (e.g. "Name (0776)" -> "0776")
+    let resolvedAdvisorId = String(followUpAdvisorDisplay || followUpAdvisorId || "kunnath").trim();
+    const parensMatch = resolvedAdvisorId.match(/\(([^)]+)\)/);
+    if (parensMatch && parensMatch[1]) {
+      resolvedAdvisorId = parensMatch[1].trim();
+    } else if (resolvedAdvisorId.startsWith("Advisor #")) {
+      resolvedAdvisorId = resolvedAdvisorId.replace("Advisor #", "").trim();
+    }
+
+    const payload = {
+      group: followUpGroup || group || "BMW",
+      customerId: String(followUpCustomerId || customerNumber || "").trim(),
+      customerName: String(followUpCustomerName || customer?.fullName || "").trim(),
+      followupId: resolvedAdvisorId || "kunnath",
+      dueDate: followUpDueDate || new Date().toISOString().split('T')[0],
+      dueTime: followUpDueTime || "11:00",
+      branchCode: followUpBranchCode || "10",
+      notes: String(followUpNotes || "").trim() || "Follow up with Service Advisor"
+    };
+
+    try {
+      const res = await createSalesFollowUpCase(payload);
+      if (res && (res.ok || res.taskId)) {
+        setFollowUpFeedback({
+          ok: true,
+          message: `Follow-up task scheduled successfully with Service Advisor ${followUpAdvisorDisplay || followUpAdvisorName || resolvedAdvisorId}!`
+        });
+        setTimeout(() => {
+          setShowFollowUpModal(false);
+          setFollowUpFeedback(null);
+        }, 1800);
+      } else {
+        setFollowUpFeedback({
+          ok: false,
+          message: res?.errorMessage || "Failed to schedule follow-up."
+        });
+      }
+    } catch (err) {
+      console.error("Create follow up error:", err);
+      setFollowUpFeedback({
+        ok: false,
+        message: err.message || "Failed to submit follow-up task."
+      });
+    } finally {
+      setSubmittingFollowUp(false);
+    }
+  };
 
   // Fetch Service Appointments (GET /api/service/appointments?regNumber={plate})
   const fetchGeelyAppointments = async () => {
@@ -362,30 +480,41 @@ export default function ServiceOpenBookingsView() {
           ) : (
             <div className="flex flex-col gap-3">
               {geelyAppointments.map((apt, idx) => {
-                const roId = apt.repairOrderId || apt.appointmentId || apt.id || `RO-${idx}`;
+                const roId = apt.repairOrderId || apt.appointmentId || apt.id || `RO-${idx + 1}`;
                 const aptDate = apt.appointment?.date || apt.startDate || 'Scheduled';
                 const aptTime = apt.appointment?.dropOffTime || apt.appointment?.time || '10:15-10:30';
                 const vehicleDesc = apt.vehicle?.description || `${apt.vehicle?.referenceData?.makeCode || apt.vehicle?.make || 'Vehicle'} ${apt.vehicle?.referenceData?.modelCode || ''}`.trim();
                 const plate = apt.vehicle?.licensePlate || apt.licensePlateNo || geelyPlate;
                 const locId = apt.details?.dealershipLocationId || apt.dealershipLocationId || 40;
+                const rawAdv = (typeof apt.advisor === 'object' && apt.advisor !== null) ? apt.advisor : {};
+                const rawSa = (typeof apt.serviceAdvisor === 'object' && apt.serviceAdvisor !== null) ? apt.serviceAdvisor : {};
+                const advisorId = rawAdv.code || rawAdv.id || rawSa.code || rawSa.id || apt.advisorId || apt.advisorCode || (typeof apt.advisor === 'string' && (/^\d+$/.test(apt.advisor.trim()) || apt.advisor.length <= 6) ? apt.advisor : '') || 'kunnath';
+                const advisorNameCandidate = rawAdv.name || rawAdv.fullName || rawSa.name || rawSa.fullName || apt.advisorName || apt.serviceAdvisorName || (typeof apt.serviceAdvisor === 'string' && isNaN(apt.serviceAdvisor) ? apt.serviceAdvisor : '') || (typeof apt.advisor === 'string' && isNaN(apt.advisor) ? apt.advisor : '') || '';
+                const advisorName = advisorNameCandidate && advisorNameCandidate !== advisorId ? advisorNameCandidate : (advisorId ? `Advisor #${advisorId}` : 'Assigned Service Advisor');
+                const workshopStatus = apt.status || 'IN_PROGRESS';
+                const workshopComments = apt.comments || apt.notes || apt.workshopComments || apt.instructions || 'Vehicle registered in workshop queue. Routine maintenance & multi-point inspection in progress.';
 
                 return (
                   <div 
                     key={roId}
-                    className="bg-white rounded-xl border border-gray-200 shadow-2xs hover:shadow-xs transition-all overflow-hidden"
+                    className="bg-white rounded-xl border border-gray-200 shadow-2xs hover:shadow-xs transition-all overflow-hidden flex flex-col gap-0"
                   >
                     <div className="bg-slate-50/80 px-4 py-3 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 flex-wrap">
                         <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 font-bold flex items-center justify-center shrink-0">
                           <FaCar className="text-sm" />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-bold text-gray-900 text-xs leading-tight">
                               Repair Order #{roId}
                             </span>
+                            {/* WIP Badge (Change 33) */}
+                            <span className="font-mono font-bold text-teal-800 text-xs bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                              WIP #{roId}
+                            </span>
                             <span className="bg-emerald-50 text-emerald-800 border border-emerald-300 font-bold text-[10px] px-2 py-0.5 rounded-full uppercase">
-                              {apt.status || 'CREATED'}
+                              {workshopStatus}
                             </span>
                           </div>
                           <span className="text-[10px] text-gray-500 font-mono">
@@ -394,23 +523,43 @@ export default function ServiceOpenBookingsView() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                      <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+                        {/* Follow-Up with Service Advisor Button (Change 34) */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenFollowUp({
+                            customerId: customerNumber || "120023",
+                            customerName: customer?.fullName || "Customer Record",
+                            group: group || "GEELY",
+                            branchCode: String(locId),
+                            advisorId: advisorId,
+                            advisorName: advisorName,
+                            wipNo: roId,
+                            notes: `Follow up with Service Advisor ${advisorName} on WIP / Repair Order #${roId} (${vehicleDesc || plate})`
+                          })}
+                          className="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95"
+                          title="Schedule follow-up task with Service Advisor"
+                        >
+                          <FaCalendarPlus className="text-[11px]" />
+                          <span>Follow-Up with Advisor</span>
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => handleOpenCancelModal(apt)}
                           className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
                           <FaBan className="text-[11px]" />
-                          <span>Cancel Appointment</span>
+                          <span>Cancel</span>
                         </button>
                       </div>
                     </div>
 
-                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-white text-xs">
+                    <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-white text-xs border-b border-gray-100">
                       <div>
                         <span className="text-[10px] text-gray-400 font-bold uppercase block">Vehicle</span>
                         <span className="font-bold text-gray-800 block truncate">{vehicleDesc || 'Customer Vehicle'}</span>
-                        <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
                           <span className="text-[10px] font-mono font-bold text-blue-700">Plate: {plate}</span>
                           {(apt.batteryId || apt.batteryID || apt.battery_id || apt.vehicle?.batteryId || apt.vehicle?.batteryID) && (
                             <span className="text-[10px] font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
@@ -426,18 +575,43 @@ export default function ServiceOpenBookingsView() {
                         <span className="text-[11px] text-gray-600 font-medium">{aptTime}</span>
                       </div>
 
+                      {/* Service Advisor (Change 31) */}
                       <div>
-                        <span className="text-[10px] text-gray-400 font-bold uppercase block">Workshop Location</span>
-                        <span className="font-bold text-gray-800 block">Location ID #{locId}</span>
-                        <span className="text-[10px] text-gray-500">AGMC Service Center</span>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase block">Service Advisor</span>
+                        <div className="flex items-center gap-1.5 font-bold text-gray-900">
+                          <FaUserTie className="text-blue-600 text-xs shrink-0" />
+                          <span className="truncate">{advisorName}</span>
+                        </div>
+                        <span className="text-[10px] text-gray-500 block truncate mt-0.5">Location #{locId} (AGMC Service)</span>
                       </div>
 
+                      {/* WIP Information (Change 33) */}
                       <div>
-                        <span className="text-[10px] text-gray-400 font-bold uppercase block">Service Type</span>
-                        <span className="font-bold text-emerald-800 block">Periodic Maintenance</span>
-                        <span className="text-[10px] text-gray-500">Keyloop Autoline Sync</span>
+                        <span className="text-[10px] text-gray-400 font-bold uppercase block">WIP & Job Info</span>
+                        <span className="font-mono font-bold text-teal-800 block">WIP #{roId}</span>
+                        <span className="text-[10px] text-gray-500 block">Periodic Maintenance / Inspection</span>
                       </div>
                     </div>
+
+                    {/* Workshop Status & Comments (Change 32) */}
+                    <div className="px-4 py-2.5 bg-slate-50/70 flex flex-col gap-1 text-[11px]">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-gray-700 flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
+                          <FaWrench className="text-blue-600 text-[10px]" />
+                          <span>Workshop Status:</span>
+                          <span className="font-extrabold text-blue-900 ml-0.5">{workshopStatus}</span>
+                        </span>
+                        <span className="text-[10px] text-gray-500 font-mono">DMS Active Order #{roId}</span>
+                      </div>
+                      <div className="flex items-start gap-1.5 mt-0.5">
+                        <FaCommentDots className="text-amber-500 text-xs shrink-0 mt-0.5" />
+                        <p className="text-gray-800 leading-snug font-medium text-[11px]">
+                          <strong className="text-gray-600 mr-1">Workshop Comments:</strong>
+                          {workshopComments}
+                        </p>
+                      </div>
+                    </div>
+
                   </div>
                 );
               })}
@@ -532,15 +706,25 @@ export default function ServiceOpenBookingsView() {
         >
           {openBookings.map((b, idx) => {
             const bookingId = b.bookingId || b.wipNumber || String(idx);
+            const wipNo = b.wipNumber || b.jobNumber || b.bookingId || `WIP-${idx + 1}`;
             const isExpanded = expandedBookingId === bookingId;
 
             // Extract branch display safely
-            const branchName = b.branch?.name || (b.branch?.code ? `Branch ${b.branch.code}` : (typeof b.branch === 'string' ? b.branch : '-'));
-            const branchCode = b.branch?.code || '';
+            const branchName = b.branch?.name || (b.branch?.code ? `Branch ${b.branch.code}` : (typeof b.branch === 'string' ? b.branch : 'AGMC Service Centre'));
+            const branchCode = b.branch?.code || customer?.branchCode || '10';
 
-            // Extract advisor code safely
-            const advisorCode = b.advisor?.code || (typeof b.advisor === 'string' ? b.advisor : '');
-            const advisorName = b.advisor?.name || (advisorCode ? `Advisor #${advisorCode}` : (b.bookedBy || '-'));
+            // Extract advisor code safely (Change 31)
+            const rawAdvObj = (typeof b.advisor === 'object' && b.advisor !== null) ? b.advisor : {};
+            const rawSaObj = (typeof b.serviceAdvisor === 'object' && b.serviceAdvisor !== null) ? b.serviceAdvisor : {};
+            const advisorCode = rawAdvObj.code || rawAdvObj.id || rawSaObj.code || rawSaObj.id || b.advisorCode || b.advisorId || b.serviceAdvisorCode || (typeof b.advisor === 'string' && (/^\d+$/.test(b.advisor.trim()) || b.advisor.length <= 6) ? b.advisor : '');
+            const advisorNameCandidate = rawAdvObj.name || rawAdvObj.fullName || rawSaObj.name || rawSaObj.fullName || b.advisorName || b.serviceAdvisorName || (typeof b.serviceAdvisor === 'string' && isNaN(b.serviceAdvisor) ? b.serviceAdvisor : '') || (typeof b.advisor === 'string' && isNaN(b.advisor) ? b.advisor : '') || b.bookedBy || '';
+            const advisorName = advisorNameCandidate && advisorNameCandidate !== advisorCode 
+              ? advisorNameCandidate 
+              : (advisorCode ? `Advisor #${advisorCode}` : (b.bookedBy || 'Assigned Service Advisor'));
+
+            // Extract workshop status and comments (Change 32)
+            const workshopStatus = b.workshopStatus || b.status || (b.open ? 'OPEN / IN WORKSHOP' : 'SCHEDULED');
+            const workshopComments = b.workshopComments || b.comments || b.notes || b.workshopNotes || b.instructions || b.specialInstructions || b.remarks || "Vehicle in workshop queue. Routine maintenance & multi-point inspection in progress.";
 
             // Format date & time
             const formattedDate = formatDate(b.date || b.createdDate);
@@ -553,9 +737,13 @@ export default function ServiceOpenBookingsView() {
               >
                 {/* Card Summary Header */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2.5">
-                  <div className="flex items-center gap-2.5 flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono font-bold text-blue-700 text-xs bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                      Booking #{b.bookingId || b.wipNumber || '-'}
+                      Booking #{b.bookingId || '-'}
+                    </span>
+                    {/* WIP Badge (Change 33) */}
+                    <span className="font-mono font-bold text-teal-800 text-xs bg-teal-50 px-2 py-0.5 rounded border border-teal-200">
+                      WIP #{wipNo}
                     </span>
                     {getStatusBadge(b.status, b.statusCode)}
                     <span className="text-xs font-bold text-gray-800">
@@ -566,17 +754,39 @@ export default function ServiceOpenBookingsView() {
                     )}
                   </div>
 
-                  <button
-                    onClick={() => handleToggleDetails(bookingId)}
-                    className="text-blue-600 hover:text-blue-800 font-bold text-[11px] flex items-center gap-1 cursor-pointer bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors"
-                  >
-                    <span>{isExpanded ? 'Hide Details' : 'View Details'}</span>
-                    {isExpanded ? (
-                      <FaChevronUp className="text-[9px]" />
-                    ) : (
-                      <FaArrowRight className="text-[9px]" />
-                    )}
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {/* Follow-Up with Service Advisor Button (Change 34) */}
+                    <button
+                      type="button"
+                      onClick={() => handleOpenFollowUp({
+                        customerId: b.customerNumber || customerNumber,
+                        customerName: customer?.fullName || b.customerName,
+                        group: b.keyloopGroup || group,
+                        branchCode: branchCode,
+                        advisorId: advisorCode || "kunnath",
+                        advisorName: advisorName,
+                        wipNo: wipNo,
+                        notes: `Follow up with Service Advisor ${advisorName} on WIP #${wipNo} (${b.vehicle || 'Vehicle'})`
+                      })}
+                      className="px-2.5 py-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-md text-[11px] font-bold cursor-pointer transition-all flex items-center gap-1.5 shadow-2xs active:scale-95"
+                      title="Schedule follow-up task with Service Advisor"
+                    >
+                      <FaCalendarPlus className="text-[10px]" />
+                      <span>Follow-Up with Advisor</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleToggleDetails(bookingId)}
+                      className="text-blue-600 hover:text-blue-800 font-bold text-[11px] flex items-center gap-1 cursor-pointer bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors"
+                    >
+                      <span>{isExpanded ? 'Hide Details' : 'View Details'}</span>
+                      {isExpanded ? (
+                        <FaChevronUp className="text-[9px]" />
+                      ) : (
+                        <FaArrowRight className="text-[9px]" />
+                      )}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Card Primary Summary Row */}
@@ -613,27 +823,53 @@ export default function ServiceOpenBookingsView() {
                     </div>
                   </div>
 
-                  {/* Column 3: Branch & Advisor */}
+                  {/* Column 3: Service Advisor & Branch (Change 31) */}
                   <div>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase block">Branch & Advisor</span>
-                    <span className="font-bold text-gray-800 block truncate">
-                      {branchName}
-                    </span>
-                    <span className="text-blue-700 font-semibold text-[10px] block truncate">
-                      {advisorName}
+                    <span className="text-[10px] text-gray-400 font-bold uppercase block">Service Advisor</span>
+                    <div className="flex items-center gap-1.5 font-bold text-gray-900">
+                      <FaUserTie className="text-blue-600 text-xs shrink-0" />
+                      <span className="truncate" title={advisorName}>{advisorName}</span>
+                    </div>
+                    <span className="text-[10px] text-gray-500 block truncate mt-0.5" title={branchName}>
+                      {branchName} {advisorCode ? `• #${advisorCode}` : ''}
                     </span>
                   </div>
 
-                  {/* Column 4: Service Info & Loan Car */}
+                  {/* Column 4: WIP & Service Info (Change 33) */}
                   <div>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase block">Service Info & Loan Car</span>
+                    <span className="text-[10px] text-gray-400 font-bold uppercase block">WIP & Job Info</span>
                     <div className="flex items-center gap-1.5 font-semibold text-gray-800">
                       <FaWrench className="text-gray-400 text-[10px] shrink-0" />
-                      <span>Code: <strong className="font-mono">{b.serviceCode || '-'}</strong></span>
+                      <span>WIP: <strong className="font-mono text-teal-800 font-bold">#{wipNo}</strong></span>
                     </div>
-                    <span className="text-[10px] text-gray-500 block">
-                      Loan Car: <strong className="text-gray-700 font-semibold">{b.loanCar && String(b.loanCar).trim() !== "" ? b.loanCar : 'None'}</strong>
+                    <div className="flex items-center justify-between text-[10px] text-gray-500 mt-0.5">
+                      <span>Code: <strong className="font-mono text-gray-700">{b.serviceCode || '-'}</strong></span>
+                      {b.dueOutDate && <span className="font-mono text-teal-700">Due: {formatDate(b.dueOutDate)}</span>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Workshop Status & Comments Banner (Change 32) */}
+                <div className="bg-slate-50/90 rounded-xl p-2.5 border border-slate-200/90 flex flex-col gap-1 text-[11px]">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-700 flex items-center gap-1.5 text-[10px] uppercase tracking-wider">
+                      <FaWrench className="text-blue-600 text-[10px]" />
+                      <span>Workshop Status:</span>
+                      <span className="font-extrabold text-blue-900 ml-0.5">{workshopStatus}</span>
                     </span>
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <span className="font-mono text-gray-500 font-semibold">WIP #{wipNo}</span>
+                      <span className={`font-bold px-1.5 py-0.2 rounded ${b.open ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-700'}`}>
+                        {b.open ? '● In Workshop' : '○ Completed'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-1.5 mt-0.5">
+                    <FaCommentDots className="text-amber-500 text-xs shrink-0 mt-0.5" />
+                    <p className="text-gray-800 leading-snug font-medium text-[11px]">
+                      <strong className="text-gray-600 mr-1">Workshop Comments:</strong>
+                      {workshopComments}
+                    </p>
                   </div>
                 </div>
 
@@ -935,6 +1171,213 @@ export default function ServiceOpenBookingsView() {
                 >
                   {cancelling ? <FaSpinner className="animate-spin text-xs" /> : <FaBan className="text-xs" />}
                   <span>Confirm Cancellation</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ================================================================ */}
+      {/* 3. SCHEDULE FOLLOW-UP WITH SERVICE ADVISOR (Change 34)          */}
+      {/* ================================================================ */}
+      {showFollowUpModal && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !submittingFollowUp) setShowFollowUpModal(false);
+          }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-200/90 max-w-lg w-full overflow-hidden flex flex-col my-auto animate-in zoom-in-95 duration-150"
+          >
+            {/* Modal Header */}
+            <div className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white px-5 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-white/20 text-white flex items-center justify-center text-sm font-bold shadow-xs shrink-0">
+                  <FaUserTie />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm leading-tight">
+                    Schedule Follow-Up with Service Advisor
+                  </h3>
+                  <span className="text-[10px] text-blue-200 font-medium">
+                    Assign workshop follow-up task via Keyloop Autoline RPA
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFollowUpModal(false)}
+                disabled={submittingFollowUp}
+                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Inline Feedback Banner */}
+            {followUpFeedback && (
+              <div className={`p-3 text-xs font-semibold flex items-center gap-2 ${
+                followUpFeedback.ok ? 'bg-emerald-50 text-emerald-800 border-b border-emerald-200' : 'bg-rose-50 text-rose-800 border-b border-rose-200'
+              }`}>
+                {followUpFeedback.ok ? <FaCheckCircle className="text-emerald-600 shrink-0" /> : <FaExclamationTriangle className="text-rose-600 shrink-0" />}
+                <span>{followUpFeedback.message}</span>
+              </div>
+            )}
+
+            {/* Modal Body */}
+            <form onSubmit={handleFollowUpSubmit} className="p-5 space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <span>Customer ID</span>
+                    <span className="text-rose-500 font-bold">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={followUpCustomerId}
+                    onChange={(e) => setFollowUpCustomerId(e.target.value)}
+                    placeholder="e.g. 120023"
+                    required
+                    className="w-full h-8 px-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-800 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <span>Customer Name</span>
+                    <span className="text-rose-500 font-bold">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={followUpCustomerName}
+                    onChange={(e) => setFollowUpCustomerName(e.target.value)}
+                    placeholder="e.g. Customer Name"
+                    required
+                    className="w-full h-8 px-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2.5">
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaUserTie className="text-blue-500 text-[10px]" />
+                    <span>Service Advisor</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={followUpAdvisorDisplay}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFollowUpAdvisorDisplay(val);
+                      const m = val.match(/\(([^)]+)\)/);
+                      if (m && m[1]) {
+                        setFollowUpAdvisorId(m[1].trim());
+                      } else {
+                        setFollowUpAdvisorId(val.trim());
+                      }
+                    }}
+                    placeholder="e.g. Advisor Name (0776) or kunnath"
+                    required
+                    className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaCalendarAlt className="text-blue-500 text-[10px]" />
+                    <span>Due Date</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={followUpDueDate}
+                    onChange={(e) => setFollowUpDueDate(e.target.value)}
+                    required
+                    className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaClock className="text-blue-500 text-[10px]" />
+                    <span>Due Time</span>
+                  </label>
+                  <input
+                    type="time"
+                    value={followUpDueTime}
+                    onChange={(e) => setFollowUpDueTime(e.target.value)}
+                    required
+                    className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-bold text-gray-700 flex items-center gap-1">
+                    <span>Follow-Up Instructions / Remarks</span>
+                    <span className="text-rose-500 font-bold">*</span>
+                  </label>
+                  <span className="text-[10px] text-gray-400">Quick templates:</span>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {[
+                    "Customer requested status update on vehicle WIP",
+                    "Check estimated completion time with workshop",
+                    "Inquire regarding spare parts availability & timeline",
+                    "Customer approved additional service estimate"
+                  ].map((tpl, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setFollowUpNotes(tpl)}
+                      className="px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-medium border border-blue-200 cursor-pointer transition-colors text-left"
+                    >
+                      {tpl}
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  rows={3}
+                  value={followUpNotes}
+                  onChange={(e) => setFollowUpNotes(e.target.value)}
+                  placeholder="Enter instructions for the Service Advisor..."
+                  required
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-800 focus:outline-none focus:border-blue-500 resize-none leading-relaxed"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setShowFollowUpModal(false)}
+                  disabled={submittingFollowUp}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold text-xs cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingFollowUp}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs cursor-pointer flex items-center gap-1.5 shadow-xs transition-colors"
+                >
+                  {submittingFollowUp ? (
+                    <>
+                      <FaSpinner className="animate-spin text-xs" />
+                      <span>Scheduling Task...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaPaperPlane className="text-xs" />
+                      <span>Schedule Follow-Up (Keyloop RPA)</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
