@@ -313,7 +313,7 @@ export const normalizeProspectRecord = (p, fallbackGroup = 'BMW', fallbackMobile
     preferredBranch: p.branchName || (p.branchCode ? `Branch ${p.branchCode}` : '10 - Sheikh Zayed Rd'),
     customerSince: p.createdAt ? p.createdAt.split('T')[0] : (p.createdDate || new Date().toISOString().split('T')[0]),
     lastUpdated: p.lastEditedDate || (p.createdAt ? p.createdAt.split('T')[0] : (p.createdDate || new Date().toISOString().split('T')[0])),
-    dateOfBirth: '',
+    dateOfBirth: p.dateOfBirth || p.dob || p.birthDate || p.DateOfBirth || p.date_of_birth || '',
     nationality: p.nationality || p.nation || '',
     vip: false,
     doNotContact: false,
@@ -369,7 +369,7 @@ export const normalizeE00MIRecord = (e, fallbackGroup = 'BMW', fallbackMobile = 
     preferredBranch: e.branchName || (e.branchCode ? `Branch ${e.branchCode}` : '10 - Sheikh Zayed Rd'),
     customerSince: e.createdDate || new Date().toISOString().split('T')[0],
     lastUpdated: e.createdDate || new Date().toISOString().split('T')[0],
-    dateOfBirth: '',
+    dateOfBirth: e.dateOfBirth || e.dob || e.birthDate || e.DateOfBirth || e.date_of_birth || '',
     nationality: e.nationality || '',
     vip: false,
     doNotContact: false,
@@ -764,7 +764,20 @@ export function CustomerProvider({ children }) {
     apiFetch(`/api/v1/customers/${g}/${c}/sales-screen`).then(res => {
       if (res && res.ok && res.data && typeof res.data === 'object') {
         const d = res.data;
-        if (d.profile && typeof d.profile === 'object') setCustomer(d.profile);
+        if (d.profile && typeof d.profile === 'object') {
+          setCustomer(prev => {
+            if (!prev) return d.profile;
+            return {
+              ...prev,
+              ...d.profile,
+              dateOfBirth: d.profile.dateOfBirth || d.profile.dob || d.profile.birthDate || d.profile.DateOfBirth || d.profile.date_of_birth || prev.dateOfBirth || prev.dob || prev.birthDate || '',
+              nationality: d.profile.nationality || prev.nationality || '',
+              customerNumber: d.profile.customerNumber || prev.customerNumber || '',
+              keyloopGroup: d.profile.keyloopGroup || prev.keyloopGroup || '',
+              consents: d.profile.consents || prev.consents
+            };
+          });
+        }
         if (Array.isArray(d.vehicles)) setVehicles(d.vehicles);
         if (Array.isArray(d.insurance)) setInsurance(d.insurance);
         if (Array.isArray(d.finance)) setFinance(d.finance);
@@ -857,8 +870,15 @@ export function CustomerProvider({ children }) {
 
       if (res && res.ok && res.data && typeof res.data === 'object') {
         const prof = res.data;
-        syncEnquiriesFromCustomer(prof, searchItem);
-        setCustomer(prof);
+        const normalizedDob = prof.dateOfBirth || prof.dob || prof.birthDate || prof.DateOfBirth || prof.date_of_birth || searchItem?.dateOfBirth || searchItem?.dob || searchItem?.birthDate || '';
+        const mergedProf = {
+          ...(searchItem || {}),
+          ...prof,
+          dateOfBirth: normalizedDob,
+          nationality: prof.nationality || searchItem?.nationality || ''
+        };
+        syncEnquiriesFromCustomer(mergedProf, searchItem);
+        setCustomer(mergedProf);
         const resolvedGroup = prof.keyloopGroup || group || '';
         if (resolvedGroup) {
           setCurrentGroup(resolvedGroup);
@@ -1692,9 +1712,9 @@ export function CustomerProvider({ children }) {
       isProspect: false,
       isNewRegistration: !autolineCustNo,
       rpaTaskId: rpaTaskId || null,
-      rpaStatus: autolineCustNo ? 'COMPLETED' : 'QUEUED',
+      rpaStatus: autolineCustNo ? 'COMPLETED' : 'Processing',
       leadSource: details.leadSource || "Inbound",
-      status: autolineCustNo ? "ACTIVE" : "QUEUED",
+      status: autolineCustNo ? "ACTIVE" : "Processing",
       salutation: details.titleCode || "Mr.",
       firstName: details.firstName || "",
       middleName: "",

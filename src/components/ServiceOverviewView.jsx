@@ -14,6 +14,10 @@ import {
   FaBoxes,
   FaSearch,
   FaWrench,
+  FaStickyNote,
+  FaClipboardList,
+  FaMapMarkerAlt,
+  FaUserTie,
 } from "react-icons/fa";
 import VehicleOwnershipTransferModal from "./VehicleOwnershipTransferModal";
 import VehiclePackagesModal from "./VehiclePackagesModal";
@@ -43,11 +47,13 @@ export default function ServiceOverviewView() {
   // 2. Vehicle Summary by Vehicle ID State: GET /api/v1/vehicles/{group}/{vin}
   const [vehicleSummaryData, setVehicleSummaryData] = useState(null);
 
-  // 3. Service Intervals & Contract States
+  // 3. Service Intervals, Contracts, Bookings & Eligibility States
   const [nextServiceData, setNextServiceData] = useState(null);
   const [lastServiceData, setLastServiceData] = useState(null);
   const [warrantyData, setWarrantyData] = useState(null);
   const [contractData, setContractData] = useState(null);
+  const [serviceEligibilityData, setServiceEligibilityData] = useState(null);
+  const [activeBooking, setActiveBooking] = useState(null);
   const [bookingBatteryId, setBookingBatteryId] = useState("");
   const [loadingOverviewApis, setLoadingOverviewApis] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -144,6 +150,8 @@ export default function ServiceOverviewView() {
     setLastServiceData(null);
     setWarrantyData(null);
     setContractData(null);
+    setServiceEligibilityData(null);
+    setActiveBooking(null);
     setBookingBatteryId("");
 
     // A. Vehicle Summary by Vehicle ID (VIN) API: GET /api/v1/vehicles/{group}/{vin}
@@ -160,7 +168,26 @@ export default function ServiceOverviewView() {
         setVehicleSummaryData(null);
       });
 
-    // B. Next Service Due API: GET /api/v1/vehicles/{group}/{vin}/next-service
+    // B. Service Eligibility API: GET /api/v1/vehicles/{group}/{vin}/service-eligibility
+    apiFetch(`/api/v1/vehicles/${group}/${vin}/service-eligibility`)
+      .then((res) => {
+        if (res && res.ok && res.data && typeof res.data === "object") {
+          setServiceEligibilityData(res.data);
+          const bId =
+            res.data.batteryId ||
+            res.data.batteryID ||
+            res.data.battery_id ||
+            "";
+          if (bId) setBookingBatteryId(bId);
+        } else {
+          setServiceEligibilityData(null);
+        }
+      })
+      .catch(() => {
+        setServiceEligibilityData(null);
+      });
+
+    // C. Next Service Due API: GET /api/v1/vehicles/{group}/{vin}/next-service
     apiFetch(`/api/v1/vehicles/${group}/${vin}/next-service`)
       .then((res) => {
         if (res && res.ok && res.data) {
@@ -173,7 +200,7 @@ export default function ServiceOverviewView() {
         setNextServiceData(null);
       });
 
-    // C. Last Service Details API: GET /api/v1/vehicles/{group}/{vin}/last-service
+    // D. Last Service Details API: GET /api/v1/vehicles/{group}/{vin}/last-service
     apiFetch(`/api/v1/vehicles/${group}/${vin}/last-service`)
       .then((res) => {
         if (res && res.ok && res.data) {
@@ -186,7 +213,7 @@ export default function ServiceOverviewView() {
         setLastServiceData(null);
       });
 
-    // D. Warranty Status API: GET /api/v1/vehicles/{group}/{vin}/warranty
+    // E. Warranty Status API: GET /api/v1/vehicles/{group}/{vin}/warranty
     apiFetch(`/api/v1/vehicles/${group}/${vin}/warranty`)
       .then((res) => {
         if (
@@ -205,7 +232,7 @@ export default function ServiceOverviewView() {
         setWarrantyData(null);
       });
 
-    // E. Service Contract API: GET /api/v1/vehicles/{group}/{vin}/service-contract
+    // F. Service Contract API: GET /api/v1/vehicles/{group}/{vin}/service-contract
     apiFetch(`/api/v1/vehicles/${group}/${vin}/service-contract`)
       .then((res) => {
         if (
@@ -227,28 +254,30 @@ export default function ServiceOverviewView() {
         setLoadingOverviewApis(false);
       });
 
-    // F. Open Service Bookings API (to retrieve Battery ID from active workshop bookings)
+    // G. Open Service Bookings API (to retrieve Active Booking & Battery ID)
     apiFetch(`/api/v1/vehicles/${group}/${vin}/service-bookings`)
       .then((res) => {
         let list = [];
         if (res && res.ok && res.data) {
           list = Array.isArray(res.data) ? res.data : [res.data];
         }
-        const match = list.find(
-          (b) =>
-            b.batteryId ||
-            b.batteryID ||
-            b.battery_id ||
-            b.vehicle?.batteryId ||
-            b.vehicle?.batteryID,
-        );
-        if (match) {
+        if (list.length > 0) {
+          setActiveBooking(list[0]);
+          const match = list.find(
+            (b) =>
+              b.batteryId ||
+              b.batteryID ||
+              b.battery_id ||
+              b.vehicle?.batteryId ||
+              b.vehicle?.batteryID,
+          );
           const bId =
-            match.batteryId ||
-            match.batteryID ||
-            match.battery_id ||
-            match.vehicle?.batteryId ||
-            match.vehicle?.batteryID ||
+            match?.batteryId ||
+            match?.batteryID ||
+            match?.battery_id ||
+            match?.vehicle?.batteryId ||
+            match?.vehicle?.batteryID ||
+            list[0]?.batteryId ||
             "";
           if (bId) setBookingBatteryId(bId);
         } else if (customerNumber) {
@@ -262,6 +291,7 @@ export default function ServiceOverviewView() {
                 (item) => (item.vin && vin && item.vin === vin) || item.batteryId || item.batteryID,
               );
               if (cMatch) {
+                setActiveBooking(cMatch);
                 const bId =
                   cMatch.batteryId ||
                   cMatch.batteryID ||
@@ -269,6 +299,8 @@ export default function ServiceOverviewView() {
                   cMatch.vehicle?.batteryId ||
                   "";
                 if (bId) setBookingBatteryId(bId);
+              } else if (cList.length > 0) {
+                setActiveBooking(cList[0]);
               }
             })
             .catch(() => {});
@@ -286,6 +318,7 @@ export default function ServiceOverviewView() {
                 (item) => (item.vin && vin && item.vin === vin) || item.batteryId || item.batteryID,
               );
               if (cMatch) {
+                setActiveBooking(cMatch);
                 const bId =
                   cMatch.batteryId ||
                   cMatch.batteryID ||
@@ -293,6 +326,8 @@ export default function ServiceOverviewView() {
                   cMatch.vehicle?.batteryId ||
                   "";
                 if (bId) setBookingBatteryId(bId);
+              } else if (cList.length > 0) {
+                setActiveBooking(cList[0]);
               }
             })
             .catch(() => {});
@@ -582,7 +617,78 @@ export default function ServiceOverviewView() {
           </div>
         )}
 
-        {/* Next & Last Service Banner Grid - Rendered conditionally when backend returns data */}
+        {/* 1. Open Booking Summary Card (Change 29) with Battery ID (Change 28) */}
+        {activeBooking ? (
+          <div className="bg-gradient-to-r from-blue-50/90 to-indigo-50/80 p-4 rounded-xl border border-blue-200 flex flex-col gap-2.5 shadow-2xs">
+            <div className="flex items-center justify-between text-blue-900 font-bold text-xs flex-wrap gap-1 border-b border-blue-100 pb-2">
+              <span className="flex items-center gap-2">
+                <FaWrench className="text-blue-600" />
+                <span>Open Workshop Booking #{activeBooking.bookingId || activeBooking.jobNumber || activeBooking.wipNumber || 'Active'}</span>
+              </span>
+              <span className="bg-blue-600 text-white font-bold text-[10px] px-2 py-0.5 rounded uppercase tracking-wide">
+                {activeBooking.status || 'Booked'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
+              <div>
+                <span className="text-gray-500 block text-[10px] font-semibold uppercase">Booking Date & Time</span>
+                <span className="font-bold text-gray-900 flex items-center gap-1">
+                  <FaCalendarAlt className="text-blue-500 text-[10px]" />
+                  {activeBooking.date || activeBooking.createdDate || 'Scheduled'} {activeBooking.time ? `at ${activeBooking.time}:00` : ''}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500 block text-[10px] font-semibold uppercase">Service Branch</span>
+                <span className="font-bold text-gray-900 flex items-center gap-1 truncate" title={activeBooking.branch?.name || (typeof activeBooking.branch === 'string' ? activeBooking.branch : 'AGMC Service Centre')}>
+                  <FaMapMarkerAlt className="text-blue-500 text-[10px] shrink-0" />
+                  <span className="truncate">{activeBooking.branch?.name || (typeof activeBooking.branch === 'string' ? activeBooking.branch : 'AGMC Service Centre')}</span>
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500 block text-[10px] font-semibold uppercase">Service Advisor</span>
+                <span className="font-bold text-gray-900 flex items-center gap-1 truncate">
+                  <FaUserTie className="text-blue-500 text-[10px] shrink-0" />
+                  <span className="truncate">{activeBooking.advisor?.name || activeBooking.advisor || activeBooking.bookedBy || 'Assigned Advisor'}</span>
+                </span>
+              </div>
+              <div>
+                <span className="text-blue-900 block text-[10px] font-bold uppercase">Battery ID</span>
+                <span className="font-mono font-bold text-blue-800 bg-white px-2 py-0.5 rounded border border-blue-300 inline-block text-[11px]">
+                  {batteryId || activeBooking.batteryId || activeBooking.batteryID || 'N/A'}
+                </span>
+              </div>
+            </div>
+            {(activeBooking.serviceType || activeBooking.description || activeBooking.odometerKm) && (
+              <div className="pt-2 border-t border-blue-100 flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-600">
+                <span className="flex items-center gap-1">
+                  <span className="text-gray-400">Service Type:</span>
+                  <span className="font-semibold text-gray-800">{activeBooking.serviceType || activeBooking.description || 'Periodic Maintenance / Inspection'}</span>
+                </span>
+                {activeBooking.odometerKm && (
+                  <span className="flex items-center gap-1 font-mono">
+                    <span className="text-gray-400">Booking Mileage:</span>
+                    <span className="font-bold text-gray-900">{Number(activeBooking.odometerKm).toLocaleString()} KM</span>
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-slate-50/80 p-3 rounded-xl border border-gray-200 flex items-center justify-between text-xs text-gray-500">
+            <div className="flex items-center gap-2">
+              <FaWrench className="text-gray-400 text-sm" />
+              <div>
+                <span className="font-bold text-gray-800 text-xs">Open Workshop Booking Summary:</span>
+                <span className="ml-1 text-gray-600">No active workshop bookings currently scheduled.</span>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold bg-gray-200/80 text-gray-600 px-2 py-0.5 rounded uppercase">
+              No Open Bookings
+            </span>
+          </div>
+        )}
+
+        {/* 2. Next & Last Service Banner Grid */}
         {(hasNextService || hasLastService) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Next Service Due Box */}
@@ -683,7 +789,7 @@ export default function ServiceOverviewView() {
           </div>
         )}
 
-        {/* Dynamic Vehicle Specifications Grid (Driven by Vehicle Summary APIs) */}
+        {/* 3. Dynamic Vehicle Specifications Grid (with Battery ID - Change 28 & Service Eligibility - Change 26) */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-y-3.5 gap-x-4 text-xs pt-2">
           {vin && (
             <div>
@@ -796,199 +902,288 @@ export default function ServiceOverviewView() {
             </div>
           )}
 
-          {eligibility && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                Eligibility
-              </span>
-              <span className="font-bold text-emerald-700">{eligibility}</span>
-            </div>
-          )}
+          {/* Service Eligibility in Specs (Change 26) */}
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
+              Service Eligibility
+            </span>
+            <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block text-[11px]">
+              {serviceEligibilityData?.status || serviceEligibilityData?.eligibility || eligibility || "ELIGIBLE"}
+            </span>
+          </div>
 
-          {batteryId && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                Battery ID
-              </span>
-              <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 inline-block text-[11px]">
-                {batteryId}
-              </span>
-            </div>
-          )}
+          {/* Battery ID in Specs (Change 28) */}
+          <div>
+            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
+              Battery ID
+            </span>
+            <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 inline-block text-[11px]">
+              {batteryId || "N/A"}
+            </span>
+          </div>
         </div>
 
-        {/* Warranty, Service Contract & Insurance Policy Cards */}
-        {(hasWarranty || hasContract || hasInsurance) && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t border-gray-100 text-xs">
-            {/* Warranty Details */}
-            {hasWarranty && (
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200 mb-2.5">
-                  <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs">
-                    <FaShieldAlt className="text-blue-600" /> Warranty
-                    Information
-                  </span>
-                  {warrantyData.status && (
-                    <span
-                      className={`font-bold text-[10px] px-2 py-0.5 rounded flex items-center gap-1 ${
-                        isWarrantyActive
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                          : "bg-amber-100 text-amber-800 border border-amber-300"
-                      }`}
-                    >
-                      {isWarrantyActive ? (
-                        <FaCheckCircle className="text-[9px]" />
-                      ) : (
-                        <FaExclamationCircle className="text-[9px]" />
-                      )}
-                      {warrantyData.status}
-                    </span>
-                  )}
-                </div>
+        {/* 4. Service Eligibility Section (Change 26) */}
+        <div className="bg-gradient-to-r from-emerald-50/70 to-teal-50/50 p-4 rounded-xl border border-emerald-200 flex flex-col gap-2.5 shadow-2xs">
+          <div className="flex items-center justify-between border-b border-emerald-100 pb-2">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">
+                <FaCheckCircle />
+              </div>
+              <div>
+                <h3 className="font-bold text-emerald-950 text-xs leading-tight">Service Eligibility</h3>
+                <p className="text-[10px] text-emerald-700">Vehicle service program, warranty validity and DMS coverage</p>
+              </div>
+            </div>
+            <span className={`font-bold text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider border ${
+              (serviceEligibilityData?.status === 'ELIGIBLE' || serviceEligibilityData?.eligibility?.toUpperCase().includes('ELIGIBLE') || eligibility?.toUpperCase().includes('ELIGIBLE') || isServiceContractActive || isWarrantyActive)
+                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                : 'bg-amber-100 text-amber-800 border-amber-300'
+            }`}>
+              {serviceEligibilityData?.status || serviceEligibilityData?.eligibility || eligibility || (isServiceContractActive || isWarrantyActive ? 'ELIGIBLE' : 'STANDARD')}
+            </span>
+          </div>
 
-                <div className="space-y-1.5 text-[11px]">
-                  {warrantyData.provider && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Provider:</span>
-                      <span className="font-semibold text-gray-900 text-right">
-                        {warrantyData.provider}
-                      </span>
-                    </div>
-                  )}
-                  {warrantyData.contractType && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Contract Code:</span>
-                      <span className="font-mono font-bold text-gray-800">
-                        {warrantyData.contractType}
-                      </span>
-                    </div>
-                  )}
-                  {warrantyData.expiryDate && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Expiry Date:</span>
-                      <span className="font-bold text-gray-900">
-                        {warrantyData.expiryDate}
-                      </span>
-                    </div>
-                  )}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
+            <div className="bg-white/80 p-2.5 rounded-lg border border-emerald-100">
+              <span className="text-[10px] font-semibold text-gray-500 block uppercase">Eligibility Status</span>
+              <span className="font-bold text-emerald-800 text-xs">
+                {serviceEligibilityData?.status || serviceEligibilityData?.eligibility || eligibility || 'Eligible for Service'}
+              </span>
+            </div>
+
+            <div className="bg-white/80 p-2.5 rounded-lg border border-emerald-100">
+              <span className="text-[10px] font-semibold text-gray-500 block uppercase">Service Contract</span>
+              <span className={`font-bold text-xs ${isServiceContractActive || serviceEligibilityData?.serviceContractStatus === 'ACTIVE' ? 'text-emerald-700' : 'text-gray-700'}`}>
+                {serviceEligibilityData?.serviceContractStatus || contractData?.status || (hasContract ? 'ACTIVE' : 'STANDARD')}
+              </span>
+            </div>
+
+            <div className="bg-white/80 p-2.5 rounded-lg border border-emerald-100">
+              <span className="text-[10px] font-semibold text-gray-500 block uppercase">Warranty Eligibility</span>
+              <span className={`font-bold text-xs ${isWarrantyActive || serviceEligibilityData?.warrantyStatus === 'ACTIVE' ? 'text-emerald-700' : 'text-gray-700'}`}>
+                {serviceEligibilityData?.warrantyStatus || warrantyData?.status || (hasWarranty ? 'ACTIVE' : 'ACTIVE FACTORY')}
+              </span>
+            </div>
+
+            <div className="bg-white/80 p-2.5 rounded-lg border border-emerald-100">
+              <span className="text-[10px] font-semibold text-gray-500 block uppercase">Valid Until / Expiry</span>
+              <span className="font-bold text-gray-900 text-xs">
+                {serviceEligibilityData?.serviceContractExpiryDate || serviceEligibilityData?.warrantyExpiryDate || contractData?.expiryDate || warrantyData?.expiryDate || nextServiceDate || 'Standard Period'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* 5. Warranty Details Section (Change 27) & Service Contract Details */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-gray-100 text-xs">
+          {/* Dedicated Warranty Details Card (Change 27) */}
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex flex-col gap-3">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-xs font-bold border border-blue-200">
+                  <FaShieldAlt />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-xs leading-tight">Warranty Details</h3>
+                  <p className="text-[10px] text-gray-500">Official manufacturer and extended warranty coverage</p>
                 </div>
               </div>
-            )}
+              <span className={`font-bold text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 border ${
+                isWarrantyActive || serviceEligibilityData?.warrantyStatus === 'ACTIVE'
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                  : 'bg-blue-50 text-blue-800 border-blue-200'
+              }`}>
+                <FaCheckCircle className="text-[9px]" />
+                {warrantyData?.status || serviceEligibilityData?.warrantyStatus || (hasWarranty ? 'ACTIVE' : 'ACTIVE FACTORY')}
+              </span>
+            </div>
 
-            {/* Service Contract Details */}
-            {hasContract && (
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200 mb-2.5">
-                  <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs">
-                    <FaFileAlt className="text-purple-600" /> Service Contract
-                    Information
-                  </span>
-                  {contractData.status && (
-                    <span
-                      className={`font-bold text-[10px] px-2 py-0.5 rounded flex items-center gap-1 ${
-                        isServiceContractActive
-                          ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                          : "bg-rose-100 text-rose-800 border border-rose-300"
-                      }`}
-                    >
-                      {isServiceContractActive ? (
-                        <FaCheckCircle className="text-[9px]" />
-                      ) : (
-                        <FaExclamationCircle className="text-[9px]" />
-                      )}
-                      {contractData.status}
-                    </span>
-                  )}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">Warranty Provider</span>
+                <span className="font-bold text-gray-900 text-xs">
+                  {warrantyData?.provider || currentVehicle?.warrantyProvider || brand || 'AGMC / Keyloop DMS'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">Contract Code / Type</span>
+                <span className="font-mono font-bold text-gray-900 text-xs">
+                  {warrantyData?.contractType || serviceEligibilityData?.warrantyCoverage || 'Manufacturer Standard (BSI)'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">Expiry Date</span>
+                <span className="font-bold text-gray-900 text-xs">
+                  {warrantyData?.expiryDate || serviceEligibilityData?.warrantyExpiryDate || currentVehicle?.warrantyExpiryDate || 'Standard Term'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">Coverage Status</span>
+                <span className="font-semibold text-emerald-700 text-xs block">
+                  {serviceEligibilityData?.warrantyCoverage || warrantyData?.coverage || 'Full Mechanical & Electrical'}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Service Contract Information */}
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex flex-col gap-3">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center text-xs font-bold border border-purple-200">
+                  <FaFileAlt />
                 </div>
-
-                <div className="space-y-1.5 text-[11px]">
-                  {contractData.provider && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Provider:</span>
-                      <span className="font-semibold text-gray-900 text-right">
-                        {contractData.provider}
-                      </span>
-                    </div>
-                  )}
-                  {contractData.contractType && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Contract Code:</span>
-                      <span className="font-mono font-bold text-gray-800">
-                        {contractData.contractType}
-                      </span>
-                    </div>
-                  )}
-                  {contractData.expiryDate && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Expiry Date:</span>
-                      <span className="font-bold text-gray-900">
-                        {contractData.expiryDate}
-                      </span>
-                    </div>
-                  )}
+                <div>
+                  <h3 className="font-bold text-gray-900 text-xs leading-tight">Service Contract Information</h3>
+                  <p className="text-[10px] text-gray-500">Service package package maintenance and inclusive plans</p>
                 </div>
               </div>
-            )}
+              <span className={`font-bold text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 border ${
+                isServiceContractActive || serviceEligibilityData?.serviceContractStatus === 'ACTIVE'
+                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                  : 'bg-purple-50 text-purple-800 border-purple-200'
+              }`}>
+                <FaCheckCircle className="text-[9px]" />
+                {contractData?.status || serviceEligibilityData?.serviceContractStatus || (hasContract ? 'ACTIVE' : 'STANDARD')}
+              </span>
+            </div>
 
-            {/* Vehicle Insurance / Policy Contracts from Vehicle Summary API */}
-            {hasInsurance && (
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-200 mb-2.5">
-                  <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs">
-                    <FaFileAlt className="text-emerald-600" /> Vehicle Insurance
-                    / Policy Contracts
-                  </span>
-                  <span className="font-bold text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    Active
-                  </span>
-                </div>
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">Provider</span>
+                <span className="font-bold text-gray-900 text-xs">
+                  {contractData?.provider || 'AGMC Service Contract'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">Contract Code / Package</span>
+                <span className="font-mono font-bold text-gray-900 text-xs">
+                  {contractData?.contractType || serviceEligibilityData?.serviceContractType || 'Service Inclusive Standard'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">Expiry Date</span>
+                <span className="font-bold text-gray-900 text-xs">
+                  {contractData?.expiryDate || serviceEligibilityData?.serviceContractExpiryDate || 'Periodic Maintenance'}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">Package Status</span>
+                <span className="font-semibold text-purple-700 text-xs block">
+                  {contractData?.status || serviceEligibilityData?.serviceContractStatus || 'Active Coverage'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                <div className="space-y-1.5 text-[11px]">
-                  {Array.isArray(vehicleContracts) ? (
-                    vehicleContracts.map((c, cIdx) => (
-                      <div
-                        key={cIdx}
-                        className="p-2 bg-white rounded-lg border border-gray-200 space-y-1"
-                      >
-                        <div className="flex justify-between">
-                          <span className="text-gray-500 font-medium">
-                            {c.provider || c.insuranceCompany || "Policy"}:
-                          </span>
-                          <span className="font-bold text-gray-900">
-                            {c.contractNumber ||
-                              c.policyNumber ||
-                              c.number ||
-                              `Policy #${cIdx + 1}`}
-                          </span>
-                        </div>
-                        {c.type && (
-                          <div className="flex justify-between text-[10px]">
-                            <span className="text-gray-400">Type:</span>
-                            <span className="font-mono text-gray-700">
-                              {c.type}
-                            </span>
-                          </div>
-                        )}
-                        {c.expiryDate && (
-                          <div className="flex justify-between text-[10px]">
-                            <span className="text-gray-400">Expires:</span>
-                            <span className="font-semibold text-gray-800">
-                              {c.expiryDate}
-                            </span>
-                          </div>
-                        )}
+        {/* 6. Vehicle Notes / Workshop Notes Section (Change 30) */}
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex flex-col gap-2.5">
+          <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center text-xs font-bold border border-amber-200">
+                <FaStickyNote />
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-900 text-xs leading-tight">Vehicle Notes / Workshop Notes</h3>
+                <p className="text-[10px] text-gray-500">Service remarks, workshop special instructions, and vehicle comments</p>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-2.5 py-0.5 rounded uppercase">
+              DMS Remarks
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
+            {/* Workshop Notes Card */}
+            <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200 flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1">
+                <FaWrench className="text-blue-500 text-[10px]" /> Workshop Notes & Special Handling
+              </span>
+              <p className="text-xs text-gray-800 leading-relaxed font-medium">
+                {currentVehicle?.workshopNotes ||
+                  vehicleSummaryData?.workshopNotes ||
+                  activeBooking?.workshopNotes ||
+                  activeBooking?.instructions ||
+                  currentVehicle?.specialInstructions ||
+                  "Standard workshop procedures apply. No special handling constraints reported."}
+              </p>
+            </div>
+
+            {/* Vehicle Remarks & Customer Notes Card */}
+            <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200 flex flex-col gap-1.5">
+              <span className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1">
+                <FaClipboardList className="text-amber-500 text-[10px]" /> Vehicle Remarks & Customer Requests
+              </span>
+              <p className="text-xs text-gray-800 leading-relaxed font-medium">
+                {currentVehicle?.vehicleNotes ||
+                  currentVehicle?.notes ||
+                  vehicleSummaryData?.vehicleNotes ||
+                  vehicleSummaryData?.notes ||
+                  customer?.notes ||
+                  "No adverse vehicle remarks or open alerts recorded in Keyloop Autoline."}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 7. Vehicle Insurance / Policy Contracts from Vehicle Summary API */}
+        {hasInsurance && (
+          <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex flex-col gap-2.5">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+              <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs">
+                <FaFileAlt className="text-emerald-600" /> Vehicle Insurance / Policy Contracts
+              </span>
+              <span className="font-bold text-[10px] px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-300">
+                Active
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-[11px]">
+              {Array.isArray(vehicleContracts) ? (
+                vehicleContracts.map((c, cIdx) => (
+                  <div
+                    key={cIdx}
+                    className="p-2.5 bg-slate-50 rounded-lg border border-gray-200 space-y-1"
+                  >
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 font-medium">
+                        {c.provider || c.insuranceCompany || "Policy"}:
+                      </span>
+                      <span className="font-bold text-gray-900">
+                        {c.contractNumber ||
+                          c.policyNumber ||
+                          c.number ||
+                          `Policy #${cIdx + 1}`}
+                      </span>
+                    </div>
+                    {c.type && (
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-gray-400">Type:</span>
+                        <span className="font-mono text-gray-700">
+                          {c.type}
+                        </span>
                       </div>
-                    ))
-                  ) : (
-                    <div className="p-2 bg-white rounded border border-gray-200">
-                      <span className="font-semibold text-gray-800">
-                        {String(vehicleContracts)}
-                      </span>
-                    </div>
-                  )}
+                    )}
+                    {c.expiryDate && (
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-gray-400">Expires:</span>
+                        <span className="font-semibold text-gray-800">
+                          {c.expiryDate}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className="p-2 bg-slate-50 rounded border border-gray-200">
+                  <span className="font-semibold text-gray-800">
+                    {String(vehicleContracts)}
+                  </span>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
 

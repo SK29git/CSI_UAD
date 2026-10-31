@@ -46,8 +46,7 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
     customer: activeCustomer, 
     currentGroup, 
     currentMobile, 
-    verifyCustomer,
-    showToast 
+    verifyCustomer
   } = useCustomer();
 
   const customer = customerData || activeCustomer;
@@ -74,28 +73,11 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
-  const [copiedTaskId, setCopiedTaskId] = useState(false);
-  const [countdown, setCountdown] = useState(null);
-
-  const countdownIntervalRef = useRef(null);
-  const autoCloseTimerRef = useRef(null);
-
-  // Clear timers on unmount
-  useEffect(() => {
-    return () => {
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
-    };
-  }, []);
 
   // Populate form when modal opens or customer changes
   useEffect(() => {
     if (!isOpen) {
       setFeedback(null);
-      setCopiedTaskId(false);
-      setCountdown(null);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
       return;
     }
 
@@ -135,19 +117,6 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
 
   if (!isOpen) return null;
 
-  const handleCopyTaskId = async (taskId) => {
-    if (!taskId) return;
-    try {
-      await navigator.clipboard.writeText(taskId);
-      setCopiedTaskId(true);
-      setTimeout(() => setCopiedTaskId(false), 2500);
-    } catch {
-      // Fallback
-      setCopiedTaskId(true);
-      setTimeout(() => setCopiedTaskId(false), 2500);
-    }
-  };
-
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!formData.customerId.trim()) {
@@ -166,39 +135,7 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
       const res = await verifyCustomer(formData);
 
       if (res && res.ok) {
-        const taskId = res.taskId || res.data?.taskId;
-        const toastData = {
-          type: 'success',
-          title: 'Customer Data Verification Submitted!',
-          taskId: taskId || null,
-          customerName: formData.customerName,
-          message: taskId 
-            ? `Customer data verification submitted successfully! Task ID: ${taskId}` 
-            : 'Customer data verification submitted successfully to Keyloop CRM!',
-          duration: 10
-        };
-
-        setFeedback(toastData);
-        if (showToast) {
-          showToast(toastData);
-        }
-
-        setCountdown(10);
-        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-        countdownIntervalRef.current = setInterval(() => {
-          setCountdown(prev => {
-            if (prev === null || prev <= 1) {
-              clearInterval(countdownIntervalRef.current);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-
-        if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
-        autoCloseTimerRef.current = setTimeout(() => {
-          if (onClose) onClose();
-        }, 10000);
+        if (onClose) onClose();
       } else {
         setFeedback({ 
           type: 'error', 
@@ -274,66 +211,20 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
 
         {/* Body Content */}
         <div className="p-6 overflow-y-auto space-y-5 flex-1">
-          {/* Feedback & Task ID Banner */}
-          {feedback && (
-            <div 
-              className={`p-4 rounded-xl border text-xs shadow-xs space-y-3 ${
-                feedback.type === 'success' 
-                  ? 'bg-emerald-50/90 border-emerald-300 text-emerald-950' 
-                  : 'bg-rose-50 border-rose-300 text-rose-900'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {feedback.type === 'success' ? (
-                    <FaCheckCircle className="text-emerald-600 text-base shrink-0" />
-                  ) : (
-                    <FaInfoCircle className="text-rose-600 text-base shrink-0" />
-                  )}
-                  <span className="font-bold text-sm">
-                    {feedback.title || (feedback.type === 'success' ? 'Verification Submitted!' : 'Submission Failed')}
-                  </span>
-                </div>
-                {feedback.type === 'success' && countdown !== null && (
-                  <span className="text-[11px] font-medium text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                    Closing in {countdown}s
-                  </span>
-                )}
+          {/* Feedback Banner */}
+          {feedback && feedback.type === 'error' && (
+            <div className="p-3 rounded-xl border text-xs bg-rose-50 border-rose-300 text-rose-900 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <FaInfoCircle className="text-rose-600 text-base shrink-0" />
+                <span className="font-semibold text-xs">{feedback.message || 'Submission Failed'}</span>
               </div>
-
-              {feedback.taskId && (
-                <div className="p-3 bg-white border border-emerald-300 rounded-lg flex items-center justify-between gap-3 shadow-2xs">
-                  <div className="min-w-0">
-                    <span className="text-[10px] uppercase font-bold text-emerald-700 block tracking-wider">
-                      This is your Task ID:
-                    </span>
-                    <span className="font-mono text-xs font-bold text-emerald-950 truncate block select-all">
-                      {feedback.taskId}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleCopyTaskId(feedback.taskId)}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white text-xs font-bold rounded flex items-center gap-1.5 shrink-0 transition-colors shadow-2xs cursor-pointer"
-                  >
-                    {copiedTaskId ? (
-                      <>
-                        <FaCheck className="text-xs" />
-                        <span>Copied!</span>
-                      </>
-                    ) : (
-                      <>
-                        <FaCopy className="text-xs" />
-                        <span>Copy Task ID</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-
-              {feedback.message && !feedback.taskId && (
-                <p className="font-medium text-xs">{feedback.message}</p>
-              )}
+              <button
+                type="button"
+                onClick={() => setFeedback(null)}
+                className="text-rose-600 hover:text-rose-800 text-xs font-bold px-1"
+              >
+                Dismiss
+              </button>
             </div>
           )}
 

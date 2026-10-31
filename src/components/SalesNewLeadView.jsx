@@ -761,18 +761,9 @@ export default function SalesNewLeadView() {
                   {leadResponseToast.isError ? "✕" : "✓"}
                 </div>
                 <div>
-                  <h4 className={`font-bold text-xs ${leadResponseToast.isError ? "text-rose-950" : "text-emerald-950"}`}>
+                  <h4 className={`font-semibold text-xs ${leadResponseToast.isError ? "text-rose-950" : "text-emerald-950"}`}>
                     {leadResponseToast.message}
                   </h4>
-                  <div className={`flex items-center gap-2 text-[10px] mt-0.5 font-mono ${
-                    leadResponseToast.isError ? "text-rose-700" : "text-emerald-700"
-                  }`}>
-                    <span>Reference ID: <strong className="text-gray-900 font-bold">{leadResponseToast.referenceId}</strong></span>
-                    <span>•</span>
-                    <span>Status: <strong className={`uppercase px-1.5 py-0.2 rounded text-[9px] font-bold ${
-                      leadResponseToast.isError ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-800"
-                    }`}>{leadResponseToast.status}</strong></span>
-                  </div>
                 </div>
               </div>
               <button

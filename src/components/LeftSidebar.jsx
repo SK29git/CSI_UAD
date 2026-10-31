@@ -2,9 +2,7 @@ import React, { useState } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import { 
   FaPhoneAlt, 
-  FaWhatsapp, 
   FaEnvelope, 
-  FaCommentAlt, 
   FaComments, 
   FaEllipsisH, 
   FaGlobe, 
@@ -101,6 +99,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
   const locationStr = getFormattedLocation ? getFormattedLocation() : '';
   const branchName = getBranchName ? getBranchName() : '';
   const customerId = customer?.customerNumber || customer?.id || '';
+  const dobValue = customer?.dateOfBirth || customer?.dob || customer?.birthDate || customer?.DateOfBirth || customer?.date_of_birth || customer?.birth_date || customer?.individual?.dateOfBirth || customer?.personalDetails?.dateOfBirth;
 
   const hasRiskData = Boolean(
     riskOverview &&
@@ -348,7 +347,11 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                     <span>SMS</span>
                   </button>
 
-                  {customer?.isProspect ? (
+                  {customer?.status === 'Processing' || customer?.rpaStatus === 'Processing' || customer?.rpaTaskId ? (
+                    <span className="bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs flex items-center gap-1">
+                      <FaSpinner className="animate-spin text-[9px]" /> Processing
+                    </span>
+                  ) : customer?.isProspect ? (
                     <span className="bg-amber-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs flex items-center gap-1">
                       <span>★</span> PROSPECT
                     </span>
@@ -409,7 +412,9 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                 {customer?.isProspect ? 'Prospect ID' : 'Customer ID'}
               </span>
               <span className="font-semibold text-gray-800">
-                {customer?.customerNumber || (customer?.rpaTaskId ? `Pending (#${customer.rpaTaskId.slice(0, 8)})` : (customer?.isNewRegistration ? 'Pending Keyloop ID' : (customer?.prospectNumber || customerId || 'Pending')))}
+                {customer?.customerNumber && customer.customerNumber !== 'PROSPECT'
+                  ? customer.customerNumber 
+                  : (customer?.rpaTaskId || customer?.status === 'Processing' || customer?.isNewRegistration ? 'Processing' : (customer?.prospectNumber || customerId || 'Pending'))}
               </span>
             </div>
 
@@ -433,7 +438,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                   <span className="font-semibold text-amber-700">{customer?.status || 'OPEN'}</span>
                 </div>
               </>
-            ) : (customer?.isNewRegistration || !customer?.customerNumber) ? (
+            ) : (customer?.isNewRegistration || !customer?.customerNumber || customer?.rpaTaskId || customer?.status === 'Processing') ? (
               <>
                 <div>
                   <span className="text-gray-400 block text-[11px]">Registration Source</span>
@@ -443,8 +448,8 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                 </div>
                 <div>
                   <span className="text-gray-400 block text-[11px]">Account Status</span>
-                  <span className="font-semibold text-blue-700">
-                    {customer?.status || 'QUEUED'}
+                  <span className="font-semibold text-amber-600 flex items-center gap-1">
+                    {customer?.rpaTaskId || customer?.status === 'Processing' || customer?.status === 'QUEUED' ? 'Processing' : (customer?.status || 'Active')}
                   </span>
                 </div>
               </>
@@ -461,14 +466,12 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               </>
             )}
 
-            {customer?.dateOfBirth && (
-              <div>
-                <span className="text-gray-400 block text-[11px]">Date of Birth</span>
-                <span className="font-semibold text-gray-800">{getFormattedDate ? getFormattedDate(customer?.dateOfBirth) : (customer?.dateOfBirth || 'N/A')}</span>
-              </div>
-            )}
-            <div className="col-span-2 pt-1 border-t border-gray-50">
-              <span className="text-gray-400 block text-[11px]">Branch Code / Preferred</span>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Date of Birth</span>
+              <span className="font-semibold text-gray-800">{dobValue ? (getFormattedDate ? getFormattedDate(dobValue) : dobValue) : 'N/A'}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Branch Code</span>
               <span className="font-semibold text-gray-800">{branchName}</span>
             </div>
 
@@ -482,39 +485,6 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <span className="text-gray-400 block text-[11px]">Consents</span>
               <span className="font-medium text-gray-700">{getConsentsDisplay ? getConsentsDisplay() : 'None'}</span>
             </div>
-
-            {/* Visual Marketing Consents Pills */}
-            {customer?.consents && (
-              <div className="col-span-2 pt-2 border-t border-gray-100">
-                <span className="text-gray-400 block text-[10px] uppercase font-bold tracking-wider mb-1.5">Communication Consents</span>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {[
-                    { key: 'phone', label: 'Phone', icon: FaPhoneAlt },
-                    { key: 'email', label: 'Email', icon: FaEnvelope },
-                    { key: 'sms', label: 'SMS', icon: FaCommentAlt },
-                    { key: 'whatsapp', label: 'WhatsApp', icon: FaWhatsapp }
-                  ].map(c => {
-                    const active = customer.consents[c.key] === true;
-                    const IconComp = c.icon;
-                    return (
-                      <span 
-                        key={c.key} 
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 border transition-all ${
-                          active 
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300' 
-                            : 'bg-gray-50 text-gray-400 border-gray-200 opacity-60'
-                        }`}
-                        title={`${c.label} Consent: ${active ? 'Opted In' : 'Opted Out'}`}
-                      >
-                        <IconComp className="text-[9px]" />
-                        <span>{c.label}:</span>
-                        <span className={active ? 'text-emerald-800' : 'text-gray-400'}>{active ? 'YES' : 'NO'}</span>
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}
