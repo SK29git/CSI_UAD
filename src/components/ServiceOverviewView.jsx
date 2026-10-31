@@ -1107,7 +1107,7 @@ export default function ServiceOverviewView() {
                   activeBooking?.workshopNotes ||
                   activeBooking?.instructions ||
                   currentVehicle?.specialInstructions ||
-                  "Standard workshop procedures apply. No special handling constraints reported."}
+                  "No workshop notes recorded."}
               </p>
             </div>
 

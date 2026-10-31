@@ -394,42 +394,32 @@ export default function SalesAfterSalesView() {
         </div>
       </div>
 
-      {/* SALES FOLLOW-UP STATUS TOAST */}
-      {followUpToast && (
-        <div className={`p-3 rounded-xl border flex items-center justify-between gap-3 text-xs animate-fade-in ${
-          followUpToast.isError 
-            ? 'bg-rose-50 border-rose-200 text-rose-900' 
-            : 'bg-emerald-50 border-emerald-200 text-emerald-950'
-        }`}>
+      {/* SALES FOLLOW-UP STATUS INDICATOR */}
+      {followUpToast && !followUpToast.isError && followUpToast.status === 'Processing' && (
+        <div className="p-2.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-xs font-semibold flex items-center justify-between gap-3 animate-fade-in">
           <div className="flex items-center gap-2">
-            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold shrink-0 ${
-              followUpToast.isError ? 'bg-rose-500' : 'bg-emerald-600'
-            }`}>
-              {followUpToast.isError ? '✕' : '✓'}
-            </div>
-            <div>
-              <p className="font-bold">{followUpToast.message}</p>
-              {followUpToast.taskId && (
-                <p className="text-[10px] text-gray-600 mt-0.5">
-                  Task ID: <span className="font-mono font-bold text-gray-900">{followUpToast.taskId}</span>
-                  {followUpToast.status && (
-                    <span className="ml-2 px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded font-bold uppercase text-[9px]">
-                      {followUpToast.status}
-                    </span>
-                  )}
-                  {followUpToast.details?.followupId && (
-                    <span className="ml-2 text-gray-500">
-                      Assigned To: <strong>{followUpToast.details.followupId}</strong>
-                    </span>
-                  )}
-                </p>
-              )}
-            </div>
+            <FaSpinner className="animate-spin text-amber-600 text-xs shrink-0" />
+            <span>Processing follow-up request...</span>
           </div>
           <button 
-            type="button"
+            type="button" 
             onClick={() => setFollowUpToast(null)}
-            className="text-gray-400 hover:text-gray-700 font-bold p-1 cursor-pointer shrink-0"
+            className="text-amber-500 hover:text-amber-800 font-bold p-1 cursor-pointer"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+      {followUpToast && followUpToast.isError && (
+        <div className="p-2.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-800 text-xs font-semibold flex items-center justify-between gap-3 animate-fade-in">
+          <div className="flex items-center gap-2">
+            <FaExclamationTriangle className="text-rose-600 text-xs shrink-0" />
+            <span>{followUpToast.message}</span>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setFollowUpToast(null)}
+            className="text-rose-400 hover:text-rose-700 font-bold p-1 cursor-pointer"
           >
             ✕
           </button>
@@ -961,57 +951,17 @@ export default function SalesAfterSalesView() {
             {/* Modal Form */}
             <form onSubmit={handleFollowUpSubmit} className="p-5 overflow-y-auto space-y-3.5 text-xs">
               
-              <div className="grid grid-cols-2 gap-3">
-                {/* Brand Group */}
-                <div>
-                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
-                    <FaLayerGroup className="text-blue-500 text-[10px]" />
-                    <span>Brand Group</span>
-                  </label>
-                  <select
-                    value={followUpGroup}
-                    onChange={(e) => setFollowUpGroup(e.target.value)}
-                    className="w-full h-8 px-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold text-gray-800 focus:outline-none focus:border-blue-500 cursor-pointer"
-                  >
-                    <option value="BMW">BMW</option>
-                    <option value="Geely">Geely</option>
-                    <option value="MINI">MINI</option>
-                    <option value="Rolls-Royce">Rolls-Royce</option>
-                  </select>
-                </div>
-
-                {/* Branch */}
-                <div>
-                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
-                    <FaBuilding className="text-blue-500 text-[10px]" />
-                    <span>Dealership Branch</span>
-                  </label>
-                  <select
-                    value={followUpBranchCode}
-                    onChange={(e) => setFollowUpBranchCode(e.target.value)}
-                    className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:border-blue-500 cursor-pointer truncate"
-                  >
-                    {BRANCH_OPTIONS.map(b => (
-                      <option key={b.code} value={b.code}>{b.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Customer ID */}
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
                     <span>Customer ID</span>
-                    <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <input
                     type="text"
                     value={followUpCustomerId}
-                    onChange={(e) => setFollowUpCustomerId(e.target.value)}
-                    placeholder="e.g. 120023"
-                    required
-                    className="w-full h-8 px-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-800 focus:outline-none focus:border-blue-500"
+                    readOnly
+                    className="w-full h-8 px-2.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-700 cursor-not-allowed select-none focus:outline-none"
                   />
                 </div>
 
@@ -1019,42 +969,43 @@ export default function SalesAfterSalesView() {
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
                     <span>Customer Name</span>
-                    <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <input
                     type="text"
                     value={followUpCustomerName}
-                    onChange={(e) => setFollowUpCustomerName(e.target.value)}
-                    placeholder="e.g. Hammad Alnuaimi"
-                    required
-                    className="w-full h-8 px-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                    readOnly
+                    className="w-full h-8 px-2.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 cursor-not-allowed select-none focus:outline-none truncate"
+                  />
+                </div>
+
+                {/* Service Advisor Name */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaUserTie className="text-blue-500 text-[10px]" />
+                    <span>Service Advisor Name</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={followUpAdvisorName || 'Assigned Service Advisor'}
+                    readOnly
+                    className="w-full h-8 px-2.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 cursor-not-allowed select-none focus:outline-none truncate"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2.5">
-                {/* Assign to Advisor / User ID */}
+              {/* Row 2: Service Advisor ID (Non-editable), Due Date, Due Time (Editable) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Service Advisor ID */}
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
                     <FaUserTie className="text-blue-500 text-[10px]" />
-                    <span>Service Advisor</span>
+                    <span>Service Advisor ID</span>
                   </label>
                   <input
                     type="text"
-                    value={followUpAdvisorDisplay}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFollowUpAdvisorDisplay(val);
-                      const m = val.match(/\(([^)]+)\)/);
-                      if (m && m[1]) {
-                        setFollowUpAdvisorId(m[1].trim());
-                      } else {
-                        setFollowUpAdvisorId(val.trim());
-                      }
-                    }}
-                    placeholder="e.g. Advisor Name (0776) or kunnath"
-                    required
-                    className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                    value={followUpAdvisorId}
+                    readOnly
+                    className="w-full h-8 px-2.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-700 cursor-not-allowed select-none focus:outline-none"
                   />
                 </div>
 
@@ -1063,13 +1014,14 @@ export default function SalesAfterSalesView() {
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
                     <FaCalendarAlt className="text-blue-500 text-[10px]" />
                     <span>Due Date</span>
+                    <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <input
                     type="date"
                     value={followUpDueDate}
                     onChange={(e) => setFollowUpDueDate(e.target.value)}
                     required
-                    className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                    className="w-full h-8 px-2.5 bg-white border border-gray-300 rounded-lg text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
 
@@ -1078,13 +1030,14 @@ export default function SalesAfterSalesView() {
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
                     <FaClock className="text-blue-500 text-[10px]" />
                     <span>Due Time</span>
+                    <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <input
                     type="time"
                     value={followUpDueTime}
                     onChange={(e) => setFollowUpDueTime(e.target.value)}
                     required
-                    className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                    className="w-full h-8 px-2.5 bg-white border border-gray-300 rounded-lg text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
               </div>
@@ -1146,7 +1099,7 @@ export default function SalesAfterSalesView() {
                   {submittingFollowUp ? (
                     <>
                       <FaSpinner className="animate-spin text-xs" />
-                      <span>Scheduling Task...</span>
+                      <span>Processing...</span>
                     </>
                   ) : (
                     <>

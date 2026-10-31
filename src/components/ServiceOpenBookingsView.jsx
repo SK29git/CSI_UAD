@@ -150,22 +150,13 @@ export default function ServiceOpenBookingsView() {
   const handleFollowUpSubmit = async (e) => {
     e.preventDefault();
     setSubmittingFollowUp(true);
-    setFollowUpFeedback(null);
-
-    // Extract advisor ID/code from display string if present (e.g. "Name (0776)" -> "0776")
-    let resolvedAdvisorId = String(followUpAdvisorDisplay || followUpAdvisorId || "kunnath").trim();
-    const parensMatch = resolvedAdvisorId.match(/\(([^)]+)\)/);
-    if (parensMatch && parensMatch[1]) {
-      resolvedAdvisorId = parensMatch[1].trim();
-    } else if (resolvedAdvisorId.startsWith("Advisor #")) {
-      resolvedAdvisorId = resolvedAdvisorId.replace("Advisor #", "").trim();
-    }
+    setFollowUpFeedback({ status: 'Processing' });
 
     const payload = {
       group: followUpGroup || group || "BMW",
       customerId: String(followUpCustomerId || customerNumber || "").trim(),
       customerName: String(followUpCustomerName || customer?.fullName || "").trim(),
-      followupId: resolvedAdvisorId || "kunnath",
+      followupId: String(followUpAdvisorId || "kunnath").trim(),
       dueDate: followUpDueDate || new Date().toISOString().split('T')[0],
       dueTime: followUpDueTime || "11:00",
       branchCode: followUpBranchCode || "10",
@@ -175,14 +166,12 @@ export default function ServiceOpenBookingsView() {
     try {
       const res = await createSalesFollowUpCase(payload);
       if (res && (res.ok || res.taskId)) {
-        setFollowUpFeedback({
-          ok: true,
-          message: `Follow-up task scheduled successfully with Service Advisor ${followUpAdvisorDisplay || followUpAdvisorName || resolvedAdvisorId}!`
-        });
+        // Show simple processing indicator, no success popup
+        setFollowUpFeedback({ status: 'Processing' });
         setTimeout(() => {
           setShowFollowUpModal(false);
           setFollowUpFeedback(null);
-        }, 1800);
+        }, 800);
       } else {
         setFollowUpFeedback({
           ok: false,
@@ -243,10 +232,7 @@ export default function ServiceOpenBookingsView() {
     try {
       const res = await deleteServiceAppointment(aptId);
       if (res && res.ok) {
-        setCancelToast({
-          isError: false,
-          message: `Appointment #${aptId} has been successfully cancelled in Keyloop/Autoline DMS.`
-        });
+        setCancelToast(null);
         setCancelModalOpen(false);
         setAppointmentToCancel(null);
         fetchGeelyAppointments();
@@ -492,7 +478,8 @@ export default function ServiceOpenBookingsView() {
                 const advisorNameCandidate = rawAdv.name || rawAdv.fullName || rawSa.name || rawSa.fullName || apt.advisorName || apt.serviceAdvisorName || (typeof apt.serviceAdvisor === 'string' && isNaN(apt.serviceAdvisor) ? apt.serviceAdvisor : '') || (typeof apt.advisor === 'string' && isNaN(apt.advisor) ? apt.advisor : '') || '';
                 const advisorName = advisorNameCandidate && advisorNameCandidate !== advisorId ? advisorNameCandidate : (advisorId ? `Advisor #${advisorId}` : 'Assigned Service Advisor');
                 const workshopStatus = apt.status || 'IN_PROGRESS';
-                const workshopComments = apt.comments || apt.notes || apt.workshopComments || apt.instructions || 'Vehicle registered in workshop queue. Routine maintenance & multi-point inspection in progress.';
+                const rawComments = apt.comments || apt.notes || apt.workshopComments || apt.instructions;
+                const workshopComments = rawComments && String(rawComments).trim() ? String(rawComments).trim() : 'No workshop comments recorded.';
 
                 return (
                   <div 
@@ -724,7 +711,8 @@ export default function ServiceOpenBookingsView() {
 
             // Extract workshop status and comments (Change 32)
             const workshopStatus = b.workshopStatus || b.status || (b.open ? 'OPEN / IN WORKSHOP' : 'SCHEDULED');
-            const workshopComments = b.workshopComments || b.comments || b.notes || b.workshopNotes || b.instructions || b.specialInstructions || b.remarks || "Vehicle in workshop queue. Routine maintenance & multi-point inspection in progress.";
+            const rawComments = b.workshopComments || b.comments || b.notes || b.workshopNotes || b.instructions || b.specialInstructions || b.remarks;
+            const workshopComments = rawComments && String(rawComments).trim() ? String(rawComments).trim() : 'No workshop comments recorded.';
 
             // Format date & time
             const formattedDate = formatDate(b.date || b.createdDate);
@@ -1218,72 +1206,76 @@ export default function ServiceOpenBookingsView() {
               </button>
             </div>
 
-            {/* Inline Feedback Banner */}
-            {followUpFeedback && (
-              <div className={`p-3 text-xs font-semibold flex items-center gap-2 ${
-                followUpFeedback.ok ? 'bg-emerald-50 text-emerald-800 border-b border-emerald-200' : 'bg-rose-50 text-rose-800 border-b border-rose-200'
-              }`}>
-                {followUpFeedback.ok ? <FaCheckCircle className="text-emerald-600 shrink-0" /> : <FaExclamationTriangle className="text-rose-600 shrink-0" />}
+            {/* Inline Processing / Status Indicator */}
+            {(submittingFollowUp || followUpFeedback?.status === 'Processing') && (
+              <div className="p-2.5 bg-amber-50 border-b border-amber-200 text-amber-800 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+                <FaSpinner className="animate-spin text-amber-600 shrink-0 text-xs" />
+                <span>Processing follow-up request...</span>
+              </div>
+            )}
+
+            {/* Error Feedback Banner */}
+            {followUpFeedback && !followUpFeedback.ok && followUpFeedback.message && (
+              <div className="p-2.5 bg-rose-50 text-rose-800 border-b border-rose-200 text-xs font-semibold flex items-center gap-2 animate-fade-in">
+                <FaExclamationTriangle className="text-rose-600 shrink-0 text-xs" />
                 <span>{followUpFeedback.message}</span>
               </div>
             )}
 
             {/* Modal Body */}
             <form onSubmit={handleFollowUpSubmit} className="p-5 space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-3">
+              {/* Row 1: Customer ID, Customer Name, Service Advisor Name (Non-editable) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
                     <span>Customer ID</span>
-                    <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <input
                     type="text"
                     value={followUpCustomerId}
-                    onChange={(e) => setFollowUpCustomerId(e.target.value)}
-                    placeholder="e.g. 120023"
-                    required
-                    className="w-full h-8 px-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-800 focus:outline-none focus:border-blue-500"
+                    readOnly
+                    className="w-full h-8 px-2.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-700 cursor-not-allowed select-none focus:outline-none"
                   />
                 </div>
 
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
                     <span>Customer Name</span>
-                    <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <input
                     type="text"
                     value={followUpCustomerName}
-                    onChange={(e) => setFollowUpCustomerName(e.target.value)}
-                    placeholder="e.g. Customer Name"
-                    required
-                    className="w-full h-8 px-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                    readOnly
+                    className="w-full h-8 px-2.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 cursor-not-allowed select-none focus:outline-none truncate"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaUserTie className="text-blue-500 text-[10px]" />
+                    <span>Service Advisor Name</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={followUpAdvisorName || 'Assigned Service Advisor'}
+                    readOnly
+                    className="w-full h-8 px-2.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 cursor-not-allowed select-none focus:outline-none truncate"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2.5">
+              {/* Row 2: Service Advisor ID (Non-editable), Due Date, Due Time (Editable) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
                     <FaUserTie className="text-blue-500 text-[10px]" />
-                    <span>Service Advisor</span>
+                    <span>Service Advisor ID</span>
                   </label>
                   <input
                     type="text"
-                    value={followUpAdvisorDisplay}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setFollowUpAdvisorDisplay(val);
-                      const m = val.match(/\(([^)]+)\)/);
-                      if (m && m[1]) {
-                        setFollowUpAdvisorId(m[1].trim());
-                      } else {
-                        setFollowUpAdvisorId(val.trim());
-                      }
-                    }}
-                    placeholder="e.g. Advisor Name (0776) or kunnath"
-                    required
-                    className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                    value={followUpAdvisorId}
+                    readOnly
+                    className="w-full h-8 px-2.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-mono font-bold text-gray-700 cursor-not-allowed select-none focus:outline-none"
                   />
                 </div>
 
@@ -1291,13 +1283,14 @@ export default function ServiceOpenBookingsView() {
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
                     <FaCalendarAlt className="text-blue-500 text-[10px]" />
                     <span>Due Date</span>
+                    <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <input
                     type="date"
                     value={followUpDueDate}
                     onChange={(e) => setFollowUpDueDate(e.target.value)}
                     required
-                    className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                    className="w-full h-8 px-2.5 bg-white border border-gray-300 rounded-lg text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
 
@@ -1305,13 +1298,14 @@ export default function ServiceOpenBookingsView() {
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1">
                     <FaClock className="text-blue-500 text-[10px]" />
                     <span>Due Time</span>
+                    <span className="text-rose-500 font-bold">*</span>
                   </label>
                   <input
                     type="time"
                     value={followUpDueTime}
                     onChange={(e) => setFollowUpDueTime(e.target.value)}
                     required
-                    className="w-full h-8 px-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-blue-500"
+                    className="w-full h-8 px-2.5 bg-white border border-gray-300 rounded-lg text-xs font-mono font-semibold text-gray-800 focus:outline-none focus:border-blue-500 transition-colors"
                   />
                 </div>
               </div>
@@ -1365,12 +1359,12 @@ export default function ServiceOpenBookingsView() {
                 <button
                   type="submit"
                   disabled={submittingFollowUp}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs cursor-pointer flex items-center gap-1.5 shadow-xs transition-colors"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded-lg font-bold text-xs cursor-pointer flex items-center gap-1.5 shadow-xs transition-colors"
                 >
                   {submittingFollowUp ? (
                     <>
                       <FaSpinner className="animate-spin text-xs" />
-                      <span>Scheduling Task...</span>
+                      <span>Processing...</span>
                     </>
                   ) : (
                     <>
