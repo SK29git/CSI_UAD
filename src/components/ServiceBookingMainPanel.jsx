@@ -752,7 +752,7 @@ export default function ServiceBookingMainPanel() {
           }`}
         >
           <FaClipboardList className="text-xs" />
-          <span>4. Save Request</span>
+          <span>4. Customer Notes</span>
         </button>
 
         <button
@@ -1590,7 +1590,7 @@ export default function ServiceBookingMainPanel() {
           <div className="bg-white rounded-xl shadow-xs border border-gray-300 overflow-hidden flex flex-col">
             <div className="bg-slate-100/80 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="font-extrabold text-gray-900 text-sm flex items-center gap-2">
-                <FaClipboardList className="text-blue-600" /> Save Customer Complaint / Request
+                <FaClipboardList className="text-blue-600" /> Customer Notes
               </h3>
             </div>
 
@@ -1641,7 +1641,7 @@ export default function ServiceBookingMainPanel() {
                   disabled={lookupLoading || !customerNumber || !requestText.trim()}
                   className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 min-w-[200px]"
                 >
-                  {lookupLoading ? <FaSpinner className="animate-spin text-sm" /> : <FaClipboardList className="text-sm" />} Save Request
+                  {lookupLoading ? <FaSpinner className="animate-spin text-sm" /> : <FaClipboardList className="text-sm" />} Customer Notes
                 </button>
               </div>
             </form>

@@ -272,12 +272,19 @@ export async function submitRpaCase(caseType, details, options = {}) {
   return data; // { taskId, status }
 }
 
+export function isValidUuid(str) {
+  if (!str || typeof str !== "string") return false;
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    str.trim()
+  );
+}
+
 /**
  * Fetches the current status of an RPA case at GET /api/intake/cases/:taskId (Single status check)
- * @param {string} taskId - RPA task ID returned by submitRpaCase
+ * @param {string} taskId - RPA task ID returned by submitRpaCase (must be a valid UUID)
  */
 export async function getRpaCaseStatus(taskId) {
-  if (!taskId) return null;
+  if (!taskId || !isValidUuid(taskId)) return null;
   const endpoint = `/api/intake/cases/${taskId}`;
   const directUrl = `${API_BASE_URL}${endpoint}`;
 
@@ -319,8 +326,8 @@ export async function pollRpaCaseStatus(
   intervalMs = 3000,
   onProgress = null,
 ) {
-  if (!taskId) {
-    throw new Error("No taskId provided for RPA status check");
+  if (!taskId || !isValidUuid(taskId)) {
+    return { ok: false, error: "Invalid or non-UUID taskId", taskId };
   }
 
   const startTime = Date.now();
@@ -621,6 +628,40 @@ export async function linkVehicleToCustomer(details, options = {}) {
     createdBy: options.createdBy || "genesys",
     ...options,
   });
+}
+
+/**
+ * Links a Brand New vehicle to a customer via Keyloop RPA Broker
+ * Case Type: 'LINK_NEW_VEHICLE_TO_CUSTOMER' via POST /api/intake/cases
+ * @param {object} details - Case payload details matching CCaaS intake schema
+ * @param {object} options - Optional parameters (createdBy, callbackUrl, onProgress)
+ */
+export async function linkNewVehicleToCustomer(details, options = {}) {
+  return await executeRpaCase("LINK_NEW_VEHICLE_TO_CUSTOMER", details, {
+    callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,
+    createdBy: options.createdBy || "genesys",
+    ...options,
+  });
+}
+
+/**
+ * Fetches an Enquiry by Group and Enquiry Number from Keyloop
+ * GET /api/v1/enquiries/:group/:enquiryNumber
+ * @param {string} group - 'BMW' | 'MINI' | 'ROLLS-ROYCE' | 'GEELY'
+ * @param {string|number} enquiryNumber - Keyloop Enquiry Number
+ */
+export async function fetchEnquiryDetails(group = "BMW", enquiryNumber) {
+  if (!enquiryNumber) return null;
+  const endpoint = `/api/v1/enquiries/${encodeURIComponent(group)}/${encodeURIComponent(String(enquiryNumber).trim())}`;
+  try {
+    const res = await apiFetch(endpoint);
+    if (res && res.ok && res.data) {
+      return Array.isArray(res.data) ? res.data[0] : res.data;
+    }
+  } catch (err) {
+    console.warn("fetchEnquiryDetails failed:", err);
+  }
+  return null;
 }
 
 /**

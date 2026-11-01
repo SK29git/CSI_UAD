@@ -1,6 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useCustomer, isExistingCustomer } from '../context/CustomerContext';
-import { apiFetch, submitLeadIntake, executeRpaCase, createComplaintCase } from '../utils/api';
+import { 
+  apiFetch, 
+  submitLeadIntake, 
+  executeRpaCase, 
+  createComplaintCase,
+  getRpaCaseStatus,
+  fetchEnquiryDetails,
+  isValidUuid
+} from '../utils/api';
 import { 
   FaUserPlus,
   FaUserCheck,
@@ -343,6 +351,272 @@ export default function SalesNewLeadView() {
     }
   };
 
+  // ----------------------------------------------------
+  // ASSIGNED SALESPERSON POLLING STATE & TIMERS
+  // ----------------------------------------------------
+  const [salespersonPollState, setSalespersonPollState] = useState(null);
+  const [isManualChecking, setIsManualChecking] = useState(false);
+  const pollingTimerRef = useRef(null);
+  const countdownTimerRef = useRef(null);
+  const pollStateRef = useRef(null);
+
+  useEffect(() => {
+    pollStateRef.current = salespersonPollState;
+  }, [salespersonPollState]);
+
+  useEffect(() => {
+    return () => {
+      if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+      if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+    };
+  }, []);
+
+  const formatMinutesSeconds = (totalSeconds) => {
+    if (totalSeconds <= 0) return '0s';
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    if (mins > 0) {
+      return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+    }
+    return `${secs}s`;
+  };
+
+  const performSalespersonCheck = async (currentState) => {
+    if (!currentState) return null;
+    const { taskId, enquiryId, group: targetGroup, customerNumber: targetCustNo, mobile: targetMobile } = currentState;
+    let resolvedEnqId = enquiryId;
+
+    // 1. Check RPA task status if taskId exists and is a valid UUID
+    if (taskId && isValidUuid(taskId)) {
+      try {
+        const taskData = await getRpaCaseStatus(taskId);
+        if (taskData) {
+          const resObj = taskData.result || {};
+          const directName = resObj.salesperson || resObj.salesPerson || resObj.salesExecutive || resObj.assignedTo || resObj.advisor?.name;
+          const directCode = resObj.salesExecutiveId || resObj.salespersonId || resObj.advisor?.code || '';
+          if (directName && typeof directName === 'string' && directName.trim() && directName.toLowerCase() !== 'null' && directName !== 'N/A') {
+            return {
+              salesperson: {
+                name: directName.trim(),
+                code: String(directCode || '').trim(),
+                email: resObj.advisor?.email || resObj.email || '',
+                branch: resObj.branch || ''
+              },
+              enquiryId: resObj.enquiryId || resObj.enquiryNumber || resolvedEnqId
+            };
+          }
+
+          if (!resolvedEnqId && (resObj.enquiryId || resObj.enquiryNumber)) {
+            resolvedEnqId = String(resObj.enquiryId || resObj.enquiryNumber).trim();
+          }
+        }
+      } catch (err) {
+        console.warn('RPA task check warning:', err);
+      }
+    }
+
+    // 2. Query Keyloop Enquiry Endpoint if enquiryId is known
+    if (resolvedEnqId && resolvedEnqId !== 'CONVERTED' && resolvedEnqId !== 'CREATED' && resolvedEnqId !== taskId) {
+      try {
+        const enqData = await fetchEnquiryDetails(targetGroup || 'BMW', resolvedEnqId);
+        if (enqData) {
+          const adv = enqData.advisor || {};
+          const advName = adv.name || enqData.salesExecutive || (adv.code ? `Advisor: ${adv.code}` : '');
+          if (advName && advName !== 'N/A' && advName.toLowerCase() !== 'null' && advName.trim()) {
+            return {
+              salesperson: {
+                name: advName,
+                code: String(adv.code || enqData.salesExecutiveId || '').trim(),
+                email: adv.email || '',
+                branch: enqData.branchName || (enqData.branchCode ? `Branch ${enqData.branchCode}` : '')
+              },
+              enquiryId: resolvedEnqId
+            };
+          }
+        }
+      } catch (err) {
+        console.warn('Keyloop enquiry check warning:', err);
+      }
+    }
+
+    // 3. Fallback: Query enquiries list by mobile or customerNumber
+    if (targetMobile || targetCustNo) {
+      try {
+        const params = new URLSearchParams();
+        params.set('group', targetGroup || 'BMW');
+        if (targetCustNo) params.set('customerNumber', targetCustNo);
+        else if (targetMobile) params.set('mobile', targetMobile.replace(/[^0-9]/g, ''));
+        const searchRes = await apiFetch(`/api/v1/enquiries?${params.toString()}`);
+        if (searchRes && searchRes.ok && searchRes.data) {
+          const list = Array.isArray(searchRes.data) ? searchRes.data : [searchRes.data];
+          if (list.length > 0) {
+            const newest = list[0];
+            const adv = newest.advisor || {};
+            const advName = adv.name || newest.salesExecutive;
+            if (advName && advName !== 'N/A' && advName.toLowerCase() !== 'null' && advName.trim()) {
+              return {
+                salesperson: {
+                  name: advName,
+                  code: String(adv.code || newest.salesExecutiveId || '').trim(),
+                  email: adv.email || '',
+                  branch: newest.branchName || ''
+                },
+                enquiryId: newest.enquiryNumber || newest.enquiryId || resolvedEnqId
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Fallback enquiry search warning:', err);
+      }
+    }
+
+    return { salesperson: null, enquiryId: resolvedEnqId };
+  };
+
+  const startSalespersonPolling = ({ taskId, enquiryId, group: tGroup, customerNumber: tCustNo, mobile: tMobile, branchLabel: tBranch }) => {
+    if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+    if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+
+    const initialState = {
+      status: 'POLLING_IMMEDIATE',
+      taskId: taskId ? String(taskId) : '',
+      enquiryId: enquiryId ? String(enquiryId) : '',
+      group: tGroup || group || 'BMW',
+      customerNumber: tCustNo ? String(tCustNo) : '',
+      mobile: tMobile || '',
+      branch: tBranch || '',
+      salesperson: null,
+      elapsedSeconds: 0,
+      nextCheckSeconds: 240,
+      lastCheckedAt: new Date().toLocaleTimeString()
+    };
+
+    setSalespersonPollState(initialState);
+    pollStateRef.current = initialState;
+
+    // Immediate check
+    performSalespersonCheck(initialState).then(res => {
+      if (res?.salesperson) {
+        setSalespersonPollState(prev => prev ? {
+          ...prev,
+          status: 'ASSIGNED',
+          salesperson: res.salesperson,
+          enquiryId: res.enquiryId || prev.enquiryId
+        } : null);
+        return;
+      }
+      if (res?.enquiryId && !initialState.enquiryId) {
+        setSalespersonPollState(prev => prev ? { ...prev, enquiryId: res.enquiryId } : null);
+      }
+    });
+
+    let currentElapsed = 0;
+    pollingTimerRef.current = setInterval(async () => {
+      currentElapsed += 1;
+      const cur = pollStateRef.current;
+      if (!cur || cur.status === 'ASSIGNED') {
+        clearInterval(pollingTimerRef.current);
+        return;
+      }
+
+      setSalespersonPollState(prev => prev ? { ...prev, elapsedSeconds: currentElapsed } : null);
+
+      // Poll check every 3 seconds
+      if (currentElapsed % 3 === 0) {
+        const checkResult = await performSalespersonCheck(cur);
+        if (checkResult?.salesperson) {
+          clearInterval(pollingTimerRef.current);
+          setSalespersonPollState(prev => prev ? {
+            ...prev,
+            status: 'ASSIGNED',
+            salesperson: checkResult.salesperson,
+            enquiryId: checkResult.enquiryId || prev.enquiryId
+          } : null);
+          return;
+        }
+        if (checkResult?.enquiryId && !cur.enquiryId) {
+          setSalespersonPollState(prev => prev ? { ...prev, enquiryId: checkResult.enquiryId } : null);
+        }
+      }
+
+      // If reached 60 seconds without salesperson, transition to Phase 2 (Waiting for 5 min)
+      if (currentElapsed >= 60) {
+        clearInterval(pollingTimerRef.current);
+        startFiveMinuteCountdown();
+      }
+    }, 1000);
+  };
+
+  const startFiveMinuteCountdown = () => {
+    setSalespersonPollState(prev => prev ? {
+      ...prev,
+      status: 'WAITING_5MIN',
+      nextCheckSeconds: 240
+    } : null);
+
+    let remainingSeconds = 240;
+    countdownTimerRef.current = setInterval(async () => {
+      remainingSeconds -= 1;
+      const cur = pollStateRef.current;
+      if (!cur || cur.status === 'ASSIGNED') {
+        clearInterval(countdownTimerRef.current);
+        return;
+      }
+
+      setSalespersonPollState(prev => prev ? { ...prev, nextCheckSeconds: remainingSeconds } : null);
+
+      if (remainingSeconds <= 0) {
+        clearInterval(countdownTimerRef.current);
+        // At 5 minutes: trigger automatic 5-min verification check
+        setSalespersonPollState(prev => prev ? { ...prev, status: 'POLLING_5MIN' } : null);
+        const finalCheck = await performSalespersonCheck(cur);
+        if (finalCheck?.salesperson) {
+          setSalespersonPollState(prev => prev ? {
+            ...prev,
+            status: 'ASSIGNED',
+            salesperson: finalCheck.salesperson,
+            enquiryId: finalCheck.enquiryId || prev.enquiryId
+          } : null);
+        } else {
+          setSalespersonPollState(prev => prev ? {
+            ...prev,
+            status: 'WAITING_5MIN',
+            nextCheckSeconds: 300,
+            lastCheckedAt: new Date().toLocaleTimeString()
+          } : null);
+        }
+      }
+    }, 1000);
+  };
+
+  const handleManualCheckNow = async () => {
+    const cur = pollStateRef.current;
+    if (!cur) return;
+    setIsManualChecking(true);
+    try {
+      const res = await performSalespersonCheck(cur);
+      if (res?.salesperson) {
+        if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
+        if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
+        setSalespersonPollState(prev => prev ? {
+          ...prev,
+          status: 'ASSIGNED',
+          salesperson: res.salesperson,
+          enquiryId: res.enquiryId || prev.enquiryId
+        } : null);
+      } else {
+        setSalespersonPollState(prev => prev ? {
+          ...prev,
+          lastCheckedAt: new Date().toLocaleTimeString(),
+          enquiryId: res?.enquiryId || prev.enquiryId
+        } : null);
+      }
+    } finally {
+      setIsManualChecking(false);
+    }
+  };
+
   const handleSaveLead = async (e) => {
     e.preventDefault();
     setSubmittingLead(true);
@@ -381,11 +655,13 @@ export default function SalesNewLeadView() {
         });
 
         const enqId = result?.result?.enquiryId || result?.result?.enquiryNumber || result?.taskId || "CONVERTED";
-        setLeadResponseToast({
-          isError: false,
-          referenceId: String(enqId),
-          status: "COMPLETED",
-          message: `Prospect #${prospectId} successfully converted to Enquiry #${enqId} in Keyloop!`
+        startSalespersonPolling({
+          taskId: result?.taskId,
+          enquiryId: (enqId !== "CONVERTED" && enqId !== result?.taskId) ? String(enqId) : '',
+          group: dynamicGroup,
+          customerNumber: prospectId,
+          mobile: formattedMobile,
+          branchLabel
         });
         setSubmittingLead(false);
         return;
@@ -418,11 +694,15 @@ export default function SalesNewLeadView() {
       const res = await submitLeadIntake(payload);
 
       if (res && res.ok && res.data) {
-        setLeadResponseToast({
-          isError: false,
-          referenceId: res.data.referenceId || "AGMC-SUCCESS",
-          status: res.data.status || "RECEIVED",
-          message: res.data.message || "Enquiry received and is being forwarded to Keyloop and Genesys"
+        const refId = res.data.referenceId || "AGMC-SUCCESS";
+        startSalespersonPolling({
+          taskId: isValidUuid(res.data.taskId) ? res.data.taskId : null,
+          referenceId: refId,
+          enquiryId: res.data.enquiryId || res.data.enquiryNumber || '',
+          group: dynamicGroup,
+          customerNumber: null,
+          mobile: formattedMobile,
+          branchLabel
         });
       }
     } catch (err) {
@@ -475,11 +755,13 @@ export default function SalesNewLeadView() {
       });
 
       const enqId = result?.result?.enquiryId || result?.result?.enquiryNumber || result?.taskId || "CREATED";
-      setLeadResponseToast({
-        isError: false,
-        referenceId: String(enqId),
-        status: "COMPLETED",
-        message: `New Enquiry successfully created for Customer #${custNo} via Keyloop RPA!`
+      startSalespersonPolling({
+        taskId: result?.taskId,
+        enquiryId: (enqId !== "CREATED" && enqId !== result?.taskId) ? String(enqId) : '',
+        group: dynamicGroup,
+        customerNumber: custNo,
+        mobile: formattedMobile,
+        branchLabel
       });
     } catch (err) {
       console.warn("Existing customer enquiry RPA error, falling back to Lead Intake:", err);
@@ -503,11 +785,15 @@ export default function SalesNewLeadView() {
         });
 
         if (intakeRes && intakeRes.ok && intakeRes.data) {
-          setLeadResponseToast({
-            isError: false,
-            referenceId: intakeRes.data.referenceId || "AGMC-SUCCESS",
-            status: intakeRes.data.status || "RECEIVED",
-            message: `Enquiry received for Existing Customer #${custNo} and forwarded to Keyloop!`
+          const refId = intakeRes.data.referenceId || "AGMC-SUCCESS";
+          startSalespersonPolling({
+            taskId: isValidUuid(intakeRes.data.taskId) ? intakeRes.data.taskId : null,
+            referenceId: refId,
+            enquiryId: intakeRes.data.enquiryId || intakeRes.data.enquiryNumber || '',
+            group: dynamicGroup,
+            customerNumber: custNo,
+            mobile: formattedMobile,
+            branchLabel
           });
         }
       } catch (fallbackErr) {
@@ -735,6 +1021,9 @@ export default function SalesNewLeadView() {
         <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
           <span className="text-[10px] text-gray-500 font-medium">
             Group : <span className="font-bold text-gray-700">{group || 'BMW'}</span> | <span className="font-bold text-gray-700">{hasCustomer ? `Customer #${customerNumber}` : 'New Enquiry'}</span>
+            {salespersonPollState?.salesperson?.name && (
+              <> | Salesperson: <span className="font-bold text-blue-700">{salespersonPollState.salesperson.name}</span></>
+            )}
           </span>
           <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-2xs shrink-0">
             <FaCar className="text-[10px]" />
@@ -748,20 +1037,15 @@ export default function SalesNewLeadView() {
       {activeTab === "lead" && (
         <div className="flex flex-col gap-2">
 
-          {leadResponseToast && (
-            <div className={`p-2.5 rounded-lg flex items-center justify-between shadow-xs border animate-fade-in ${
-              leadResponseToast.isError
-                ? "bg-rose-50 border-rose-200 text-rose-900"
-                : "bg-emerald-50 border-emerald-200 text-emerald-800"
-            }`}>
+          {/* Error Notice Only - No intrusive polling bars or success banners */}
+          {leadResponseToast && leadResponseToast.isError && (
+            <div className="p-2.5 rounded-lg flex items-center justify-between shadow-xs border animate-fade-in bg-rose-50 border-rose-200 text-rose-900">
               <div className="flex items-center gap-2">
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] shadow-xs text-white ${
-                  leadResponseToast.isError ? "bg-rose-500" : "bg-emerald-500"
-                }`}>
-                  {leadResponseToast.isError ? "✕" : "✓"}
+                <div className="w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] shadow-xs text-white bg-rose-500">
+                  ✕
                 </div>
                 <div>
-                  <h4 className={`font-semibold text-xs ${leadResponseToast.isError ? "text-rose-950" : "text-emerald-950"}`}>
+                  <h4 className="font-semibold text-xs text-rose-950">
                     {leadResponseToast.message}
                   </h4>
                 </div>

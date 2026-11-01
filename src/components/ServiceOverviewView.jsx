@@ -18,9 +18,11 @@ import {
   FaClipboardList,
   FaMapMarkerAlt,
   FaUserTie,
+  FaPlusCircle,
 } from "react-icons/fa";
 import VehicleOwnershipTransferModal from "./VehicleOwnershipTransferModal";
 import VehiclePackagesModal from "./VehiclePackagesModal";
+import AddNewVehicleModal from "./AddNewVehicleModal";
 
 export default function ServiceOverviewView() {
   const {
@@ -56,6 +58,7 @@ export default function ServiceOverviewView() {
   const [activeBooking, setActiveBooking] = useState(null);
   const [bookingBatteryId, setBookingBatteryId] = useState("");
   const [loadingOverviewApis, setLoadingOverviewApis] = useState(false);
+  const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isPackagesModalOpen, setIsPackagesModalOpen] = useState(false);
   const [isPackagesInlineExpanded, setIsPackagesInlineExpanded] =
@@ -546,6 +549,16 @@ export default function ServiceOverviewView() {
                 </select>
               </div>
             )}
+
+            <button
+              type="button"
+              onClick={() => setIsAddVehicleModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer"
+              title="Add / Link Brand New Vehicle to Customer"
+            >
+              <FaPlusCircle className="text-[11px]" />
+              <span className="hidden sm:inline">Add New Vehicle</span>
+            </button>
 
             <button
               type="button"
@@ -1310,6 +1323,15 @@ export default function ServiceOverviewView() {
         isOpen={isPackagesModalOpen}
         onClose={() => setIsPackagesModalOpen(false)}
         vehicle={currentVehicle}
+      />
+
+      {/* Add New Vehicle to Customer Modal */}
+      <AddNewVehicleModal
+        isOpen={isAddVehicleModalOpen}
+        onClose={() => setIsAddVehicleModalOpen(false)}
+        onSuccess={() => {
+          handleRefreshAll();
+        }}
       />
 
       {/* Vehicle Ownership Transfer / Link Modal */}
