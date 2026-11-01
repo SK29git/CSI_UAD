@@ -651,6 +651,24 @@ export async function createSalesFollowUpCase(details, options = {}) {
   });
 }
 
+/**
+ * Creates Service Request Notes via Keyloop RPA Intake (caseType: 'CREATE_SERVICE_REQUEST_NOTES')
+ * POST /api/intake/cases
+ * @param {object} details - { group, customerId, customerName, eventType, branchCode, notes, salesExecutiveId }
+ * @param {object} options - Optional parameters (createdBy, callbackUrl, onProgress)
+ */
+export async function createServiceRequestNotes(details, options = {}) {
+  const payloadDetails = {
+    ...details,
+    salesExecutiveId: details?.salesExecutiveId || "pattepu",
+  };
+  return await executeRpaCase("CREATE_SERVICE_REQUEST_NOTES", payloadDetails, {
+    callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,
+    createdBy: options.createdBy || "genesys",
+    ...options,
+  });
+}
+
 /* ========================================================================== */
 /* AGMC SMS GATEWAY SERVICE (POST https://agmcutil.agmcgroup.ae/api/v1/sms/send)*/
 /* ========================================================================== */

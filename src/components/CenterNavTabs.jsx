@@ -22,7 +22,8 @@ import {
   FaCheckCircle,
   FaWrench,
   FaHeart,
-  FaChartPie
+  FaChartPie,
+  FaPlusCircle
 } from 'react-icons/fa';
 import { getFullMobileNumber } from '../utils/phoneUtils';
 
@@ -86,6 +87,7 @@ export default function CenterNavTabs({
   const getSubTabIcon = (id) => {
     switch (id) {
       case 'Overview': return <FaHome className="text-xs" />;
+      case 'Create Service': return <FaPlusCircle className="text-xs" />;
       case 'New Lead':
       case 'New Enquiry': return <FaUserPlus className="text-xs" />;
       case 'Enquiries': return <FaClipboardList className="text-xs" />;
@@ -123,6 +125,7 @@ export default function CenterNavTabs({
 
   const serviceSubTabs = [
     { id: 'Overview', label: 'Overview' },
+    { id: 'Create Service', label: 'Create Service' },
     { id: 'Book Service', label: 'Book Service' },
     { id: 'Open Bookings', label: 'Open Bookings' },
     { id: 'Service History', label: 'Service History' },

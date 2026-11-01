@@ -3,6 +3,7 @@ import CenterNavTabs from '../components/CenterNavTabs';
 import LeftSidebar from '../components/LeftSidebar';
 import ServiceBookingMainPanel from '../components/ServiceBookingMainPanel';
 import ServiceOverviewView from '../components/ServiceOverviewView';
+import CreateServiceView from '../components/CreateServiceView';
 import ServiceOpenBookingsView from '../components/ServiceOpenBookingsView';
 import ServiceHistoryView from '../components/ServiceHistoryView';
 import ServiceWarrantyClaimsView from '../components/ServiceWarrantyClaimsView';
@@ -50,6 +51,8 @@ export default function ServiceBookingPage() {
     switch (activeSubTab) {
       case 'Overview':
         return <ServiceOverviewView />;
+      case 'Create Service':
+        return <CreateServiceView />;
       case 'Book Service':
         return <ServiceBookingMainPanel />;
       case 'Open Bookings':

@@ -424,24 +424,80 @@ export default function SalesOverviewView() {
               {/* 3. Trade-in History Card */}
               {activeDetailTab === 'tradein' && hasTradeIn && (
                 <div className="space-y-3">
-                  {tradeInData.map((trd, idx) => (
-                    <div key={trd.tradeInId || idx} className="bg-white p-3.5 rounded-lg border border-gray-200 space-y-2">
-                      <div className="flex flex-wrap justify-between items-center border-b border-gray-100 pb-2">
-                        <span className="font-mono font-bold text-purple-700 text-xs">{trd.tradeInId || `TRD-${idx+1}`}</span>
-                        {trd.status && (
-                          <span className="bg-blue-100 text-blue-800 font-extrabold text-[10px] px-2 py-0.5 rounded uppercase">
-                            {trd.status}
+                  {tradeInData.map((trd, idx) => {
+                    const refNo = trd.reference || trd.tradeInId || `TRD-${idx + 1}`;
+                    const vehicleDesc = trd.previousVehicle || (typeof trd.vehicle === 'object' ? (trd.vehicle.description || trd.vehicle.model || trd.vehicle.name) : trd.vehicle) || 'Trade-in Vehicle';
+                    const vehNo = trd.vehicleNumber || trd.vehicleNo;
+                    const val = trd.value !== undefined && trd.value !== null ? trd.value : trd.appraisedValue;
+                    const formattedVal = val !== undefined && val !== null && val !== ''
+                      ? (typeof val === 'number' ? `AED ${val.toLocaleString()}` : (String(val).startsWith('AED') ? val : `AED ${Number(val).toLocaleString() || val}`))
+                      : null;
+                    const status = trd.status || 'Recorded';
+                    const isCompleted = String(status).toLowerCase() === 'completed';
+                    const isCancelled = String(status).toLowerCase() === 'cancelled';
+
+                    return (
+                      <div key={refNo || idx} className="bg-white p-3.5 rounded-lg border border-gray-200 space-y-2.5">
+                        <div className="flex flex-wrap justify-between items-center border-b border-gray-100 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-bold text-purple-700 text-xs">
+                              Ref #{refNo}
+                            </span>
+                            {vehNo && (
+                              <span className="text-[10px] font-mono text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                                Vehicle #{vehNo}
+                              </span>
+                            )}
+                          </div>
+                          <span className={`font-extrabold text-[10px] px-2 py-0.5 rounded uppercase tracking-wide ${
+                            isCompleted ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
+                            isCancelled ? 'bg-rose-100 text-rose-800 border border-rose-200' :
+                            'bg-blue-100 text-blue-800 border border-blue-200'
+                          }`}>
+                            {status}
                           </span>
-                        )}
+                        </div>
+
+                        <div>
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Previous Vehicle</span>
+                          <span className="font-extrabold text-gray-900 text-xs">{vehicleDesc}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs text-gray-700 pt-1 border-t border-gray-50">
+                          {formattedVal && (
+                            <div>
+                              <span className="text-gray-400 block text-[10px]">Trade-in Value</span>
+                              <strong className="text-emerald-700 font-extrabold">{formattedVal}</strong>
+                            </div>
+                          )}
+                          {trd.tradeInDate && (
+                            <div>
+                              <span className="text-gray-400 block text-[10px]">Trade Date</span>
+                              <span className="font-mono">{trd.tradeInDate}</span>
+                            </div>
+                          )}
+                          {trd.valuationDate && (
+                            <div>
+                              <span className="text-gray-400 block text-[10px]">Valuation Date</span>
+                              <span className="font-mono">{trd.valuationDate}</span>
+                            </div>
+                          )}
+                          {trd.appraisalDate && (
+                            <div>
+                              <span className="text-gray-400 block text-[10px]">Appraisal Date</span>
+                              <span className="font-mono">{trd.appraisalDate}</span>
+                            </div>
+                          )}
+                          {trd.vin && (
+                            <div>
+                              <span className="text-gray-400 block text-[10px]">VIN</span>
+                              <strong className="font-mono text-gray-800">{trd.vin}</strong>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs text-gray-700">
-                        {trd.vehicle && <div>Evaluated Vehicle: <strong>{typeof trd.vehicle === 'object' ? (trd.vehicle.description || trd.vehicle.model || trd.vehicle.name || 'Vehicle') : String(trd.vehicle)}</strong></div>}
-                        {trd.vin && <div>VIN: <strong className="font-mono">{trd.vin}</strong></div>}
-                        {trd.appraisedValue && <div>Appraised Value: <strong className="text-emerald-700 font-extrabold">{trd.appraisedValue}</strong></div>}
-                        {trd.tradeInDate && <div>Trade Date: <span>{trd.tradeInDate}</span></div>}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
