@@ -294,6 +294,11 @@ export const normalizeProspectRecord = (p, fallbackGroup = 'BMW', fallbackMobile
     customerType: 'PROSPECT',
     isProspect: true,
     isWebLead: false,
+    linkType: p.linkType || 'PR',
+    campaign: p.campaign || '',
+    marketingCampaignCode: p.marketingCampaignCode || '',
+    source: p.source || p.leadSource || '',
+    channel: p.channel || '',
     salutation: p.titleCode || p.salutation || '',
     firstName: fName,
     middleName: '',
@@ -347,6 +352,13 @@ export const normalizeE00MIRecord = (e, fallbackGroup = 'BMW', fallbackMobile = 
     prospectNumber: e.prospectNumber || (isCustLink ? '' : idVal),
     eventKey: e.eventKey || '',
     linkType: e.linkType || 'PR',
+    campaign: e.campaign || '',
+    marketingCampaignCode: e.marketingCampaignCode || '',
+    source: e.source || e.leadSource || '',
+    channel: e.channel || '',
+    make: e.make || '',
+    model: e.model || '',
+    description: e.description || '',
     customerType: isCustLink ? 'CUSTOMER' : 'PROSPECT',
     isProspect: true,
     isWebLead: false,
@@ -1661,9 +1673,11 @@ export function CustomerProvider({ children }) {
       country: details.country || "United Arab Emirates",
       mobile: details.mobile || "",
       email: details.email || "",
+      source: details.source || "CRM Inbound",
       sourceOfInformation: details.sourceOfInformation || "Walk-in",
       personalId: details.personalId || "",
-      nationality: details.nationality || ""
+      nationality: details.nationality || "",
+      ...(details.dob ? { dob: details.dob } : {})
     };
 
     console.log("Submitting RPA CREATE_CUSTOMER payload:", caseDetails);
@@ -1805,9 +1819,11 @@ export function CustomerProvider({ children }) {
       country: details.country !== undefined ? details.country : (customer.country || customer.nationality || "United Arab Emirates"),
       mobile: details.mobile !== undefined ? details.mobile : (customer.mobile || ""),
       email: details.email !== undefined ? details.email : (customer.email || ""),
+      source: details.source !== undefined ? details.source : (customer.source || customer.leadSource || "CRM Inbound"),
       sourceOfInformation: details.sourceOfInformation !== undefined ? details.sourceOfInformation : (customer.sourceOfInformation || "Walk-in"),
       personalId: details.personalId !== undefined ? details.personalId : (customer.personalId || ""),
-      nationality: details.nationality !== undefined ? details.nationality : (customer.nationality || "")
+      nationality: details.nationality !== undefined ? details.nationality : (customer.nationality || ""),
+      ...(details.dob ? { dob: details.dob } : (customer?.dateOfBirth || customer?.dob ? { dob: customer.dateOfBirth || customer.dob } : {}))
     };
 
     console.log("Submitting RPA CREATE_CUSTOMER on customer edit:", caseDetails);

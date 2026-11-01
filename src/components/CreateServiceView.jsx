@@ -71,10 +71,10 @@ export default function CreateServiceView() {
     "10";
 
   const advisorId =
+    customer?.salesExecutiveId ||
     customer?.advisorId ||
     customer?.serviceAdvisorId ||
-    customer?.salesExecutiveId ||
-    "pattepu";
+    null;
 
   // Editable fields state
   const [reference, setReference] = useState("ES5");
@@ -109,7 +109,7 @@ export default function CreateServiceView() {
         customerName: String(customerName || "").trim(),
         eventType: reference, // Sent as eventType to RPA API
         branchCode: String(branchCode || "10").trim(),
-        salesExecutiveId: String(advisorId || "pattepu").trim(),
+        salesExecutiveId: advisorId ? String(advisorId).trim() : null,
         notes: notes.trim(),
       };
 

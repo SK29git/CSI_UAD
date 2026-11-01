@@ -660,7 +660,7 @@ export async function createSalesFollowUpCase(details, options = {}) {
 export async function createServiceRequestNotes(details, options = {}) {
   const payloadDetails = {
     ...details,
-    salesExecutiveId: details?.salesExecutiveId || "pattepu",
+    salesExecutiveId: details?.salesExecutiveId || null,
   };
   return await executeRpaCase("CREATE_SERVICE_REQUEST_NOTES", payloadDetails, {
     callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,

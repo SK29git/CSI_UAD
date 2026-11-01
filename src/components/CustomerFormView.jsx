@@ -20,7 +20,9 @@ import {
   FaCopy,
   FaTimes,
   FaCheckCircle,
-  FaIdCard
+  FaIdCard,
+  FaCalendarAlt,
+  FaBullhorn
 } from 'react-icons/fa';
 
 const GROUP_OPTIONS = ['BMW', 'MINI', 'ROLLS-ROYCE', 'GEELY'];
@@ -35,16 +37,57 @@ const CITY_OPTIONS = [
   'Umm Al Quwain',
   'Al Ain'
 ];
-const SOURCE_OF_INFORMATION_OPTIONS = [
-  'Walk-in',
-  'Phone Call',
-  'Email',
-  'Website',
-  'Social Media',
-  'Referral',
-  'Event',
-  'Other'
+
+// Exact Sources requested from both CRM Channels and Contact Sources
+export const CRM_SOURCES = [
+  'CRM Inbound',
+  'CRM Outbound',
+  'CRM Digital Media / Online Enquiries',
+  'CRM Service Booking Lead'
 ];
+
+export const CONTACT_SOURCES = [
+  'Customer Call',
+  'Customer Walk-in',
+  'Email',
+  'AGMC BMW Website',
+  'BMW Middle East',
+  'CSI',
+  'DED',
+  'Feedback Form',
+  'Happiness Counter',
+  'OCMS',
+  'Social Media',
+  'VOC'
+];
+
+export const CUSTOMER_SOURCE_OPTIONS = [
+  ...CRM_SOURCES,
+  ...CONTACT_SOURCES
+];
+
+// Helper to map Source selection to Keyloop RPA's strict sourceOfInformation enum
+export function mapSourceToSourceOfInfo(src) {
+  switch (src) {
+    case 'Customer Walk-in': return 'Walk-in';
+    case 'Customer Call': return 'CRM Outbound Calls';
+    case 'Email': return 'E-Mail';
+    case 'AGMC BMW Website':
+    case 'BMW Middle East':
+    case 'CRM Digital Media / Online Enquiries':
+    case 'Feedback Form':
+    case 'OCMS': return 'Website';
+    case 'Social Media': return 'Facebook';
+    case 'CRM Service Booking Lead': return 'Service Department';
+    case 'CRM Inbound': return 'Walk-in';
+    case 'CRM Outbound': return 'CRM Outbound Calls';
+    case 'CSI':
+    case 'VOC': return 'Referrals';
+    case 'Happiness Counter':
+    case 'DED': return 'Walk-in';
+    default: return 'Walk-in';
+  }
+}
 
 export default function CustomerFormView({ mode = 'create', onClose }) {
   const { 
@@ -95,9 +138,11 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     titleCode: 'Mr.',
     firstName: '',
     surname: '',
+    source: 'CRM Inbound',
     sourceOfInformation: 'Walk-in',
     personalId: '',
     nationality: '',
+    dob: '',
     area: 'Deira',
     city: 'Dubai',
     country: 'United Arab Emirates',
@@ -120,10 +165,18 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     setFormData(prev => ({ ...prev, group: newGroup, branch: defBranch }));
   };
 
+  const handleSourceChange = (newSource) => {
+    setFormData(prev => ({
+      ...prev,
+      source: newSource,
+      sourceOfInformation: mapSourceToSourceOfInfo(newSource)
+    }));
+  };
+
   const currentBranches = getBranchesForGroup(formData.group);
 
   useEffect(() => {
-    // If submission is in progress or success feedback is already shown, do NOT reset or wipe feedback
+    // If submission is in progress or success feedback is already shown, do NOT reset
     if (isSubmitting || feedback?.type === 'success') {
       return;
     }
@@ -157,16 +210,23 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
 
     if (mode === 'edit' && customer) {
       const emailVal = customer.email || customer.emailRaw || '';
+      const initialGrp = customer.keyloopGroup || currentGroup || 'BMW';
+      const branches = getBranchesForGroup(initialGrp);
+      const matchingBranch = branches.find(b => customer.branchCode && String(b.code) === String(customer.branchCode));
+      const defBranch = matchingBranch ? `${matchingBranch.code} - ${matchingBranch.name}` : (customer.preferredBranch || '10 - Sheikh Zayed Rd');
+      const initialSource = customer.source || customer.leadSource || 'Customer Walk-in';
 
       setFormData({
-        group: customer.keyloopGroup || currentGroup || 'BMW',
-        branch: customer.preferredBranch || (customer.branchCode ? `${customer.branchCode} - Sheikh Zayed Rd` : '10 - Sheikh Zayed Rd'),
+        group: initialGrp,
+        branch: defBranch,
         titleCode: customer.salutation || 'Mr.',
         firstName: customer.firstName || '',
         surname: customer.surname || '',
-        sourceOfInformation: customer.sourceOfInformation || 'Walk-in',
+        source: initialSource,
+        sourceOfInformation: customer.sourceOfInformation || mapSourceToSourceOfInfo(initialSource),
         personalId: customer.personalId || customer.nationalId || '',
         nationality: customer.nationality || '',
+        dob: customer.dateOfBirth || customer.dob || '',
         area: customer.location?.area || 'Deira',
         city: customer.location?.city || 'Dubai',
         country: customer.country || customer.nationality || 'United Arab Emirates',
@@ -181,20 +241,27 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
       });
       setFeedback(null);
     } else if (mode === 'create') {
+      const initialGrp = currentGroup || 'BMW';
+      const branches = getBranchesForGroup(initialGrp);
+      const defBranch = branches[0] ? `${branches[0].code} - ${branches[0].name}` : '10 - Sheikh Zayed Rd';
+      const initialSource = customer?.leadSource || customer?.source || 'CRM Inbound';
+
       setFormData(prev => ({
-        group: currentGroup || prev.group || 'BMW',
-        branch: prev.branch || '10 - Sheikh Zayed Rd',
+        group: initialGrp,
+        branch: defBranch,
         titleCode: prev.titleCode || 'Mr.',
-        firstName: prev.firstName || '',
-        surname: prev.surname || '',
-        sourceOfInformation: prev.sourceOfInformation || 'Walk-in',
-        personalId: prev.personalId || '',
-        nationality: prev.nationality || '',
-        area: prev.area || 'Deira',
-        city: prev.city || 'Dubai',
-        country: prev.country || 'United Arab Emirates',
+        firstName: prev.firstName || (customer?.isProspect ? customer?.firstName || '' : ''),
+        surname: prev.surname || (customer?.isProspect ? customer?.surname || '' : ''),
+        source: prev.source || initialSource,
+        sourceOfInformation: mapSourceToSourceOfInfo(prev.source || initialSource),
+        personalId: prev.personalId || customer?.personalId || '',
+        nationality: prev.nationality || customer?.nationality || '',
+        dob: prev.dob || customer?.dateOfBirth || customer?.dob || '',
+        area: prev.area || customer?.location?.area || 'Deira',
+        city: prev.city || customer?.location?.city || 'Dubai',
+        country: prev.country || customer?.country || 'United Arab Emirates',
         mobile: prev.mobile || resolvedMobile || urlMobile || (currentMobile && !String(currentMobile).includes('*') ? currentMobile.replace(/\D/g, '') : ''),
-        email: prev.email || '',
+        email: prev.email || (customer?.email || ''),
         consents: prev.consents || {
           phone: true,
           email: false,
@@ -211,24 +278,41 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
       setFeedback({ type: 'error', message: 'First name is required.' });
       return;
     }
+    if (!formData.surname.trim()) {
+      setFeedback({ type: 'error', message: 'Surname is required.' });
+      return;
+    }
     if (!formData.mobile.trim()) {
       setFeedback({ type: 'error', message: 'Mobile number is required.' });
+      return;
+    }
+    if (!formData.area.trim()) {
+      setFeedback({ type: 'error', message: 'Area is required.' });
+      return;
+    }
+    if (!formData.city.trim()) {
+      setFeedback({ type: 'error', message: 'City is required.' });
       return;
     }
 
     setIsSubmitting(true);
     setFeedback(null);
 
+    const submissionPayload = {
+      ...formData,
+      sourceOfInformation: mapSourceToSourceOfInfo(formData.source)
+    };
+
     try {
       if (mode === 'create') {
-        const res = await createCustomer(formData);
+        const res = await createCustomer(submissionPayload);
         if (res && res.ok) {
           if (onClose) onClose();
         } else {
           setFeedback({ type: 'error', message: res?.error || 'Failed to create customer record.' });
         }
       } else {
-        const res = await updateCustomer(formData);
+        const res = await updateCustomer(submissionPayload);
         if (res && res.ok) {
           if (onClose) onClose();
         } else {
@@ -270,7 +354,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
             <p className="text-[11px] text-gray-500">
               {mode === 'create' 
                 ? 'Register customer record in AGMC CCaaS and Keyloop CRM' 
-                : 'Modify customer name and contact details'}
+                : 'Modify customer profile and contact details'}
             </p>
           </div>
         </div>
@@ -303,149 +387,314 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
-          {/* Editable Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            {/* Title Code */}
-            <div>
-              <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                <FaUser className="text-gray-400 text-[10px]" /> Title Code
-              </label>
-              <select
-                value={formData.titleCode}
-                onChange={(e) => setFormData(prev => ({ ...prev, titleCode: e.target.value }))}
-                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors"
-              >
-                {TITLE_OPTIONS.map(t => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
+          {/* SECTION 1: Personal & Contact Information */}
+          <div>
+            <div className="flex items-center justify-between pb-1.5 mb-2.5 border-b border-gray-100">
+              <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                <FaUser className="text-blue-600 text-[11px]" /> Personal & Contact Information
+              </h3>
+              <span className="text-[10px] text-gray-400 font-medium">* Required fields</span>
             </div>
 
-            {/* First Name */}
-            <div>
-              <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                <FaUser className="text-gray-400 text-[10px]" /> First Name <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.firstName}
-                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                placeholder="e.g. Tariq"
-                required
-                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
-              />
-            </div>
-
-            {/* Surname */}
-            <div>
-              <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                <FaUser className="text-gray-400 text-[10px]" /> Surname
-              </label>
-              <input
-                type="text"
-                value={formData.surname}
-                onChange={(e) => setFormData(prev => ({ ...prev, surname: e.target.value }))}
-                placeholder="e.g. Bashir"
-                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
-              />
-            </div>
-
-            {/* Mobile Number */}
-            <div>
-              <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                <FaPhoneAlt className="text-gray-400 text-[10px]" /> Mobile Number <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="tel"
-                value={formData.mobile}
-                onChange={(e) => setFormData(prev => ({ ...prev, mobile: e.target.value }))}
-                placeholder="e.g. 0561277913"
-                required
-                className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
-              />
-            </div>
-          </div>
-
-          {/* Read-Only Profile Information */}
-          <div className="pt-2 border-t border-gray-100">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* Source of Information */}
+              {/* Title Code */}
               <div>
-                <label className="text-[11px] font-semibold text-gray-500 mb-1 flex items-center gap-1">
-                  <FaBuilding className="text-gray-400 text-[10px]" /> Source of Information
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <FaUser className="text-gray-400 text-[10px]" /> Title Code <span className="text-rose-500">*</span>
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-medium text-gray-700 truncate" title={formData.sourceOfInformation || customer?.sourceOfInformation || 'Walk-in'}>
-                  {formData.sourceOfInformation || customer?.sourceOfInformation || 'Walk-in'}
-                </div>
+                <select
+                  value={formData.titleCode}
+                  onChange={(e) => setFormData(prev => ({ ...prev, titleCode: e.target.value }))}
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors"
+                >
+                  {TITLE_OPTIONS.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Keyloop Group */}
+              {/* First Name */}
               <div>
-                <label className="text-[11px] font-semibold text-gray-500 mb-1 flex items-center gap-1">
-                  <FaLayerGroup className="text-gray-400 text-[10px]" /> Keyloop Group
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <FaUser className="text-gray-400 text-[10px]" /> First Name <span className="text-rose-500">*</span>
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-medium text-gray-700 truncate">
-                  {formData.group || 'BMW'}
-                </div>
+                <input
+                  type="text"
+                  value={formData.firstName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="e.g. Tariq"
+                  required
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                />
               </div>
 
-              {/* Preferred Branch Location */}
+              {/* Surname */}
               <div>
-                <label className="text-[11px] font-semibold text-gray-500 mb-1 flex items-center gap-1">
-                  <FaBuilding className="text-gray-400 text-[10px]" /> Preferred Branch Location
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <FaUser className="text-gray-400 text-[10px]" /> Surname <span className="text-rose-500">*</span>
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-medium text-gray-700 truncate" title={formData.branch || '10 - Sheikh Zayed Rd'}>
-                  {formData.branch || '10 - Sheikh Zayed Rd'}
-                </div>
+                <input
+                  type="text"
+                  value={formData.surname}
+                  onChange={(e) => setFormData(prev => ({ ...prev, surname: e.target.value }))}
+                  placeholder="e.g. Bashir"
+                  required
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                />
+              </div>
+
+              {/* Mobile Number */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <FaPhoneAlt className="text-gray-400 text-[10px]" /> Mobile Number <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={formData.mobile}
+                  onChange={(e) => setFormData(prev => ({ ...prev, mobile: e.target.value }))}
+                  placeholder="e.g. 0561277913"
+                  required
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                />
               </div>
 
               {/* Email Address */}
               <div>
-                <label className="text-[11px] font-semibold text-gray-500 mb-1 flex items-center gap-1">
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   <FaEnvelope className="text-gray-400 text-[10px]" /> Email Address
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-medium text-gray-700 truncate" title={formData.email || customer?.email || 'N/A'}>
-                  {formData.email || customer?.email || 'N/A'}
-                </div>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="e.g. customer@example.com"
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                />
               </div>
 
-              {/* Personal ID */}
+              {/* Personal / Emirates ID */}
               <div>
-                <label className="text-[11px] font-semibold text-gray-500 mb-1 flex items-center gap-1">
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   <FaIdCard className="text-gray-400 text-[10px]" /> Personal / Emirates ID
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-mono font-medium text-gray-700 truncate">
-                  {formData.personalId || customer?.personalId || customer?.nationalId || 'N/A'}
-                </div>
+                <input
+                  type="text"
+                  value={formData.personalId}
+                  onChange={(e) => setFormData(prev => ({ ...prev, personalId: e.target.value }))}
+                  placeholder="e.g. 784-1990-1234567-1"
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                />
               </div>
 
               {/* Nationality */}
               <div>
-                <label className="text-[11px] font-semibold text-gray-500 mb-1 flex items-center gap-1">
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   <FaGlobe className="text-gray-400 text-[10px]" /> Nationality
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-medium text-gray-700 truncate">
-                  {formData.nationality || customer?.nationality || 'N/A'}
-                </div>
+                <input
+                  type="text"
+                  value={formData.nationality}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nationality: e.target.value }))}
+                  placeholder="e.g. United Arab Emirates"
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                />
               </div>
 
-              {/* City & Area */}
+              {/* Date of Birth */}
               <div>
-                <label className="text-[11px] font-semibold text-gray-500 mb-1 flex items-center gap-1">
-                  <FaMapMarkerAlt className="text-gray-400 text-[10px]" /> City & Area
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <FaCalendarAlt className="text-gray-400 text-[10px]" /> Date of Birth
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-medium text-gray-700 truncate" title={`${formData.city || 'Dubai'}, ${formData.area || 'Deira'}`}>
-                  {formData.city || 'Dubai'}, {formData.area || 'Deira'}
-                </div>
+                <input
+                  type="date"
+                  value={formData.dob}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dob: e.target.value }))}
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 2: Organization, Branch, Source & Location */}
+          <div className="pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between pb-1.5 mb-2.5 border-b border-gray-100">
+              <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                <FaBuilding className="text-blue-600 text-[11px]" /> Organization, Branch & Location
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Keyloop Group */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <FaLayerGroup className="text-gray-400 text-[10px]" /> Keyloop Group <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={formData.group}
+                  onChange={(e) => handleGroupChange(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors"
+                >
+                  {GROUP_OPTIONS.map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Preferred Branch Location */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <FaBuilding className="text-gray-400 text-[10px]" /> Preferred Branch <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={formData.branch}
+                  onChange={(e) => setFormData(prev => ({ ...prev, branch: e.target.value }))}
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors truncate"
+                >
+                  {currentBranches.map(b => (
+                    <option key={b.code} value={`${b.code} - ${b.name}`}>
+                      {b.code} - {b.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Source (Updated with both CRM Channels and Contact Sources from user images) */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <FaBullhorn className="text-gray-400 text-[10px]" /> Source <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={formData.source}
+                  onChange={(e) => handleSourceChange(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors"
+                >
+                  <optgroup label="CRM Sources">
+                    {CRM_SOURCES.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Customer Contact Sources">
+                    {CONTACT_SOURCES.map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              {/* City */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <FaMapMarkerAlt className="text-gray-400 text-[10px]" /> City <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={formData.city}
+                  onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors"
+                >
+                  {CITY_OPTIONS.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Area */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <FaMapMarkerAlt className="text-gray-400 text-[10px]" /> Area <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.area}
+                  onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
+                  placeholder="e.g. Deira, Downtown, Jumeirah"
+                  required
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                />
               </div>
 
               {/* Country */}
               <div>
-                <label className="text-[11px] font-semibold text-gray-500 mb-1 flex items-center gap-1">
-                  <FaGlobe className="text-gray-400 text-[10px]" /> Country
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  <FaGlobe className="text-gray-400 text-[10px]" /> Country <span className="text-rose-500">*</span>
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-medium text-gray-700 truncate">
-                  {formData.country || 'United Arab Emirates'}
+                <input
+                  type="text"
+                  value={formData.country}
+                  onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
+                  placeholder="e.g. United Arab Emirates"
+                  required
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* SECTION 3: Campaign & Channel Details (From Prospects / E00MI API) */}
+          <div className="pt-2 border-t border-gray-100">
+            <div className="flex items-center justify-between pb-1.5 mb-2.5 border-b border-gray-100">
+              <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                <FaBullhorn className="text-blue-600 text-[11px]" /> Campaign & Channel Details
+              </h3>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Link Type */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  Link Type
+                </label>
+                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-700">
+                  {customer?.linkType || '-'}
+                </div>
+              </div>
+
+              {/* Prospect Number */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  Prospect Number
+                </label>
+                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-700 font-mono">
+                  {customer?.prospectNumber || '-'}
+                </div>
+              </div>
+
+              {/* Campaign */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  Campaign
+                </label>
+                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-700">
+                  {customer?.campaign || '-'}
+                </div>
+              </div>
+
+              {/* Marketing Campaign Code */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  Marketing Campaign Code
+                </label>
+                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-700 font-mono">
+                  {customer?.marketingCampaignCode || '-'}
+                </div>
+              </div>
+
+              {/* Source */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  Source
+                </label>
+                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-700">
+                  {customer?.source || customer?.leadSource || formData.source || '-'}
+                </div>
+              </div>
+
+              {/* Channel */}
+              <div>
+                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                  Channel
+                </label>
+                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-700">
+                  {customer?.channel || '-'}
                 </div>
               </div>
             </div>

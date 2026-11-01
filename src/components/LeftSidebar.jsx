@@ -491,6 +491,33 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <span className="text-gray-400 block text-[11px]">Consents</span>
               <span className="font-medium text-gray-700">{getConsentsDisplay ? getConsentsDisplay() : 'None'}</span>
             </div>
+
+            <div>
+              <span className="text-gray-400 block text-[11px]">Link Type</span>
+              <span className="font-semibold text-gray-800">{customer?.linkType || '-'}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Prospect Number</span>
+              <span className="font-semibold text-gray-800">{customer?.prospectNumber || '-'}</span>
+            </div>
+
+            <div>
+              <span className="text-gray-400 block text-[11px]">Campaign</span>
+              <span className="font-semibold text-gray-800 truncate block" title={customer?.campaign || '-'}>{customer?.campaign || '-'}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Marketing Campaign Code</span>
+              <span className="font-semibold text-gray-800 truncate block" title={customer?.marketingCampaignCode || '-'}>{customer?.marketingCampaignCode || '-'}</span>
+            </div>
+
+            <div>
+              <span className="text-gray-400 block text-[11px]">Source</span>
+              <span className="font-semibold text-gray-800 truncate block" title={customer?.source || customer?.leadSource || '-'}>{customer?.source || customer?.leadSource || '-'}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Channel</span>
+              <span className="font-semibold text-gray-800 truncate block" title={customer?.channel || '-'}>{customer?.channel || '-'}</span>
+            </div>
           </div>
         </div>
       )}
