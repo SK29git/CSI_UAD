@@ -64,6 +64,16 @@ export default function SalesPage() {
     }
   }, [activeSubTab]);
 
+  useEffect(() => {
+    const handleSwitchTab = (e) => {
+      if (e.detail) {
+        setActiveSubTab(e.detail);
+      }
+    };
+    window.addEventListener('switchSalesTab', handleSwitchTab);
+    return () => window.removeEventListener('switchSalesTab', handleSwitchTab);
+  }, []);
+
   const renderSalesContent = () => {
     if (customerFormMode) {
       return <CustomerFormView mode={customerFormMode} onClose={closeCustomerForm} />;
@@ -74,7 +84,7 @@ export default function SalesPage() {
         return <SalesOverviewView />;
       case 'New Enquiry':
       case 'New Lead':
-        return <SalesNewLeadView />;
+        return <SalesNewLeadView onNavigateToEnquiries={() => setActiveSubTab('Enquiries')} />;
       case 'Enquiries':
         return <SalesEnquiriesView />;
       case 'Test Drive':
@@ -86,7 +96,7 @@ export default function SalesPage() {
       case 'After-Sales & Follow Up':
         return <SalesAfterSalesView />;
       default:
-        return <SalesNewLeadView />;
+        return <SalesNewLeadView onNavigateToEnquiries={() => setActiveSubTab('Enquiries')} />;
     }
   };
 

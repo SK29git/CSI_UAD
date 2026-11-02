@@ -831,102 +831,82 @@ export async function sendCustomerSmsMessage({
 /* Source: AGMC Omnichannel DMS / Service Booking Gateway                     */
 /* ========================================================================== */
 
+export const OTOLINK_API_BASE_URL = "https://mt-otolink-api-stage.otolink.app";
+export const OTOLINK_API_KEY = "oak_5a8d97e50b797a5e666584f6a01add4020740e5582c0aedb";
+export const OTOLINK_API_SECRET = "oas_MvJM3MwA_xNjkTtILJnnI01boUOi9MUos2SKcXUECzI1aaVM";
+export const OTOLINK_TOKEN_TENANT_ID = "OTeuromoto901072";
 export const SERVICE_ENGINE_TENANT_ID = "OTagmcgeel713061";
 export const GEELY_TENANT_ID = SERVICE_ENGINE_TENANT_ID;
+export const OTOLINK_AUTH_TOKEN = "778c2f355c8687a75d0d16955ca2bd72";
 
 /**
- * 1. Generate Service Gateway Token (GET /api/leads/generate-token/{tenantId})
+ * 1. Generate Otolink / Service Gateway Token
+ * Endpoint: GET /api/leads/generate-token/{tenantId}
+ * Requires headers: x-api-key, x-api-secret
  * Caches token in localStorage for 1 hour
  */
-export async function getServiceEngineToken(
-  tenantId = SERVICE_ENGINE_TENANT_ID,
-  forceRefresh = false,
-) {
-  const CACHE_KEY = `ccaas_service_token_${tenantId}`;
-  const EXPIRY_KEY = `ccaas_service_token_expiry_${tenantId}`;
+export async function getOtolinkToken(forceRefresh = false) {
+  const CACHE_KEY = "otolink_auth_token";
+  const EXPIRY_KEY = "otolink_auth_token_expiry";
 
   if (!forceRefresh) {
     try {
       const cached = localStorage.getItem(CACHE_KEY);
       const expiry = localStorage.getItem(EXPIRY_KEY);
-      if (cached && expiry && Date.now() < parseInt(expiry, 10) - 60000) {
+      if (cached && expiry && Date.now() < parseInt(expiry, 10)) {
         return cached;
       }
-    } catch {}
-  }
-
-  const endpoint = `/api/leads/generate-token/${encodeURIComponent(tenantId)}`;
-  const res = await apiFetch(endpoint);
-
-  if (res && res.ok && res.data?.token) {
-    try {
-      localStorage.setItem(CACHE_KEY, res.data.token);
-      localStorage.setItem(EXPIRY_KEY, String(Date.now() + 3600000));
-    } catch {}
-    return res.data.token;
-  }
-
-  // Fallback direct url in case of local proxy edge case
-  const directUrl = `${API_BASE_URL}${endpoint}`;
-  try {
-    const directRes = await fetch(directUrl);
-    if (directRes.ok) {
-      const data = await directRes.json();
-      if (data?.token) {
-        try {
-          localStorage.setItem(CACHE_KEY, data.token);
-          localStorage.setItem(EXPIRY_KEY, String(Date.now() + 3600000));
-        } catch {}
-        return data.token;
-      }
+    } catch {
+      // localStorage may fail in some environments
     }
-  } catch (e) {
-    console.warn("Direct Service token fetch fallback failed:", e);
   }
 
-  throw new Error(
-    `Failed to generate Service engine token: ${res?.statusText || "Server error"}`,
-  );
-}
-export const getGeelyServiceToken = getServiceEngineToken;
-
-/**
- * Service API Fetch Helper with automatic Bearer/token injection & 401 retry
- */
-export async function serviceApiFetch(path, options = {}, useBearer = false) {
-  let token = null;
-  try {
-    token = await getServiceEngineToken();
-  } catch (err) {
-    console.warn(
-      "Could not retrieve Service engine token, proceeding with unauthenticated request:",
-      err,
-    );
-  }
-
-  const authHeaderValue = token ? (useBearer ? `Bearer ${token}` : token) : "";
+  const tenants = [OTOLINK_TOKEN_TENANT_ID, SERVICE_ENGINE_TENANT_ID];
   const headers = {
+    "x-api-key": OTOLINK_API_KEY,
+    "x-api-secret": OTOLINK_API_SECRET,
     "Content-Type": "application/json",
-    "x-l10n-locale": "en",
-    ...(authHeaderValue ? { Authorization: authHeaderValue } : {}),
-    ...(options.headers || {}),
   };
 
-  let res = await apiFetch(path, { ...options, headers });
+  for (const tenant of tenants) {
+    const urls = [
+      `/api/leads/generate-token/${encodeURIComponent(tenant)}`,
+      `/otolink-api/api/leads/generate-token/${encodeURIComponent(tenant)}`,
+      `${OTOLINK_API_BASE_URL}/api/leads/generate-token/${encodeURIComponent(tenant)}`,
+    ];
 
-  // If 401 Unauthorized, refresh token once and retry
-  if (res && res.status === 401) {
-    try {
-      token = await getServiceEngineToken(SERVICE_ENGINE_TENANT_ID, true);
-      const retryAuth = token ? (useBearer ? `Bearer ${token}` : token) : "";
-      headers["Authorization"] = retryAuth;
-      res = await apiFetch(path, { ...options, headers });
-    } catch (refreshErr) {
-      console.warn("Token refresh retry failed:", refreshErr);
+    for (const url of urls) {
+      try {
+        const res = await fetch(url, { method: "GET", headers });
+        if (res.ok) {
+          const json = await res.json();
+          const token = json?.token || json?.result?.token;
+          if (token) {
+            try {
+              localStorage.setItem(CACHE_KEY, token);
+              localStorage.setItem(EXPIRY_KEY, String(Date.now() + 3600 * 1000));
+            } catch {}
+            return token;
+          }
+        }
+      } catch (err) {
+        // try next endpoint/tenant
+      }
     }
   }
 
-  return res;
+  return OTOLINK_AUTH_TOKEN;
+}
+
+export const getServiceEngineToken = getOtolinkToken;
+export const getGeelyServiceToken = getOtolinkToken;
+
+/**
+ * Service API Fetch Helper with automatic token injection & 401 retry
+ * Routes to Otolink Service Gateway (https://mt-otolink-api-stage.otolink.app)
+ */
+export async function serviceApiFetch(path, options = {}, useBearer = false) {
+  return await otolinkServiceFetch(path, options);
 }
 export const geelyApiFetch = serviceApiFetch;
 
@@ -1013,21 +993,96 @@ export async function getServiceAdvisors(dealershipLocationId) {
 export const getGeelyAdvisors = getServiceAdvisors;
 
 /**
+ * Otolink Service API Fetch Helper (Handles dynamic token injection, stage endpoint & proxy)
+ */
+export async function otolinkServiceFetch(path, options = {}) {
+  const relativePath = path.startsWith("/") ? path : `/${path}`;
+  const directProxyUrl = relativePath;
+  const prefixedProxyUrl = `/otolink-api${relativePath}`;
+  const directUrl = `${OTOLINK_API_BASE_URL}${relativePath}`;
+
+  let token = await getOtolinkToken();
+
+  const getHeaders = (authToken) => ({
+    Authorization: authToken,
+    "Content-Type": "application/json",
+    ...(options.headers || {}),
+  });
+
+  // 1. Try direct relative proxy (/api/service/...)
+  try {
+    const res = await fetch(directProxyUrl, {
+      ...options,
+      headers: getHeaders(token),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, data, status: res.status };
+    }
+    // If 401 Unauthorized, refresh token and retry once
+    if (res.status === 401) {
+      token = await getOtolinkToken(true);
+      const retryRes = await fetch(directProxyUrl, {
+        ...options,
+        headers: getHeaders(token),
+      });
+      if (retryRes.ok) {
+        const data = await retryRes.json();
+        return { ok: true, data, status: retryRes.status };
+      }
+    }
+  } catch (err) {
+    console.warn("Direct proxy otolinkServiceFetch failed, trying prefixed proxy:", err);
+  }
+
+  // 2. Try prefixed proxy (/otolink-api/...)
+  try {
+    const res = await fetch(prefixedProxyUrl, {
+      ...options,
+      headers: getHeaders(token),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, data, status: res.status };
+    }
+  } catch (err) {
+    console.warn("Prefixed proxy otolinkServiceFetch failed, trying direct URL:", err);
+  }
+
+  // 3. Direct fetch fallback to https://mt-otolink-api-stage.otolink.app
+  try {
+    const res = await fetch(directUrl, {
+      ...options,
+      headers: getHeaders(token),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { ok: true, data, status: res.status };
+    }
+    return { ok: false, status: res.status };
+  } catch (err) {
+    console.error("Direct otolinkServiceFetch error:", err);
+    return { ok: false, error: err.message };
+  }
+}
+
+/**
  * 9. Get Available Appointment Dates (POST /api/service/appointment-dates)
  * Supports dynamic make: 'BMW', 'MINI', 'Geely', 'Rolls-Royce', etc.
  */
 export async function getAppointmentDates({
-  dealershipLocationId,
+  dealershipLocationId = 10,
   make = "BMW",
-  serviceProductIds = [],
+  serviceProductIds = ["6dc62a95-a90c-49a8-a967-49be58de3e86"],
 }) {
-  const pIds = Array.isArray(serviceProductIds)
+  const pIds = Array.isArray(serviceProductIds) && serviceProductIds.length > 0
     ? serviceProductIds
-    : [serviceProductIds].filter(Boolean);
-  return await serviceApiFetch("/api/service/appointment-dates", {
+    : ["6dc62a95-a90c-49a8-a967-49be58de3e86"];
+
+  return await otolinkServiceFetch("/api/service/appointment-dates", {
     method: "POST",
     body: JSON.stringify({
-      dealershipLocationId: Number(dealershipLocationId),
+      dealershipLocationId: Number(dealershipLocationId) || 10,
       make: make || "BMW",
       serviceProductIds: pIds,
     }),
@@ -1040,17 +1095,18 @@ export const getGeelyAppointmentDates = getAppointmentDates;
  */
 export async function getAppointmentTimes({
   selectedDate,
-  dealershipLocationId,
-  serviceProductIds = [],
+  dealershipLocationId = 10,
+  serviceProductIds = ["6dc62a95-a90c-49a8-a967-49be58de3e86"],
 }) {
-  const pIds = Array.isArray(serviceProductIds)
+  const pIds = Array.isArray(serviceProductIds) && serviceProductIds.length > 0
     ? serviceProductIds
-    : [serviceProductIds].filter(Boolean);
-  return await serviceApiFetch("/api/service/appointment-time", {
+    : ["6dc62a95-a90c-49a8-a967-49be58de3e86"];
+
+  return await otolinkServiceFetch("/api/service/appointment-time", {
     method: "POST",
     body: JSON.stringify({
-      selectedDate,
-      dealershipLocationId: Number(dealershipLocationId),
+      selectedDate: selectedDate || new Date().toISOString().split("T")[0],
+      dealershipLocationId: Number(dealershipLocationId) || 10,
       serviceProductIds: pIds,
     }),
   });

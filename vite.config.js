@@ -12,6 +12,27 @@ export default defineConfig({
   server: {
     port: 5175,
     proxy: {
+      '/api/service': {
+        target: 'https://mt-otolink-api-stage.otolink.app',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/service-locations': {
+        target: 'https://mt-otolink-api-stage.otolink.app',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/api/leads/generate-token': {
+        target: 'https://mt-otolink-api-stage.otolink.app',
+        changeOrigin: true,
+        secure: false,
+      },
+      '/otolink-api': {
+        target: 'https://mt-otolink-api-stage.otolink.app',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/otolink-api/, '')
+      },
       '/api': {
         target: 'https://ccaas.agmcgroup.ae',
         changeOrigin: true,

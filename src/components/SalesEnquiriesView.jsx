@@ -7,7 +7,6 @@ import {
   FaSearch, 
   FaFilter, 
   FaSpinner, 
-  FaRedo, 
   FaCar, 
   FaUser, 
   FaCalendarAlt, 
@@ -186,11 +185,33 @@ export default function SalesEnquiriesView() {
         endpoint = `/api/v1/enquiries?${params.toString()}`;
       }
 
-      const res = await apiFetch(endpoint);
+      let res = await apiFetch(endpoint);
+
+      // If specific enquiry endpoint failed (e.g. 404 because newly created in RPA and not indexed yet), fallback to mobile/status search
+      if ((!res || !res.ok) && targetEnquiryNo && targetEnquiryNo.trim()) {
+        const fallbackParams = new URLSearchParams();
+        fallbackParams.set('group', group);
+        if (searchMobile && searchMobile.trim()) {
+          fallbackParams.set('mobile', searchMobile.trim().replace(/[^0-9]/g, ''));
+        } else if (customerNumber) {
+          fallbackParams.set('customerNumber', customerNumber);
+        } else {
+          fallbackParams.set('status', 'open');
+        }
+        res = await apiFetch(`/api/v1/enquiries?${fallbackParams.toString()}`);
+      }
+
       if (res && res.ok && res.data) {
         const list = Array.isArray(res.data) ? res.data : [res.data];
         if (list.length > 0) {
-          setEnquiries(list);
+          // Merge with any newly created pending enquiries that aren't yet in server list
+          const serverIds = new Set(
+            list.map(e => String(e.enquiryNumber || e.enquiryId || e.id || '')).filter(Boolean)
+          );
+          const pendingNew = (customerEnquiries || []).filter(
+            e => e.isNew && !serverIds.has(String(e.enquiryNumber || e.enquiryId || e.id || ''))
+          );
+          setEnquiries([...pendingNew, ...list]);
         } else if (customerEnquiries.length > 0) {
           setEnquiries(customerEnquiries);
         } else {
@@ -229,6 +250,38 @@ export default function SalesEnquiriesView() {
     }
     fetchEnquiries(currentEnqNo || null);
   }, [customerNumber, group, customer?.enquiries?.length]);
+
+  // Automatic 5-minute polling: re-query enquiries so newly created enquiries from Keyloop/DMS show
+  useEffect(() => {
+    // 1. One-off timeout if an enquiry was created within the last 5 minutes
+    let creationPollTimeout = null;
+    const lastCreated = sessionStorage.getItem('last_enquiry_created_time');
+    if (lastCreated) {
+      const elapsed = Date.now() - parseInt(lastCreated, 10);
+      const fiveMinutes = 5 * 60 * 1000;
+      if (elapsed < fiveMinutes) {
+        const remaining = fiveMinutes - elapsed;
+        creationPollTimeout = setTimeout(() => {
+          console.log('[SalesEnquiriesView] 5-minute post-creation poll running...');
+          fetchEnquiries();
+          sessionStorage.removeItem('last_enquiry_created_time');
+        }, remaining);
+      } else {
+        sessionStorage.removeItem('last_enquiry_created_time');
+      }
+    }
+
+    // 2. Periodic 5-minute polling interval
+    const intervalTimer = setInterval(() => {
+      console.log('[SalesEnquiriesView] Periodic 5-minute polling running...');
+      fetchEnquiries();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      if (creationPollTimeout) clearTimeout(creationPollTimeout);
+      clearInterval(intervalTimer);
+    };
+  }, [group, searchMobile, searchEnquiryNumber, customerNumber]);
 
   const handleToggleDetails = async (enq) => {
     const id = String(enq?.enquiryNumber || enq?.enquiryId || enq?.id || '');
@@ -329,15 +382,6 @@ export default function SalesEnquiriesView() {
               </span>
             </div>
           </div>
-
-          <button
-            onClick={fetchEnquiries}
-            disabled={loading}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700 font-medium cursor-pointer transition-all self-start sm:self-auto text-xs border border-gray-300"
-          >
-            <FaRedo className={`text-xs ${loading ? 'animate-spin text-blue-600' : ''}`} />
-            <span>Refresh</span>
-          </button>
         </div>
 
         {/* Filters Grid */}

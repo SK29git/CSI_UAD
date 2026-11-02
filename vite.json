@@ -1,0 +1,8 @@
+{
+  "baseUrl": "https://mt-otolink-api-stage.otolink.app",
+  "tenantId": "OTagmcgeel713061",
+  "tokenTenantId": "OTeuromoto901072",
+  "apiKey": "oak_5a8d97e50b797a5e666584f6a01add4020740e5582c0aedb",
+  "apiSecret": "oas_MvJM3MwA_xNjkTtILJnnI01boUOi9MUos2SKcXUECzI1aaVM",
+  "generateTokenEndpoint": "/api/leads/generate-token/OTeuromoto901072"
+}

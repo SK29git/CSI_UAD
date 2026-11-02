@@ -22,8 +22,7 @@ import {
   FaEdit,
   FaSearch,
   FaCheckDouble,
-  FaPaperPlane,
-  FaExchangeAlt
+  FaPaperPlane
 } from 'react-icons/fa';
 import { getFullMobileNumber, getDisplayMobileNumber } from '../utils/phoneUtils';
 
@@ -50,8 +49,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     fetchCustomerByPlateOrVin,
     fetchCustomerByEmail,
     fetchCustomerByCustomerNumber,
-    searchCustomer,
-    tradeInHistory
+    searchCustomer
   } = useCustomer();
 
   const [searchQuery, setSearchQuery] = useState(() => {
@@ -60,7 +58,6 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
   });
   const [isSearching, setIsSearching] = useState(false);
   const [searchStatus, setSearchStatus] = useState(null);
-  const [isTradeInOpen, setIsTradeInOpen] = useState(true);
 
   const handlePlateOrVinSearch = async (e) => {
     if (e) e.preventDefault();
@@ -131,7 +128,6 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
   );
 
   const hasNotesData = Boolean(customer?.notes && String(customer?.notes).trim() !== "");
-  const hasTradeInData = Array.isArray(tradeInHistory) && tradeInHistory.length > 0;
 
   if (isCollapsed) {
     return (
@@ -519,108 +515,6 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <span className="font-semibold text-gray-800 truncate block" title={customer?.channel || '-'}>{customer?.channel || '-'}</span>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* 2b. Trade-in History Card (Rendered below Customer Profile if available) */}
-      {hasTradeInData && (
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 text-xs">
-          <div 
-            onClick={() => setIsTradeInOpen(prev => !prev)}
-            className="flex items-center justify-between pb-2 border-b border-gray-100 cursor-pointer select-none group"
-            title="Click to expand/collapse Trade-in History"
-          >
-            <span className="font-bold text-gray-800 flex items-center gap-1.5 group-hover:text-purple-700 transition-colors">
-              <FaExchangeAlt className="text-purple-600 text-xs" />
-              <span>Trade-in History</span>
-            </span>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono font-bold bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200">
-                {tradeInHistory.length} {tradeInHistory.length === 1 ? 'Record' : 'Records'}
-              </span>
-              <span className="text-gray-400 group-hover:text-gray-600 text-xs transition-transform">
-                {isTradeInOpen ? <FaChevronUp className="text-[10px]" /> : <FaChevronDown className="text-[10px]" />}
-              </span>
-            </div>
-          </div>
-
-          {isTradeInOpen && (
-            <div 
-              className="mt-2.5 space-y-2.5 max-h-[280px] overflow-y-auto pr-1 animate-fade-in"
-              style={{
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#cbd5e1 transparent'
-              }}
-            >
-              {tradeInHistory.map((trd, idx) => {
-                const refNo = trd.reference || trd.tradeInId || `TRD-${idx + 1}`;
-                const vehicleDesc = trd.previousVehicle || (typeof trd.vehicle === 'object' ? (trd.vehicle.description || trd.vehicle.model || trd.vehicle.name) : trd.vehicle) || 'Trade-in Vehicle';
-                const vehNo = trd.vehicleNumber || trd.vehicleNo;
-                const val = trd.value !== undefined && trd.value !== null ? trd.value : trd.appraisedValue;
-                const formattedVal = val !== undefined && val !== null && val !== ''
-                  ? (typeof val === 'number' ? `AED ${val.toLocaleString()}` : (String(val).startsWith('AED') ? val : `AED ${Number(val).toLocaleString() || val}`))
-                  : null;
-                const status = trd.status || 'Recorded';
-                const isCompleted = String(status).toLowerCase() === 'completed';
-                const isCancelled = String(status).toLowerCase() === 'cancelled';
-
-                return (
-                  <div key={refNo || idx} className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-1.5 hover:border-purple-200 transition-colors">
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="font-mono font-bold text-purple-700 text-[11px]">
-                        Ref #{refNo}
-                      </span>
-                      <span className={`font-bold text-[9px] px-1.5 py-0.5 rounded uppercase tracking-wide ${
-                        isCompleted ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' :
-                        isCancelled ? 'bg-rose-100 text-rose-700 border border-rose-200' :
-                        'bg-blue-100 text-blue-800 border border-blue-200'
-                      }`}>
-                        {status}
-                      </span>
-                    </div>
-
-                    <div>
-                      <span className="font-bold text-gray-900 block text-[11px] leading-tight" title={vehicleDesc}>
-                        {vehicleDesc}
-                      </span>
-                      {vehNo && (
-                        <span className="text-[10px] text-gray-500 font-mono block mt-0.5">
-                          Vehicle #{vehNo}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-1.5 text-[10px] pt-1.5 border-t border-slate-200/80">
-                      {formattedVal && (
-                        <div>
-                          <span className="text-gray-400 block text-[9px]">Trade Value</span>
-                          <strong className="text-emerald-700 font-bold">{formattedVal}</strong>
-                        </div>
-                      )}
-                      {trd.tradeInDate && (
-                        <div>
-                          <span className="text-gray-400 block text-[9px]">Trade Date</span>
-                          <span className="font-mono text-gray-700">{trd.tradeInDate}</span>
-                        </div>
-                      )}
-                      {trd.valuationDate && (
-                        <div>
-                          <span className="text-gray-400 block text-[9px]">Valuation Date</span>
-                          <span className="font-mono text-gray-700">{trd.valuationDate}</span>
-                        </div>
-                      )}
-                      {trd.appraisalDate && (
-                        <div>
-                          <span className="text-gray-400 block text-[9px]">Appraisal Date</span>
-                          <span className="font-mono text-gray-700">{trd.appraisalDate}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
         </div>
       )}
 

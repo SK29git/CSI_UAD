@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useCustomer, isExistingCustomer } from '../context/CustomerContext';
-import { 
-  apiFetch, 
-  submitLeadIntake, 
-  executeRpaCase, 
+import React, { useState, useEffect, useRef } from "react";
+import { useCustomer, isExistingCustomer } from "../context/CustomerContext";
+import {
+  apiFetch,
+  submitLeadIntake,
+  executeRpaCase,
   createComplaintCase,
   getRpaCaseStatus,
   fetchEnquiryDetails,
-  isValidUuid
-} from '../utils/api';
-import { 
+  isValidUuid,
+} from "../utils/api";
+import {
   FaUserPlus,
   FaUserCheck,
   FaExclamationTriangle,
@@ -33,10 +33,16 @@ import {
   FaCar,
   FaList,
   FaMapMarkerAlt,
-  FaRegFileAlt
-} from 'react-icons/fa';
-import { getFullMobileNumber, isFullMobileNumber } from '../utils/phoneUtils';
-import { BRAND_OPTIONS, getModelsForBrand, GEELY_BRANCHES, BMW_BRANCHES, getBranchesForGroup } from '../data/brandModels';
+  FaRegFileAlt,
+} from "react-icons/fa";
+import { getFullMobileNumber, isFullMobileNumber } from "../utils/phoneUtils";
+import {
+  BRAND_OPTIONS,
+  getModelsForBrand,
+  GEELY_BRANCHES,
+  BMW_BRANCHES,
+  getBranchesForGroup,
+} from "../data/brandModels";
 
 /**
  * CustomSelect - Compact dropdown that ALWAYS opens downwards with medium scrollbar height
@@ -45,47 +51,60 @@ function CustomSelect({
   value,
   onChange,
   options = [],
-  placeholder = '-- Select --',
+  placeholder = "-- Select --",
   searchable = true,
-  searchPlaceholder = 'Search...',
+  searchPlaceholder = "Search...",
   required = false,
-  icon = null
+  icon = null,
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const containerRef = useRef(null);
 
   useEffect(() => {
     function handleClickOutside(event) {
-      if (containerRef.current && !containerRef.current.contains(event.target)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target)
+      ) {
         setIsOpen(false);
       }
     }
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener("mousedown", handleClickOutside);
     }
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen]);
 
-  const normalizedOptions = options.map(opt => 
-    typeof opt === 'object' ? opt : { value: opt, label: opt }
+  const normalizedOptions = options.map((opt) =>
+    typeof opt === "object" ? opt : { value: opt, label: opt },
   );
 
-  const selectedOption = normalizedOptions.find(o => o.value === value) || (value ? { value, label: value } : null);
+  const selectedOption =
+    normalizedOptions.find((o) => o.value === value) ||
+    (value ? { value, label: value } : null);
 
-  const filteredOptions = normalizedOptions.filter(o => 
-    (o.label || o.value || '').toLowerCase().includes(search.toLowerCase())
+  const filteredOptions = normalizedOptions.filter((o) =>
+    (o.label || o.value || "").toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
-    <div className={`relative w-full ${isOpen ? 'z-50' : 'z-10'}`} ref={containerRef}>
+    <div
+      className={`relative w-full ${isOpen ? "z-50" : "z-10"}`}
+      ref={containerRef}
+    >
       <button
         type="button"
-        onClick={() => { setIsOpen(prev => !prev); setSearch(''); }}
+        onClick={() => {
+          setIsOpen((prev) => !prev);
+          setSearch("");
+        }}
         className={`w-full h-8 px-2 bg-white border rounded-lg font-semibold text-gray-800 text-left flex items-center justify-between cursor-pointer shadow-2xs text-xs transition-all ${
-          isOpen ? 'border-blue-500 ring-2 ring-blue-100' : 'border-slate-200/90 hover:border-slate-300'
+          isOpen
+            ? "border-blue-500 ring-2 ring-blue-100"
+            : "border-slate-200/90 hover:border-slate-300"
         }`}
       >
         <div className="flex items-center min-w-0 flex-1">
@@ -95,18 +114,30 @@ function CustomSelect({
             </div>
           )}
           <span className="truncate">
-            {selectedOption ? selectedOption.label : <span className="text-gray-400 font-normal">{placeholder}</span>}
+            {selectedOption ? (
+              selectedOption.label
+            ) : (
+              <span className="text-gray-400 font-normal">{placeholder}</span>
+            )}
           </span>
         </div>
-        <FaChevronDown className={`text-gray-400 text-[9px] shrink-0 ml-1 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`} />
+        <FaChevronDown
+          className={`text-gray-400 text-[9px] shrink-0 ml-1 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       {required && (
         <input
           tabIndex={-1}
           autoComplete="off"
-          style={{ opacity: 0, width: 0, height: 0, position: 'absolute', pointerEvents: 'none' }}
-          value={value || ''}
+          style={{
+            opacity: 0,
+            width: 0,
+            height: 0,
+            position: "absolute",
+            pointerEvents: "none",
+          }}
+          value={value || ""}
           onChange={() => {}}
           required={required}
         />
@@ -146,12 +177,14 @@ function CustomSelect({
                     }}
                     className={`w-full px-2.5 py-2 text-left text-xs rounded-lg transition-colors cursor-pointer flex items-center justify-between ${
                       isSelected
-                        ? 'bg-blue-600 text-white font-bold'
-                        : 'text-gray-800 hover:bg-blue-50 hover:text-blue-700 font-medium'
+                        ? "bg-blue-600 text-white font-bold"
+                        : "text-gray-800 hover:bg-blue-50 hover:text-blue-700 font-medium"
                     }`}
                   >
                     <span className="truncate">{opt.label}</span>
-                    {isSelected && <FaCheck className="text-[10px] shrink-0 ml-1.5 text-white" />}
+                    {isSelected && (
+                      <FaCheck className="text-[10px] shrink-0 ml-1.5 text-white" />
+                    )}
                   </button>
                 );
               })
@@ -164,83 +197,96 @@ function CustomSelect({
 }
 
 const LEAD_SOURCES = [
-  'CRM Inbound',
-  'CRM Outbound',
-  'CRM Digital Media / Online Enquiries',
-  'CRM Service Booking Lead'
+  "CRM Inbound",
+  "CRM Outbound",
+  "CRM Digital Media / Online Enquiries",
+  "CRM Service Booking Lead",
 ];
 
 const LEAD_ORIGINS = [
-  'BMW Test Drive - EN',
-  'BMW Test Drive - AR',
-  'BMW Web Enquiry',
-  'Geely Test Drive - EN',
-  'Geely Web Enquiry',
-  'MINI Test Drive',
-  'Motorrad Test Drive',
-  'Showroom Walk-in',
-  'Website Inquiry',
-  'Digital Campaign',
-  'Call Center Inbound',
-  'Direct Referral'
+  "BMW Test Drive - EN",
+  "BMW Test Drive - AR",
+  "BMW Web Enquiry",
+  "Geely Test Drive - EN",
+  "Geely Web Enquiry",
+  "MINI Test Drive",
+  "Motorrad Test Drive",
+  "Showroom Walk-in",
+  "Website Inquiry",
+  "Digital Campaign",
+  "Call Center Inbound",
+  "Direct Referral",
 ];
 
-const TITLE_OPTIONS = [
-  'Mr',
-  'Ms',
-  'Mrs',
-  'Messrs',
-  'Dr',
-  'Prof',
-  'Eng'
-];
+const TITLE_OPTIONS = ["Mr", "Ms", "Mrs", "Messrs", "Dr", "Prof", "Eng"];
 
 const formatMobileForLead = (val) => {
-  if (!val) return '';
+  if (!val) return "";
   const str = String(val).trim();
-  if (str.startsWith('+')) return str;
-  if (str.startsWith('00')) return `+${str.slice(2)}`;
-  const digits = str.replace(/[^0-9]/g, '');
-  if (digits.startsWith('971')) return `+${digits}`;
-  if (digits.startsWith('0')) return `+971${digits.slice(1)}`;
+  if (str.startsWith("+")) return str;
+  if (str.startsWith("00")) return `+${str.slice(2)}`;
+  const digits = str.replace(/[^0-9]/g, "");
+  if (digits.startsWith("971")) return `+${digits}`;
+  if (digits.startsWith("0")) return `+971${digits.slice(1)}`;
   return `+971${digits}`;
 };
 
-export default function SalesNewLeadView() {
-  const { customer, currentMobile, group: contextGroup } = useCustomer();
+export default function SalesNewLeadView({ onNavigateToEnquiries }) {
+  const { 
+    customer, 
+    currentMobile, 
+    group: contextGroup,
+    setEnquiries,
+    setEnquiryNumber 
+  } = useCustomer();
   const hasCustomer = isExistingCustomer(customer);
-  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || '');
+  const group =
+    contextGroup ||
+    customer?.keyloopGroup ||
+    new URLSearchParams(window.location.search).get("group") ||
+    "";
   const customerNumber = customer?.customerNumber || "";
-  const vin = customer?.vin || (customer?.vehicles && customer?.vehicles[0]?.vin) || "";
+  const vin =
+    customer?.vin || (customer?.vehicles && customer?.vehicles[0]?.vin) || "";
 
   const [activeTab, setActiveTab] = useState("lead"); // "lead" | "complaint"
+
+  const navigateToEnquiriesTab = (newEnquiryObj) => {
+    sessionStorage.setItem("last_enquiry_created_time", String(Date.now()));
+    if (typeof onNavigateToEnquiries === "function") {
+      onNavigateToEnquiries(newEnquiryObj);
+    }
+    window.dispatchEvent(
+      new CustomEvent("switchSalesTab", { detail: "Enquiries" }),
+    );
+  };
 
   // ----------------------------------------------------
   // 1. LEAD STATE & HANDLERS
   // ----------------------------------------------------
   const resolveMake = (val) => {
-    if (!val) return 'BMW';
+    if (!val) return "BMW";
     const norm = String(val).trim().toUpperCase();
-    if (BRAND_OPTIONS.some(b => b.code === norm)) return norm;
-    if (norm === 'GEELY') return 'GEELY';
-    if (norm === 'ROLLS-ROYCE' || norm === 'ROLLS_ROYCE') return 'ROLLS';
-    if (norm === 'BMW_I' || norm === 'BMW I') return 'BMWI';
-    if (norm === 'BMW_MOTORRAD' || norm === 'MOTORRAD') return 'BMWMOTO';
+    if (BRAND_OPTIONS.some((b) => b.code === norm)) return norm;
+    if (norm === "GEELY") return "GEELY";
+    if (norm === "ROLLS-ROYCE" || norm === "ROLLS_ROYCE") return "ROLLS";
+    if (norm === "BMW_I" || norm === "BMW I") return "BMWI";
+    if (norm === "BMW_MOTORRAD" || norm === "MOTORRAD") return "BMWMOTO";
     return norm;
   };
 
-  const initialMake = resolveMake(group || customer?.keyloopGroup || 'BMW');
+  const initialMake = resolveMake(group || customer?.keyloopGroup || "BMW");
   const [make, setMake] = useState(initialMake);
-  const [model, setModel] = useState(() => customer?.model || '');
+  const [model, setModel] = useState(() => customer?.model || "");
 
   // Determine branch list dynamically based on group / make
   const getBranches = () => {
-    const mk = String(make || '').toUpperCase();
-    if (['GEELY', 'GALAXY', 'RIDDARA'].includes(mk)) {
+    const mk = String(make || "").toUpperCase();
+    if (["GEELY", "GALAXY", "RIDDARA"].includes(mk)) {
       return GEELY_BRANCHES;
     }
-    const grp = String(group || customer?.keyloopGroup || '').toUpperCase();
-    if (grp.includes('GEELY')) {
+    const grp = String(group || customer?.keyloopGroup || "").toUpperCase();
+    if (grp.includes("GEELY")) {
       return GEELY_BRANCHES;
     }
     return BMW_BRANCHES;
@@ -248,41 +294,58 @@ export default function SalesNewLeadView() {
 
   const currentBranches = getBranches();
 
-  const [title, setTitle] = useState(() => (customer?.salutation ? customer.salutation.replace(/\.$/, '').trim() : 'Mr'));
-  const [firstname, setFirstname] = useState(() => customer?.firstName || '');
-  const [surname, setSurname] = useState(() => customer?.surname || '');
-  const [email, setEmail] = useState(() => customer?.email || customer?.emailRaw || '');
-  const [mobile, setMobile] = useState(() => getFullMobileNumber(customer) || currentMobile || '');
-  const [origin, setOrigin] = useState(group ? `${group} Test Drive - EN` : 'Test Drive - EN');
+  const [title, setTitle] = useState(() =>
+    customer?.salutation ? customer.salutation.replace(/\.$/, "").trim() : "Mr",
+  );
+  const [firstname, setFirstname] = useState(() => customer?.firstName || "");
+  const [surname, setSurname] = useState(() => customer?.surname || "");
+  const [email, setEmail] = useState(
+    () => customer?.email || customer?.emailRaw || "",
+  );
+  const [mobile, setMobile] = useState(
+    () => getFullMobileNumber(customer) || currentMobile || "",
+  );
+  const [origin, setOrigin] = useState(
+    group ? `${group} Test Drive - EN` : "Test Drive - EN",
+  );
   const [source, setSource] = useState(LEAD_SOURCES[0]);
   const [branch, setBranch] = useState(() => {
-    if (customer?.branchCode && currentBranches.some(b => b.code === customer.branchCode)) {
+    if (
+      customer?.branchCode &&
+      currentBranches.some((b) => b.code === customer.branchCode)
+    ) {
       return customer.branchCode;
     }
-    return currentBranches[0]?.code || '10';
+    return currentBranches[0]?.code || "10";
   });
-  const [newused, setNewused] = useState('NEW');
+  const [newused, setNewused] = useState("NEW");
   const [dealershipLocation, setDealershipLocation] = useState(() => {
-    const brObj = currentBranches.find(b => b.code === (customer?.branchCode || '10'));
-    return brObj ? brObj.name : (currentBranches[0]?.name || 'Sheikh Zayed Rd');
+    const brObj = currentBranches.find(
+      (b) => b.code === (customer?.branchCode || "10"),
+    );
+    return brObj ? brObj.name : currentBranches[0]?.name || "Sheikh Zayed Rd";
   });
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState("");
   const [submittingLead, setSubmittingLead] = useState(false);
   const [leadResponseToast, setLeadResponseToast] = useState(null);
 
   const currentModels = getModelsForBrand(make);
-  const originOptions = Array.from(new Set([origin, ...LEAD_ORIGINS])).filter(Boolean);
-  const titleOptions = Array.from(new Set([title, ...TITLE_OPTIONS])).filter(Boolean);
+  const originOptions = Array.from(new Set([origin, ...LEAD_ORIGINS])).filter(
+    Boolean,
+  );
+  const titleOptions = Array.from(new Set([title, ...TITLE_OPTIONS])).filter(
+    Boolean,
+  );
 
   useEffect(() => {
     if (customer && customer.customerNumber) {
       if (customer?.salutation) {
-        const cleanSal = customer?.salutation?.replace(/\.$/, '').trim();
+        const cleanSal = customer?.salutation?.replace(/\.$/, "").trim();
         setTitle(cleanSal || customer?.salutation);
       }
-      setFirstname(customer?.firstName || '');
-      setSurname(customer?.surname || '');
-      setEmail(customer?.email || customer?.emailRaw || '');
+      setFirstname(customer?.firstName || "");
+      setSurname(customer?.surname || "");
+      setEmail(customer?.email || customer?.emailRaw || "");
       const fullMobile = getFullMobileNumber(customer, currentMobile);
       if (fullMobile) {
         setMobile(fullMobile);
@@ -302,13 +365,13 @@ export default function SalesNewLeadView() {
       }
     } else {
       // Clean state for New Customer / Prospect intake
-      setTitle('Mr');
-      setFirstname('');
-      setSurname('');
-      setEmail('');
-      setMobile(currentMobile || '');
-      setModel('');
-      setNotes('');
+      setTitle("Mr");
+      setFirstname("");
+      setSurname("");
+      setEmail("");
+      setMobile(currentMobile || "");
+      setModel("");
+      setNotes("");
     }
   }, [customer, currentMobile]);
 
@@ -316,35 +379,35 @@ export default function SalesNewLeadView() {
     if (group && group !== make) {
       const resolved = resolveMake(group);
       setMake(resolved);
-      setModel('');
+      setModel("");
     }
   }, [group]);
 
   // Keep branch valid if switching between Geely & BMW
   useEffect(() => {
-    if (!currentBranches.some(b => b.code === branch)) {
-      setBranch(currentBranches[0]?.code || '10');
+    if (!currentBranches.some((b) => b.code === branch)) {
+      setBranch(currentBranches[0]?.code || "10");
     }
   }, [currentBranches, branch]);
 
   const handleMakeChange = (newMake) => {
     setMake(newMake);
-    setModel('');
+    setModel("");
     setOrigin(`${newMake} Test Drive - EN`);
-    setNotes('');
+    setNotes("");
   };
 
   const handleModelChange = (newModel) => {
     setModel(newModel);
     if (!notes || notes.startsWith("Model : '")) {
-      setNotes(newModel ? `Model : '${newModel}'` : '');
+      setNotes(newModel ? `Model : '${newModel}'` : "");
     }
   };
 
   const handleBranchChange = (newBranch) => {
     setBranch(newBranch);
-    const brObj = currentBranches.find(b => b.code === newBranch);
-    const brName = brObj ? brObj.name : 'Sheikh Zayed Rd';
+    const brObj = currentBranches.find((b) => b.code === newBranch);
+    const brName = brObj ? brObj.name : "Sheikh Zayed Rd";
     setDealershipLocation(brName);
     if (model) {
       setNotes(`Location : ${brName}, Model : '${model}'`);
@@ -372,18 +435,24 @@ export default function SalesNewLeadView() {
   }, []);
 
   const formatMinutesSeconds = (totalSeconds) => {
-    if (totalSeconds <= 0) return '0s';
+    if (totalSeconds <= 0) return "0s";
     const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
     if (mins > 0) {
-      return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+      return `${mins}m ${secs < 10 ? "0" : ""}${secs}s`;
     }
     return `${secs}s`;
   };
 
   const performSalespersonCheck = async (currentState) => {
     if (!currentState) return null;
-    const { taskId, enquiryId, group: targetGroup, customerNumber: targetCustNo, mobile: targetMobile } = currentState;
+    const {
+      taskId,
+      enquiryId,
+      group: targetGroup,
+      customerNumber: targetCustNo,
+      mobile: targetMobile,
+    } = currentState;
     let resolvedEnqId = enquiryId;
 
     // 1. Check RPA task status if taskId exists and is a valid UUID
@@ -392,50 +461,86 @@ export default function SalesNewLeadView() {
         const taskData = await getRpaCaseStatus(taskId);
         if (taskData) {
           const resObj = taskData.result || {};
-          const directName = resObj.salesperson || resObj.salesPerson || resObj.salesExecutive || resObj.assignedTo || resObj.advisor?.name;
-          const directCode = resObj.salesExecutiveId || resObj.salespersonId || resObj.advisor?.code || '';
-          if (directName && typeof directName === 'string' && directName.trim() && directName.toLowerCase() !== 'null' && directName !== 'N/A') {
+          const directName =
+            resObj.salesperson ||
+            resObj.salesPerson ||
+            resObj.salesExecutive ||
+            resObj.assignedTo ||
+            resObj.advisor?.name;
+          const directCode =
+            resObj.salesExecutiveId ||
+            resObj.salespersonId ||
+            resObj.advisor?.code ||
+            "";
+          if (
+            directName &&
+            typeof directName === "string" &&
+            directName.trim() &&
+            directName.toLowerCase() !== "null" &&
+            directName !== "N/A"
+          ) {
             return {
               salesperson: {
                 name: directName.trim(),
-                code: String(directCode || '').trim(),
-                email: resObj.advisor?.email || resObj.email || '',
-                branch: resObj.branch || ''
+                code: String(directCode || "").trim(),
+                email: resObj.advisor?.email || resObj.email || "",
+                branch: resObj.branch || "",
               },
-              enquiryId: resObj.enquiryId || resObj.enquiryNumber || resolvedEnqId
+              enquiryId:
+                resObj.enquiryId || resObj.enquiryNumber || resolvedEnqId,
             };
           }
 
           if (!resolvedEnqId && (resObj.enquiryId || resObj.enquiryNumber)) {
-            resolvedEnqId = String(resObj.enquiryId || resObj.enquiryNumber).trim();
+            resolvedEnqId = String(
+              resObj.enquiryId || resObj.enquiryNumber,
+            ).trim();
           }
         }
       } catch (err) {
-        console.warn('RPA task check warning:', err);
+        console.warn("RPA task check warning:", err);
       }
     }
 
     // 2. Query Keyloop Enquiry Endpoint if enquiryId is known
-    if (resolvedEnqId && resolvedEnqId !== 'CONVERTED' && resolvedEnqId !== 'CREATED' && resolvedEnqId !== taskId) {
+    if (
+      resolvedEnqId &&
+      resolvedEnqId !== "CONVERTED" &&
+      resolvedEnqId !== "CREATED" &&
+      resolvedEnqId !== taskId
+    ) {
       try {
-        const enqData = await fetchEnquiryDetails(targetGroup || 'BMW', resolvedEnqId);
+        const enqData = await fetchEnquiryDetails(
+          targetGroup || "BMW",
+          resolvedEnqId,
+        );
         if (enqData) {
           const adv = enqData.advisor || {};
-          const advName = adv.name || enqData.salesExecutive || (adv.code ? `Advisor: ${adv.code}` : '');
-          if (advName && advName !== 'N/A' && advName.toLowerCase() !== 'null' && advName.trim()) {
+          const advName =
+            adv.name ||
+            enqData.salesExecutive ||
+            (adv.code ? `Advisor: ${adv.code}` : "");
+          if (
+            advName &&
+            advName !== "N/A" &&
+            advName.toLowerCase() !== "null" &&
+            advName.trim()
+          ) {
             return {
               salesperson: {
                 name: advName,
-                code: String(adv.code || enqData.salesExecutiveId || '').trim(),
-                email: adv.email || '',
-                branch: enqData.branchName || (enqData.branchCode ? `Branch ${enqData.branchCode}` : '')
+                code: String(adv.code || enqData.salesExecutiveId || "").trim(),
+                email: adv.email || "",
+                branch:
+                  enqData.branchName ||
+                  (enqData.branchCode ? `Branch ${enqData.branchCode}` : ""),
               },
-              enquiryId: resolvedEnqId
+              enquiryId: resolvedEnqId,
             };
           }
         }
       } catch (err) {
-        console.warn('Keyloop enquiry check warning:', err);
+        console.warn("Keyloop enquiry check warning:", err);
       }
     }
 
@@ -443,71 +548,97 @@ export default function SalesNewLeadView() {
     if (targetMobile || targetCustNo) {
       try {
         const params = new URLSearchParams();
-        params.set('group', targetGroup || 'BMW');
-        if (targetCustNo) params.set('customerNumber', targetCustNo);
-        else if (targetMobile) params.set('mobile', targetMobile.replace(/[^0-9]/g, ''));
-        const searchRes = await apiFetch(`/api/v1/enquiries?${params.toString()}`);
+        params.set("group", targetGroup || "BMW");
+        if (targetCustNo) params.set("customerNumber", targetCustNo);
+        else if (targetMobile)
+          params.set("mobile", targetMobile.replace(/[^0-9]/g, ""));
+        const searchRes = await apiFetch(
+          `/api/v1/enquiries?${params.toString()}`,
+        );
         if (searchRes && searchRes.ok && searchRes.data) {
-          const list = Array.isArray(searchRes.data) ? searchRes.data : [searchRes.data];
+          const list = Array.isArray(searchRes.data)
+            ? searchRes.data
+            : [searchRes.data];
           if (list.length > 0) {
             const newest = list[0];
             const adv = newest.advisor || {};
             const advName = adv.name || newest.salesExecutive;
-            if (advName && advName !== 'N/A' && advName.toLowerCase() !== 'null' && advName.trim()) {
+            if (
+              advName &&
+              advName !== "N/A" &&
+              advName.toLowerCase() !== "null" &&
+              advName.trim()
+            ) {
               return {
                 salesperson: {
                   name: advName,
-                  code: String(adv.code || newest.salesExecutiveId || '').trim(),
-                  email: adv.email || '',
-                  branch: newest.branchName || ''
+                  code: String(
+                    adv.code || newest.salesExecutiveId || "",
+                  ).trim(),
+                  email: adv.email || "",
+                  branch: newest.branchName || "",
                 },
-                enquiryId: newest.enquiryNumber || newest.enquiryId || resolvedEnqId
+                enquiryId:
+                  newest.enquiryNumber || newest.enquiryId || resolvedEnqId,
               };
             }
           }
         }
       } catch (err) {
-        console.warn('Fallback enquiry search warning:', err);
+        console.warn("Fallback enquiry search warning:", err);
       }
     }
 
     return { salesperson: null, enquiryId: resolvedEnqId };
   };
 
-  const startSalespersonPolling = ({ taskId, enquiryId, group: tGroup, customerNumber: tCustNo, mobile: tMobile, branchLabel: tBranch }) => {
+  const startSalespersonPolling = ({
+    taskId,
+    enquiryId,
+    group: tGroup,
+    customerNumber: tCustNo,
+    mobile: tMobile,
+    branchLabel: tBranch,
+  }) => {
     if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
     if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
 
     const initialState = {
-      status: 'POLLING_IMMEDIATE',
-      taskId: taskId ? String(taskId) : '',
-      enquiryId: enquiryId ? String(enquiryId) : '',
-      group: tGroup || group || 'BMW',
-      customerNumber: tCustNo ? String(tCustNo) : '',
-      mobile: tMobile || '',
-      branch: tBranch || '',
+      status: "POLLING_IMMEDIATE",
+      taskId: taskId ? String(taskId) : "",
+      enquiryId: enquiryId ? String(enquiryId) : "",
+      group: tGroup || group || "BMW",
+      customerNumber: tCustNo ? String(tCustNo) : "",
+      mobile: tMobile || "",
+      branch: tBranch || "",
       salesperson: null,
       elapsedSeconds: 0,
       nextCheckSeconds: 240,
-      lastCheckedAt: new Date().toLocaleTimeString()
+      lastCheckedAt: new Date().toLocaleTimeString(),
     };
 
     setSalespersonPollState(initialState);
     pollStateRef.current = initialState;
 
     // Immediate check
-    performSalespersonCheck(initialState).then(res => {
+    performSalespersonCheck(initialState).then((res) => {
       if (res?.salesperson) {
-        setSalespersonPollState(prev => prev ? {
-          ...prev,
-          status: 'ASSIGNED',
-          salesperson: res.salesperson,
-          enquiryId: res.enquiryId || prev.enquiryId
-        } : null);
+        setSalespersonPollState((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: "ASSIGNED",
+                salesperson: res.salesperson,
+                enquiryId: res.enquiryId || prev.enquiryId,
+              }
+            : null,
+        );
         return;
       }
       if (res?.enquiryId && !initialState.enquiryId) {
-        setSalespersonPollState(prev => prev ? { ...prev, enquiryId: res.enquiryId } : null);
+        setSalespersonPollState((prev) =>
+          prev ? { ...prev, enquiryId: res.enquiryId } : null,
+        );
       }
     });
 
@@ -515,28 +646,36 @@ export default function SalesNewLeadView() {
     pollingTimerRef.current = setInterval(async () => {
       currentElapsed += 1;
       const cur = pollStateRef.current;
-      if (!cur || cur.status === 'ASSIGNED') {
+      if (!cur || cur.status === "ASSIGNED") {
         clearInterval(pollingTimerRef.current);
         return;
       }
 
-      setSalespersonPollState(prev => prev ? { ...prev, elapsedSeconds: currentElapsed } : null);
+      setSalespersonPollState((prev) =>
+        prev ? { ...prev, elapsedSeconds: currentElapsed } : null,
+      );
 
       // Poll check every 3 seconds
       if (currentElapsed % 3 === 0) {
         const checkResult = await performSalespersonCheck(cur);
         if (checkResult?.salesperson) {
           clearInterval(pollingTimerRef.current);
-          setSalespersonPollState(prev => prev ? {
-            ...prev,
-            status: 'ASSIGNED',
-            salesperson: checkResult.salesperson,
-            enquiryId: checkResult.enquiryId || prev.enquiryId
-          } : null);
+          setSalespersonPollState((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "ASSIGNED",
+                  salesperson: checkResult.salesperson,
+                  enquiryId: checkResult.enquiryId || prev.enquiryId,
+                }
+              : null,
+          );
           return;
         }
         if (checkResult?.enquiryId && !cur.enquiryId) {
-          setSalespersonPollState(prev => prev ? { ...prev, enquiryId: checkResult.enquiryId } : null);
+          setSalespersonPollState((prev) =>
+            prev ? { ...prev, enquiryId: checkResult.enquiryId } : null,
+          );
         }
       }
 
@@ -549,42 +688,58 @@ export default function SalesNewLeadView() {
   };
 
   const startFiveMinuteCountdown = () => {
-    setSalespersonPollState(prev => prev ? {
-      ...prev,
-      status: 'WAITING_5MIN',
-      nextCheckSeconds: 240
-    } : null);
+    setSalespersonPollState((prev) =>
+      prev
+        ? {
+            ...prev,
+            status: "WAITING_5MIN",
+            nextCheckSeconds: 240,
+          }
+        : null,
+    );
 
     let remainingSeconds = 240;
     countdownTimerRef.current = setInterval(async () => {
       remainingSeconds -= 1;
       const cur = pollStateRef.current;
-      if (!cur || cur.status === 'ASSIGNED') {
+      if (!cur || cur.status === "ASSIGNED") {
         clearInterval(countdownTimerRef.current);
         return;
       }
 
-      setSalespersonPollState(prev => prev ? { ...prev, nextCheckSeconds: remainingSeconds } : null);
+      setSalespersonPollState((prev) =>
+        prev ? { ...prev, nextCheckSeconds: remainingSeconds } : null,
+      );
 
       if (remainingSeconds <= 0) {
         clearInterval(countdownTimerRef.current);
         // At 5 minutes: trigger automatic 5-min verification check
-        setSalespersonPollState(prev => prev ? { ...prev, status: 'POLLING_5MIN' } : null);
+        setSalespersonPollState((prev) =>
+          prev ? { ...prev, status: "POLLING_5MIN" } : null,
+        );
         const finalCheck = await performSalespersonCheck(cur);
         if (finalCheck?.salesperson) {
-          setSalespersonPollState(prev => prev ? {
-            ...prev,
-            status: 'ASSIGNED',
-            salesperson: finalCheck.salesperson,
-            enquiryId: finalCheck.enquiryId || prev.enquiryId
-          } : null);
+          setSalespersonPollState((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "ASSIGNED",
+                  salesperson: finalCheck.salesperson,
+                  enquiryId: finalCheck.enquiryId || prev.enquiryId,
+                }
+              : null,
+          );
         } else {
-          setSalespersonPollState(prev => prev ? {
-            ...prev,
-            status: 'WAITING_5MIN',
-            nextCheckSeconds: 300,
-            lastCheckedAt: new Date().toLocaleTimeString()
-          } : null);
+          setSalespersonPollState((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  status: "WAITING_5MIN",
+                  nextCheckSeconds: 300,
+                  lastCheckedAt: new Date().toLocaleTimeString(),
+                }
+              : null,
+          );
         }
       }
     }, 1000);
@@ -599,18 +754,26 @@ export default function SalesNewLeadView() {
       if (res?.salesperson) {
         if (pollingTimerRef.current) clearInterval(pollingTimerRef.current);
         if (countdownTimerRef.current) clearInterval(countdownTimerRef.current);
-        setSalespersonPollState(prev => prev ? {
-          ...prev,
-          status: 'ASSIGNED',
-          salesperson: res.salesperson,
-          enquiryId: res.enquiryId || prev.enquiryId
-        } : null);
+        setSalespersonPollState((prev) =>
+          prev
+            ? {
+                ...prev,
+                status: "ASSIGNED",
+                salesperson: res.salesperson,
+                enquiryId: res.enquiryId || prev.enquiryId,
+              }
+            : null,
+        );
       } else {
-        setSalespersonPollState(prev => prev ? {
-          ...prev,
-          lastCheckedAt: new Date().toLocaleTimeString(),
-          enquiryId: res?.enquiryId || prev.enquiryId
-        } : null);
+        setSalespersonPollState((prev) =>
+          prev
+            ? {
+                ...prev,
+                lastCheckedAt: new Date().toLocaleTimeString(),
+                enquiryId: res?.enquiryId || prev.enquiryId,
+              }
+            : null,
+        );
       }
     } finally {
       setIsManualChecking(false);
@@ -622,13 +785,20 @@ export default function SalesNewLeadView() {
     setSubmittingLead(true);
     setLeadResponseToast(null);
 
-    const dynamicGroup = group || customer?.keyloopGroup || 'BMW';
-    const brObj = currentBranches.find(b => b.code === branch);
-    const branchLabel = brObj ? `${brObj.code} - ${brObj.name}` : `${branch} - ${dealershipLocation || 'Sheikh Zayed Rd'}`;
-    const fullName = `${firstname} ${surname}`.trim() || customer?.fullName || "Valued Prospect";
+    const dynamicGroup = group || customer?.keyloopGroup || "BMW";
+    const brObj = currentBranches.find((b) => b.code === branch);
+    const branchLabel = brObj
+      ? `${brObj.code} - ${brObj.name}`
+      : `${branch} - ${dealershipLocation || "Sheikh Zayed Rd"}`;
+    const fullName =
+      `${firstname} ${surname}`.trim() ||
+      customer?.fullName ||
+      "Valued Prospect";
 
     // If active profile is a Prospect with a prospect ID, use RPA Case: CONVERT_PROSPECT_TO_ENQUIRY (Item 4 in RPA collection)
-    const prospectId = customer?.prospectNumber || (customer?.isProspect ? (customer?.customerNumber || customer?.id) : null);
+    const prospectId =
+      customer?.prospectNumber ||
+      (customer?.isProspect ? customer?.customerNumber || customer?.id : null);
     if (prospectId) {
       const rpaPayload = {
         prospectId: String(prospectId),
@@ -646,32 +816,89 @@ export default function SalesNewLeadView() {
         manufacturer: make || "BMW",
         model: model || "",
         purchaseType: "",
-        dateRequired: ""
+        dateRequired: "",
       };
 
       try {
-        const result = await executeRpaCase("CONVERT_PROSPECT_TO_ENQUIRY", rpaPayload, {
-          createdBy: "genesys"
-        });
+        const result = await executeRpaCase(
+          "CONVERT_PROSPECT_TO_ENQUIRY",
+          rpaPayload,
+          {
+            createdBy: "genesys",
+          },
+        );
 
-        const enqId = result?.result?.enquiryId || result?.result?.enquiryNumber || result?.taskId || "CONVERTED";
+        const enqId =
+          result?.result?.enquiryId ||
+          result?.result?.enquiryNumber ||
+          result?.taskId ||
+          "CONVERTED";
+        const displayEnqId =
+          enqId !== "CONVERTED" && enqId !== result?.taskId
+            ? String(enqId)
+            : `ENQ-${Date.now().toString().slice(-6)}`;
+
+        const newEnquiryObj = {
+          enquiryNumber: displayEnqId,
+          enquiryId: String(enqId),
+          taskId: result?.taskId,
+          isNew: true,
+          status: "OPEN",
+          outcome: "OPEN",
+          make: make.trim() || dynamicGroup,
+          model: model.trim() || "Vehicle Enquiry",
+          brand: make.trim() || dynamicGroup,
+          customer: {
+            name: fullName,
+            mobile: formattedMobile,
+            customerNumber: String(prospectId),
+          },
+          advisor: {
+            name: "Assignment in progress",
+          },
+          branchName: branchLabel,
+          createdDate: new Date().toISOString().split("T")[0],
+          notes: notes || "",
+        };
+
+        if (setEnquiries) {
+          setEnquiries((prev) => [
+            newEnquiryObj,
+            ...(Array.isArray(prev)
+              ? prev.filter((e) => String(e.enquiryNumber || e.enquiryId) !== displayEnqId)
+              : []),
+          ]);
+        }
+        if (setEnquiryNumber) {
+          setEnquiryNumber(displayEnqId);
+        }
+
         startSalespersonPolling({
           taskId: result?.taskId,
-          enquiryId: (enqId !== "CONVERTED" && enqId !== result?.taskId) ? String(enqId) : '',
+          enquiryId:
+            enqId !== "CONVERTED" && enqId !== result?.taskId
+              ? String(enqId)
+              : "",
           group: dynamicGroup,
           customerNumber: prospectId,
           mobile: formattedMobile,
-          branchLabel
+          branchLabel,
         });
+
+        navigateToEnquiriesTab(newEnquiryObj);
         setSubmittingLead(false);
         return;
       } catch (err) {
-        console.warn("Prospect to Enquiry RPA failed, falling back to Lead Intake API:", err);
+        console.warn(
+          "Prospect to Enquiry RPA failed, falling back to Lead Intake API:",
+          err,
+        );
       }
     }
 
     // Default flow: New Lead Intake submission (for brand-new unassigned web prospects)
-    const computedLocation = dealershipLocation.trim() || 'Sheikh Zayed Road Dubai';
+    const computedLocation =
+      dealershipLocation.trim() || "Sheikh Zayed Road Dubai";
     const formattedMobile = formatMobileForLead(mobile);
 
     const payload = {
@@ -687,7 +914,7 @@ export default function SalesNewLeadView() {
       leadOrigin: origin || "",
       leadSource: source || LEAD_SOURCES[0],
       branch: branch || "10",
-      notes: notes || ""
+      notes: notes || "",
     };
 
     try {
@@ -695,15 +922,55 @@ export default function SalesNewLeadView() {
 
       if (res && res.ok && res.data) {
         const refId = res.data.referenceId || "AGMC-SUCCESS";
+        const enqId = res.data.enquiryId || res.data.enquiryNumber || refId;
+
+        const newEnquiryObj = {
+          enquiryNumber: String(enqId),
+          enquiryId: String(enqId),
+          referenceId: refId,
+          taskId: isValidUuid(res.data.taskId) ? res.data.taskId : null,
+          isNew: true,
+          status: "OPEN",
+          outcome: "OPEN",
+          make: make.trim() || dynamicGroup,
+          model: model.trim() || "New Lead Enquiry",
+          brand: make.trim() || dynamicGroup,
+          customer: {
+            name: `${firstname} ${surname}`.trim() || "New Customer",
+            mobile: formattedMobile,
+            customerNumber: "",
+          },
+          advisor: {
+            name: "Assignment in progress",
+          },
+          branchName: branchLabel,
+          createdDate: new Date().toISOString().split("T")[0],
+          notes: notes || "",
+        };
+
+        if (setEnquiries) {
+          setEnquiries((prev) => [
+            newEnquiryObj,
+            ...(Array.isArray(prev)
+              ? prev.filter((e) => String(e.enquiryNumber || e.enquiryId) !== String(enqId))
+              : []),
+          ]);
+        }
+        if (setEnquiryNumber) {
+          setEnquiryNumber(String(enqId));
+        }
+
         startSalespersonPolling({
           taskId: isValidUuid(res.data.taskId) ? res.data.taskId : null,
           referenceId: refId,
-          enquiryId: res.data.enquiryId || res.data.enquiryNumber || '',
+          enquiryId: res.data.enquiryId || res.data.enquiryNumber || "",
           group: dynamicGroup,
           customerNumber: null,
           mobile: formattedMobile,
-          branchLabel
+          branchLabel,
         });
+
+        navigateToEnquiriesTab(newEnquiryObj);
       }
     } catch (err) {
       console.error("Failed to submit enquiry:", err);
@@ -711,7 +978,9 @@ export default function SalesNewLeadView() {
         isError: true,
         referenceId: "FAILED",
         status: "ERROR",
-        message: err.message || "Failed to submit enquiry. Please check required fields."
+        message:
+          err.message ||
+          "Failed to submit enquiry. Please check required fields.",
       });
     } finally {
       setSubmittingLead(false);
@@ -726,7 +995,8 @@ export default function SalesNewLeadView() {
         isError: true,
         referenceId: "FAILED",
         status: "ERROR",
-        message: "No existing customer number found. Please select a customer or switch to Prospect mode."
+        message:
+          "No existing customer number found. Please select a customer or switch to Prospect mode.",
       });
       return;
     }
@@ -734,10 +1004,16 @@ export default function SalesNewLeadView() {
     setSubmittingLead(true);
     setLeadResponseToast(null);
 
-    const dynamicGroup = group || customer?.keyloopGroup || 'BMW';
-    const brObj = currentBranches.find(b => b.code === branch);
-    const branchLabel = brObj ? `${brObj.code} - ${brObj.name}` : `${branch} - ${dealershipLocation}`;
-    const fullName = `${firstname} ${surname}`.trim() || customer?.fullName || customer?.name || "Valued Customer";
+    const dynamicGroup = group || customer?.keyloopGroup || "BMW";
+    const brObj = currentBranches.find((b) => b.code === branch);
+    const branchLabel = brObj
+      ? `${brObj.code} - ${brObj.name}`
+      : `${branch} - ${dealershipLocation}`;
+    const fullName =
+      `${firstname} ${surname}`.trim() ||
+      customer?.fullName ||
+      customer?.name ||
+      "Valued Customer";
 
     const payload = {
       group: dynamicGroup,
@@ -746,27 +1022,83 @@ export default function SalesNewLeadView() {
       branch: branchLabel,
       vehicleType: (newused || "new").toLowerCase(),
       manufacturer: make,
-      model: model
+      model: model,
     };
 
     try {
-      const result = await executeRpaCase("CONVERT_PROSPECT_TO_ENQUIRY", payload, {
-        createdBy: "genesys"
-      });
+      const result = await executeRpaCase(
+        "CONVERT_PROSPECT_TO_ENQUIRY",
+        payload,
+        {
+          createdBy: "genesys",
+        },
+      );
 
-      const enqId = result?.result?.enquiryId || result?.result?.enquiryNumber || result?.taskId || "CREATED";
+      const enqId =
+        result?.result?.enquiryId ||
+        result?.result?.enquiryNumber ||
+        result?.taskId ||
+        "CREATED";
+
+      const displayEnqId =
+        enqId !== "CREATED" && enqId !== result?.taskId
+          ? String(enqId)
+          : `ENQ-${Date.now().toString().slice(-6)}`;
+
+      const newEnquiryObj = {
+        enquiryNumber: displayEnqId,
+        enquiryId: String(enqId),
+        taskId: result?.taskId,
+        isNew: true,
+        status: "OPEN",
+        outcome: "OPEN",
+        make: make.trim() || dynamicGroup,
+        model: model.trim() || "Vehicle Enquiry",
+        brand: make.trim() || dynamicGroup,
+        customer: {
+          name: fullName,
+          mobile: formattedMobile,
+          customerNumber: String(custNo),
+        },
+        advisor: {
+          name: "Assignment in progress",
+        },
+        branchName: branchLabel,
+        createdDate: new Date().toISOString().split("T")[0],
+        notes: notes || "",
+      };
+
+      if (setEnquiries) {
+        setEnquiries((prev) => [
+          newEnquiryObj,
+          ...(Array.isArray(prev)
+            ? prev.filter((e) => String(e.enquiryNumber || e.enquiryId) !== displayEnqId)
+            : []),
+        ]);
+      }
+      if (setEnquiryNumber) {
+        setEnquiryNumber(displayEnqId);
+      }
+
       startSalespersonPolling({
         taskId: result?.taskId,
-        enquiryId: (enqId !== "CREATED" && enqId !== result?.taskId) ? String(enqId) : '',
+        enquiryId:
+          enqId !== "CREATED" && enqId !== result?.taskId ? String(enqId) : "",
         group: dynamicGroup,
         customerNumber: custNo,
         mobile: formattedMobile,
-        branchLabel
+        branchLabel,
       });
+
+      navigateToEnquiriesTab(newEnquiryObj);
     } catch (err) {
-      console.warn("Existing customer enquiry RPA error, falling back to Lead Intake:", err);
+      console.warn(
+        "Existing customer enquiry RPA error, falling back to Lead Intake:",
+        err,
+      );
       try {
-        const computedLocation = dealershipLocation.trim() || 'Sheikh Zayed Road Dubai';
+        const computedLocation =
+          dealershipLocation.trim() || "Sheikh Zayed Road Dubai";
         const formattedMobile = formatMobileForLead(mobile);
         const intakeRes = await submitLeadIntake({
           firstName: firstname.trim(),
@@ -781,27 +1113,76 @@ export default function SalesNewLeadView() {
           leadOrigin: origin || "",
           leadSource: source || LEAD_SOURCES[0],
           branch: branch || "10",
-          notes: `Existing Customer #${custNo}. ${notes || ''}`
+          notes: `Existing Customer #${custNo}. ${notes || ""}`,
         });
 
         if (intakeRes && intakeRes.ok && intakeRes.data) {
           const refId = intakeRes.data.referenceId || "AGMC-SUCCESS";
-          startSalespersonPolling({
-            taskId: isValidUuid(intakeRes.data.taskId) ? intakeRes.data.taskId : null,
+          const fallbackEnqId =
+            intakeRes.data.enquiryId || intakeRes.data.enquiryNumber || refId;
+
+          const fallbackEnquiryObj = {
+            enquiryNumber: String(fallbackEnqId),
+            enquiryId: String(fallbackEnqId),
             referenceId: refId,
-            enquiryId: intakeRes.data.enquiryId || intakeRes.data.enquiryNumber || '',
+            taskId: isValidUuid(intakeRes.data.taskId)
+              ? intakeRes.data.taskId
+              : null,
+            isNew: true,
+            status: "OPEN",
+            outcome: "OPEN",
+            make: make.trim() || dynamicGroup,
+            model: model.trim() || "Vehicle Enquiry",
+            brand: make.trim() || dynamicGroup,
+            customer: {
+              name: fullName,
+              mobile: formattedMobile,
+              customerNumber: String(custNo),
+            },
+            advisor: {
+              name: "Assignment in progress",
+            },
+            branchName: branchLabel,
+            createdDate: new Date().toISOString().split("T")[0],
+            notes: `Existing Customer #${custNo}. ${notes || ""}`,
+          };
+
+          if (setEnquiries) {
+            setEnquiries((prev) => [
+              fallbackEnquiryObj,
+              ...(Array.isArray(prev)
+                ? prev.filter((e) => String(e.enquiryNumber || e.enquiryId) !== String(fallbackEnqId))
+                : []),
+            ]);
+          }
+          if (setEnquiryNumber) {
+            setEnquiryNumber(String(fallbackEnqId));
+          }
+
+          startSalespersonPolling({
+            taskId: isValidUuid(intakeRes.data.taskId)
+              ? intakeRes.data.taskId
+              : null,
+            referenceId: refId,
+            enquiryId:
+              intakeRes.data.enquiryId || intakeRes.data.enquiryNumber || "",
             group: dynamicGroup,
             customerNumber: custNo,
             mobile: formattedMobile,
-            branchLabel
+            branchLabel,
           });
+
+          navigateToEnquiriesTab(fallbackEnquiryObj);
         }
       } catch (fallbackErr) {
         setLeadResponseToast({
           isError: true,
           referenceId: "FAILED",
           status: "ERROR",
-          message: err.message || fallbackErr.message || "Failed to create enquiry for existing customer."
+          message:
+            err.message ||
+            fallbackErr.message ||
+            "Failed to create enquiry for existing customer.",
         });
       }
     } finally {
@@ -819,7 +1200,9 @@ export default function SalesNewLeadView() {
   // ----------------------------------------------------
   // 2. COMPLAINT STATE & HANDLERS (Postman 6. Complaints)
   // ----------------------------------------------------
-  const [complaintCategory, setComplaintCategory] = useState("Sales / Dealership Experience");
+  const [complaintCategory, setComplaintCategory] = useState(
+    "Sales / Dealership Experience",
+  );
   const [complaintDescription, setComplaintDescription] = useState("");
   const [complaintVin, setComplaintVin] = useState(vin);
   const [submittingComplaint, setSubmittingComplaint] = useState(false);
@@ -831,11 +1214,11 @@ export default function SalesNewLeadView() {
   const [selectedComplaintRef, setSelectedComplaintRef] = useState("");
   const [complaintActionResult, setComplaintActionResult] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
-  const [actionSubTab, setActionSubTab] = useState('monitor'); // 'monitor' | 'ack' | 'satisfaction'
+  const [actionSubTab, setActionSubTab] = useState("monitor"); // 'monitor' | 'ack' | 'satisfaction'
 
-  const renderSafeVal = (val, fallback = 'N/A') => {
-    if (val === null || val === undefined || val === '') return fallback;
-    if (typeof val === 'object') {
+  const renderSafeVal = (val, fallback = "N/A") => {
+    if (val === null || val === undefined || val === "") return fallback;
+    if (typeof val === "object") {
       if (val.name) return val.name;
       if (val.description) return val.description;
       if (val.title) return val.title;
@@ -851,7 +1234,9 @@ export default function SalesNewLeadView() {
     }
     setLoadingComplaints(true);
     try {
-      const res = await apiFetch(`/api/v1/complaints?group=${group}&customerNumber=${customerNumber}&status=all`);
+      const res = await apiFetch(
+        `/api/v1/complaints?group=${group}&customerNumber=${customerNumber}&status=all`,
+      );
       if (res && res.ok && Array.isArray(res.data)) {
         setCustomerComplaints(res.data);
       } else {
@@ -889,7 +1274,7 @@ export default function SalesNewLeadView() {
       complaintPriority: "Normal",
       department: "Sales",
       source: "Customer Call",
-      complaintGroup: "Customer"
+      complaintGroup: "Customer",
     };
 
     try {
@@ -898,19 +1283,25 @@ export default function SalesNewLeadView() {
       if (res && res.ok) {
         const newRef = res.ticketNumber || res.referenceId || "AGMC-CREATED";
         setSelectedComplaintRef(newRef);
-        setComplaintToast({ 
-          ok: true, 
-          message: `Complaint Ticket created successfully! Ref #${res.referenceId}${res.ticketNumber ? ` | CXPulse #${res.ticketNumber}` : ''}` 
+        setComplaintToast({
+          ok: true,
+          message: `Complaint Ticket created successfully! Ref #${res.referenceId}${res.ticketNumber ? ` | CXPulse #${res.ticketNumber}` : ""}`,
         });
         setComplaintDescription("");
         fetchCustomerComplaints();
         // Automatically fetch and show acknowledgement for the newly created complaint
-        handleTriggerComplaintAction('ack', newRef);
+        handleTriggerComplaintAction("ack", newRef);
       } else {
-        setComplaintToast({ ok: false, message: res?.errorMessage || "Failed to create complaint ticket" });
+        setComplaintToast({
+          ok: false,
+          message: res?.errorMessage || "Failed to create complaint ticket",
+        });
       }
     } catch (err) {
-      setComplaintToast({ ok: false, message: err.message || "Failed to submit complaint ticket" });
+      setComplaintToast({
+        ok: false,
+        message: err.message || "Failed to submit complaint ticket",
+      });
     } finally {
       setSubmittingComplaint(false);
     }
@@ -921,7 +1312,7 @@ export default function SalesNewLeadView() {
     if (!ref) return;
 
     setSelectedComplaintRef(ref);
-    setActionSubTab(actionType || 'monitor');
+    setActionSubTab(actionType || "monitor");
     setActionLoading(true);
     setComplaintActionResult(null);
 
@@ -934,14 +1325,15 @@ export default function SalesNewLeadView() {
           action: actionType,
           ref,
           data: res.data || res,
-          ok: true
+          ok: true,
         });
       } else {
         setComplaintActionResult({
           action: actionType,
           ref,
-          error: res?.statusText || "No data returned for this complaint reference",
-          ok: false
+          error:
+            res?.statusText || "No data returned for this complaint reference",
+          ok: false,
         });
       }
     } catch (err) {
@@ -949,7 +1341,7 @@ export default function SalesNewLeadView() {
         action: actionType,
         ref,
         error: err.message || "Failed to execute complaint action",
-        ok: false
+        ok: false,
       });
     } finally {
       setActionLoading(false);
@@ -959,13 +1351,12 @@ export default function SalesNewLeadView() {
   const handleLookupComplaintSubmit = (e) => {
     e.preventDefault();
     if (searchComplaintRef.trim()) {
-      handleTriggerComplaintAction('monitor', searchComplaintRef.trim());
+      handleTriggerComplaintAction("monitor", searchComplaintRef.trim());
     }
   };
 
   return (
     <div className="bg-white rounded-xl p-2.5 sm:p-3 shadow-xs border border-slate-200/90 flex flex-col gap-2 text-xs transition-all">
-      
       {/* Top Header Card */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
         {/* Left: Icon, Title, Subtitle & Switch Tab Pill */}
@@ -980,9 +1371,9 @@ export default function SalesNewLeadView() {
                   New Enquiry
                 </h2>
                 <p className="text-[10px] text-gray-400 font-medium">
-                  {hasCustomer 
-                    ? `Create new enquiry for Customer #${customerNumber}` 
-                    : 'Capture customer details to create a new enquiry'}
+                  {hasCustomer
+                    ? `Create new enquiry for Customer #${customerNumber}`
+                    : "Capture customer details to create a new enquiry"}
                 </p>
               </div>
 
@@ -1001,8 +1392,12 @@ export default function SalesNewLeadView() {
                 <FaExclamationTriangle />
               </div>
               <div>
-                <h2 className="text-xs sm:text-sm font-extrabold text-gray-900 leading-tight">Sales Complaints & Tickets</h2>
-                <p className="text-[10px] text-gray-400 font-medium">Manage and track customer complaints and inquiries</p>
+                <h2 className="text-xs sm:text-sm font-extrabold text-gray-900 leading-tight">
+                  Sales Complaints & Tickets
+                </h2>
+                <p className="text-[10px] text-gray-400 font-medium">
+                  Manage and track customer complaints and inquiries
+                </p>
               </div>
 
               <button
@@ -1020,9 +1415,19 @@ export default function SalesNewLeadView() {
         {/* Right: Group / Customer badge and Circular Car Icon */}
         <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
           <span className="text-[10px] text-gray-500 font-medium">
-            Group : <span className="font-bold text-gray-700">{group || 'BMW'}</span> | <span className="font-bold text-gray-700">{hasCustomer ? `Customer #${customerNumber}` : 'New Enquiry'}</span>
+            Group :{" "}
+            <span className="font-bold text-gray-700">{group || "BMW"}</span> |{" "}
+            <span className="font-bold text-gray-700">
+              {hasCustomer ? `Customer #${customerNumber}` : "New Enquiry"}
+            </span>
             {salespersonPollState?.salesperson?.name && (
-              <> | Salesperson: <span className="font-bold text-blue-700">{salespersonPollState.salesperson.name}</span></>
+              <>
+                {" "}
+                | Salesperson:{" "}
+                <span className="font-bold text-blue-700">
+                  {salespersonPollState.salesperson.name}
+                </span>
+              </>
             )}
           </span>
           <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-2xs shrink-0">
@@ -1036,7 +1441,6 @@ export default function SalesNewLeadView() {
       {/* ------------------------------------------------------------------- */}
       {activeTab === "lead" && (
         <div className="flex flex-col gap-2">
-
           {/* Error Notice Only - No intrusive polling bars or success banners */}
           {leadResponseToast && leadResponseToast.isError && (
             <div className="p-2.5 rounded-lg flex items-center justify-between shadow-xs border animate-fade-in bg-rose-50 border-rose-200 text-rose-900">
@@ -1063,7 +1467,6 @@ export default function SalesNewLeadView() {
           <form onSubmit={handleSubmitEnquiry} className="space-y-1.5 text-xs">
             {/* Unified Continuous Grid: 3 columns on xl/lg, 2 columns on md/sm */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-3 gap-y-1.5">
-              
               {/* 1. Lead Origin */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
@@ -1073,7 +1476,7 @@ export default function SalesNewLeadView() {
                   icon={<FaTh className="text-blue-500 text-[10px]" />}
                   value={origin}
                   onChange={(val) => setOrigin(val)}
-                  options={originOptions.map(o => ({ value: o, label: o }))}
+                  options={originOptions.map((o) => ({ value: o, label: o }))}
                   placeholder="Select Lead Origin"
                   searchPlaceholder="Search origin..."
                   required
@@ -1089,7 +1492,7 @@ export default function SalesNewLeadView() {
                   icon={<FaBullhorn className="text-blue-500 text-[10px]" />}
                   value={source}
                   onChange={(val) => setSource(val)}
-                  options={LEAD_SOURCES.map(s => ({ value: s, label: s }))}
+                  options={LEAD_SOURCES.map((s) => ({ value: s, label: s }))}
                   placeholder="Select Lead Source"
                   searchPlaceholder="Search source..."
                   required
@@ -1105,7 +1508,10 @@ export default function SalesNewLeadView() {
                   icon={<FaBuilding className="text-blue-500 text-[10px]" />}
                   value={branch}
                   onChange={(val) => handleBranchChange(val)}
-                  options={currentBranches.map(b => ({ value: b.code, label: `${b.code} - ${b.name}` }))}
+                  options={currentBranches.map((b) => ({
+                    value: b.code,
+                    label: `${b.code} - ${b.name}`,
+                  }))}
                   placeholder="-- Select Branch --"
                   searchPlaceholder="Search branch..."
                   required
@@ -1121,7 +1527,7 @@ export default function SalesNewLeadView() {
                   icon={<FaUser className="text-blue-500 text-[10px]" />}
                   value={title}
                   onChange={(val) => setTitle(val)}
-                  options={titleOptions.map(t => ({ value: t, label: t }))}
+                  options={titleOptions.map((t) => ({ value: t, label: t }))}
                   placeholder="Select Title"
                 />
               </div>
@@ -1135,8 +1541,8 @@ export default function SalesNewLeadView() {
                   <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
                     <FaUser />
                   </div>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={firstname}
                     onChange={(e) => setFirstname(e.target.value)}
                     required
@@ -1155,8 +1561,8 @@ export default function SalesNewLeadView() {
                   <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-xs mr-1.5">
                     <FaUser />
                   </div>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={surname}
                     onChange={(e) => setSurname(e.target.value)}
                     required
@@ -1169,14 +1575,15 @@ export default function SalesNewLeadView() {
               {/* 7. Mobile / Phone */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                  Mobile / Phone <span className="text-rose-500 font-bold">*</span>
+                  Mobile / Phone{" "}
+                  <span className="text-rose-500 font-bold">*</span>
                 </label>
                 <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
                   <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
                     <FaPhoneAlt />
                   </div>
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
                     required
@@ -1189,14 +1596,15 @@ export default function SalesNewLeadView() {
               {/* 8. Email Address */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                  Email Address <span className="text-rose-500 font-bold">*</span>
+                  Email Address{" "}
+                  <span className="text-rose-500 font-bold">*</span>
                 </label>
                 <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
                   <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
                     <FaEnvelope />
                   </div>
-                  <input 
-                    type="email" 
+                  <input
+                    type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -1215,7 +1623,10 @@ export default function SalesNewLeadView() {
                   icon={<FaCar className="text-blue-500 text-[10px]" />}
                   value={newused}
                   onChange={(val) => setNewused(val)}
-                  options={[{ value: 'NEW', label: 'NEW' }, { value: 'USED', label: 'USED' }]}
+                  options={[
+                    { value: "NEW", label: "NEW" },
+                    { value: "USED", label: "USED" },
+                  ]}
                   placeholder="Select Vehicle Type"
                 />
               </div>
@@ -1223,13 +1634,17 @@ export default function SalesNewLeadView() {
               {/* 10. Make / Brand */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                  Make / Brand <span className="text-rose-500 font-bold">*</span>
+                  Make / Brand{" "}
+                  <span className="text-rose-500 font-bold">*</span>
                 </label>
                 <CustomSelect
                   icon={<FaCar className="text-blue-500 text-[10px]" />}
                   value={make}
                   onChange={(val) => handleMakeChange(val)}
-                  options={BRAND_OPTIONS.map((b) => ({ value: b.code, label: b.label }))}
+                  options={BRAND_OPTIONS.map((b) => ({
+                    value: b.code,
+                    label: b.label,
+                  }))}
                   placeholder="-- Select Brand --"
                   searchPlaceholder="Search brand..."
                   required
@@ -1270,7 +1685,6 @@ export default function SalesNewLeadView() {
                   />
                 </div>
               </div>
-
             </div>
 
             {/* ROW: Enquiry Notes & Submit Button */}
@@ -1281,7 +1695,7 @@ export default function SalesNewLeadView() {
                   <span>Enquiry Notes</span>
                 </label>
                 <div className="relative w-full bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs transition-all px-2 py-1">
-                  <textarea 
+                  <textarea
                     rows={1}
                     maxLength={500}
                     value={notes}
@@ -1290,26 +1704,32 @@ export default function SalesNewLeadView() {
                     className="w-full bg-transparent border-0 focus:outline-none text-xs font-semibold text-gray-800 pr-12 py-0.5 leading-snug resize-none placeholder:text-gray-400 h-6.5"
                   />
                   <div className="absolute right-2 top-1.5 text-[9px] font-semibold text-gray-400 select-none">
-                    {(notes || '').length}/500
+                    {(notes || "").length}/500
                   </div>
                 </div>
               </div>
 
               {/* Form Submit Button */}
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 disabled={submittingLead}
                 className="h-8.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-50 shrink-0"
               >
                 {submittingLead ? (
                   <>
                     <FaSpinner className="animate-spin text-xs" />
-                    <span>{hasCustomer ? 'Creating Enquiry...' : 'Submitting Enquiry...'}</span>
+                    <span>
+                      {hasCustomer
+                        ? "Creating Enquiry..."
+                        : "Submitting Enquiry..."}
+                    </span>
                   </>
                 ) : (
                   <>
                     <FaPaperPlane className="text-xs" />
-                    <span>{hasCustomer ? `Create Enquiry #${customerNumber}` : 'Create Enquiry'}</span>
+                    <span>
+                      {hasCustomer ? `Create Enquiry ` : "Create Enquiry"}
+                    </span>
                   </>
                 )}
               </button>
@@ -1323,42 +1743,63 @@ export default function SalesNewLeadView() {
       {/* ------------------------------------------------------------------- */}
       {activeTab === "complaint" && (
         <div className="flex flex-col gap-4">
-          
           {/* Create Complaint Ticket Form */}
           <div className="p-4 bg-amber-50/50 border border-amber-200/70 rounded-xl space-y-3">
             <h3 className="font-extrabold text-amber-950 text-xs flex items-center gap-2">
-              <FaExclamationTriangle className="text-amber-600 text-sm" /> Create Complaint Ticket
+              <FaExclamationTriangle className="text-amber-600 text-sm" />{" "}
+              Create Complaint Ticket
             </h3>
 
             {complaintToast && (
-              <div className={`p-3 rounded-lg text-xs font-bold ${
-                complaintToast.ok ? 'bg-emerald-100 text-emerald-900 border border-emerald-300' : 'bg-rose-100 text-rose-900 border border-rose-300'
-              }`}>
+              <div
+                className={`p-3 rounded-lg text-xs font-bold ${
+                  complaintToast.ok
+                    ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                    : "bg-rose-100 text-rose-900 border border-rose-300"
+                }`}
+              >
                 {complaintToast.message}
               </div>
             )}
 
-            <form onSubmit={handleCreateComplaint} className="space-y-3 text-xs">
+            <form
+              onSubmit={handleCreateComplaint}
+              className="space-y-3 text-xs"
+            >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-gray-700 block mb-1">Complaint Category</label>
-                  <select 
+                  <label className="text-[11px] font-bold text-gray-700 block mb-1">
+                    Complaint Category
+                  </label>
+                  <select
                     value={complaintCategory}
                     onChange={(e) => setComplaintCategory(e.target.value)}
                     className="w-full p-2 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 focus:outline-none focus:border-amber-500"
                   >
-                    <option value="Sales / Dealership Experience">Sales / Dealership Experience</option>
-                    <option value="Vehicle Delivery Delay">Vehicle Delivery Delay</option>
-                    <option value="Issue after last visit">Issue after last visit</option>
-                    <option value="Pricing / Invoice Query">Pricing / Invoice Query</option>
-                    <option value="Staff Communication">Staff Communication</option>
+                    <option value="Sales / Dealership Experience">
+                      Sales / Dealership Experience
+                    </option>
+                    <option value="Vehicle Delivery Delay">
+                      Vehicle Delivery Delay
+                    </option>
+                    <option value="Issue after last visit">
+                      Issue after last visit
+                    </option>
+                    <option value="Pricing / Invoice Query">
+                      Pricing / Invoice Query
+                    </option>
+                    <option value="Staff Communication">
+                      Staff Communication
+                    </option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold text-gray-700 block mb-1">Vehicle VIN (Optional)</label>
-                  <input 
-                    type="text" 
+                  <label className="text-[11px] font-bold text-gray-700 block mb-1">
+                    Vehicle VIN (Optional)
+                  </label>
+                  <input
+                    type="text"
                     value={complaintVin}
                     onChange={(e) => setComplaintVin(e.target.value)}
                     placeholder="e.g. WBA31HC04SFT82888"
@@ -1371,7 +1812,7 @@ export default function SalesNewLeadView() {
                 <label className="text-[11px] font-bold text-gray-700 block mb-1">
                   Description <span className="text-rose-500">*</span>
                 </label>
-                <textarea 
+                <textarea
                   rows={2}
                   value={complaintDescription}
                   onChange={(e) => setComplaintDescription(e.target.value)}
@@ -1387,7 +1828,11 @@ export default function SalesNewLeadView() {
                   disabled={submittingComplaint || !complaintDescription.trim()}
                   className="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-lg shadow-xs flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  {submittingComplaint ? <FaSpinner className="animate-spin text-xs" /> : <FaPaperPlane className="text-xs" />}
+                  {submittingComplaint ? (
+                    <FaSpinner className="animate-spin text-xs" />
+                  ) : (
+                    <FaPaperPlane className="text-xs" />
+                  )}
                   <span>Submit Complaint Ticket</span>
                 </button>
               </div>
@@ -1398,10 +1843,14 @@ export default function SalesNewLeadView() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <h3 className="font-extrabold text-gray-900 text-xs flex items-center gap-1.5">
-                <FaExclamationTriangle className="text-amber-600" /> Customer Active Complaint Tickets ({customerComplaints.length})
+                <FaExclamationTriangle className="text-amber-600" /> Customer
+                Active Complaint Tickets ({customerComplaints.length})
               </h3>
               <div className="flex items-center gap-2">
-                <form onSubmit={handleLookupComplaintSubmit} className="flex items-center gap-1.5">
+                <form
+                  onSubmit={handleLookupComplaintSubmit}
+                  className="flex items-center gap-1.5"
+                >
                   <div className="relative">
                     <FaSearch className="absolute left-2.5 top-2.5 text-gray-400 text-[10px]" />
                     <input
@@ -1417,15 +1866,21 @@ export default function SalesNewLeadView() {
                     disabled={!searchComplaintRef.trim() || actionLoading}
                     className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs cursor-pointer flex items-center gap-1"
                   >
-                    {actionLoading ? <FaSpinner className="animate-spin text-xs" /> : 'Lookup'}
+                    {actionLoading ? (
+                      <FaSpinner className="animate-spin text-xs" />
+                    ) : (
+                      "Lookup"
+                    )}
                   </button>
                 </form>
-                <button 
+                <button
                   onClick={fetchCustomerComplaints}
                   className="p-1 text-gray-500 hover:text-gray-800 cursor-pointer"
                   title="Refresh Complaints"
                 >
-                  <FaRedo className={`text-xs ${loadingComplaints ? 'animate-spin' : ''}`} />
+                  <FaRedo
+                    className={`text-xs ${loadingComplaints ? "animate-spin" : ""}`}
+                  />
                 </button>
               </div>
             </div>
@@ -1433,14 +1888,20 @@ export default function SalesNewLeadView() {
             {loadingComplaints ? (
               <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
                 <FaSpinner className="animate-spin text-xl text-amber-600" />
-                <span className="text-xs font-medium">Loading customer complaints...</span>
+                <span className="text-xs font-medium">
+                  Loading customer complaints...
+                </span>
               </div>
             ) : customerComplaints.length === 0 ? (
               <div className="p-6 text-center text-gray-400 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-1">
                 <FaInfoCircle className="mx-auto text-xl text-gray-300 mb-1" />
-                <p className="font-bold text-gray-700 text-xs">No active complaint tickets found for Customer #{customerNumber || 'N/A'}.</p>
+                <p className="font-bold text-gray-700 text-xs">
+                  No active complaint tickets found for Customer #
+                  {customerNumber || "N/A"}.
+                </p>
                 <p className="text-[11px] text-gray-400">
-                  You can use the form above to submit a new complaint ticket or lookup an existing reference ID.
+                  You can use the form above to submit a new complaint ticket or
+                  lookup an existing reference ID.
                 </p>
               </div>
             ) : (
@@ -1458,37 +1919,72 @@ export default function SalesNewLeadView() {
                   </thead>
                   <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
                     {customerComplaints.map((item, idx) => {
-                      const refId = item.complaintId || item.id || item.complaintReference || `AGMC-${idx+1}`;
+                      const refId =
+                        item.complaintId ||
+                        item.id ||
+                        item.complaintReference ||
+                        `AGMC-${idx + 1}`;
                       const isSelected = selectedComplaintRef === refId;
                       return (
-                        <tr key={idx} className={`hover:bg-amber-50/40 transition-colors ${isSelected ? 'bg-amber-50/60 font-semibold' : ''}`}>
-                          <td className="py-3 px-3 font-mono font-bold text-amber-700">{renderSafeVal(refId)}</td>
-                          <td className="py-3 px-3 font-bold text-gray-900">{renderSafeVal(item.category)}</td>
-                          <td className="py-3 px-3 text-gray-800 max-w-xs truncate" title={item.description}>{renderSafeVal(item.description)}</td>
-                          <td className="py-3 px-3 font-mono text-gray-600">{renderSafeVal(item.openDate || item.createdDate || item.date)}</td>
+                        <tr
+                          key={idx}
+                          className={`hover:bg-amber-50/40 transition-colors ${isSelected ? "bg-amber-50/60 font-semibold" : ""}`}
+                        >
+                          <td className="py-3 px-3 font-mono font-bold text-amber-700">
+                            {renderSafeVal(refId)}
+                          </td>
+                          <td className="py-3 px-3 font-bold text-gray-900">
+                            {renderSafeVal(item.category)}
+                          </td>
+                          <td
+                            className="py-3 px-3 text-gray-800 max-w-xs truncate"
+                            title={item.description}
+                          >
+                            {renderSafeVal(item.description)}
+                          </td>
+                          <td className="py-3 px-3 font-mono text-gray-600">
+                            {renderSafeVal(
+                              item.openDate || item.createdDate || item.date,
+                            )}
+                          </td>
                           <td className="py-3 px-3">
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-300 uppercase">
-                              {renderSafeVal(item.status || 'OPEN')}
+                              {renderSafeVal(item.status || "OPEN")}
                             </span>
                           </td>
                           <td className="py-3 px-3 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1">
                               <button
-                                onClick={() => { setSelectedComplaintRef(refId); handleTriggerComplaintAction('monitor', refId); }}
+                                onClick={() => {
+                                  setSelectedComplaintRef(refId);
+                                  handleTriggerComplaintAction(
+                                    "monitor",
+                                    refId,
+                                  );
+                                }}
                                 className="px-2 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] font-bold cursor-pointer"
                                 title="Monitor Complaint Status"
                               >
                                 Status
                               </button>
                               <button
-                                onClick={() => { setSelectedComplaintRef(refId); handleTriggerComplaintAction('ack', refId); }}
+                                onClick={() => {
+                                  setSelectedComplaintRef(refId);
+                                  handleTriggerComplaintAction("ack", refId);
+                                }}
                                 className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold cursor-pointer"
                                 title="Customer Acknowledgement"
                               >
                                 Ack
                               </button>
                               <button
-                                onClick={() => { setSelectedComplaintRef(refId); handleTriggerComplaintAction('satisfaction', refId); }}
+                                onClick={() => {
+                                  setSelectedComplaintRef(refId);
+                                  handleTriggerComplaintAction(
+                                    "satisfaction",
+                                    refId,
+                                  );
+                                }}
                                 className="px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold cursor-pointer"
                                 title="Satisfaction & Resolution Survey"
                               >
@@ -1507,27 +2003,40 @@ export default function SalesNewLeadView() {
 
           {/* Action Result Details Box (shown DOWN BELOW the table when a complaint is inspected or looked up) */}
           {complaintActionResult && (
-            <div className={`p-4 rounded-xl text-xs space-y-3 animate-fade-in ${
-              complaintActionResult.ok 
-                ? 'bg-amber-50/70 border border-amber-200 text-amber-950' 
-                : 'bg-rose-50/80 border border-rose-200 text-rose-900'
-            }`}>
+            <div
+              className={`p-4 rounded-xl text-xs space-y-3 animate-fade-in ${
+                complaintActionResult.ok
+                  ? "bg-amber-50/70 border border-amber-200 text-amber-950"
+                  : "bg-rose-50/80 border border-rose-200 text-rose-900"
+              }`}
+            >
               <div className="flex items-center justify-between pb-2 border-b border-amber-200/60">
                 <div className="flex items-center gap-2">
-                  <FaCheckCircle className={complaintActionResult.ok ? 'text-amber-600' : 'text-rose-600'} />
+                  <FaCheckCircle
+                    className={
+                      complaintActionResult.ok
+                        ? "text-amber-600"
+                        : "text-rose-600"
+                    }
+                  />
                   <h4 className="font-extrabold text-sm text-gray-900">
                     Complaint Ticket #{complaintActionResult.ref}
                   </h4>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                    (complaintActionResult.data?.complaint?.status || complaintActionResult.data?.status) === 'CLOSED'
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : 'bg-amber-100 text-amber-900 border border-amber-300'
-                  }`}>
-                    {complaintActionResult.data?.complaint?.status || complaintActionResult.data?.status || 'OPEN'}
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      (complaintActionResult.data?.complaint?.status ||
+                        complaintActionResult.data?.status) === "CLOSED"
+                        ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                        : "bg-amber-100 text-amber-900 border border-amber-300"
+                    }`}
+                  >
+                    {complaintActionResult.data?.complaint?.status ||
+                      complaintActionResult.data?.status ||
+                      "OPEN"}
                   </span>
                 </div>
-                <button 
-                  onClick={() => setComplaintActionResult(null)} 
+                <button
+                  onClick={() => setComplaintActionResult(null)}
                   className="text-gray-400 hover:text-gray-700 text-sm font-bold cursor-pointer p-1"
                   title="Close"
                 >
@@ -1536,37 +2045,39 @@ export default function SalesNewLeadView() {
               </div>
 
               {complaintActionResult.error ? (
-                <p className="text-xs font-medium text-rose-700">{complaintActionResult.error}</p>
+                <p className="text-xs font-medium text-rose-700">
+                  {complaintActionResult.error}
+                </p>
               ) : (
                 <>
                   {/* 3 Operational Action Tabs (matching Postman 6. Complaints APIs) */}
                   <div className="flex items-center gap-1.5 border-b border-amber-200/50 pb-2">
                     <button
-                      onClick={() => setActionSubTab('monitor')}
+                      onClick={() => setActionSubTab("monitor")}
                       className={`px-3 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1 ${
-                        actionSubTab === 'monitor'
-                          ? 'bg-amber-600 text-white shadow-2xs'
-                          : 'bg-white text-gray-700 hover:bg-amber-100/60 border border-amber-200'
+                        actionSubTab === "monitor"
+                          ? "bg-amber-600 text-white shadow-2xs"
+                          : "bg-white text-gray-700 hover:bg-amber-100/60 border border-amber-200"
                       }`}
                     >
                       <FaClock className="text-xs" /> Monitor Status
                     </button>
                     <button
-                      onClick={() => setActionSubTab('ack')}
+                      onClick={() => setActionSubTab("ack")}
                       className={`px-3 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1 ${
-                        actionSubTab === 'ack'
-                          ? 'bg-blue-600 text-white shadow-2xs'
-                          : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-200'
+                        actionSubTab === "ack"
+                          ? "bg-blue-600 text-white shadow-2xs"
+                          : "bg-white text-gray-700 hover:bg-blue-50 border border-gray-200"
                       }`}
                     >
                       <FaBell className="text-xs" /> Customer Acknowledgement
                     </button>
                     <button
-                      onClick={() => setActionSubTab('satisfaction')}
+                      onClick={() => setActionSubTab("satisfaction")}
                       className={`px-3 py-1 rounded-md text-[11px] font-bold cursor-pointer transition-colors flex items-center gap-1 ${
-                        actionSubTab === 'satisfaction'
-                          ? 'bg-emerald-600 text-white shadow-2xs'
-                          : 'bg-white text-gray-700 hover:bg-emerald-50 border border-gray-200'
+                        actionSubTab === "satisfaction"
+                          ? "bg-emerald-600 text-white shadow-2xs"
+                          : "bg-white text-gray-700 hover:bg-emerald-50 border border-gray-200"
                       }`}
                     >
                       <FaStar className="text-xs" /> Satisfaction & Closure
@@ -1574,76 +2085,139 @@ export default function SalesNewLeadView() {
                   </div>
 
                   {/* TAB 1: MONITOR STATUS */}
-                  {actionSubTab === 'monitor' && (
+                  {actionSubTab === "monitor" && (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 text-[11px]">
                       <div>
-                        <span className="text-gray-500 block text-[10px]">Category:</span>
-                        <strong>{complaintActionResult.data?.complaint?.category || complaintActionResult.data?.category || 'Sales Experience'}</strong>
+                        <span className="text-gray-500 block text-[10px]">
+                          Category:
+                        </span>
+                        <strong>
+                          {complaintActionResult.data?.complaint?.category ||
+                            complaintActionResult.data?.category ||
+                            "Sales Experience"}
+                        </strong>
                       </div>
                       <div>
-                        <span className="text-gray-500 block text-[10px]">Department:</span>
-                        <strong>{complaintActionResult.data?.complaint?.department || complaintActionResult.data?.department || 'Sales'}</strong>
+                        <span className="text-gray-500 block text-[10px]">
+                          Department:
+                        </span>
+                        <strong>
+                          {complaintActionResult.data?.complaint?.department ||
+                            complaintActionResult.data?.department ||
+                            "Sales"}
+                        </strong>
                       </div>
                       <div>
-                        <span className="text-gray-500 block text-[10px]">Branch / Location:</span>
-                        <strong>{complaintActionResult.data?.complaint?.location || 'Branch 10'}</strong>
+                        <span className="text-gray-500 block text-[10px]">
+                          Branch / Location:
+                        </span>
+                        <strong>
+                          {complaintActionResult.data?.complaint?.location ||
+                            "Branch 10"}
+                        </strong>
                       </div>
                       <div>
-                        <span className="text-gray-500 block text-[10px]">Raised Date:</span>
-                        <strong>{(complaintActionResult.data?.complaint?.raisedDate || complaintActionResult.data?.createdAt || '').slice(0, 10) || 'Today'}</strong>
+                        <span className="text-gray-500 block text-[10px]">
+                          Raised Date:
+                        </span>
+                        <strong>
+                          {(
+                            complaintActionResult.data?.complaint?.raisedDate ||
+                            complaintActionResult.data?.createdAt ||
+                            ""
+                          ).slice(0, 10) || "Today"}
+                        </strong>
                       </div>
                       <div className="col-span-2 sm:col-span-4 bg-white p-2.5 rounded-lg border border-amber-200/80">
-                        <span className="text-gray-500 block text-[10px] mb-0.5">Description:</span>
+                        <span className="text-gray-500 block text-[10px] mb-0.5">
+                          Description:
+                        </span>
                         <p className="text-gray-800 font-medium">
-                          {complaintActionResult.data?.complaint?.description || complaintActionResult.data?.description || 'No description provided'}
+                          {complaintActionResult.data?.complaint?.description ||
+                            complaintActionResult.data?.description ||
+                            "No description provided"}
                         </p>
                       </div>
                     </div>
                   )}
 
                   {/* TAB 2: SEND ACKNOWLEDGEMENT */}
-                  {actionSubTab === 'ack' && (
+                  {actionSubTab === "ack" && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1 text-[11px]">
                       <div>
-                        <span className="text-gray-500 block text-[10px]">Customer:</span>
-                        <strong>{complaintActionResult.data?.customerName || customer?.fullName || 'Customer Record'}</strong>
+                        <span className="text-gray-500 block text-[10px]">
+                          Customer:
+                        </span>
+                        <strong>
+                          {complaintActionResult.data?.customerName ||
+                            customer?.fullName ||
+                            "Customer Record"}
+                        </strong>
                       </div>
                       <div>
-                        <span className="text-gray-500 block text-[10px]">Mobile:</span>
-                        <strong className="font-mono">{complaintActionResult.data?.mobile || customer?.mobile || 'N/A'}</strong>
+                        <span className="text-gray-500 block text-[10px]">
+                          Mobile:
+                        </span>
+                        <strong className="font-mono">
+                          {complaintActionResult.data?.mobile ||
+                            customer?.mobile ||
+                            "N/A"}
+                        </strong>
                       </div>
                       <div>
-                        <span className="text-gray-500 block text-[10px]">Email:</span>
-                        <strong>{complaintActionResult.data?.email || customer?.email || 'N/A'}</strong>
+                        <span className="text-gray-500 block text-[10px]">
+                          Email:
+                        </span>
+                        <strong>
+                          {complaintActionResult.data?.email ||
+                            customer?.email ||
+                            "N/A"}
+                        </strong>
                       </div>
                       <div className="col-span-2 sm:col-span-3 bg-white p-2.5 rounded-lg border border-blue-200">
-                        <span className="text-blue-700 block text-[10px] font-bold uppercase mb-0.5">Acknowledgement Status:</span>
+                        <span className="text-blue-700 block text-[10px] font-bold uppercase mb-0.5">
+                          Acknowledgement Status:
+                        </span>
                         <p className="text-gray-700">
-                          {complaintActionResult.data?.messageStatus 
-                            ? `Status: ${complaintActionResult.data.messageStatus}` 
-                            : 'Complaint ticket acknowledged and logged to customer communication profile.'}
+                          {complaintActionResult.data?.messageStatus
+                            ? `Status: ${complaintActionResult.data.messageStatus}`
+                            : "Complaint ticket acknowledged and logged to customer communication profile."}
                         </p>
                       </div>
                     </div>
                   )}
 
                   {/* TAB 3: TRIGGER SATISFACTION FORM */}
-                  {actionSubTab === 'satisfaction' && (
+                  {actionSubTab === "satisfaction" && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1 text-[11px]">
                       <div>
-                        <span className="text-gray-500 block text-[10px]">Resolution State:</span>
+                        <span className="text-gray-500 block text-[10px]">
+                          Resolution State:
+                        </span>
                         <strong className="text-amber-800">
-                          {(complaintActionResult.data?.complaint?.open ?? true) ? 'In Progress (Open)' : 'Resolved & Closed'}
+                          {(complaintActionResult.data?.complaint?.open ?? true)
+                            ? "In Progress (Open)"
+                            : "Resolved & Closed"}
                         </strong>
                       </div>
                       <div>
-                        <span className="text-gray-500 block text-[10px]">Closure Date:</span>
-                        <strong>{complaintActionResult.data?.complaint?.closedDate || complaintActionResult.data?.closedAt || 'Active / Open'}</strong>
+                        <span className="text-gray-500 block text-[10px]">
+                          Closure Date:
+                        </span>
+                        <strong>
+                          {complaintActionResult.data?.complaint?.closedDate ||
+                            complaintActionResult.data?.closedAt ||
+                            "Active / Open"}
+                        </strong>
                       </div>
                       <div>
-                        <span className="text-gray-500 block text-[10px]">Satisfaction Survey:</span>
+                        <span className="text-gray-500 block text-[10px]">
+                          Satisfaction Survey:
+                        </span>
                         <span className="inline-block bg-emerald-100 text-emerald-900 font-bold px-2 py-0.5 rounded text-[10px]">
-                          {(complaintActionResult.data?.complaint?.open ?? true) ? 'Eligible on resolution' : 'Dispatched'}
+                          {(complaintActionResult.data?.complaint?.open ?? true)
+                            ? "Eligible on resolution"
+                            : "Dispatched"}
                         </span>
                       </div>
                     </div>
@@ -1652,10 +2226,8 @@ export default function SalesNewLeadView() {
               )}
             </div>
           )}
-
         </div>
       )}
-
     </div>
   );
 }

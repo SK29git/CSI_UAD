@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import { 
   apiFetch,
@@ -35,8 +35,179 @@ import {
   FaTimes,
   FaCalendarAlt,
   FaCheck,
-  FaArrowRight
+  FaArrowRight,
+  FaChevronLeft,
+  FaChevronRight
 } from 'react-icons/fa';
+
+/**
+ * AvailableDatesCalendar - Interactive calendar enforcing that ONLY dates
+ * returned in `availableDates` from /api/service/appointment-dates are selectable.
+ */
+function AvailableDatesCalendar({
+  availableDates = [],
+  selectedDate,
+  onSelectDate,
+  loading = false,
+}) {
+  const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
+
+  // Determine starting month from selectedDate or first available date
+  const [currentYearMonth, setCurrentYearMonth] = useState(() => {
+    const seed = selectedDate || availableDates[0] || '2026-11-02';
+    const [y, m] = seed.split('-').map(Number);
+    return { year: y || 2026, month: (m ? m - 1 : 10) };
+  });
+
+  // When selectedDate or availableDates change, keep month in view
+  useEffect(() => {
+    if (selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
+      const [y, m] = selectedDate.split('-').map(Number);
+      if (y && m) {
+        setCurrentYearMonth({ year: y, month: m - 1 });
+      }
+    } else if (availableDates.length > 0) {
+      const [y, m] = availableDates[0].split('-').map(Number);
+      if (y && m) {
+        setCurrentYearMonth({ year: y, month: m - 1 });
+      }
+    }
+  }, [selectedDate, availableDates]);
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const handlePrevMonth = () => {
+    setCurrentYearMonth(prev => {
+      if (prev.month === 0) return { year: prev.year - 1, month: 11 };
+      return { year: prev.year, month: prev.month - 1 };
+    });
+  };
+
+  const handleNextMonth = () => {
+    setCurrentYearMonth(prev => {
+      if (prev.month === 11) return { year: prev.year + 1, month: 0 };
+      return { year: prev.year, month: prev.month + 1 };
+    });
+  };
+
+  const calendarDays = useMemo(() => {
+    const { year, month } = currentYearMonth;
+    const firstDayIndex = new Date(year, month, 1).getDay(); // 0 = Sun
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const days = [];
+    for (let i = 0; i < firstDayIndex; i++) {
+      days.push({ day: null, dateStr: null, isCurrentMonth: false });
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const mm = String(month + 1).padStart(2, '0');
+      const dd = String(d).padStart(2, '0');
+      const dateStr = `${year}-${mm}-${dd}`;
+      days.push({
+        day: d,
+        dateStr,
+        isCurrentMonth: true,
+        isAvailable: availableSet.has(dateStr),
+        isSelected: dateStr === selectedDate
+      });
+    }
+    return days;
+  }, [currentYearMonth, availableSet, selectedDate]);
+
+  return (
+    <div className="flex flex-col bg-slate-50/70 p-2.5 rounded-lg border border-slate-200">
+      {/* Month Navigation */}
+      <div className="flex items-center justify-between px-1 mb-2">
+        <button
+          type="button"
+          onClick={handlePrevMonth}
+          className="p-1 hover:bg-slate-200 text-slate-600 rounded-md transition-colors cursor-pointer"
+          title="Previous Month"
+        >
+          <FaChevronLeft className="text-xs" />
+        </button>
+        <div className="text-xs font-bold text-slate-800 tracking-wide">
+          {monthNames[currentYearMonth.month]} {currentYearMonth.year}
+        </div>
+        <button
+          type="button"
+          onClick={handleNextMonth}
+          className="p-1 hover:bg-slate-200 text-slate-600 rounded-md transition-colors cursor-pointer"
+          title="Next Month"
+        >
+          <FaChevronRight className="text-xs" />
+        </button>
+      </div>
+
+      {/* Weekday Headers */}
+      <div className="grid grid-cols-7 gap-1 text-center mb-1">
+        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(w => (
+          <span key={w} className="text-[10px] font-bold text-slate-400">
+            {w}
+          </span>
+        ))}
+      </div>
+
+      {/* Days Grid */}
+      <div className="grid grid-cols-7 gap-1 text-center">
+        {calendarDays.map((cell, idx) => {
+          if (!cell.isCurrentMonth) {
+            return <div key={`empty-${idx}`} className="h-7" />;
+          }
+
+          if (cell.isAvailable) {
+            return (
+              <button
+                key={cell.dateStr}
+                type="button"
+                onClick={() => onSelectDate(cell.dateStr)}
+                className={`h-7 rounded-md text-xs font-bold transition-all flex flex-col items-center justify-center relative cursor-pointer ${
+                  cell.isSelected
+                    ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-300'
+                    : 'bg-white hover:bg-blue-50 text-blue-900 border border-blue-200 hover:border-blue-400'
+                }`}
+                title={`Select ${cell.dateStr} (Available)`}
+              >
+                <span>{cell.day}</span>
+                <span
+                  className={`w-1 h-1 rounded-full absolute bottom-0.5 ${
+                    cell.isSelected ? 'bg-white' : 'bg-emerald-500'
+                  }`}
+                />
+              </button>
+            );
+          }
+
+          return (
+            <div
+              key={cell.dateStr}
+              className="h-7 rounded-md text-xs font-normal text-slate-300 flex items-center justify-center cursor-not-allowed select-none bg-slate-100/30"
+              title="Not available for booking"
+            >
+              {cell.day}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Legend & Selected info */}
+      <div className="mt-2.5 pt-2 border-t border-slate-200/80 flex items-center justify-between text-[10px]">
+        <div className="flex items-center gap-1.5 text-slate-500">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+          <span>Available</span>
+          <span className="w-2 h-2 rounded-full bg-slate-300 inline-block ml-1" />
+          <span>Unavailable</span>
+        </div>
+        <div className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+          {selectedDate || 'No date selected'}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function ServiceBookingMainPanel() {
   const { customer, agentId, getFormattedName, selectedVin, vehicles, group: contextGroup } = useCustomer();
@@ -118,15 +289,15 @@ export default function ServiceBookingMainPanel() {
 
   const [geelyLocations, setGeelyLocations] = useState([]);
   const [geelyLocationsLoading, setGeelyLocationsLoading] = useState(false);
-  const [geelyLocationId, setGeelyLocationId] = useState(40);
+  const [geelyLocationId, setGeelyLocationId] = useState(10);
 
   const [geelyServices, setGeelyServices] = useState([]);
   const [geelyServicesLoading, setGeelyServicesLoading] = useState(false);
-  const [geelySelectedProductId, setGeelySelectedProductId] = useState('07143ffd-184e-43b5-a8de-f68d63199baa');
+  const [geelySelectedProductId, setGeelySelectedProductId] = useState('6dc62a95-a90c-49a8-a967-49be58de3e86');
 
   const [geelyAvailableDates, setGeelyAvailableDates] = useState([]);
   const [geelyDatesLoading, setGeelyDatesLoading] = useState(false);
-  const [geelySelectedDate, setGeelySelectedDate] = useState('2026-11-17');
+  const [geelySelectedDate, setGeelySelectedDate] = useState('2026-11-02');
 
   const [geelyTimeSlots, setGeelyTimeSlots] = useState([]);
   const [geelyTimesLoading, setGeelyTimesLoading] = useState(false);
@@ -217,11 +388,16 @@ export default function ServiceBookingMainPanel() {
           serviceProductIds: [geelySelectedProductId]
         });
         if (isMounted && res && res.ok && res.data) {
-          const rawDates = res.data.result?.availableDates || res.data.availableDates || [];
-          if (Array.isArray(rawDates) && rawDates.length > 0) {
-            setGeelyAvailableDates(rawDates);
-            if (!rawDates.includes(geelySelectedDate)) {
-              setGeelySelectedDate(rawDates[0]);
+          const rawDates = Array.isArray(res.data.result)
+            ? res.data.result
+            : (res.data.result?.availableDates || res.data.result?.dates || res.data.availableDates || res.data.dates || []);
+          const normalizedDates = rawDates
+            .map(item => (typeof item === 'string' ? item : item?.date || item?.appointmentDate))
+            .filter(Boolean);
+          if (Array.isArray(normalizedDates) && normalizedDates.length > 0) {
+            setGeelyAvailableDates(normalizedDates);
+            if (!normalizedDates.includes(geelySelectedDate)) {
+              setGeelySelectedDate(normalizedDates[0]);
             }
           }
         }
@@ -1109,81 +1285,97 @@ export default function ServiceBookingMainPanel() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     
                     {/* Appointment Date (POST /api/service/appointment-dates) */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1.5">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
+                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
                           <FaCalendarAlt className="text-blue-600 text-xs" /> Appointment Date <span className="text-rose-500 font-bold">*</span>
-                        </span>
-                        {geelyDatesLoading && (
-                          <span className="text-gray-400 font-medium text-[10px] flex items-center gap-1">
-                            <FaSpinner className="animate-spin text-[10px]" /> Fetching dates...
+                        </label>
+                        {geelyDatesLoading ? (
+                          <span className="text-blue-600 font-medium text-[10px] flex items-center gap-1">
+                            <FaSpinner className="animate-spin text-[10px]" /> Loading dates...
+                          </span>
+                        ) : (
+                          <span className="text-emerald-700 font-mono font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                            {geelyAvailableDates.length} selective dates
                           </span>
                         )}
-                      </label>
-                      <input
-                        type="date"
-                        required
-                        value={geelySelectedDate}
-                        onChange={(e) => setGeelySelectedDate(e.target.value)}
-                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                      </div>
+
+                      {/* Interactive Calendar - Enforces only availableDates are selective */}
+                      <AvailableDatesCalendar
+                        availableDates={geelyAvailableDates}
+                        selectedDate={geelySelectedDate}
+                        onSelectDate={(dt) => setGeelySelectedDate(dt)}
+                        loading={geelyDatesLoading}
                       />
-                      {geelyAvailableDates.length > 0 && (
-                        <div className="pt-1.5 flex flex-wrap gap-1">
-                          <span className="text-[10px] text-gray-400 font-bold block w-full">Available Dates:</span>
-                          {geelyAvailableDates.slice(0, 5).map(dt => (
-                            <button
-                              key={dt}
-                              type="button"
-                              onClick={() => setGeelySelectedDate(dt)}
-                              className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all cursor-pointer ${
-                                geelySelectedDate === dt
-                                  ? 'bg-blue-600 text-white shadow-2xs'
-                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                              }`}
-                            >
-                              {dt}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
 
                     {/* Appointment Timeslots (POST /api/service/appointment-time) */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1.5">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <FaClock className="text-blue-600 text-xs" /> Drop-off Timeslot <span className="text-rose-500 font-bold">*</span>
-                        </span>
-                        {geelyTimesLoading && (
-                          <span className="text-gray-400 font-medium text-[10px] flex items-center gap-1">
-                            <FaSpinner className="animate-spin text-[10px]" /> Fetching slots...
-                          </span>
+                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-2 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                            <FaClock className="text-blue-600 text-xs" /> Drop-off Timeslot <span className="text-rose-500 font-bold">*</span>
+                          </label>
+                          {geelyTimesLoading ? (
+                            <span className="text-blue-600 font-medium text-[10px] flex items-center gap-1">
+                              <FaSpinner className="animate-spin text-[10px]" /> Loading slots...
+                            </span>
+                          ) : (
+                            <span className="text-slate-500 font-medium text-[10px]">
+                              {geelyTimeSlots.length} available slots
+                            </span>
+                          )}
+                        </div>
+
+                        {geelyTimesLoading ? (
+                          <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-2 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+                            <FaSpinner className="animate-spin text-xl text-blue-600" />
+                            <span className="text-xs font-medium text-slate-600">Fetching available slots for {geelySelectedDate}...</span>
+                          </div>
+                        ) : geelyTimeSlots.length > 0 ? (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[220px] overflow-y-auto pr-1">
+                            {geelyTimeSlots.map((slot, sIdx) => {
+                              const isSelected = geelySelectedTimeSlot === slot.timeSlot;
+                              return (
+                                <button
+                                  key={slot.timeSlot || sIdx}
+                                  type="button"
+                                  onClick={() => {
+                                    setGeelySelectedTimeSlot(slot.timeSlot);
+                                    if (slot.advisorId) setGeelyAdvisorId(String(slot.advisorId));
+                                  }}
+                                  className={`p-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border flex flex-col items-center justify-center gap-0.5 ${
+                                    isSelected
+                                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-300'
+                                      : 'bg-slate-50 hover:bg-blue-50/80 text-slate-800 hover:text-blue-700 border-slate-200'
+                                  }`}
+                                >
+                                  <span className="text-xs">{slot.timeSlot}</span>
+                                  {slot.advisorId && (
+                                    <span className={`text-[9px] font-normal ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                                      Advisor: {slot.advisorId}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="p-8 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-500 text-xs">
+                            No drop-off timeslots available for <span className="font-bold text-slate-700">{geelySelectedDate}</span>. Please choose another date on the calendar.
+                          </div>
                         )}
-                      </label>
-                      <div className="flex flex-wrap gap-1.5 min-h-[38px] items-center">
-                        {(geelyTimeSlots.length > 0 ? geelyTimeSlots : [
-                          { timeSlot: "08:00-08:15", advisorId: "4031" },
-                          { timeSlot: "08:15-08:30", advisorId: "4031" },
-                          { timeSlot: "10:15-10:30", advisorId: "4031" },
-                          { timeSlot: "11:45-12:00", advisorId: "4031" }
-                        ]).map((slot, sIdx) => (
-                          <button
-                            key={slot.timeSlot || sIdx}
-                            type="button"
-                            onClick={() => {
-                              setGeelySelectedTimeSlot(slot.timeSlot);
-                              if (slot.advisorId) setGeelyAdvisorId(String(slot.advisorId));
-                            }}
-                            className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border ${
-                              geelySelectedTimeSlot === slot.timeSlot
-                                ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                                : 'bg-gray-50 hover:bg-gray-100 text-gray-800 border-gray-200'
-                            }`}
-                          >
-                            {slot.timeSlot}
-                          </button>
-                        ))}
                       </div>
+
+                      {geelySelectedTimeSlot && (
+                        <div className="pt-2 border-t border-slate-200 text-[11px] text-slate-600 flex items-center justify-between">
+                          <span>Selected Slot:</span>
+                          <span className="font-bold font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                            {geelySelectedTimeSlot} {geelyAdvisorId ? `(Advisor: ${geelyAdvisorId})` : ''}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                   </div>
