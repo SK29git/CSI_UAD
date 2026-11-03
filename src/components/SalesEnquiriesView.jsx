@@ -543,7 +543,12 @@ export default function SalesEnquiriesView() {
             return (
               <div 
                 key={enqId || idx}
-                className="bg-white rounded-xl p-4 border border-gray-200 hover:border-blue-300 shadow-2xs flex flex-col gap-3 transition-all"
+                style={isExpanded ? { backgroundColor: '#f0f6ff', borderColor: '#3b82f6' } : {}}
+                className={`rounded-xl p-4 border transition-all flex flex-col gap-3 ${
+                  isExpanded 
+                    ? 'border-blue-500 shadow-md ring-2 ring-blue-500/20' 
+                    : 'bg-white border-gray-200 hover:border-blue-300 shadow-2xs'
+                }`}
               >
                 {/* Card Summary Header */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-2.5">
@@ -577,14 +582,28 @@ export default function SalesEnquiriesView() {
                       <span>Showroom Appt</span>
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleToggleDetails(enq)}
-                      className="text-blue-600 hover:text-blue-800 font-bold text-[11px] flex items-center gap-1 cursor-pointer bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md transition-colors"
+                      style={
+                        isExpanded
+                          ? { backgroundColor: '#2563eb', color: '#ffffff', borderColor: '#1d4ed8' }
+                          : { backgroundColor: '#eff6ff', color: '#1d4ed8', borderColor: '#bfdbfe' }
+                      }
+                      className={`text-[11px] font-bold flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-lg border transition-all shadow-2xs active:scale-95 ${
+                        isExpanded
+                          ? 'ring-2 ring-blue-400/50 shadow-xs'
+                          : 'hover:bg-blue-100 hover:border-blue-300'
+                      }`}
+                      title={isExpanded ? 'Hide enquiry details' : 'Open enquiry details'}
                     >
-                      <span>{isExpanded ? 'Hide Details' : 'View Details'}</span>
+                      {isExpanded && (
+                        <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+                      )}
+                      <span>{isExpanded ? 'Hide Details' : 'Open Details'}</span>
                       {isExpanded ? (
-                        <FaChevronUp className="text-[9px]" />
+                        <FaChevronUp className="text-[10px]" />
                       ) : (
-                        <FaArrowRight className="text-[9px]" />
+                        <FaChevronDown className="text-[10px]" />
                       )}
                     </button>
                   </div>
@@ -654,19 +673,32 @@ export default function SalesEnquiriesView() {
 
                 {/* Expanded Detailed Breakdown with ALL Response Fields */}
                 {isExpanded && (
-                  <div className="mt-2 p-3.5 bg-slate-50/90 rounded-xl border border-blue-200/90 shadow-2xs flex flex-col gap-3">
-                    {/* Expanded Header */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200/70 pb-2">
+                  <div 
+                    style={{ backgroundColor: '#edf4fe', borderColor: '#3b82f6' }}
+                    className="mt-2.5 p-4 rounded-xl border-2 shadow-sm flex flex-col gap-3.5 transition-all"
+                  >
+                    {/* Expanded Header Banner */}
+                    <div 
+                      style={{ backgroundColor: '#1d4ed8' }}
+                      className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 rounded-lg text-white shadow-xs"
+                    >
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-xs text-blue-900 flex items-center gap-1.5">
-                          <FaInfoCircle className="text-blue-600 text-xs" />
+                        <span className="font-extrabold text-xs text-white flex items-center gap-2">
+                          <FaInfoCircle className="text-blue-200 text-sm" />
                           Full Enquiry Record #{merged.enquiryNumber || merged.enquiryId || enqId}
                         </span>
-                        <span className="bg-blue-100 text-blue-800 text-[10px] font-mono px-2 py-0.5 rounded font-semibold border border-blue-200">
+                        <span 
+                          style={{ backgroundColor: '#10b981', color: '#ffffff' }}
+                          className="text-[10px] font-black px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-2xs tracking-wide uppercase"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                          Open Details Active
+                        </span>
+                        <span className="bg-white/20 text-white text-[10px] font-mono px-2 py-0.5 rounded font-bold border border-white/30 backdrop-blur-xs">
                           Group: {merged.keyloopGroup || group}
                         </span>
                         {merged.creationSource && (
-                          <span className="bg-gray-100 text-gray-600 text-[10px] px-1.5 py-0.5 rounded border border-gray-200">
+                          <span className="bg-white/15 text-blue-100 text-[10px] px-2 py-0.5 rounded font-medium border border-white/20">
                             Creation Source: {merged.creationSource}
                           </span>
                         )}
@@ -676,9 +708,11 @@ export default function SalesEnquiriesView() {
                         <button 
                           type="button"
                           onClick={() => setExpandedEnquiryId(null)}
-                          className="text-gray-400 hover:text-gray-700 text-xs font-bold px-1.5 py-0.5 rounded hover:bg-gray-200/50 cursor-pointer"
+                          className="text-white hover:text-white text-xs font-bold px-2.5 py-1 rounded-md bg-white/20 hover:bg-rose-600/90 border border-white/30 hover:border-rose-600 shadow-2xs cursor-pointer transition-all flex items-center gap-1.5"
+                          title="Hide enquiry details"
                         >
-                          ✕ Close
+                          <FaTimes className="text-[11px]" />
+                          <span>Close Details</span>
                         </button>
                       </div>
                     </div>
