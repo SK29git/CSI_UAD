@@ -183,28 +183,63 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
 
     const urlMobile = getUrlParamMobile();
     let resolvedMobile = getFullMobileNumber(customer, currentMobile);
+
+    if (!resolvedMobile) {
+      // Direct unmasked on customer
+      const directCandidates = [
+        customer?.mobileRaw,
+        customer?.mobile,
+        customer?.mobilePhone,
+        customer?.phone,
+        customer?.telephone,
+        customer?.phoneNumber,
+        customer?.contactNumber
+      ];
+      for (const num of directCandidates) {
+        if (num && !String(num).includes('*')) {
+          const digits = String(num).replace(/[^0-9]/g, '');
+          if (digits.length >= 7) {
+            resolvedMobile = digits;
+            break;
+          }
+        }
+      }
+    }
+
     if (!resolvedMobile) {
       if (urlMobile) {
         resolvedMobile = urlMobile;
       } else if (currentMobile && !String(currentMobile).includes('*')) {
         resolvedMobile = String(currentMobile).replace(/\D/g, '');
-      } else if (customer) {
-        const directNumbers = [customer.mobilePhone, customer.mobile, customer.mobileRaw, customer.phone, customer.telephone];
-        for (const num of directNumbers) {
-          if (num && !String(num).includes('*')) {
-            const digits = String(num).replace(/[^0-9]/g, '');
-            if (digits.length >= 7) {
-              resolvedMobile = digits;
-              break;
-            }
-          }
-        }
       }
     }
+
     if (!resolvedMobile && typeof window !== 'undefined') {
-      const cached = localStorage.getItem('complaint_cached_mobile') || localStorage.getItem('sales_cached_mobile');
+      const cached = localStorage.getItem('complaint_cached_mobile') || 
+                     localStorage.getItem('sales_cached_mobile') ||
+                     localStorage.getItem('last_searched_mobile');
       if (cached && !cached.includes('*')) {
         resolvedMobile = cached.replace(/\D/g, '');
+      }
+    }
+
+    // Fallback: If customer HAS a mobile number (even if formatted or masked by DMS, e.g. +971... or +*********574)
+    // NEVER leave the mobile field empty when a customer mobile is present!
+    if (!resolvedMobile && customer) {
+      const anyCandidate = [
+        customer.mobileRaw,
+        customer.mobile,
+        customer.mobilePhone,
+        customer.phone,
+        customer.telephone,
+        customer.phoneNumber,
+        currentMobile
+      ];
+      for (const c of anyCandidate) {
+        if (c && String(c).trim() && String(c).trim() !== 'N/A') {
+          resolvedMobile = String(c).trim();
+          break;
+        }
       }
     }
 
@@ -214,7 +249,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
       const branches = getBranchesForGroup(initialGrp);
       const matchingBranch = branches.find(b => customer.branchCode && String(b.code) === String(customer.branchCode));
       const defBranch = matchingBranch ? `${matchingBranch.code} - ${matchingBranch.name}` : (customer.preferredBranch || '10 - Sheikh Zayed Rd');
-      const initialSource = customer.source || customer.leadSource || 'Customer Walk-in';
+      const initialSource = customer.source || customer.leadSource || '';
 
       setFormData({
         group: initialGrp,
@@ -230,7 +265,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         area: customer.location?.area || 'Deira',
         city: customer.location?.city || 'Dubai',
         country: customer.country || customer.nationality || 'United Arab Emirates',
-        mobile: resolvedMobile || '',
+        mobile: resolvedMobile || customer.mobile || customer.mobileRaw || customer.mobilePhone || customer.phone || customer.telephone || currentMobile || '',
         email: emailVal,
         consents: customer.consents || {
           phone: true,
@@ -260,7 +295,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         area: prev.area || customer?.location?.area || 'Deira',
         city: prev.city || customer?.location?.city || 'Dubai',
         country: prev.country || customer?.country || 'United Arab Emirates',
-        mobile: prev.mobile || resolvedMobile || urlMobile || (currentMobile && !String(currentMobile).includes('*') ? currentMobile.replace(/\D/g, '') : ''),
+        mobile: prev.mobile || resolvedMobile || customer?.mobile || customer?.mobileRaw || urlMobile || (currentMobile && !String(currentMobile).includes('*') ? currentMobile.replace(/\D/g, '') : ''),
         email: prev.email || (customer?.email || ''),
         consents: prev.consents || {
           phone: true,
@@ -515,7 +550,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
             </div>
           </div>
 
-          {/* SECTION 2: Organization, Branch, Source & Location */}
+          {/* SECTION 2: Organization, Branch & Location (Non-editable) */}
           <div className="pt-2 border-t border-gray-100">
             <div className="flex items-center justify-between pb-1.5 mb-2.5 border-b border-gray-100">
               <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -523,107 +558,75 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
               </h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
               {/* Keyloop Group */}
               <div>
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                  <FaLayerGroup className="text-gray-400 text-[10px]" /> Keyloop Group <span className="text-rose-500">*</span>
+                  <FaLayerGroup className="text-gray-400 text-[10px]" /> Keyloop Group
                 </label>
-                <select
+                <input
+                  type="text"
                   value={formData.group}
-                  onChange={(e) => handleGroupChange(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors"
-                >
-                  {GROUP_OPTIONS.map(g => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
+                  readOnly
+                  disabled
+                  className="w-full px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
+                />
               </div>
 
               {/* Preferred Branch Location */}
               <div>
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                  <FaBuilding className="text-gray-400 text-[10px]" /> Preferred Branch <span className="text-rose-500">*</span>
+                  <FaBuilding className="text-gray-400 text-[10px]" /> Preferred Branch
                 </label>
-                <select
+                <input
+                  type="text"
                   value={formData.branch}
-                  onChange={(e) => setFormData(prev => ({ ...prev, branch: e.target.value }))}
-                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors truncate"
-                >
-                  {currentBranches.map(b => (
-                    <option key={b.code} value={`${b.code} - ${b.name}`}>
-                      {b.code} - {b.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Source (Updated with both CRM Channels and Contact Sources from user images) */}
-              <div>
-                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                  <FaBullhorn className="text-gray-400 text-[10px]" /> Source <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={formData.source}
-                  onChange={(e) => handleSourceChange(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors"
-                >
-                  <optgroup label="CRM Sources">
-                    {CRM_SOURCES.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Customer Contact Sources">
-                    {CONTACT_SOURCES.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </optgroup>
-                </select>
+                  readOnly
+                  disabled
+                  title={formData.branch}
+                  className="w-full px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md font-semibold text-gray-700 text-xs cursor-not-allowed select-none truncate"
+                />
               </div>
 
               {/* City */}
               <div>
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                  <FaMapMarkerAlt className="text-gray-400 text-[10px]" /> City <span className="text-rose-500">*</span>
+                  <FaMapMarkerAlt className="text-gray-400 text-[10px]" /> City
                 </label>
-                <select
+                <input
+                  type="text"
                   value={formData.city}
-                  onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors"
-                >
-                  {CITY_OPTIONS.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                  readOnly
+                  disabled
+                  className="w-full px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
+                />
               </div>
 
               {/* Area */}
               <div>
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                  <FaMapMarkerAlt className="text-gray-400 text-[10px]" /> Area <span className="text-rose-500">*</span>
+                  <FaMapMarkerAlt className="text-gray-400 text-[10px]" /> Area
                 </label>
                 <input
                   type="text"
                   value={formData.area}
-                  onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
-                  placeholder="e.g. Deira, Downtown, Jumeirah"
-                  required
-                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                  readOnly
+                  disabled
+                  className="w-full px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
                 />
               </div>
 
               {/* Country */}
               <div>
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                  <FaGlobe className="text-gray-400 text-[10px]" /> Country <span className="text-rose-500">*</span>
+                  <FaGlobe className="text-gray-400 text-[10px]" /> Country
                 </label>
                 <input
                   type="text"
                   value={formData.country}
-                  onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
-                  placeholder="e.g. United Arab Emirates"
-                  required
-                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                  readOnly
+                  disabled
+                  className="w-full px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
                 />
               </div>
             </div>

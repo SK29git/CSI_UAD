@@ -8,6 +8,7 @@ import SalesVehicleOrdersView from '../components/SalesVehicleOrdersView';
 import SalesSegmentsView from '../components/SalesSegmentsView';
 import SalesAfterSalesView from '../components/SalesAfterSalesView';
 import SalesEnquiriesView from '../components/SalesEnquiriesView';
+import SalesCreateTaskView from '../components/SalesCreateTaskView';
 import RightSidebar from '../components/RightSidebar';
 import CustomerFormView from '../components/CustomerFormView';
 import { useCustomer, isExistingCustomer } from '../context/CustomerContext';
@@ -85,6 +86,8 @@ export default function SalesPage() {
       case 'New Enquiry':
       case 'New Lead':
         return <SalesNewLeadView onNavigateToEnquiries={() => setActiveSubTab('Enquiries')} />;
+      case 'Create Sales Task':
+        return <SalesCreateTaskView />;
       case 'Enquiries':
         return <SalesEnquiriesView />;
       case 'Test Drive':

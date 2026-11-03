@@ -77,7 +77,8 @@ export function getFullMobileNumber(customer, contextMobile) {
       salesVal,
       generalVal,
       typeof window !== 'undefined' ? localStorage.getItem('complaint_cached_mobile') : null,
-      typeof window !== 'undefined' ? localStorage.getItem('sales_cached_mobile') : null
+      typeof window !== 'undefined' ? localStorage.getItem('sales_cached_mobile') : null,
+      typeof window !== 'undefined' ? localStorage.getItem('last_searched_mobile') : null
     ];
 
     for (const c of externalCandidates) {
@@ -88,8 +89,8 @@ export function getFullMobileNumber(customer, contextMobile) {
           if (cleanDigits.endsWith(suffix)) {
             return cleanDigits;
           }
-        } else if (!customer) {
-          // If no customer is loaded yet (initial cold load), candidate is acceptable
+        } else {
+          // If no masked suffix is specified, accept the genuine candidate
           return cleanDigits;
         }
       }

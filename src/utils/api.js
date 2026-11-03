@@ -710,6 +710,66 @@ export async function createServiceRequestNotes(details, options = {}) {
   });
 }
 
+/**
+ * Creates a Sales Task via Keyloop RPA Intake (caseType: 'CREATE_SALES_TASK')
+ * POST /api/intake/cases
+ * @param {object} details - { group, customerId, customerName, callScript, vehicleType, manufacturer, model, branchCode, eventType, notes, salesExecutiveId, dueDate, dueTime }
+ * @param {object} options - Optional parameters
+ */
+export async function createSalesTaskCase(details, options = {}) {
+  const endpoint = "/api/intake/cases";
+  const directUrl = `${API_BASE_URL}${endpoint}`;
+  const payload = {
+    caseType: "CREATE_SALES_TASK",
+    details: details || {},
+  };
+
+  const send = async (url) => {
+    return await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Api-Key": RPA_API_KEY,
+      },
+      body: JSON.stringify(payload),
+    });
+  };
+
+  let res;
+  try {
+    res = await send(endpoint);
+  } catch (err) {
+    res = await send(directUrl);
+  }
+
+  const contentType = res.headers.get("content-type") || "";
+  let data = null;
+  if (contentType.includes("application/json")) {
+    data = await res.json();
+  } else {
+    const text = await res.text();
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { message: text };
+    }
+  }
+
+  if (!res.ok) {
+    const errMsg =
+      data?.errorMessage ||
+      data?.message ||
+      data?.error ||
+      `Failed to create sales task (${res.status})`;
+    const err = new Error(errMsg);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+
+  return { ok: true, status: res.status, data };
+}
+
 /* ========================================================================== */
 /* AGMC SMS GATEWAY SERVICE (POST https://agmcutil.agmcgroup.ae/api/v1/sms/send)*/
 /* ========================================================================== */
