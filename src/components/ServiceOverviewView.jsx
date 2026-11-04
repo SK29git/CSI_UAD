@@ -915,14 +915,35 @@ export default function ServiceOverviewView() {
             </div>
           )}
 
-          {/* Service Eligibility in Specs (Change 26) */}
+          {/* Service Eligibility in Specs */}
           <div>
             <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
               Service Eligibility
             </span>
-            <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block text-[11px]">
-              {serviceEligibilityData?.status || serviceEligibilityData?.eligibility || eligibility || "ELIGIBLE"}
-            </span>
+            {(() => {
+              const rawVal = serviceEligibilityData?.eligibility || serviceEligibilityData?.status || eligibility || "";
+              const val = typeof rawVal === "string" ? rawVal.trim() : String(rawVal || "").trim();
+
+              if (!val) {
+                return (
+                  <span className="font-semibold text-gray-500 bg-gray-50 px-2 py-0.5 rounded border border-gray-200 inline-block text-[11px]">
+                    N/A
+                  </span>
+                );
+              }
+
+              const upper = val.toUpperCase();
+              const isEligible = upper.includes("ELIGIB") && !upper.includes("NOT") && !upper.includes("INELIGIB");
+              return (
+                <span className={`font-bold px-2 py-0.5 rounded border inline-block text-[11px] ${
+                  isEligible
+                    ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                    : "text-amber-700 bg-amber-50 border-amber-200"
+                }`}>
+                  {val}
+                </span>
+              );
+            })()}
           </div>
 
           {/* Battery ID in Specs (Change 28) */}
@@ -933,58 +954,6 @@ export default function ServiceOverviewView() {
             <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 inline-block text-[11px]">
               {batteryId || "N/A"}
             </span>
-          </div>
-        </div>
-
-        {/* 4. Service Eligibility Section (Change 26) */}
-        <div className="bg-gradient-to-r from-emerald-50/70 to-teal-50/50 p-4 rounded-xl border border-emerald-200 flex flex-col gap-2.5 shadow-2xs">
-          <div className="flex items-center justify-between border-b border-emerald-100 pb-2">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">
-                <FaCheckCircle />
-              </div>
-              <div>
-                <h3 className="font-bold text-emerald-950 text-xs leading-tight">Service Eligibility</h3>
-                <p className="text-[10px] text-emerald-700">Vehicle service program, warranty validity and DMS coverage</p>
-              </div>
-            </div>
-            <span className={`font-bold text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider border ${
-              (serviceEligibilityData?.status === 'ELIGIBLE' || serviceEligibilityData?.eligibility?.toUpperCase().includes('ELIGIBLE') || eligibility?.toUpperCase().includes('ELIGIBLE') || isServiceContractActive || isWarrantyActive)
-                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                : 'bg-amber-100 text-amber-800 border-amber-300'
-            }`}>
-              {serviceEligibilityData?.status || serviceEligibilityData?.eligibility || eligibility || (isServiceContractActive || isWarrantyActive ? 'ELIGIBLE' : 'STANDARD')}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
-            <div className="bg-white/80 p-2.5 rounded-lg border border-emerald-100">
-              <span className="text-[10px] font-semibold text-gray-500 block uppercase">Eligibility Status</span>
-              <span className="font-bold text-emerald-800 text-xs">
-                {serviceEligibilityData?.status || serviceEligibilityData?.eligibility || eligibility || 'Eligible for Service'}
-              </span>
-            </div>
-
-            <div className="bg-white/80 p-2.5 rounded-lg border border-emerald-100">
-              <span className="text-[10px] font-semibold text-gray-500 block uppercase">Service Contract</span>
-              <span className={`font-bold text-xs ${isServiceContractActive || serviceEligibilityData?.serviceContractStatus === 'ACTIVE' ? 'text-emerald-700' : 'text-gray-700'}`}>
-                {serviceEligibilityData?.serviceContractStatus || contractData?.status || (hasContract ? 'ACTIVE' : 'STANDARD')}
-              </span>
-            </div>
-
-            <div className="bg-white/80 p-2.5 rounded-lg border border-emerald-100">
-              <span className="text-[10px] font-semibold text-gray-500 block uppercase">Warranty Eligibility</span>
-              <span className={`font-bold text-xs ${isWarrantyActive || serviceEligibilityData?.warrantyStatus === 'ACTIVE' ? 'text-emerald-700' : 'text-gray-700'}`}>
-                {serviceEligibilityData?.warrantyStatus || warrantyData?.status || (hasWarranty ? 'ACTIVE' : 'ACTIVE FACTORY')}
-              </span>
-            </div>
-
-            <div className="bg-white/80 p-2.5 rounded-lg border border-emerald-100">
-              <span className="text-[10px] font-semibold text-gray-500 block uppercase">Valid Until / Expiry</span>
-              <span className="font-bold text-gray-900 text-xs">
-                {serviceEligibilityData?.serviceContractExpiryDate || serviceEligibilityData?.warrantyExpiryDate || contractData?.expiryDate || warrantyData?.expiryDate || nextServiceDate || 'Standard Period'}
-              </span>
-            </div>
           </div>
         </div>
 

@@ -713,7 +713,7 @@ export async function createServiceRequestNotes(details, options = {}) {
 /**
  * Creates a Sales Task via Keyloop RPA Intake (caseType: 'CREATE_SALES_TASK')
  * POST /api/intake/cases
- * @param {object} details - { group, customerId, customerName, callScript, vehicleType, manufacturer, model, branchCode, eventType, notes, salesExecutiveId, dueDate, dueTime }
+ * @param {object} details - { group, customerId, customerName, callScript, vehicleType, manufacturer, model, branchCode, eventType, whoPrompted, notes, salesExecutiveId, dueDate, dueTime }
  * @param {object} options - Optional parameters
  */
 export async function createSalesTaskCase(details, options = {}) {

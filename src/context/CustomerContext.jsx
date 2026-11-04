@@ -994,56 +994,7 @@ export function CustomerProvider({ children }) {
       let allResults = [];
       const activeGroup = group || currentGroup || '';
 
-      // 1. Primary Query: /api/v1/customers
-      if (activeGroup && activeGroup.trim() !== '') {
-        const searchUrl = `/api/v1/customers?group=${encodeURIComponent(activeGroup.trim())}&mobile=${cleanedMobile}`;
-        const res = await apiFetch(searchUrl);
-        if (res && res.ok && res.data) {
-          allResults = Array.isArray(res.data) ? res.data : [res.data];
-        }
-      } else {
-        // Query known groups in parallel to discover which group the mobile belongs to dynamically
-        const groupPromises = KNOWN_GROUPS.map(g =>
-          apiFetch(`/api/v1/customers?group=${g}&mobile=${cleanedMobile}`)
-            .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
-            .catch(() => [])
-        );
-        const groupResults = await Promise.all(groupPromises);
-        allResults = groupResults.flat();
-      }
-      
-      if (allResults.length > 0) {
-        // Save customer search response array to localStorage with prefix
-        localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(allResults));
-
-        let storedIdx = 0;
-        const savedIdxStr = localStorage.getItem(prefix + 'selected_index');
-        if (savedIdxStr !== null && !isNaN(Number(savedIdxStr))) {
-          storedIdx = Number(savedIdxStr);
-        }
-
-        setCustomerList(allResults);
-        const validIdx = storedIdx < allResults.length ? storedIdx : 0;
-        setSelectedIndex(validIdx);
-        const targetItem = allResults[validIdx];
-
-        if (targetItem && targetItem.customerNumber) {
-          const detectedGroup = targetItem.keyloopGroup || group || '';
-          setCurrentCustomerNumber(String(targetItem.customerNumber));
-          setCurrentMobile(cleanedMobile);
-          await fetchProfileByCustomerNumber(detectedGroup, targetItem.customerNumber, prefix, { searchedMobile: cleanedMobile }, targetItem);
-          return { ok: true, count: allResults.length, customer: targetItem, group: detectedGroup, isProspect: false };
-        } else if (targetItem) {
-          syncEnquiriesFromCustomer(targetItem);
-          setCustomer(targetItem);
-          setCurrentCustomerNumber(targetItem.customerNumber || '');
-          setCurrentMobile(cleanedMobile);
-          syncCustomerToUrl(targetItem, activeGroup || 'BMW', cleanedMobile);
-          return { ok: true, count: allResults.length, customer: targetItem, group: activeGroup || 'BMW', isProspect: false };
-        }
-      }
-      
-      // 2. Fallback to Prospects API: /api/v1/prospects?group={group}&mobile={mobile}
+      // 1. Primary Query: Prospects API (/api/v1/prospects?group={group}&mobile={mobile})
       let prospectResults = [];
       if (activeGroup && activeGroup.trim() !== '') {
         const pUrl = `/api/v1/prospects?group=${encodeURIComponent(activeGroup.trim())}&mobile=${cleanedMobile}`;
@@ -1091,7 +1042,7 @@ export function CustomerProvider({ children }) {
         };
       }
 
-      // 3. Fallback to E00MI Inbound Events API: /api/v1/e00mi?group={group}&mobile={mobile}
+      // 2. Secondary Query: E00MI Inbound Events API (/api/v1/e00mi?group={group}&mobile={mobile})
       let e00miResults = [];
       if (activeGroup && activeGroup.trim() !== '') {
         const eUrl = `/api/v1/e00mi?group=${encodeURIComponent(activeGroup.trim())}&mobile=${cleanedMobile}`;
@@ -1140,9 +1091,58 @@ export function CustomerProvider({ children }) {
         };
       }
 
+      // 3. Fallback Query: Customers API (/api/v1/customers?group={group}&mobile={mobile})
+      if (activeGroup && activeGroup.trim() !== '') {
+        const searchUrl = `/api/v1/customers?group=${encodeURIComponent(activeGroup.trim())}&mobile=${cleanedMobile}`;
+        const res = await apiFetch(searchUrl);
+        if (res && res.ok && res.data) {
+          allResults = Array.isArray(res.data) ? res.data : [res.data];
+        }
+      } else {
+        // Query known groups in parallel to discover which group the mobile belongs to dynamically
+        const groupPromises = KNOWN_GROUPS.map(g =>
+          apiFetch(`/api/v1/customers?group=${g}&mobile=${cleanedMobile}`)
+            .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
+            .catch(() => [])
+        );
+        const groupResults = await Promise.all(groupPromises);
+        allResults = groupResults.flat();
+      }
+      
+      if (allResults.length > 0) {
+        // Save customer search response array to localStorage with prefix
+        localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(allResults));
+
+        let storedIdx = 0;
+        const savedIdxStr = localStorage.getItem(prefix + 'selected_index');
+        if (savedIdxStr !== null && !isNaN(Number(savedIdxStr))) {
+          storedIdx = Number(savedIdxStr);
+        }
+
+        setCustomerList(allResults);
+        const validIdx = storedIdx < allResults.length ? storedIdx : 0;
+        setSelectedIndex(validIdx);
+        const targetItem = allResults[validIdx];
+
+        if (targetItem && targetItem.customerNumber) {
+          const detectedGroup = targetItem.keyloopGroup || group || '';
+          setCurrentCustomerNumber(String(targetItem.customerNumber));
+          setCurrentMobile(cleanedMobile);
+          await fetchProfileByCustomerNumber(detectedGroup, targetItem.customerNumber, prefix, { searchedMobile: cleanedMobile }, targetItem);
+          return { ok: true, count: allResults.length, customer: targetItem, group: detectedGroup, isProspect: false };
+        } else if (targetItem) {
+          syncEnquiriesFromCustomer(targetItem);
+          setCustomer(targetItem);
+          setCurrentCustomerNumber(targetItem.customerNumber || '');
+          setCurrentMobile(cleanedMobile);
+          syncCustomerToUrl(targetItem, activeGroup || 'BMW', cleanedMobile);
+          return { ok: true, count: allResults.length, customer: targetItem, group: activeGroup || 'BMW', isProspect: false };
+        }
+      }
+
       setCustomer(null);
       setCustomerList([]);
-      return { ok: false, message: `No customer or prospect found for mobile "${mobileNum}"` };
+      return { ok: false, message: `No prospect or customer found for mobile "${mobileNum}"` };
     } catch (err) {
       console.warn("Search mobile error:", err.message);
       setError(err.message);
@@ -1237,13 +1237,22 @@ export function CustomerProvider({ children }) {
         const res = await apiFetch(url);
         if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) {
           results = res.data;
+        } else {
+          // Also check by customerNumber in prospects API
+          const url2 = `/api/v1/prospects?group=${encodeURIComponent(activeGroup.trim())}&customerNumber=${encodeURIComponent(cleanNo)}`;
+          const res2 = await apiFetch(url2);
+          if (res2 && res2.ok && Array.isArray(res2.data) && res2.data.length > 0) {
+            results = res2.data;
+          }
         }
       } else {
-        const promises = KNOWN_GROUPS.map(g =>
-          apiFetch(`/api/v1/prospects?group=${g}&prospectNumber=${encodeURIComponent(cleanNo)}`)
-            .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
-            .catch(() => [])
-        );
+        const promises = KNOWN_GROUPS.map(async (g) => {
+          const res = await apiFetch(`/api/v1/prospects?group=${g}&prospectNumber=${encodeURIComponent(cleanNo)}`).catch(() => null);
+          if (res && res.ok && Array.isArray(res.data) && res.data.length > 0) return res.data;
+          const res2 = await apiFetch(`/api/v1/prospects?group=${g}&customerNumber=${encodeURIComponent(cleanNo)}`).catch(() => null);
+          if (res2 && res2.ok && Array.isArray(res2.data)) return res2.data;
+          return [];
+        });
         const groupResults = await Promise.all(promises);
         results = groupResults.flat();
       }
@@ -1300,39 +1309,7 @@ export function CustomerProvider({ children }) {
       let allResults = [];
       const activeGroup = group || currentGroup || customer?.keyloopGroup || '';
       
-      // 1. Primary Query: /api/v1/customers
-      if (activeGroup && activeGroup.trim() !== '') {
-        const searchUrl = `/api/v1/customers?group=${encodeURIComponent(activeGroup.trim())}&email=${encodeURIComponent(cleanEmail)}`;
-        const res = await apiFetch(searchUrl);
-        if (res && res.ok && res.data) {
-          allResults = Array.isArray(res.data) ? res.data : [res.data];
-        }
-      } else {
-        const groupPromises = KNOWN_GROUPS.map(g =>
-          apiFetch(`/api/v1/customers?group=${g}&email=${encodeURIComponent(cleanEmail)}`)
-            .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
-            .catch(() => [])
-        );
-        const groupResults = await Promise.all(groupPromises);
-        allResults = groupResults.flat();
-      }
-
-      if (allResults.length > 0) {
-        localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(allResults));
-        setCustomerList(allResults);
-        setSelectedIndex(0);
-        const targetItem = allResults[0];
-        const detectedGroup = targetItem.keyloopGroup || activeGroup || 'BMW';
-        if (targetItem.customerNumber) {
-          await fetchProfileByCustomerNumber(detectedGroup, targetItem.customerNumber, prefix, {}, targetItem);
-        } else {
-          syncEnquiriesFromCustomer(targetItem);
-          setCustomer(targetItem);
-        }
-        return { ok: true, count: allResults.length, customer: targetItem, group: detectedGroup, isProspect: false };
-      }
-
-      // 2. Fallback to /api/v1/prospects?group={group}&email={email}
+      // 1. Primary Query: Prospects API (/api/v1/prospects?group={group}&email={email})
       let prospectResults = [];
       if (activeGroup && activeGroup.trim() !== '') {
         const pUrl = `/api/v1/prospects?group=${encodeURIComponent(activeGroup.trim())}&email=${encodeURIComponent(cleanEmail)}`;
@@ -1380,7 +1357,7 @@ export function CustomerProvider({ children }) {
         };
       }
 
-      // 3. Fallback to /api/v1/e00mi?group={group}&email={email}
+      // 2. Secondary Query: E00MI Inbound Events API (/api/v1/e00mi?group={group}&email={email})
       let e00miResults = [];
       if (activeGroup && activeGroup.trim() !== '') {
         const eUrl = `/api/v1/e00mi?group=${encodeURIComponent(activeGroup.trim())}&email=${encodeURIComponent(cleanEmail)}`;
@@ -1429,9 +1406,41 @@ export function CustomerProvider({ children }) {
         };
       }
 
+      // 3. Fallback Query: Customers API (/api/v1/customers?group={group}&email={email})
+      if (activeGroup && activeGroup.trim() !== '') {
+        const searchUrl = `/api/v1/customers?group=${encodeURIComponent(activeGroup.trim())}&email=${encodeURIComponent(cleanEmail)}`;
+        const res = await apiFetch(searchUrl);
+        if (res && res.ok && res.data) {
+          allResults = Array.isArray(res.data) ? res.data : [res.data];
+        }
+      } else {
+        const groupPromises = KNOWN_GROUPS.map(g =>
+          apiFetch(`/api/v1/customers?group=${g}&email=${encodeURIComponent(cleanEmail)}`)
+            .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
+            .catch(() => [])
+        );
+        const groupResults = await Promise.all(groupPromises);
+        allResults = groupResults.flat();
+      }
+
+      if (allResults.length > 0) {
+        localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(allResults));
+        setCustomerList(allResults);
+        setSelectedIndex(0);
+        const targetItem = allResults[0];
+        const detectedGroup = targetItem.keyloopGroup || activeGroup || 'BMW';
+        if (targetItem.customerNumber) {
+          await fetchProfileByCustomerNumber(detectedGroup, targetItem.customerNumber, prefix, {}, targetItem);
+        } else {
+          syncEnquiriesFromCustomer(targetItem);
+          setCustomer(targetItem);
+        }
+        return { ok: true, count: allResults.length, customer: targetItem, group: detectedGroup, isProspect: false };
+      }
+
       setCustomer(null);
       setCustomerList([]);
-      return { ok: false, message: `No customer, prospect, or lead found for email "${cleanEmail}"` };
+      return { ok: false, message: `No prospect or customer found for email "${cleanEmail}"` };
     } catch (err) {
       console.warn("Search email error:", err.message);
       setError(err.message);
@@ -1588,15 +1597,15 @@ export function CustomerProvider({ children }) {
       if (resP && resP.ok) return resP;
     }
 
-    // 4. Pure numeric query (4-8 digits: customer number or prospect number)
+    // 4. Pure numeric query (4-8 digits): First search in prospect APIs, then customer API
     if (/^\d{4,8}$/.test(q)) {
-      // Step 4a: Try customer number
-      const resCust = await fetchCustomerByCustomerNumber(activeGroup, q, prefix);
-      if (resCust && resCust.ok) return resCust;
-
-      // Step 4b: Try prospect number
+      // Step 4a: Try prospect number FIRST
       const resPros = await fetchCustomerByProspectNumber(q, activeGroup, prefix);
       if (resPros && resPros.ok) return resPros;
+
+      // Step 4b: Try customer number if not found in prospects
+      const resCust = await fetchCustomerByCustomerNumber(activeGroup, q, prefix);
+      if (resCust && resCust.ok) return resCust;
 
       // Step 4c: Try mobile in case it was a short phone search
       const resMob = await fetchCustomerByMobile(q, activeGroup, prefix);

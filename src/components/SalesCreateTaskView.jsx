@@ -20,8 +20,41 @@ import {
   FaCar,
   FaBuilding,
   FaIdCard,
-  FaUserTie
+  FaUserTie,
+  FaBullhorn
 } from 'react-icons/fa';
+
+export const WHO_PROMPTED_OPTIONS = [
+  { code: 'AUTODROM', description: 'Dubai Autodrome' },
+  { code: 'BMWSTOCK', description: 'BMW Stock Locator' },
+  { code: 'BMWiPORT', description: 'BMW Portal' },
+  { code: 'CALLCENT', description: 'CRM Outbound' },
+  { code: 'DLRWEBS', description: 'BPS Portal' },
+  { code: 'Dubiz', description: 'Dubizzle' },
+  { code: 'Email', description: 'Email' },
+  { code: 'FACEBOOK', description: 'Facebook' },
+  { code: 'IG', description: 'Instagram' },
+  { code: 'INTERNAL', description: 'Internal Deal' },
+  { code: 'LEADSBRI', description: 'Leads Bridge' },
+  { code: 'LINKED', description: 'Linked-In' },
+  { code: 'MINIPORT', description: 'www.mini-dubai.com' },
+  { code: 'MINSTOCK', description: 'MINI Stock Locator' },
+  { code: 'MKTEVT', description: 'Marketing Event' },
+  { code: 'OLBNR', description: 'Online Banners' },
+  { code: 'OUTADS', description: 'Outdoor Advertising' },
+  { code: 'REFF', description: 'Referrals' },
+  { code: 'SAD', description: 'Showroom at your doorstep' },
+  { code: 'SB', description: 'Service Booking' },
+  { code: 'SEARCH', description: 'Search Engines' },
+  { code: 'SERVICE', description: 'Service Department' },
+  { code: 'SMS', description: 'SMS' },
+  { code: 'SNAP', description: 'SNAPCHAT' },
+  { code: 'TIK', description: 'TIKTOK' },
+  { code: 'TWITTER', description: 'Twitter' },
+  { code: 'WHTAPP', description: 'Whatsapp' },
+  { code: 'WINDSHOP', description: 'Window Shopping' },
+  { code: 'YTUBE', description: 'Youtube' }
+];
 
 export default function SalesCreateTaskView() {
   const { customer, vehicles = [], group: contextGroup } = useCustomer();
@@ -90,6 +123,7 @@ export default function SalesCreateTaskView() {
     group: resolvedGroup,
     customerId: resolvedCustomerId,
     customerName: resolvedCustomerName,
+    whoPrompted: 'SB',
     vehicleType: hasCustomerVehicle ? 'used' : 'new',
     manufacturer: hasCustomerVehicle ? customerVehicleMake : resolvedGroup,
     model: hasCustomerVehicle ? customerVehicleModel : 'X5 M',
@@ -194,6 +228,7 @@ For any Clarification, please call me on EXT: 4447.`;
         model: String(activeModel).trim(),
         branchCode: String(customerBranchCode).trim(),
         eventType: 'Z0000001', // Hardcoded as instructed
+        whoPrompted: String(formData.whoPrompted || 'SB').trim(),
         notes: String(formData.notes || '').trim(),
         dueDate: activeDueDate,
         dueTime: String(formData.dueTime).trim()
@@ -364,6 +399,29 @@ For any Clarification, please call me on EXT: 4447.`;
                 value={branchDisplayName}
                 className="w-full pl-8 pr-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-100 text-slate-700 font-medium cursor-not-allowed select-none"
               />
+            </div>
+          </div>
+
+          {/* Who Prompted (Dropdown with Descriptions, sends Code) */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Who Prompted <span className="text-rose-500">*</span>
+            </label>
+            <div className="relative">
+              <FaBullhorn className="absolute left-3 top-2.5 text-slate-400 text-xs pointer-events-none" />
+              <select
+                name="whoPrompted"
+                value={formData.whoPrompted}
+                onChange={handleChange}
+                className="w-full pl-8 pr-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-blue-500 font-medium"
+                required
+              >
+                {WHO_PROMPTED_OPTIONS.map(item => (
+                  <option key={item.code} value={item.code}>
+                    {item.description}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
