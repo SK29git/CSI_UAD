@@ -150,7 +150,6 @@ export default function CenterNavTabs({
   const salesSubTabs = [
     { id: 'Overview', label: 'Overview' },
     { id: 'New Enquiry', label: 'New Enquiry' },
-    { id: 'Create Sales Task', label: 'Create Sales Task' },
     { id: 'Enquiries', label: 'Enquiries' },
     { id: 'Test Drive', label: 'Test Drive' },
     { id: 'Vehicle Orders', label: 'Vehicle Orders' },

@@ -34,7 +34,9 @@ import {
   FaList,
   FaMapMarkerAlt,
   FaRegFileAlt,
+  FaTasks,
 } from "react-icons/fa";
+import SalesCreateTaskView from "./SalesCreateTaskView";
 import { getFullMobileNumber, isFullMobileNumber } from "../utils/phoneUtils";
 import {
   BRAND_OPTIONS,
@@ -231,7 +233,7 @@ const formatMobileForLead = (val) => {
   return `+971${digits}`;
 };
 
-export default function SalesNewLeadView({ onNavigateToEnquiries }) {
+export default function SalesNewLeadView({ onNavigateToEnquiries, initialInnerTab = "enquiry" }) {
   const { 
     customer, 
     currentMobile, 
@@ -249,7 +251,14 @@ export default function SalesNewLeadView({ onNavigateToEnquiries }) {
   const vin =
     customer?.vin || (customer?.vehicles && customer?.vehicles[0]?.vin) || "";
 
+  const [innerTab, setInnerTab] = useState(initialInnerTab || "enquiry"); // "enquiry" | "salesTask"
   const [activeTab, setActiveTab] = useState("lead"); // "lead" | "complaint"
+
+  useEffect(() => {
+    if (initialInnerTab) {
+      setInnerTab(initialInnerTab);
+    }
+  }, [initialInnerTab]);
 
   const navigateToEnquiriesTab = (newEnquiryObj) => {
     sessionStorage.setItem("last_enquiry_created_time", String(Date.now()));
@@ -1356,7 +1365,48 @@ export default function SalesNewLeadView({ onNavigateToEnquiries }) {
   };
 
   return (
-    <div className="bg-white rounded-xl p-2.5 sm:p-3 shadow-xs border border-slate-200/90 flex flex-col gap-2 text-xs transition-all">
+    <div className="flex flex-col gap-2.5">
+      {/* Top Two Tabs Inside New Enquiry */}
+      <div className="bg-white rounded-xl px-3.5 py-2 shadow-xs border border-slate-200/90 flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setInnerTab("enquiry")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              innerTab === "enquiry"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80"
+            }`}
+          >
+            <FaUserPlus className="text-xs" />
+            <span>New Enquiry</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setInnerTab("salesTask")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+              innerTab === "salesTask"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80"
+            }`}
+          >
+            <FaTasks className="text-xs" />
+            <span>Create Sales Task</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="text-[10px] text-gray-500 font-medium">
+            Target Brand: <span className="font-bold text-gray-800">{group || "BMW"}</span>
+          </span>
+        </div>
+      </div>
+
+      {innerTab === "salesTask" ? (
+        <SalesCreateTaskView />
+      ) : (
+        <div className="bg-white rounded-xl p-2.5 sm:p-3 shadow-xs border border-slate-200/90 flex flex-col gap-2 text-xs transition-all">
       {/* Top Header Card */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
         {/* Left: Icon, Title, Subtitle & Switch Tab Pill */}
@@ -2226,6 +2276,8 @@ export default function SalesNewLeadView({ onNavigateToEnquiries }) {
               )}
             </div>
           )}
+        </div>
+      )}
         </div>
       )}
     </div>

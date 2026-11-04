@@ -87,7 +87,7 @@ export default function SalesPage() {
       case 'New Lead':
         return <SalesNewLeadView onNavigateToEnquiries={() => setActiveSubTab('Enquiries')} />;
       case 'Create Sales Task':
-        return <SalesCreateTaskView />;
+        return <SalesNewLeadView onNavigateToEnquiries={() => setActiveSubTab('Enquiries')} initialInnerTab="salesTask" />;
       case 'Enquiries':
         return <SalesEnquiriesView />;
       case 'Test Drive':
