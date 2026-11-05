@@ -631,6 +631,20 @@ export async function linkVehicleToCustomer(details, options = {}) {
 }
 
 /**
+ * Submits Customer Data Verification Case via Keyloop RPA Intake
+ * Case Type: 'CUSTOMER_DATA_VERIFICATION' via POST /api/intake/cases
+ * @param {object} details - { group, customerId, customerName, documentsVerified, trackEmiratesIdVerification, trackMulkiyaVerification }
+ * @param {object} options - Optional parameters (createdBy, callbackUrl)
+ */
+export async function submitCustomerDataVerification(details, options = {}) {
+  return await submitRpaCase("CUSTOMER_DATA_VERIFICATION", details, {
+    callbackUrl: options.callbackUrl || DEFAULT_RPA_CALLBACK_URL,
+    createdBy: options.createdBy || "genesys",
+    ...options,
+  });
+}
+
+/**
  * Links a Brand New vehicle to a customer via Keyloop RPA Broker
  * Case Type: 'LINK_NEW_VEHICLE_TO_CUSTOMER' via POST /api/intake/cases
  * @param {object} details - Case payload details matching CCaaS intake schema

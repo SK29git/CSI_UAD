@@ -51,6 +51,7 @@ export default function ServiceBookingPage() {
     switch (activeSubTab) {
       case 'Overview':
         return <ServiceOverviewView />;
+      case 'Other Request':
       case 'Create Service':
         return <CreateServiceView />;
       case 'Book Service':

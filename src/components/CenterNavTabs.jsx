@@ -88,6 +88,7 @@ export default function CenterNavTabs({
   const getSubTabIcon = (id) => {
     switch (id) {
       case 'Overview': return <FaHome className="text-xs" />;
+      case 'Other Request':
       case 'Create Service': return <FaPlusCircle className="text-xs" />;
       case 'New Lead':
       case 'New Enquiry': return <FaUserPlus className="text-xs" />;
@@ -127,7 +128,7 @@ export default function CenterNavTabs({
 
   const serviceSubTabs = [
     { id: 'Overview', label: 'Overview' },
-    { id: 'Create Service', label: 'Create Service' },
+    { id: 'Other Request', label: 'Other Request' },
     { id: 'Book Service', label: 'Book Service' },
     { id: 'Open Bookings', label: 'Open Bookings' },
     { id: 'Service History', label: 'Service History' },

@@ -22,8 +22,10 @@ import {
   FaCheckCircle,
   FaIdCard,
   FaCalendarAlt,
-  FaBullhorn
+  FaBullhorn,
+  FaCar
 } from 'react-icons/fa';
+import AddNewVehicleModal from './AddNewVehicleModal';
 
 const GROUP_OPTIONS = ['BMW', 'MINI', 'ROLLS-ROYCE', 'GEELY'];
 const TITLE_OPTIONS = ['Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Eng.', 'Sheikh', 'Sheikha'];
@@ -95,8 +97,18 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     currentMobile, 
     currentGroup, 
     createCustomer, 
-    updateCustomer
+    updateCustomer,
+    fetchVehiclesByCustomer
   } = useCustomer();
+
+  const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false);
+
+  const handleVehicleAdded = () => {
+    if (customer?.customerNumber) {
+      const grp = currentGroup || customer?.keyloopGroup || 'BMW';
+      fetchVehiclesByCustomer(grp, customer.customerNumber);
+    }
+  };
 
   const isProspect = customer?.isProspect === true || customer?.customerType === 'PROSPECT' || customer?.profileType === 'PROSPECT';
 
@@ -394,13 +406,27 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onClose}
-          className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-lg transition-colors cursor-pointer"
-        >
-          Back to Dashboard
-        </button>
+        <div className="flex items-center gap-2">
+          {mode === 'edit' && (
+            <button
+              type="button"
+              onClick={() => setIsAddVehicleModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer"
+              title="Add / Link Brand New Vehicle to Customer"
+            >
+              <FaCar className="text-[11px]" />
+              <span>Add New Vehicle</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-lg transition-colors cursor-pointer"
+          >
+            Back to Dashboard
+          </button>
+        </div>
       </div>
 
       {/* 2. Main Form Card */}
@@ -718,26 +744,33 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
               disabled={isSubmitting}
               className="px-5 py-2 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              {isSubmitting ? (
-                <>
-                  <FaSpinner className="animate-spin text-xs" />
-                  <span>Processing...</span>
-                </>
-              ) : mode === 'create' ? (
-                <>
-                  <FaUserPlus className="text-xs" />
-                  <span>Create Customer</span>
-                </>
-              ) : (
-                <>
-                  <FaSave className="text-xs" />
-                  <span>Save Changes</span>
-                </>
-              )}
-            </button>
+                {isSubmitting ? (
+                  <>
+                    <FaSpinner className="animate-spin text-xs" />
+                    <span>Processing...</span>
+                  </>
+                ) : mode === 'create' ? (
+                  <>
+                    <FaUserPlus className="text-xs" />
+                    <span>Create Customer</span>
+                  </>
+                ) : (
+                  <>
+                    <FaSave className="text-xs" />
+                    <span>Save Changes</span>
+                  </>
+                )}
+              </button>
           </div>
         </form>
       </div>
+
+      {/* Add New Vehicle to Customer Modal */}
+      <AddNewVehicleModal
+        isOpen={isAddVehicleModalOpen}
+        onClose={() => setIsAddVehicleModalOpen(false)}
+        onSuccess={handleVehicleAdded}
+      />
     </div>
   );
 }

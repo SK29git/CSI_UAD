@@ -153,10 +153,10 @@ export default function CreateServiceView() {
           </div>
           <div>
             <h2 className="text-xs sm:text-sm font-extrabold text-gray-900 leading-tight">
-              Create Service
+              Other Request
             </h2>
             <p className="text-[10px] text-gray-400 font-medium">
-              Create service request notes for{" "}
+              Create other request notes for{" "}
               <span className="font-semibold text-gray-700">
                 {customerName || (customerId ? `Customer #${customerId}` : "Customer")}
               </span>
@@ -346,7 +346,7 @@ export default function CreateServiceView() {
             ) : (
               <>
                 <FaPaperPlane className="text-xs" />
-                <span>Submit Service Request</span>
+                <span>Submit Other Request</span>
               </>
             )}
           </button>

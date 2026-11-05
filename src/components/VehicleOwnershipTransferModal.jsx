@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
-import { linkVehicleToCustomer, apiFetch } from '../utils/api';
+import { linkVehicleToCustomer, submitCustomerDataVerification, apiFetch } from '../utils/api';
 import { 
   FaCar, 
   FaExchangeAlt, 
@@ -17,7 +17,9 @@ import {
   FaCheckCircle, 
   FaExclamationTriangle, 
   FaTimes, 
-  FaSearch 
+  FaSearch,
+  FaFileContract,
+  FaShieldAlt
 } from 'react-icons/fa';
 
 const GROUP_OPTIONS = ['BMW', 'MINI', 'ROLLS-ROYCE', 'GEELY'];
@@ -102,13 +104,33 @@ export default function VehicleOwnershipTransferModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
+  // Customer Data Verification State (CUSTOMER_DATA_VERIFICATION)
+  const [documentsVerified, setDocumentsVerified] = useState('Yes');
+  const [trackEmiratesIdVerification, setTrackEmiratesIdVerification] = useState('Yes');
+  const [trackMulkiyaVerification, setTrackMulkiyaVerification] = useState('No');
+  const [isVerifyingData, setIsVerifyingData] = useState(false);
+  const [isDataVerified, setIsDataVerified] = useState(false);
+  const [verificationFeedback, setVerificationFeedback] = useState(null);
+
   // Reset or initialize when modal opens
   useEffect(() => {
     if (isOpen) {
       setGroup(initialGroup || contextGroup || customer?.keyloopGroup || 'BMW');
       setVin(initialVin || selectedVin || (vehicles.length > 0 ? (vehicles[0].vin || vehicles[0].chassisNumber) : '') || '');
+      
+      if (customer && !existingCustomerId) {
+        const cNum = customer.customerNumber || customer.customerId || '';
+        const cName = customer.fullName || `${customer.firstName || ''} ${customer.surname || ''}`.trim() || '';
+        const cNat = customer.nationality || '';
+        if (cNum) setExistingCustomerId(String(cNum));
+        if (cName) setExistingCustomerName(cName);
+        if (cNat) setExistingNationality(cNat);
+      }
+
       setFeedback(null);
       setLookupFeedback(null);
+      setVerificationFeedback(null);
+      setIsDataVerified(false);
     }
   }, [isOpen, initialVin, initialGroup, contextGroup, customer, selectedVin, vehicles]);
 
@@ -182,6 +204,69 @@ export default function VehicleOwnershipTransferModal({
       });
     } finally {
       setIsLookingUp(false);
+    }
+  };
+
+  // Independent Customer Data Verification Submission (CUSTOMER_DATA_VERIFICATION)
+  const handleVerifyCustomerData = async (e) => {
+    if (e) e.preventDefault();
+    if (isDataVerified || isVerifyingData) return;
+    setVerificationFeedback(null);
+
+    const targetCustomerId = transferMode === 'EXISTING'
+      ? (existingCustomerId.trim() || customer?.customerNumber || customer?.customerId || '')
+      : (customer?.customerNumber || customer?.customerId || '');
+
+    const targetCustomerName = transferMode === 'EXISTING'
+      ? (existingCustomerName.trim() || customer?.fullName || `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() || '')
+      : `${newFirstName || ''} ${newSurname || ''}`.trim() || customer?.fullName || '';
+
+    if (!targetCustomerId) {
+      setVerificationFeedback({
+        type: 'error',
+        message: 'Customer ID is required for data verification.'
+      });
+      return;
+    }
+
+    if (!targetCustomerName) {
+      setVerificationFeedback({
+        type: 'error',
+        message: 'Customer Name is required for data verification.'
+      });
+      return;
+    }
+
+    setIsVerifyingData(true);
+    try {
+      const payload = {
+        group: group.trim() || 'BMW',
+        customerId: String(targetCustomerId).trim(),
+        customerName: String(targetCustomerName).trim(),
+        documentsVerified: String(documentsVerified).trim(),
+        trackEmiratesIdVerification: String(trackEmiratesIdVerification).trim(),
+        trackMulkiyaVerification: String(trackMulkiyaVerification).trim()
+      };
+
+      const res = await submitCustomerDataVerification(payload, {
+        createdBy: agentId || 'genesys'
+      });
+
+      if (res && (res.ok || res.taskId)) {
+        setIsDataVerified(true);
+        setVerificationFeedback(null);
+      } else {
+        throw new Error(res?.error || res?.errorMessage || 'Data verification failed');
+      }
+    } catch (err) {
+      console.warn("Customer data verification error:", err);
+      setIsDataVerified(false);
+      setVerificationFeedback({
+        type: 'error',
+        message: err.message || 'Failed to submit data verification.'
+      });
+    } finally {
+      setIsVerifyingData(false);
     }
   };
 
@@ -270,6 +355,28 @@ export default function VehicleOwnershipTransferModal({
       const res = await linkVehicleToCustomer(details, {
         createdBy: agentId || "genesys"
       });
+
+      // 2. Submit Customer Data Verification Case (CUSTOMER_DATA_VERIFICATION) if not already verified
+      const targetCustId = transferMode === 'EXISTING' ? existingCustomerId.trim() : (customer?.customerNumber || '');
+      const targetCustName = transferMode === 'EXISTING' ? existingCustomerName.trim() : `${newFirstName} ${newSurname}`.trim();
+      
+      if (!isDataVerified && targetCustId && targetCustName) {
+        try {
+          await submitCustomerDataVerification({
+            group: group.trim() || 'BMW',
+            customerId: String(targetCustId).trim(),
+            customerName: String(targetCustName).trim(),
+            documentsVerified: String(documentsVerified).trim(),
+            trackEmiratesIdVerification: String(trackEmiratesIdVerification).trim(),
+            trackMulkiyaVerification: String(trackMulkiyaVerification).trim()
+          }, {
+            createdBy: agentId || 'genesys'
+          });
+          setIsDataVerified(true);
+        } catch (verifErr) {
+          console.warn("Background data verification submission failed:", verifErr);
+        }
+      }
 
       if (res && res.ok) {
         setFeedback({
@@ -800,6 +907,157 @@ export default function VehicleOwnershipTransferModal({
               </div>
             </div>
           )}
+
+          {/* Section 4: Customer Data Verification (RPA Intake) */}
+          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/90 flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs shadow-2xs">
+                  <FaShieldAlt />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-xs text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                    Customer Data Verification
+                  </h4>
+                  <p className="text-[10px] text-slate-500">
+                    Verify documents, Emirates ID, and Mulkiya registration for Keyloop CRM
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {isDataVerified ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-emerald-600 text-white border border-emerald-600 shadow-2xs flex items-center gap-1.5 cursor-default select-none transition-all"
+                    title="Customer data has been verified and case is queued"
+                  >
+                    <FaCheckCircle className="text-white text-[10px]" />
+                    <span>Data Verified</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleVerifyCustomerData}
+                    disabled={isVerifyingData}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 shadow-2xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                    title="Submit data verification case"
+                  >
+                    {isVerifyingData ? <FaSpinner className="animate-spin text-[10px]" /> : <FaCheckCircle className="text-[10px]" />}
+                    <span>{isVerifyingData ? 'Verifying...' : 'Verify Data Now'}</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {verificationFeedback && verificationFeedback.type === 'error' && (
+              <div className="p-2 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 bg-rose-50 text-rose-800 border border-rose-200">
+                <FaExclamationTriangle className="text-rose-600 shrink-0 text-xs" />
+                <span>{verificationFeedback.message}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-0.5">
+              
+              {/* 1. Documents Verified */}
+              <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs flex flex-col justify-between gap-2">
+                <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                  <FaFileContract className="text-blue-600 text-xs" />
+                  <span>Documents Verified <span className="text-rose-500">*</span></span>
+                </label>
+                <div className="flex items-center gap-4 pt-1">
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-800">
+                    <input
+                      type="radio"
+                      name="documentsVerified"
+                      value="Yes"
+                      checked={documentsVerified === 'Yes'}
+                      onChange={(e) => setDocumentsVerified(e.target.value)}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className={documentsVerified === 'Yes' ? 'text-emerald-700 font-bold' : ''}>Yes</span>
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-800">
+                    <input
+                      type="radio"
+                      name="documentsVerified"
+                      value="No"
+                      checked={documentsVerified === 'No'}
+                      onChange={(e) => setDocumentsVerified(e.target.value)}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className={documentsVerified === 'No' ? 'text-rose-700 font-bold' : ''}>No</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* 2. Track Emirates ID Verification */}
+              <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs flex flex-col justify-between gap-2">
+                <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                  <FaIdCard className="text-indigo-600 text-xs" />
+                  <span>Track Emirates ID <span className="text-rose-500">*</span></span>
+                </label>
+                <div className="flex items-center gap-4 pt-1">
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-800">
+                    <input
+                      type="radio"
+                      name="trackEmiratesIdVerification"
+                      value="Yes"
+                      checked={trackEmiratesIdVerification === 'Yes'}
+                      onChange={(e) => setTrackEmiratesIdVerification(e.target.value)}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className={trackEmiratesIdVerification === 'Yes' ? 'text-emerald-700 font-bold' : ''}>Yes</span>
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-800">
+                    <input
+                      type="radio"
+                      name="trackEmiratesIdVerification"
+                      value="No"
+                      checked={trackEmiratesIdVerification === 'No'}
+                      onChange={(e) => setTrackEmiratesIdVerification(e.target.value)}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className={trackEmiratesIdVerification === 'No' ? 'text-rose-700 font-bold' : ''}>No</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* 3. Track Mulkiya Verification */}
+              <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs flex flex-col justify-between gap-2">
+                <label className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+                  <FaCar className="text-emerald-600 text-xs" />
+                  <span>Track Mulkiya <span className="text-rose-500">*</span></span>
+                </label>
+                <div className="flex items-center gap-4 pt-1">
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-800">
+                    <input
+                      type="radio"
+                      name="trackMulkiyaVerification"
+                      value="Yes"
+                      checked={trackMulkiyaVerification === 'Yes'}
+                      onChange={(e) => setTrackMulkiyaVerification(e.target.value)}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className={trackMulkiyaVerification === 'Yes' ? 'text-emerald-700 font-bold' : ''}>Yes</span>
+                  </label>
+                  <label className="inline-flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-800">
+                    <input
+                      type="radio"
+                      name="trackMulkiyaVerification"
+                      value="No"
+                      checked={trackMulkiyaVerification === 'No'}
+                      onChange={(e) => setTrackMulkiyaVerification(e.target.value)}
+                      className="w-4 h-4 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    />
+                    <span className={trackMulkiyaVerification === 'No' ? 'text-rose-700 font-bold' : ''}>No</span>
+                  </label>
+                </div>
+              </div>
+
+            </div>
+          </div>
 
           {/* Modal Action Buttons Footer */}
           <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-200">

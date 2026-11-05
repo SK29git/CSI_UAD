@@ -19,10 +19,10 @@ import {
   FaMapMarkerAlt,
   FaUserTie,
   FaPlusCircle,
+  FaTimes,
 } from "react-icons/fa";
 import VehicleOwnershipTransferModal from "./VehicleOwnershipTransferModal";
 import VehiclePackagesModal from "./VehiclePackagesModal";
-import AddNewVehicleModal from "./AddNewVehicleModal";
 
 export default function ServiceOverviewView() {
   const {
@@ -58,11 +58,9 @@ export default function ServiceOverviewView() {
   const [activeBooking, setActiveBooking] = useState(null);
   const [bookingBatteryId, setBookingBatteryId] = useState("");
   const [loadingOverviewApis, setLoadingOverviewApis] = useState(false);
-  const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [isPackagesModalOpen, setIsPackagesModalOpen] = useState(false);
-  const [isPackagesInlineExpanded, setIsPackagesInlineExpanded] =
-    useState(false);
+  const [isPackagesDrawerOpen, setIsPackagesDrawerOpen] = useState(false);
   const [packageInlineFilter, setPackageInlineFilter] = useState("");
 
   // Combined vehicle list prioritizing the direct API response
@@ -89,19 +87,25 @@ export default function ServiceOverviewView() {
     return [];
   }, [currentVehicle, vehicleSummaryData]);
 
-  const filteredInlinePackages = useMemo(() => {
+  const drawerFilteredPackages = useMemo(() => {
+    if (!packageInlineFilter.trim()) return packagesList;
+    const term = packageInlineFilter.trim().toLowerCase();
     return packagesList.filter((p) => {
-      if (!packageInlineFilter.trim()) return true;
-      return (p.packageDescription || "")
-        .toLowerCase()
-        .includes(packageInlineFilter.toLowerCase());
+      const desc = (p.packageDescription || "").toLowerCase();
+      const vehNo = String(p.vehicleNumber !== undefined && p.vehicleNumber !== null ? p.vehicleNumber : "").toLowerCase();
+      const seqNo = String(p.sequenceNumber !== undefined && p.sequenceNumber !== null ? p.sequenceNumber : "").toLowerCase();
+      const vin = String(p.vin || "").toLowerCase();
+      const regDate = String(p.registrationDate || "").toLowerCase();
+
+      return (
+        desc.includes(term) ||
+        vehNo.includes(term) ||
+        seqNo.includes(term) ||
+        vin.includes(term) ||
+        regDate.includes(term)
+      );
     });
   }, [packagesList, packageInlineFilter]);
-
-  const displayedInlinePackages =
-    isPackagesInlineExpanded || packageInlineFilter.trim()
-      ? filteredInlinePackages
-      : filteredInlinePackages.slice(0, 8);
 
   // Fetch Vehicle Summaries by Customer ID (GET /api/v1/vehicles?group={group}&customerNumber={customerNumber})
   const fetchCustomerVehicleSummaries = async () => {
@@ -492,9 +496,11 @@ export default function ServiceOverviewView() {
   );
 
   return (
-    <div className="flex flex-col gap-4 text-xs font-sans">
-      {/* Primary Vehicle Summary Card */}
-      <div className="bg-white rounded-xl p-4 sm:p-5 shadow-xs border border-gray-100 flex flex-col gap-4">
+    <div className="flex flex-col xl:flex-row gap-3 sm:gap-4 items-start w-full">
+      {/* Center Main Overview Column */}
+      <div className="flex-1 w-full min-w-0 flex flex-col gap-4 text-xs font-sans">
+        {/* Primary Vehicle Summary Card */}
+        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-xs border border-gray-100 flex flex-col gap-4">
         {/* Header & Multi-Vehicle Selector */}
         <div className="flex flex-wrap items-center justify-between pb-3 border-b border-gray-100 gap-2">
           <div className="flex items-center gap-2.5">
@@ -552,22 +558,35 @@ export default function ServiceOverviewView() {
 
             <button
               type="button"
-              onClick={() => setIsAddVehicleModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 hover:text-emerald-800 border border-emerald-200 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer"
-              title="Add / Link Brand New Vehicle to Customer"
-            >
-              <FaPlusCircle className="text-[11px]" />
-              <span className="hidden sm:inline">Add New Vehicle</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => setIsTransferModalOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 border border-blue-200 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer"
               title="Transfer / Link Vehicle Ownership to Existing or New Customer"
             >
               <FaExchangeAlt className="text-[11px]" />
               <span className="hidden sm:inline">Transfer Ownership</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsPackagesDrawerOpen(!isPackagesDrawerOpen)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-2xs cursor-pointer border ${
+                isPackagesDrawerOpen
+                  ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                  : "bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-800 border border-purple-200"
+              }`}
+              title="Toggle Vehicle Packages Right Sidebar"
+            >
+              <FaCar className="text-[11px]" />
+              <span className="hidden sm:inline">Packages</span>
+              {packagesList.length > 0 && (
+                <span className={`text-[10px] font-extrabold px-1.5 py-0.2 rounded-full ml-0.5 ${
+                  isPackagesDrawerOpen
+                    ? "bg-purple-800 text-white"
+                    : "bg-purple-200/80 text-purple-900"
+                }`}>
+                  {packagesList.length}
+                </span>
+              )}
             </button>
 
             <button
@@ -1168,139 +1187,185 @@ export default function ServiceOverviewView() {
             </div>
           </div>
         )}
+        </div>
+      </div>
 
-        {/* Vehicle Packages & Factory Options Section */}
-        {packagesList.length > 0 && (
-          <div className="pt-4 border-t border-gray-100 flex flex-col gap-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-gray-900 flex items-center gap-1.5 text-xs">
-                  <FaBoxes className="text-blue-600" /> Vehicle Packages
-                </span>
-                <span className="bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200">
-                  {packagesList.length} Packages
-                </span>
+      {/* RIGHT SIDEBAR: Vehicle Packages (Inline Layout Column, No Z-index Modal Backdrop) */}
+      {isPackagesDrawerOpen && (
+        <aside className="w-full xl:w-[440px] 2xl:w-[480px] shrink-0 sticky top-2 sm:top-5 z-10 transition-all duration-300 bg-white rounded-2xl border border-slate-200/90 shadow-sm flex flex-col overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-slate-900 text-white px-4 py-3.5 flex items-center justify-between border-b border-blue-900/40 shrink-0">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
+                <FaCar className="text-sm" />
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsPackagesModalOpen(true)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-bold border border-blue-200 transition cursor-pointer shadow-2xs"
-                >
-                  <FaBoxes className="text-[10px]" />
-                  <span>View All Packages ({packagesList.length})</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setIsPackagesInlineExpanded(!isPackagesInlineExpanded)
-                  }
-                  className="text-xs text-gray-500 hover:text-gray-700 font-semibold px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded cursor-pointer transition"
-                >
-                  {isPackagesInlineExpanded
-                    ? "Show Less"
-                    : `Show More (${packagesList.length})`}
-                </button>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-extrabold text-sm tracking-wide truncate">
+                    Vehicle Packages
+                  </h3>
+                  <span className="bg-blue-500/30 text-blue-200 border border-blue-400/30 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                    {packagesList.length} Total
+                  </span>
+                </div>
+                <p className="text-[10px] text-blue-200/80 truncate font-mono">
+                  {description || makeModel || 'Vehicle'} {vin ? `• ${vin}` : ''}
+                </p>
               </div>
             </div>
 
-            {/* Quick Filter / Search input */}
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 max-w-sm">
-                <FaSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
-                <input
-                  type="text"
-                  value={packageInlineFilter}
-                  onChange={(e) => setPackageInlineFilter(e.target.value)}
-                  placeholder="Filter packages (e.g. wheels, sport, BSI, warranty)..."
-                  className="w-full pl-7 pr-3 py-1 bg-gray-50 hover:bg-white focus:bg-white border border-gray-200 focus:border-blue-500 rounded-lg text-xs text-gray-800 placeholder-gray-400 focus:outline-none transition shadow-2xs"
-                />
-              </div>
+            <button
+              type="button"
+              onClick={() => setIsPackagesDrawerOpen(false)}
+              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+              title="Close Packages Sidebar"
+            >
+              <FaTimes className="text-xs" />
+            </button>
+          </div>
+
+          {/* Quick Search */}
+          <div className="p-3 bg-slate-50 border-b border-slate-200 shrink-0">
+            {/* Search Bar */}
+            <div className="relative">
+              <FaSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs" />
+              <input
+                type="text"
+                value={packageInlineFilter}
+                onChange={(e) => setPackageInlineFilter(e.target.value)}
+                placeholder="Search packages by keyword, VIN, date, code..."
+                className="w-full pl-7 pr-7 py-1.5 bg-white border border-gray-300 focus:border-blue-500 rounded-lg text-xs text-gray-800 placeholder-gray-400 focus:outline-none transition shadow-2xs font-medium"
+              />
               {packageInlineFilter && (
                 <button
-                  onClick={() => setPackageInlineFilter("")}
-                  className="text-xs text-gray-500 hover:text-gray-700 font-bold"
+                  type="button"
+                  onClick={() => setPackageInlineFilter('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 font-bold text-xs cursor-pointer"
                 >
-                  Clear
+                  ✕
                 </button>
               )}
             </div>
+          </div>
 
-            {/* Packages Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 pt-1 text-xs">
-              {displayedInlinePackages.map((pkg, pIdx) => {
-                const desc = pkg.packageDescription || "Package Option";
-                const isRemovable = desc.includes("(Removable)");
+          {/* Scrollable Packages List */}
+          <div className="max-h-[calc(100vh-280px)] overflow-y-auto p-3 space-y-2 bg-slate-50/50">
+            {drawerFilteredPackages.length === 0 ? (
+              <div className="p-6 text-center flex flex-col items-center justify-center text-gray-400">
+                <FaCar className="text-2xl mb-1.5 text-gray-300" />
+                <p className="text-xs font-semibold text-gray-600">No packages found</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {packageInlineFilter ? `No results matching "${packageInlineFilter}"` : 'No package options installed on this vehicle'}
+                </p>
+              </div>
+            ) : (
+              drawerFilteredPackages.map((pkg, idx) => {
+                const desc = pkg.packageDescription || 'Package Option';
+                const isRemovable = desc.includes('(Removable)');
                 const isWarranty =
-                  desc.toLowerCase().includes("warranty") ||
-                  desc.toLowerCase().includes("warr") ||
-                  desc.toLowerCase().includes("bsi") ||
-                  desc.toLowerCase().includes("insurance");
-                const cleanDesc = desc
-                  .replace(/\s*\(Removable\)\s*/i, "")
-                  .trim();
+                  desc.toLowerCase().includes('warranty') ||
+                  desc.toLowerCase().includes('warr') ||
+                  desc.toLowerCase().includes('bsi') ||
+                  desc.toLowerCase().includes('insurance') ||
+                  desc.toLowerCase().includes('service');
+                const cleanDesc = desc.replace(/\s*\(Removable\)\s*/i, '').trim();
 
                 return (
-                  <div
-                    key={pIdx}
-                    onClick={() => setIsPackagesModalOpen(true)}
-                    className="p-2.5 bg-slate-50 hover:bg-blue-50/60 rounded-xl border border-slate-200 hover:border-blue-300 transition cursor-pointer flex flex-col justify-between gap-1 shadow-2xs group"
-                    title="Click to view all packages"
+                  <div 
+                    key={idx}
+                    className="p-3 bg-white rounded-xl border border-slate-200/90 hover:border-blue-300 hover:shadow-xs transition flex flex-col gap-2"
                   >
-                    <span className="font-bold text-gray-900 text-[11px] leading-tight line-clamp-2 group-hover:text-blue-700">
-                      {cleanDesc}
-                    </span>
-                    <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                    {/* Title & Badges */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2 min-w-0">
+                        <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-600 font-mono text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span className="font-bold text-gray-900 text-[11px] leading-snug">
+                          {cleanDesc}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                        {pkg.vehicleNumber && (
+                          <span 
+                            className="font-mono text-[9px] font-semibold text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200"
+                            title="Vehicle Number"
+                          >
+                            Veh #{pkg.vehicleNumber}
+                          </span>
+                        )}
+                        {(pkg.sequenceNumber !== undefined && pkg.sequenceNumber !== null && pkg.sequenceNumber !== '') && (
+                          <span 
+                            className="font-mono text-[9px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200"
+                            title="Sequence Number"
+                          >
+                            Seq #{pkg.sequenceNumber}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Metadata: Registration Date & VIN */}
+                    {(pkg.registrationDate || pkg.vin) && (
+                      <div className="flex items-center justify-between gap-2 text-[10px] text-gray-500 font-medium px-2 py-1 bg-slate-50/90 rounded-lg border border-slate-100">
+                        {pkg.registrationDate ? (
+                          <span className="flex items-center gap-1">
+                            <FaCalendarAlt className="text-gray-400 text-[9px]" />
+                            <span className="text-gray-400">Reg:</span>
+                            <strong className="text-gray-800 font-semibold">{pkg.registrationDate}</strong>
+                          </span>
+                        ) : <span />}
+                        {pkg.vin && (
+                          <span className="font-mono text-[9px] text-gray-500 truncate max-w-[170px]" title={`VIN: ${pkg.vin}`}>
+                            VIN: {pkg.vin}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Tags */}
+                    <div className="flex items-center gap-1 flex-wrap pt-0.5">
                       {isRemovable && (
-                        <span className="text-[9px] bg-amber-100 text-amber-800 font-extrabold px-1.5 py-0.2 rounded border border-amber-200">
+                        <span className="text-[9px] bg-amber-50 text-amber-800 font-extrabold px-1.5 py-0.2 rounded border border-amber-200">
                           Removable
                         </span>
                       )}
                       {isWarranty && (
-                        <span className="text-[9px] bg-purple-100 text-purple-800 font-extrabold px-1.5 py-0.2 rounded border border-purple-200">
-                          BSI/Warranty
+                        <span className="text-[9px] bg-purple-50 text-purple-800 font-extrabold px-1.5 py-0.2 rounded border border-purple-200">
+                          BSI / Warranty / Service
                         </span>
                       )}
+                      <span className="text-[9px] text-gray-500 bg-gray-50 px-1.5 py-0.2 rounded border border-gray-100 font-medium">
+                        Factory Equipment
+                      </span>
                     </div>
                   </div>
                 );
-              })}
-            </div>
-
-            {packagesList.length > 8 &&
-              !isPackagesInlineExpanded &&
-              !packageInlineFilter && (
-                <div className="text-center pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setIsPackagesModalOpen(true)}
-                    className="text-xs font-bold text-blue-600 hover:text-blue-800 inline-flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>
-                      + {packagesList.length - 8} more packages installed (Click
-                      to view full list)
-                    </span>
-                  </button>
-                </div>
-              )}
+              })
+            )}
           </div>
-        )}
-      </div>
+
+          {/* Footer */}
+          <div className="p-2.5 bg-white border-t border-slate-200 flex items-center justify-between text-xs shrink-0">
+            <span className="text-gray-500 text-[10px] font-medium">
+              Showing {drawerFilteredPackages.length} of {packagesList.length} packages
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsPackagesDrawerOpen(false)}
+              className="px-3 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg transition-colors cursor-pointer text-xs"
+            >
+              Close
+            </button>
+          </div>
+        </aside>
+      )}
 
       {/* Vehicle Packages Breakdown Modal */}
       <VehiclePackagesModal
         isOpen={isPackagesModalOpen}
         onClose={() => setIsPackagesModalOpen(false)}
         vehicle={currentVehicle}
-      />
-
-      {/* Add New Vehicle to Customer Modal */}
-      <AddNewVehicleModal
-        isOpen={isAddVehicleModalOpen}
-        onClose={() => setIsAddVehicleModalOpen(false)}
-        onSuccess={() => {
-          handleRefreshAll();
-        }}
       />
 
       {/* Vehicle Ownership Transfer / Link Modal */}

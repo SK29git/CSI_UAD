@@ -88,7 +88,7 @@ export default function VehiclePackagesModal({ isOpen, onClose, vehicle }) {
         <div className="p-4 sm:p-5 border-b border-gray-100 bg-slate-50 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs shrink-0">
-              <FaBoxes className="text-lg" />
+              <FaCar className="text-lg" />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
@@ -253,9 +253,9 @@ export default function VehiclePackagesModal({ isOpen, onClose, vehicle }) {
                               Connected / Digital
                             </span>
                           )}
-                          {pkg.sequenceNumber && pkg.sequenceNumber !== "0" && (
-                            <span className="text-[9px] font-mono text-gray-400">
-                              Seq: {pkg.sequenceNumber}
+                          {pkg.sequenceNumber !== undefined && pkg.sequenceNumber !== null && pkg.sequenceNumber !== "" && (
+                            <span className="text-[9px] font-mono text-indigo-700 bg-indigo-50 px-1.5 py-0.2 rounded border border-indigo-200">
+                              Seq #{pkg.sequenceNumber}
                             </span>
                           )}
                         </div>
@@ -263,10 +263,17 @@ export default function VehiclePackagesModal({ isOpen, onClose, vehicle }) {
                     </div>
 
                     {/* Metadata Footer if present */}
-                    {(pkg.vehicleNumber || pkg.registrationDate) && (
-                      <div className="pt-2 border-t border-gray-50 flex items-center justify-between text-[10px] text-gray-400 font-mono">
-                        {pkg.vehicleNumber && <span>Veh #{pkg.vehicleNumber}</span>}
-                        {pkg.registrationDate && <span>Reg: {pkg.registrationDate}</span>}
+                    {(pkg.vehicleNumber || pkg.registrationDate || pkg.vin) && (
+                      <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-500 font-mono flex-wrap gap-1">
+                        <div className="flex items-center gap-2">
+                          {pkg.vehicleNumber && <span>Veh #{pkg.vehicleNumber}</span>}
+                          {pkg.registrationDate && (
+                            <span className="flex items-center gap-1 font-sans text-gray-600 font-medium">
+                              <FaCalendarAlt className="text-gray-400 text-[9px]" /> Reg: {pkg.registrationDate}
+                            </span>
+                          )}
+                        </div>
+                        {pkg.vin && <span className="text-[9px] text-gray-400">VIN: {pkg.vin}</span>}
                       </div>
                     )}
                   </div>
