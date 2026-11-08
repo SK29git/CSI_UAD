@@ -217,197 +217,146 @@ export default function SalesOverviewView() {
               </div>
             </div>
 
-            {/* TOP SECTION: 2 Primary DMS Panels (Identity + Definition) with clean vertical dividing border */}
+            {/* 2 Primary DMS Panels: Vehicle Identity & Vehicle Definition */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
 
               {/* PANEL 1: Vehicle Identity */}
               <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
-                <div className="bg-gradient-to-r from-blue-50/90 to-gray-50 border-b border-gray-200 px-3 py-1.5 text-center">
+                <div className="bg-gradient-to-r from-blue-50/90 to-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center justify-between">
                   <span className="font-bold text-blue-950 text-xs tracking-wide">Vehicle Identity</span>
                 </div>
-                <div className="p-2 sm:p-2.5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2">
-                    {/* Left Column */}
-                    <div className="sm:pr-3.5 sm:border-r border-gray-200 flex flex-col justify-between">
-                      {[
-                        { label: 'Registration number', value: activeVehicle.registrationNumber },
-                        { label: 'VIN', value: activeVehicle.vin, mono: true, bold: true },
-                        { label: 'Model analysis code', value: activeVehicle.modelAnalysisCode },
-                        { label: 'Battery ID' , value: activeVehicle.batteryIdentificationNumber, red: true },
-                        { label: 'Odometer at last work', value: activeVehicle.odometerAtLastWork ? `${activeVehicle.odometerAtLastWork} KM` : null },
-                        { label: 'Driver side', value: activeVehicle.driverSide === 'L' ? 'Left hand drive' : activeVehicle.driverSide === 'R' ? 'Right hand drive' : activeVehicle.driverSide },
-                        { label: 'Previous reg. date', value: activeVehicle.previousRegistrationDate ? String(activeVehicle.previousRegistrationDate).split('T')[0] : null },
-                      ].map(({ label, value, mono, bold, red }) => (
-                        <div key={label} className="flex items-center justify-between py-1 border-b border-gray-100/70 gap-2 hover:bg-gray-50/50 transition-colors">
-                          <span className={`font-medium text-[11px] truncate ${red ? 'text-red-600 font-bold' : 'text-gray-500'}`}>{label}:</span>
-                          <span className={`text-[11px] truncate text-right ${mono ? 'font-mono' : ''} ${bold ? 'font-bold' : 'font-semibold'} ${red ? 'text-red-600 font-bold bg-red-50 border border-red-200 px-1.5 py-0.2 rounded inline-block text-[10px]' : 'text-gray-900'}`}>
-                            {value || '-'}
-                          </span>
-                        </div>
-                      ))}
+                <div className="divide-y divide-gray-100">
+                  {[
+                    { label: 'Registration number:', value: activeVehicle.registrationNumber },
+                    { label: 'Registration date:', value: activeVehicle.registrationDate ? String(activeVehicle.registrationDate).split('T')[0] : null },
+                    { label: 'VIN:', value: activeVehicle.vin, mono: true, bold: true },
+                    { label: 'Vehicle number', value: activeVehicle.vehicleNumber ? `#${activeVehicle.vehicleNumber}` : null, mono: true, bold: true },
+                    { label: 'Model analysis code:', value: activeVehicle.modelAnalysisCode },
+                    { label: 'Engine number:', value: activeVehicle.engineNumber, mono: true },
+                    { label: 'Battery ID:', value: activeVehicle.batteryIdentificationNumber, red: true },
+                    { label: 'Mileage:', value: activeVehicle.mileageKm != null ? `${Number(activeVehicle.mileageKm).toLocaleString()} KM` : (activeVehicle.lastOdometer ? `${activeVehicle.lastOdometer} KM` : null), bold: true },
+                    { label: 'Last odometer reading:', value: activeVehicle.lastOdometer ? `${activeVehicle.lastOdometer} Kilometres` : (activeVehicle.mileageKm != null ? `${Number(activeVehicle.mileageKm).toLocaleString()} Kilometres` : null), bold: true },
+                  ].map(({ label, value, mono, bold, red }) => (
+                    <div key={label} className="flex items-center justify-between px-3 py-1.5 gap-2 hover:bg-gray-50/60 transition-colors">
+                      <span className={`font-medium text-[11px] w-48 shrink-0 ${red ? 'text-red-600 font-bold' : 'text-gray-600'}`}>{label}</span>
+                      <div className="flex-1 flex justify-end">
+                        <span className={`text-[11px] truncate max-w-full ${mono ? 'font-mono' : ''} ${bold ? 'font-bold' : 'font-semibold'} ${red ? 'text-red-600 font-bold bg-red-50 border border-red-200 px-2 py-0.5 rounded text-[11px]' : 'text-gray-900'}`}>
+                          {value || '-'}
+                        </span>
+                      </div>
                     </div>
-
-                    {/* Right Column */}
-                    <div className="sm:pl-3.5 flex flex-col justify-between max-sm:mt-1">
-                      {[
-                        { label: 'Registration date', value: activeVehicle.registrationDate ? String(activeVehicle.registrationDate).split('T')[0] : null },
-                        { label: 'Vehicle number (#DMS)', value: activeVehicle.vehicleNumber ? `#${activeVehicle.vehicleNumber}` : null, mono: true, bold: true, highlight: 'text-blue-900 bg-blue-50/60 px-1.5 py-0.2 rounded border border-blue-100 inline-block' },
-                        { label: 'Engine number', value: activeVehicle.engineNumber, mono: true },
-                        { label: 'Mileage (KM)', value: activeVehicle.mileageKm != null ? `${Number(activeVehicle.mileageKm).toLocaleString()} KM` : (activeVehicle.lastOdometer ? `${activeVehicle.lastOdometer} KM` : null), bold: true },
-                        { label: 'Last odometer', value: activeVehicle.lastOdometer ? `${activeVehicle.lastOdometer} KM` : (activeVehicle.mileageKm != null ? `${Number(activeVehicle.mileageKm).toLocaleString()} KM` : null) },
-                        { label: 'Odometer type', value: activeVehicle.odometerType === 'K' ? 'Kilometres' : (activeVehicle.odometerType || '-') },
-                        { label: 'Previous reg. number', value: activeVehicle.previousRegistrationNumber },
-                        { label: 'Status', value: activeVehicle.vehicleStatusIndicator ? `${activeVehicle.vehicleStatusIndicator} (Current vehicle)` : null },
-                      ].map(({ label, value, mono, bold, highlight }) => (
-                        <div key={label} className="flex items-center justify-between py-1 border-b border-gray-100/70 gap-2 hover:bg-gray-50/50 transition-colors">
-                          <span className="text-gray-500 font-medium text-[11px] truncate">{label}:</span>
-                          <span className={`text-[11px] truncate text-right ${highlight ? highlight : ''} ${mono ? 'font-mono' : ''} ${bold ? 'font-bold' : 'font-semibold'} ${highlight ? '' : 'text-gray-900'}`}>
-                            {value || '-'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
 
               {/* PANEL 2: Vehicle Definition */}
               <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
-                <div className="bg-gradient-to-r from-blue-50/90 to-gray-50 border-b border-gray-200 px-3 py-1.5 text-center">
+                <div className="bg-gradient-to-r from-blue-50/90 to-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center justify-between">
                   <span className="font-bold text-blue-950 text-xs tracking-wide">Vehicle Definition</span>
                 </div>
-                <div className="p-2 sm:p-2.5">
-                  <div className="grid grid-cols-1 sm:grid-cols-2">
-                    {/* Left Column */}
-                    <div className="sm:pr-3.5 sm:border-r border-gray-200 flex flex-col justify-between">
-                      {[
-                        { label: 'Manufacturer', value: activeVehicle.brand || activeVehicle.manufacturerCode, bold: true },
-                        { label: 'Variant', value: activeVehicle.variant },
-                        { label: 'Model year', value: activeVehicle.modelYear, bold: true },
-                        { label: 'Colour', value: [activeVehicle.colourCode, activeVehicle.colourDescription || activeVehicle.colour].filter(Boolean).join('  ') },
-                        { label: 'Variant Class', value: activeVehicle.variantClass },
-                        { label: 'Doors', value: activeVehicle.numberOfDoors },
-                        { label: 'Transmission', value: activeVehicle.transmission === 'A' ? 'Automatic' : activeVehicle.transmission === 'M' ? 'Manual' : activeVehicle.transmission },
-                        { label: 'Valuation adjustment', value: activeVehicle.valuationAdjustmentCode },
-                        { label: 'Country of origin', value: activeVehicle.countryOfOrigin },
-                      ].map(({ label, value, bold }) => (
-                        <div key={label} className="flex items-center justify-between py-1 border-b border-gray-100/70 gap-2 hover:bg-gray-50/50 transition-colors">
-                          <span className="text-gray-500 font-medium text-[11px] truncate">{label}:</span>
-                          <span className={`text-[11px] truncate text-right text-gray-900 ${bold ? 'font-bold' : 'font-semibold'}`} title={String(value || '')}>
-                            {value || '-'}
-                          </span>
-                        </div>
-                      ))}
+                <div className="divide-y divide-gray-100">
+                  {[
+                    { label: 'Manufacturer:', value: activeVehicle.brand || activeVehicle.manufacturerCode, bold: true },
+                    { label: 'Model:', value: activeVehicle.model, bold: true },
+                    { label: 'Variant:', value: activeVehicle.variant },
+                    { label: 'Sub-variant:', value: activeVehicle.subVariantCode },
+                    { label: 'Model year:', value: activeVehicle.modelYear, bold: true },
+                    { label: 'Description:', value: activeVehicle.description },
+                    { label: 'Colour:', value: activeVehicle.colourDescription || activeVehicle.colour || activeVehicle.colourCode },
+                  ].map(({ label, value, bold }) => (
+                    <div key={label} className="flex items-center justify-between px-3 py-1.5 gap-2 hover:bg-gray-50/60 transition-colors">
+                      <span className="text-gray-600 font-medium text-[11px] w-36 shrink-0">{label}</span>
+                      <span className={`text-[11px] truncate text-right flex-1 text-gray-900 ${bold ? 'font-bold' : 'font-semibold'}`} title={String(value || '')}>
+                        {value || '-'}
+                      </span>
                     </div>
-
-                    {/* Right Column */}
-                    <div className="sm:pl-3.5 flex flex-col justify-between max-sm:mt-1">
-                      {[
-                        { label: 'Model', value: activeVehicle.model, bold: true },
-                        { label: 'Sub-variant', value: activeVehicle.subVariantCode },
-                        { label: 'Description', value: activeVehicle.description },
-                        { label: 'Trim', value: [activeVehicle.trimCode, activeVehicle.trimDescription].filter(Boolean).join('  ') },
-                        { label: 'Body style', value: activeVehicle.bodyStyle },
-                        { label: 'Fuel type', value: activeVehicle.fuelType || activeVehicle.fuelTypeCode },
-                        { label: 'Engine capacity', value: activeVehicle.engineCapacity ? `${activeVehicle.engineCapacity} cc` : null },
-                        { label: 'Owner type', value: activeVehicle.companyOrPrivatelyOwned === '0' ? 'Company' : activeVehicle.companyOrPrivatelyOwned === '2' ? 'Privately owned' : activeVehicle.companyOrPrivatelyOwned },
-                        { label: 'VSB', value: activeVehicle.vsb },
-                      ].map(({ label, value, bold }) => (
-                        <div key={label} className="flex items-center justify-between py-1 border-b border-gray-100/70 gap-2 hover:bg-gray-50/50 transition-colors">
-                          <span className="text-gray-500 font-medium text-[11px] truncate">{label}:</span>
-                          <span className={`text-[11px] truncate text-right text-gray-900 ${bold ? 'font-bold' : 'font-semibold'}`} title={String(value || '')}>
-                            {value || '-'}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* BOTTOM SECTION: Full-Width 3-Column Strip (Owners, DMS Linkage, Service & Logistics) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-1">
+            {/* 2 Bottom Panels: Owners & Customer Detail */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
 
-              {/* 1. Owners Panel */}
+              {/* PANEL 3: Owners */}
               <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
-                <div className="bg-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center justify-between">
-                  <span className="font-bold text-gray-800 text-xs">Owners & Accounts</span>
-                  <span className="text-[10px] text-gray-400">Account IDs</span>
+                <div className="bg-gradient-to-r from-blue-50/90 to-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center justify-between">
+                  <span className="font-bold text-blue-950 text-xs tracking-wide">Owners</span>
                 </div>
-                <div className="divide-y divide-gray-100">
-                  {[
-                    { label: 'Sales customer', value: activeVehicle.salesCustomer },
-                    { label: 'Aftersales customer', value: activeVehicle.aftersalesCustomer },
-                    { label: 'Driver customer', value: activeVehicle.driveCustomer },
-                    { label: 'Keyloop group', value: activeVehicle.keyloopGroup },
-                    { label: 'MS company', value: activeVehicle.msCompany },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex items-center justify-between px-3 py-1 gap-2 hover:bg-gray-50/60">
-                      <span className="text-gray-500 font-medium text-[11px]">{label}:</span>
-                      <span className="font-bold text-gray-900 text-[11px] font-mono">{value || '-'}</span>
-                    </div>
-                  ))}
-                  {Array.isArray(activeVehicle.linkedVia) && activeVehicle.linkedVia.length > 0 && (
-                    <div className="px-3 py-1.5 bg-blue-50/30">
-                      <span className="text-gray-400 text-[10px] block mb-1">Linked via:</span>
-                      <div className="flex flex-wrap gap-1">
-                        {activeVehicle.linkedVia.map((link, i) => (
-                          <span key={i} className="bg-blue-600 text-white font-bold text-[9px] px-2 py-0.5 rounded shadow-2xs">{link}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                <div className="p-2 sm:p-2.5">
+                  <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Linked Owner Customers</div>
+                  <div className="border border-gray-200 rounded overflow-hidden">
+                    <table className="w-full text-left text-[11px]">
+                      <thead className="bg-blue-50/60 text-blue-950 border-b border-gray-200 font-bold">
+                        <tr>
+                          <th className="py-1 px-2.5 w-1/3">Link Type</th>
+                          <th className="py-1 px-2.5 w-1/2">Customer</th>
+                          <th className="py-1 px-2.5">Company</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {activeVehicle.salesCustomer && (
+                          <tr className="hover:bg-gray-50/60 text-gray-800">
+                            <td className="py-1 px-2.5 flex items-center gap-1.5 text-gray-600">
+                              <span>🔗</span> Sales customer
+                            </td>
+                            <td className="py-1 px-2.5 font-semibold text-gray-900">
+                              {customer?.fullName || activeVehicle.salesCustomer}
+                            </td>
+                            <td className="py-1 px-2.5 text-gray-400">-</td>
+                          </tr>
+                        )}
+                        {activeVehicle.aftersalesCustomer && (
+                          <tr className="hover:bg-gray-50/60 text-gray-800">
+                            <td className="py-1 px-2.5 flex items-center gap-1.5 text-gray-600">
+                              <span>🔗</span> Aftersales customer
+                            </td>
+                            <td className="py-1 px-2.5 font-semibold">
+                              {customer?.fullName || activeVehicle.aftersalesCustomer}
+                            </td>
+                            <td className="py-1 px-2.5 text-gray-400">-</td>
+                          </tr>
+                        )}
+                        {activeVehicle.driveCustomer && (
+                          <tr className="hover:bg-gray-50/60 text-gray-800">
+                            <td className="py-1 px-2.5 flex items-center gap-1.5 text-gray-600">
+                              <span>🔗</span> Driver customer
+                            </td>
+                            <td className="py-1 px-2.5 font-semibold">
+                              {customer?.fullName || activeVehicle.driveCustomer}
+                            </td>
+                            <td className="py-1 px-2.5 text-gray-400">-</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
 
-              {/* 2. Enquiries & DMS Details */}
+              {/* PANEL 4: Customer Detail */}
               <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
-                <div className="bg-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center justify-between">
-                  <span className="font-bold text-gray-800 text-xs">Enquiry & Stock Link</span>
-                  <span className="text-[10px] text-gray-400">DMS Link</span>
+                <div className="bg-gradient-to-r from-blue-50/90 to-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center justify-between">
+                  <span className="font-bold text-blue-950 text-xs tracking-wide">Customer Detail</span>
                 </div>
-                <div className="divide-y divide-gray-100">
-                  {[
-                    { label: 'Purchase enquiry #', value: activeVehicle.purchaseEnquiryNumber ? `#${activeVehicle.purchaseEnquiryNumber}` : null, mono: true, bold: true },
-                    { label: 'Sales enquiry #', value: activeVehicle.enquiryNumber },
-                    { label: 'Stock progress', value: activeVehicle.stockProgress, bold: true, color: 'text-blue-700' },
-                    { label: 'Progress name', value: activeVehicle.progressName },
-                    { label: 'Progress code', value: activeVehicle.progressCode },
-                    { label: 'Vehicle type', value: activeVehicle.vehicleType },
-                    { label: 'Stock sequence', value: activeVehicle.stockSequenceNumber },
-                    { label: 'Location', value: [activeVehicle.locationCode, activeVehicle.locationDescription].filter(Boolean).join(' ') },
-                  ].map(({ label, value, mono, bold, color }) => (
-                    <div key={label} className="flex items-center justify-between px-3 py-1 gap-2 hover:bg-gray-50/60">
-                      <span className="text-gray-500 font-medium text-[11px]">{label}:</span>
-                      <span className={`text-[11px] truncate text-right ${mono ? 'font-mono' : ''} ${bold ? 'font-bold' : 'font-semibold'} ${color ? color : 'text-gray-900'}`}>{value || '-'}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* 3. Service & Milestone Dates */}
-              <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
-                <div className="bg-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center justify-between">
-                  <span className="font-bold text-gray-800 text-xs">Milestones & Service</span>
-                  <span className="text-[10px] text-gray-400">Timeline</span>
-                </div>
-                <div className="divide-y divide-gray-100">
-                  {[
-                    { label: 'Delivery date', value: activeVehicle.deliveryDate ? String(activeVehicle.deliveryDate).split('T')[0] : null },
-                    { label: 'Date of last work', value: activeVehicle.dateOfLastWork ? String(activeVehicle.dateOfLastWork).split('T')[0] : null },
-                    { label: 'Next service date', value: activeVehicle.nextServiceDate ? String(activeVehicle.nextServiceDate).split('T')[0] : null, green: true },
-                    { label: 'Next service odometer', value: activeVehicle.nextServiceOdometerKm != null ? `${activeVehicle.nextServiceOdometerKm} KM` : (activeVehicle.nextServiceOdometer || null), green: true },
-                    { label: 'PDI completed', value: activeVehicle.pdiCompleted ? String(activeVehicle.pdiCompleted).split('T')[0] : null },
-                    { label: 'RTA expiry', value: activeVehicle.roadSafetyTestExpiryDate ? String(activeVehicle.roadSafetyTestExpiryDate).split('T')[0] : null },
-                    { label: 'Supplier order date', value: activeVehicle.supplierOrderDate ? String(activeVehicle.supplierOrderDate).split('T')[0] : null },
-                    { label: 'Production date', value: activeVehicle.originalProductionDate ? String(activeVehicle.originalProductionDate).split('T')[0] : null },
-                  ].map(({ label, value, green }) => (
-                    <div key={label} className="flex items-center justify-between px-3 py-1 gap-2 hover:bg-gray-50/60">
-                      <span className="text-gray-500 font-medium text-[11px]">{label}:</span>
-                      <span className={`text-[11px] truncate text-right ${green ? 'text-emerald-700 font-bold' : 'text-gray-900 font-semibold'}`}>{value || '-'}</span>
-                    </div>
-                  ))}
+                <div className="p-2 sm:p-2.5 divide-y divide-gray-100">
+                  <div className="flex items-center justify-between py-1.5 gap-2">
+                    <span className="text-gray-600 font-medium text-[11px] w-28 shrink-0">Title:</span>
+                    <span className="font-semibold text-gray-900 text-[11px] text-right flex-1">{customer?.salutation || '-'}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1.5 gap-2">
+                    <span className="text-gray-600 font-medium text-[11px] w-28 shrink-0">First name:</span>
+                    <span className="font-semibold text-gray-900 text-[11px] text-right flex-1">{customer?.firstName || '-'}</span>
+                    <span className="text-gray-400 text-[10px] ml-2">Initials: <strong className="text-gray-800">{customer?.initials || '-'}</strong></span>
+                  </div>
+                  <div className="flex items-center justify-between py-1.5 gap-2">
+                    <span className="text-gray-600 font-medium text-[11px] w-28 shrink-0">Middle name:</span>
+                    <span className="font-semibold text-gray-900 text-[11px] text-right flex-1">{customer?.middleName || '-'}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1.5 gap-2">
+                    <span className="text-gray-600 font-medium text-[11px] w-28 shrink-0">Surname:</span>
+                    <span className="font-bold text-gray-900 text-[11px] text-right flex-1">{customer?.surname || '-'}</span>
+                  </div>
                 </div>
               </div>
 

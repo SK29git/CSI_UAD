@@ -1,599 +1,722 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
-import { apiFetch, getServiceHistory, getServiceHistoryDetail } from '../utils/api';
-import { createPortal } from 'react-dom';
-import { 
-  FaHistory, 
-  FaCar, 
-  FaSpinner, 
-  FaRedo, 
-  FaWrench,
-  FaCalendarAlt,
-  FaInfoCircle,
-  FaCheckCircle,
-  FaEye,
-  FaTimes,
-  FaFileInvoiceDollar,
-  FaUser
+import { apiFetch } from '../utils/api';
+import {
+  FaHistory,
+  FaRedo,
+  FaSpinner
 } from 'react-icons/fa';
 
 export default function ServiceHistoryView() {
   const { customer, selectedVin, vehicleDetails, vehicles, group: contextGroup } = useCustomer();
-  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
+  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "BMW");
   const customerNumber = customer?.customerNumber || customer?.id || "";
   const vin = selectedVin || vehicleDetails?.vin || (vehicles && vehicles[0]?.vin) || "";
+  const vehicleNumber = vehicleDetails?.vehicleNumber || (vehicles && vehicles[0]?.vehicleNumber) || "";
 
-  // Flow Toggle: 'GEELY' (default) or 'KEYLOOP'
-  const [historyFlow, setHistoryFlow] = useState('GEELY');
-
-  // Universal DMS Flow State
-  const initialGeelyVin = vin || customer?.vin || (vehicles && vehicles.length > 0 ? vehicles[0].vin : '') || 'SAJAB4BG7GA910301';
-  const [geelyVin, setGeelyVin] = useState(initialGeelyVin);
-  const [geelyHistory, setGeelyHistory] = useState([]);
-  const [geelyLoading, setGeelyLoading] = useState(true);
+  // Editable search inputs for firing the 3 APIs (no hardcoded defaults)
+  const [searchVin, setSearchVin] = useState(vin);
+  const [searchCustomerNumber, setSearchCustomerNumber] = useState(customerNumber);
+  const [searchWipNumber, setSearchWipNumber] = useState("");
 
   useEffect(() => {
-    if (vin) setGeelyVin(vin);
+    if (vin) setSearchVin(vin);
   }, [vin]);
 
-  // Detail Modal State
-  const [selectedHistoryRecord, setSelectedHistoryRecord] = useState(null);
-  const [historyDetailLoading, setHistoryDetailLoading] = useState(false);
-  const [historyDetailData, setHistoryDetailData] = useState(null);
+  useEffect(() => {
+    if (customerNumber) setSearchCustomerNumber(customerNumber);
+  }, [customerNumber]);
 
-  // KEYLOOP State
-  const [history, setHistory] = useState([]);
+  // Main service history state (strictly populated by live API responses)
+  const [historyRecords, setHistoryRecords] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch Universal Service History (GET /api/service/history?vinNumber={vin}&page=1&pageSize=50)
-  const fetchGeelyHistory = async () => {
-    if (!geelyVin.trim()) return;
-    setGeelyLoading(true);
-    try {
-      const res = await getServiceHistory(geelyVin.trim(), 1, 50);
-      if (res && res.ok && res.data) {
-        const rawList = res.data.vehicleServiceHistory?.serviceHistory || res.data.result || res.data.data || res.data || [];
-        setGeelyHistory(Array.isArray(rawList) ? rawList : [rawList]);
-      } else {
-        setGeelyHistory([]);
+  // Selected row index (default to first row)
+  const [selectedRowIndex, setSelectedRowIndex] = useState(0);
+
+  // Helper to deduplicate records from multiple APIs
+  const deduplicateRecords = (records) => {
+    const seen = new Set();
+    const result = [];
+
+    for (const r of records) {
+      if (!r || typeof r !== 'object') continue;
+      const key = `${r.wipNumber || ''}_${r.invoiceNumber || ''}_${r.eventDate || r.documentDate || ''}_${r.repairDescription || ''}_${r.account || ''}_${r.branchCode || ''}_${r.odometer || ''}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(r);
       }
-    } catch (err) {
-      console.warn("Failed to fetch service history:", err);
-      setGeelyHistory([]);
-    } finally {
-      setGeelyLoading(false);
     }
+    return result;
   };
 
-  useEffect(() => {
-    if (historyFlow === 'GEELY') {
-      fetchGeelyHistory();
-    }
-  }, [historyFlow, geelyVin]);
-
-  // Open Service History Details Modal (GET /api/service/history-by-Id/{serviceHistoryId})
-  const handleOpenDetailModal = async (record) => {
-    setSelectedHistoryRecord(record);
-    const histId = record.serviceHistoryId || record.id || record.historyId;
-    if (!histId) return;
-
-    setHistoryDetailLoading(true);
-    setHistoryDetailData(null);
-    try {
-      const res = await getServiceHistoryDetail(histId);
-      if (res && res.ok && res.data) {
-        setHistoryDetailData(res.data.result || res.data.data || res.data);
+  // Safe extraction of array data from various API response envelopes
+  const extractArray = (data) => {
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.data)) return data.data;
+    if (data && Array.isArray(data.result)) return data.result;
+    if (data && Array.isArray(data.serviceHistory)) return data.serviceHistory;
+    if (data && typeof data === 'object') {
+      const keys = Object.keys(data);
+      for (const k of keys) {
+        if (Array.isArray(data[k])) return data[k];
       }
-    } catch (err) {
-      console.warn("Fetch service history details error:", err);
-    } finally {
-      setHistoryDetailLoading(false);
     }
+    return [];
   };
 
-  // Fetch Keyloop Service History
-  const fetchServiceHistory = async () => {
-    if (!vin) {
-      setHistory([]);
-      setLoading(false);
-      return;
-    }
+  // Core multi-API fetching function that fires all 3 endpoints concurrently
+  const fetchAllServiceHistoryApis = async () => {
     setLoading(true);
-    setHistory([]);
-    try {
-      const apiUrl = `/api/v1/vehicles/${group}/${vin}/service-history?from=2025-01-01&to=2026-12-31`;
-      const res = await apiFetch(apiUrl);
-      if (res && res.ok && Array.isArray(res.data)) {
-        setHistory(res.data);
-      } else {
-        setHistory([]);
-      }
-    } catch (err) {
-      console.warn("Failed to fetch vehicle service history:", err);
-      setHistory([]);
-    } finally {
-      setLoading(false);
+
+    const activeGroup = (group || 'BMW').trim();
+    const activeVin = (searchVin || vin || '').trim();
+    const activeCust = (searchCustomerNumber || customerNumber || '').trim();
+    const activeWip = (searchWipNumber || '').trim();
+
+    const calls = [];
+
+    // 1. GET /api/v1/service-history?group={{group}}&wipNumber={{wipNumber}} (if WIP provided)
+    if (activeWip) {
+      calls.push(
+        apiFetch(`/api/v1/service-history?group=${encodeURIComponent(activeGroup)}&wipNumber=${encodeURIComponent(activeWip)}`)
+          .then(res => ({ type: 'wip', res }))
+          .catch(err => ({ type: 'wip', error: err?.message || 'Failed' }))
+      );
     }
+
+    // 2. GET /api/v1/service-history?group={{group}}&customerNumber={{customerNumber}} (if customer # provided)
+    if (activeCust) {
+      calls.push(
+        apiFetch(`/api/v1/service-history?group=${encodeURIComponent(activeGroup)}&customerNumber=${encodeURIComponent(activeCust)}`)
+          .then(res => ({ type: 'customer', res }))
+          .catch(err => ({ type: 'customer', error: err?.message || 'Failed' }))
+      );
+    }
+
+    // 3. GET /api/v1/service-history?group={{group}}&vin={{vin}} (if VIN provided)
+    if (activeVin) {
+      calls.push(
+        apiFetch(`/api/v1/service-history?group=${encodeURIComponent(activeGroup)}&vin=${encodeURIComponent(activeVin)}`)
+          .then(res => ({ type: 'vin', res }))
+          .catch(err => ({ type: 'vin', error: err?.message || 'Failed' }))
+      );
+    }
+
+    const settled = await Promise.allSettled(calls);
+    let combined = [];
+
+    settled.forEach(item => {
+      if (item.status === 'fulfilled') {
+        const val = item.value;
+        if (val.res && val.res.ok && val.res.data) {
+          const arr = extractArray(val.res.data);
+          combined = combined.concat(arr);
+        }
+      }
+    });
+
+    const deduplicated = deduplicateRecords(combined);
+    setHistoryRecords(deduplicated);
+    setSelectedRowIndex(0);
+    setLoading(false);
   };
 
   useEffect(() => {
-    if (historyFlow === 'KEYLOOP') {
-      fetchServiceHistory();
-    }
-  }, [group, vin, historyFlow]);
+    fetchAllServiceHistoryApis();
+  }, [group, vin, customerNumber]);
 
-  const getStatusBadge = (status) => {
-    if (!status) return <span className="text-gray-400 font-normal">-</span>;
-    const s = String(status).trim().toUpperCase();
-    if (s === 'BOOKED') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
-          <FaCheckCircle className="text-[9px] text-blue-600" /> Booked
-        </span>
-      );
+  // Selected item reference for populating the 3 bottom cards
+  const selectedItem = historyRecords[selectedRowIndex] || historyRecords[0] || null;
+
+  // Formatting helpers
+  const fmt = (val) => (val !== undefined && val !== null && String(val).trim() !== '' ? String(val) : '-');
+  const fmtDate = (val) => {
+    if (!val || String(val).trim() === '') return '/  /';
+    const s = String(val).split('T')[0];
+    const parts = s.split('-');
+    if (parts.length === 3) {
+      return `${parts[1]}/${parts[2]}/${parts[0]}`;
     }
-    if (s === 'COMPLETED' || s === 'INVOICED') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-          <FaCheckCircle className="text-[9px] text-emerald-600" /> {status}
-        </span>
-      );
-    }
-    if (s === 'CANCELLED') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-200">
-          {status}
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
-        {status}
-      </span>
-    );
+    return s;
+  };
+  const fmtNum = (val) => {
+    if (val === undefined || val === null || String(val).trim() === '') return '-';
+    const n = Number(val);
+    return isNaN(n) ? String(val) : n.toLocaleString();
   };
 
-  const getSourceBadge = (source) => {
-    if (!source) return <span className="text-gray-400 font-normal">-</span>;
-    const s = String(source).trim().toUpperCase();
-    if (s === 'WORKSHOP_BOOKING') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
-          <FaWrench className="text-[9px]" /> Workshop Booking
-        </span>
-      );
-    }
-    if (s === 'VEHICLE') {
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-          <FaCar className="text-[9px]" /> Vehicle Record
-        </span>
-      );
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200">
-        {source}
-      </span>
-    );
-  };
+  // Dynamic Odometer Unit - never hardcoded
+  const odoUnit = (() => {
+    if (!selectedItem?.odometerType || String(selectedItem.odometerType).trim() === '') return '';
+    const t = String(selectedItem.odometerType).trim().toUpperCase();
+    if (t === 'K' || t === 'KM' || t === 'KILOMETRES') return 'Kilometres';
+    if (t === 'M' || t === 'MI' || t === 'MILES') return 'Miles';
+    return selectedItem.odometerType;
+  })();
+
+  const displayOdometerType = odoUnit || '-';
 
   return (
-    <div className="flex flex-col gap-4 text-xs font-sans">
-      
-      {/* Integration Flow Switcher Bar */}
-      <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold">
-            <FaHistory className="text-sm" />
-          </div>
-          <div>
-            <span className="font-bold text-gray-900 text-xs block">Service History Integration Flow</span>
-            <span className="text-[10px] text-gray-500 font-medium">Select backend DMS for vehicle maintenance logs</span>
+    <div className="flex flex-col gap-3 font-sans text-xs">
+
+      {/* Top Banner & Query Bar */}
+      <div className="bg-white rounded-lg border border-gray-200 shadow-2xs p-3 flex flex-col gap-2">
+        
+        {/* Title Line */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center font-bold">
+              <FaHistory className="text-xs" />
+            </div>
+            <div>
+              <h2 className="font-bold text-gray-900 text-sm leading-tight">
+                {vehicleNumber ? `Vehicle #${vehicleNumber} (Current vehicle)` : (vin ? `Vehicle VIN: ${vin}` : 'Vehicle Service History')}
+              </h2>
+              <span className="text-[10px] text-gray-500 font-mono">
+                Group: {group || 'BMW'} | VIN: {searchVin || vin || '-'} | Customer #: {searchCustomerNumber || customerNumber || '-'}
+              </span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl">
+        {/* Search Inputs & Fetch Button */}
+        <div className="flex flex-wrap items-center gap-2 pt-0.5 text-[11px]">
+          <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded px-2 py-1">
+            <span className="text-gray-500 font-semibold uppercase text-[10px]">WIP #:</span>
+            <input
+              type="text"
+              value={searchWipNumber}
+              onChange={(e) => setSearchWipNumber(e.target.value)}
+              placeholder="Enter WIP #"
+              className="w-24 font-mono font-bold text-gray-900 bg-transparent focus:outline-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded px-2 py-1">
+            <span className="text-gray-500 font-semibold uppercase text-[10px]">Cust #:</span>
+            <input
+              type="text"
+              value={searchCustomerNumber}
+              onChange={(e) => setSearchCustomerNumber(e.target.value)}
+              placeholder="Customer #"
+              className="w-24 font-mono font-bold text-gray-900 bg-transparent focus:outline-none"
+            />
+          </div>
+
+          <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded px-2 py-1">
+            <span className="text-gray-500 font-semibold uppercase text-[10px]">VIN:</span>
+            <input
+              type="text"
+              value={searchVin}
+              onChange={(e) => setSearchVin(e.target.value)}
+              placeholder="VIN number"
+              className="w-40 font-mono font-bold text-gray-900 bg-transparent focus:outline-none uppercase"
+            />
+          </div>
+
           <button
             type="button"
-            onClick={() => setHistoryFlow('GEELY')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              historyFlow === 'GEELY'
-                ? 'bg-blue-600 text-white shadow-2xs'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            onClick={fetchAllServiceHistoryApis}
+            disabled={loading}
+            className="px-3.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>AGMC Universal Service Engine (Direct DMS)</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setHistoryFlow('KEYLOOP')}
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-              historyFlow === 'KEYLOOP'
-                ? 'bg-blue-600 text-white shadow-2xs'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <span>Keyloop RPA Flow</span>
+            <FaRedo className={`text-[10px] ${loading ? 'animate-spin' : ''}`} />
+            <span>Fetch</span>
           </button>
         </div>
       </div>
 
-      {/* ================================================================ */}
-      {/* 1. AGMC UNIVERSAL SERVICE HISTORY VIEW (Direct DMS)              */}
-      {/* ================================================================ */}
-      {historyFlow === 'GEELY' && (
-        <div className="bg-white rounded-xl p-5 shadow-xs border border-gray-100 flex flex-col gap-4 text-xs">
-          
-          {/* Header Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                <FaWrench className="text-base" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-gray-900 leading-tight">Vehicle Service History</h2>
-                  <span className="bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200 uppercase">
-                    Multi-Brand DMS Engine
-                  </span>
-                  {geelyHistory.length > 0 && (
-                    <span className="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-emerald-200">
-                      {geelyHistory.length} Records
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] text-gray-500 font-medium">
-                  Historical Workshop Job Cards & Invoices
-                </span>
-              </div>
-            </div>
-
-            {/* VIN Input & Refresh Bar */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1">
-                <span className="text-[10px] font-bold text-gray-500 uppercase">VIN:</span>
-                <input
-                  type="text"
-                  value={geelyVin}
-                  onChange={(e) => setGeelyVin(e.target.value)}
-                  placeholder="e.g. SAJAB4BG7GA910301"
-                  className="w-40 sm:w-48 bg-transparent font-mono font-bold text-gray-900 text-xs focus:outline-none uppercase"
-                />
-              </div>
-
-              <button
-                type="button"
-                onClick={fetchGeelyHistory}
-                disabled={geelyLoading}
-                className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 cursor-pointer transition-colors"
-                title="Refresh Service History"
-              >
-                <FaRedo className={`text-xs ${geelyLoading ? 'animate-spin text-blue-600' : ''}`} />
-              </button>
-            </div>
+      {/* ========================================================================= */}
+      {/* MAIN KEYLOOP DMS PANEL: Service History Table                              */}
+      {/* ========================================================================= */}
+      <div className="border border-gray-300 rounded-lg overflow-hidden bg-white shadow-2xs">
+        
+        {/* Header Bar */}
+        <div className="bg-gradient-to-r from-blue-50/90 via-sky-50 to-gray-50 border-b border-gray-300 px-3 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-blue-950 text-xs tracking-wide">Service History</span>
+            <span className="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-0.2 rounded-full border border-blue-200">
+              {historyRecords.length} records
+            </span>
           </div>
-
-          {/* History Body */}
-          {geelyLoading ? (
-            <div className="py-16 flex flex-col items-center justify-center text-gray-400 gap-2">
-              <FaSpinner className="animate-spin text-xl text-blue-600" />
-              <span className="text-xs font-medium">Fetching vehicle service history from DMS...</span>
-            </div>
-          ) : geelyHistory.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-1">
-              <FaInfoCircle className="mx-auto text-xl text-gray-300 mb-1" />
-              <p className="font-bold text-gray-700 text-xs">No Service History Records Found for VIN {geelyVin}</p>
-              <p className="text-[11px] text-gray-400">
-                There are no historical repair orders recorded in Keyloop for this chassis.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto border border-gray-200 rounded-xl">
-              <table className="w-full text-center">
-                <thead className="bg-gray-50 text-gray-500 font-bold uppercase text-[10px] border-b border-gray-200">
-                  <tr>
-                    <th className="py-2.5 px-3 text-center">Service Date</th>
-                    <th className="py-2.5 px-3 text-center">History / Invoice ID</th>
-                    <th className="py-2.5 px-3 text-center">Mileage</th>
-                    <th className="py-2.5 px-3 text-center">Service Operations</th>
-                    <th className="py-2.5 px-3 text-center">Amount</th>
-                    <th className="py-2.5 px-3 text-center">Details</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
-                  {geelyHistory.map((row, idx) => {
-                    const histId = row.serviceHistoryId || row.id || row.invoiceNumber || idx;
-                    const dateStr = row.serviceDate || row.date || row.completedDate || '-';
-                    const mileage = row.mileage || row.mileageKm;
-                    const ops = row.operationDescription || row.description || row.serviceType || 'Periodic Maintenance';
-                    const amount = row.cost || row.amount || row.totalCost;
-
-                    return (
-                      <tr key={histId} className="hover:bg-gray-50/80 transition-colors">
-                        <td className="py-3 px-3 font-semibold text-gray-900 font-mono text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <FaCalendarAlt className="text-gray-400 text-xs shrink-0" />
-                            <span>{dateStr}</span>
-                          </div>
-                        </td>
-
-                        <td className="py-3 px-3 font-mono font-bold text-blue-700 text-center">
-                          #{histId}
-                        </td>
-
-                        <td className="py-3 px-3 font-bold text-gray-900 font-mono text-center">
-                          {mileage ? `${Number(mileage).toLocaleString()} KM` : '-'}
-                        </td>
-
-                        <td className="py-3 px-3 font-semibold text-gray-800 text-center max-w-[200px] truncate" title={ops}>
-                          {ops}
-                        </td>
-
-                        <td className="py-3 px-3 font-mono font-bold text-gray-900 text-center">
-                          {amount ? `AED ${Number(amount).toLocaleString()}` : '-'}
-                        </td>
-
-                        <td className="py-3 px-3 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenDetailModal(row)}
-                            className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 font-bold text-[11px] inline-flex items-center gap-1 transition-colors cursor-pointer"
-                          >
-                            <FaEye className="text-xs" />
-                            <span>View Details</span>
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
         </div>
-      )}
 
-      {/* ================================================================ */}
-      {/* 2. BMW KEYLOOP SERVICE HISTORY VIEW                              */}
-      {/* ================================================================ */}
-      {historyFlow === 'KEYLOOP' && (
-        <div className="bg-white rounded-xl p-5 shadow-xs border border-gray-100 flex flex-col gap-4 text-xs font-sans">
-          
-          {/* Header Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                <FaHistory className="text-base" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-gray-900 leading-tight">BMW Vehicle Service History</h2>
-                  {history.length > 0 && (
-                    <span className="bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200">
-                      {history.length} {history.length === 1 ? 'Record' : 'Records'}
-                    </span>
-                  )}
-                </div>
-                <span className="text-[10px] text-gray-400 font-mono">
-                  Keyloop Group: {group} {customerNumber ? `| Customer #${customerNumber}` : ''} {vin ? `| VIN: ${vin}` : ''}
-                </span>
-              </div>
-            </div>
-
-            <button 
-              onClick={fetchServiceHistory}
-              disabled={loading}
-              className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 cursor-pointer self-start sm:self-auto transition-colors"
-              title="Refresh Service History"
-            >
-              <FaRedo className={`text-xs ${loading ? 'animate-spin text-blue-600' : ''}`} />
-            </button>
+        {/* Table Body */}
+        {loading ? (
+          <div className="py-12 flex flex-col items-center justify-center text-gray-400 gap-2">
+            <FaSpinner className="animate-spin text-lg text-blue-600" />
+            <span className="text-xs font-semibold">Querying Service History APIs...</span>
           </div>
-
-          {/* History Table */}
-          {loading ? (
-            <div className="py-12 flex flex-col items-center justify-center text-gray-400 gap-2">
-              <FaSpinner className="animate-spin text-xl text-blue-600" />
-              <span className="text-xs font-medium">Loading workshop service history...</span>
-            </div>
-          ) : history.length === 0 ? (
-            <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-1">
-              <FaInfoCircle className="mx-auto text-xl text-gray-300 mb-1" />
-              <p className="font-bold text-gray-700 text-xs">No Service History Records Found</p>
-              <p className="text-[11px] text-gray-400">There are no historical workshop records returned from the API for this vehicle.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto border border-gray-200 rounded-xl">
-              <table className="w-full text-center">
-                <thead className="bg-gray-50 text-gray-500 font-bold uppercase text-[10px] border-b border-gray-200">
-                  <tr>
-                    <th className="py-2.5 px-3 text-center">Service Date</th>
-                    <th className="py-2.5 px-3 text-center">Booking ID</th>
-                    <th className="py-2.5 px-3 text-center">Mileage</th>
-                    <th className="py-2.5 px-3 text-center">Status</th>
-                    <th className="py-2.5 px-3 text-center">Source</th>
-                    <th className="py-2.5 px-3 text-center">Branch</th>
-                    <th className="py-2.5 px-3 text-center">Cost</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
-                  {history.map((row, idx) => (
-                    <tr key={row.bookingId || row.serviceDate || idx} className="hover:bg-gray-50/80 transition-colors">
-                      <td className="py-3 px-3 font-semibold text-gray-900 font-mono text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <FaCalendarAlt className="text-gray-400 text-xs shrink-0" />
-                          <span>{row.serviceDate || row.date || <span className="text-gray-400 font-normal">-</span>}</span>
-                        </div>
+        ) : historyRecords.length === 0 ? (
+          <div className="py-12 text-center text-gray-500 bg-gray-50/50">
+            <p className="font-bold text-gray-700 text-xs">No Service History Records Found</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">No records returned from Keyloop DMS for the current customer or vehicle.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto max-h-[360px] overflow-y-auto border-b border-gray-200">
+            <table className="w-full text-left text-[11px] border-collapse select-none">
+              <thead className="bg-[#e9eef4] text-[#1e3a5f] font-bold border-b border-gray-300 sticky top-0 z-10">
+                <tr>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap">Date</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap">Invoice Date</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap">Event Code</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap">Event Type</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap">Repair Description</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap text-right">Odometer</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap text-right">WIP #</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap text-right">Vehicle #</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap text-right">Customer #</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap">Customer Name</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap">Account</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap text-right">Invoice Value</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap text-right">Invoice #</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap">Branch</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap">Branch Name</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap">Misc Reference</th>
+                  <th className="py-1.5 px-2.5 border-r border-gray-200 whitespace-nowrap">Owning Operator</th>
+                  <th className="py-1.5 px-2.5 whitespace-nowrap">Invoice Operator</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 font-medium">
+                {historyRecords.map((row, idx) => {
+                  const isSelected = idx === selectedRowIndex;
+                  return (
+                    <tr
+                      key={idx}
+                      onClick={() => setSelectedRowIndex(idx)}
+                      className={`cursor-pointer transition-colors ${
+                        isSelected
+                          ? 'bg-[#0078d7] text-white font-bold'
+                          : idx % 2 === 0
+                            ? 'bg-white hover:bg-blue-50/50 text-gray-800'
+                            : 'bg-[#fbfcfe] hover:bg-blue-50/50 text-gray-800'
+                      }`}
+                    >
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap font-mono ${isSelected ? 'border-blue-400' : 'border-gray-100'}`}>
+                        {fmtDate(row.eventDate || row.documentDate)}
                       </td>
-
-                      <td className="py-3 px-3 font-mono font-bold text-blue-600 text-center">
-                        {row.bookingId ? `#${row.bookingId}` : row.wipNumber ? `#${row.wipNumber}` : <span className="text-gray-400 font-normal">-</span>}
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap font-mono ${isSelected ? 'border-blue-400' : 'border-gray-100'}`}>
+                        {fmtDate(row.invoiceDate)}
                       </td>
-
-                      <td className="py-3 px-3 font-bold text-gray-900 font-mono text-center">
-                        {row.mileageKm !== undefined && row.mileageKm !== null ? `${Number(row.mileageKm).toLocaleString()} KM` : row.mileage ? `${row.mileage} KM` : <span className="text-gray-400 font-normal">-</span>}
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap font-mono font-bold ${isSelected ? 'border-blue-400 text-yellow-200' : 'border-gray-100 text-blue-800'}`}>
+                        {fmt(row.eventCode)}
                       </td>
-
-                      <td className="py-3 px-3 text-center">
-                        <div className="flex items-center justify-center">
-                          {getStatusBadge(row.status)}
-                        </div>
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap font-mono ${isSelected ? 'border-blue-400 text-sky-100' : 'border-gray-100 text-purple-700'}`}>
+                        {fmt(row.eventType)}
                       </td>
-
-                      <td className="py-3 px-3 text-center">
-                        <div className="flex items-center justify-center">
-                          {getSourceBadge(row.source)}
-                        </div>
+                      <td className={`py-1.5 px-2.5 border-r max-w-[240px] truncate ${isSelected ? 'border-blue-400' : 'border-gray-100'}`} title={row.repairDescription}>
+                        {fmt(row.repairDescription)}
                       </td>
-
-                      <td className="py-3 px-3 text-gray-700 font-semibold text-center">
-                        {row.branch || <span className="text-gray-400 font-normal">-</span>}
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap text-right font-mono ${isSelected ? 'border-blue-400' : 'border-gray-100'}`}>
+                        {fmtNum(row.odometer)}
                       </td>
-
-                      <td className="py-3 px-3 text-center font-bold text-gray-900 font-mono">
-                        {row.cost && String(row.cost).trim() !== '' ? `AED ${Number(row.cost).toLocaleString()}` : row.amount && String(row.amount).trim() !== '' ? `AED ${row.amount}` : <span className="text-gray-400 font-normal">-</span>}
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap text-right font-mono font-bold ${isSelected ? 'border-blue-400 text-white' : 'border-gray-100 text-blue-900'}`}>
+                        {fmt(row.wipNumber)}
+                      </td>
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap text-right font-mono ${isSelected ? 'border-blue-400' : 'border-gray-100'}`}>
+                        {fmt(row.vehicleNumber)}
+                      </td>
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap text-right font-mono ${isSelected ? 'border-blue-400' : 'border-gray-100'}`}>
+                        {fmt(row.customerNumber)}
+                      </td>
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap max-w-[150px] truncate ${isSelected ? 'border-blue-400' : 'border-gray-100'}`} title={row.customerName}>
+                        {fmt(row.customerName)}
+                      </td>
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap font-mono ${isSelected ? 'border-blue-400' : 'border-gray-100'}`}>
+                        {fmt(row.account)}
+                      </td>
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap text-right font-mono font-bold ${isSelected ? 'border-blue-400' : 'border-gray-100 text-gray-900'}`}>
+                        {row.invoiceValue && String(row.invoiceValue).trim() !== '' ? row.invoiceValue : (row.baseCurrencyVatValue && String(row.baseCurrencyVatValue).trim() !== '' ? row.baseCurrencyVatValue : '-')}
+                      </td>
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap text-right font-mono ${isSelected ? 'border-blue-400' : 'border-gray-100'}`}>
+                        {fmt(row.invoiceNumber)}
+                      </td>
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap font-mono ${isSelected ? 'border-blue-400' : 'border-gray-100'}`}>
+                        {fmt(row.branchCode)}
+                      </td>
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap ${isSelected ? 'border-blue-400' : 'border-gray-100'}`}>
+                        {fmt(row.branchName)}
+                      </td>
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap font-mono ${isSelected ? 'border-blue-400' : 'border-gray-100'}`}>
+                        {fmt(row.miscReference)}
+                      </td>
+                      <td className={`py-1.5 px-2.5 border-r whitespace-nowrap ${isSelected ? 'border-blue-400' : 'border-gray-100'}`}>
+                        {row.owningOperator || row.operatorName ? `${row.owningOperator || ''} ${row.operatorName ? `(${row.operatorName})` : ''}`.trim() : '-'}
+                      </td>
+                      <td className="py-1.5 px-2.5 whitespace-nowrap">
+                        {row.invoiceOperator || row.invoiceOperatorName ? `${row.invoiceOperator || ''} ${row.invoiceOperatorName ? `(${row.invoiceOperatorName})` : ''}`.trim() : '-'}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 3 BOTTOM CARDS (Point of Sale Detail | Service Data | Inspection)        */}
+      {/* Only shown when service history records exist                           */}
+      {/* ========================================================================= */}
+      {historyRecords.length > 0 && selectedItem && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 text-xs">
+
+        {/* ===================================================================== */}
+        {/* CARD 1: Point of Sale Detail                                         */}
+        {/* ===================================================================== */}
+        <div className="border border-gray-300 rounded-lg overflow-hidden bg-white shadow-2xs flex flex-col">
+          <div className="bg-gradient-to-r from-blue-50/90 to-gray-50 border-b border-gray-300 px-3 py-1.5 flex items-center justify-between">
+            <span className="font-bold text-blue-950 text-xs tracking-wide">Point of Sale Detail</span>
+          </div>
+
+          <div className="p-3 flex flex-col gap-2 text-[11px] flex-1">
+            {/* Point of Sale account */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Point of Sale account:</span>
+              <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] truncate">
+                {selectedItem?.pointOfSaleAccount || selectedItem?.account || '-'}
+              </div>
             </div>
-          )}
 
-        </div>
-      )}
-
-      {/* ================================================================ */}
-      {/* GEELY SERVICE HISTORY DETAILS MODAL (/api/service/history-by-Id) */}
-      {/* ================================================================ */}
-      {selectedHistoryRecord && typeof document !== 'undefined' && createPortal(
-        <div 
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedHistoryRecord(null);
-          }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in"
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-2xl shadow-2xl border border-gray-200/90 max-w-lg w-full overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200"
-          >
-            {/* Header */}
-            <div className="bg-white border-b border-gray-100 p-4 sm:p-5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center font-bold shadow-2xs shrink-0">
-                  <FaFileInvoiceDollar className="text-base" />
+            {/* Aftersales branch */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Aftersales branch:</span>
+              <div className="flex items-center gap-1 flex-1">
+                <div className="w-16 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] truncate text-center">
+                  {selectedItem?.branchCode ? String(selectedItem.branchCode).padStart(4, '0') : '-'}
                 </div>
-                <div>
-                  <h3 className="font-bold text-gray-900 text-sm leading-tight">
-                    Service Record Details #{selectedHistoryRecord.serviceHistoryId || selectedHistoryRecord.id}
-                  </h3>
-                  <span className="text-[10px] text-gray-500 font-medium">
-                    Historical Job Card & Line Items Breakdown
-                  </span>
+                <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-medium text-gray-900 min-h-[22px] truncate">
+                  {selectedItem?.branchName || selectedItem?.aftersalesBranch || '-'}
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedHistoryRecord(null)}
-                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition-colors cursor-pointer text-xs"
-              >
-                ✕
-              </button>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-5 flex flex-col gap-4 text-xs">
-              {historyDetailLoading ? (
-                <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
-                  <FaSpinner className="animate-spin text-xl text-blue-600" />
-                  <span>Loading service history details from Keyloop DMS...</span>
+            {/* Aftersales Executive */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Aftersales Executive:</span>
+              <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-medium text-gray-900 min-h-[22px] truncate">
+                {selectedItem?.afterSalesExecutive || '-'}
+              </div>
+            </div>
+
+            {/* Contract Reference Number */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Contract Reference #:</span>
+              <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] truncate">
+                {selectedItem?.contractReferenceNumber || '-'}
+              </div>
+            </div>
+
+            {/* Job Card Archive */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Job Card Archive:</span>
+              <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] truncate">
+                {selectedItem?.jobCardArchive || '-'}
+              </div>
+            </div>
+
+            {/* Registration & Date */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Registration:</span>
+              <div className="flex items-center gap-1 flex-1">
+                <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] truncate">
+                  {selectedItem?.registrationNumber || '-'}
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <div className="grid grid-cols-2 gap-2.5 bg-gray-50 p-3 rounded-xl border border-gray-200 text-[11px]">
-                    <div>
-                      <span className="text-gray-400 text-[10px] block font-semibold uppercase">Service Date</span>
-                      <span className="font-bold text-gray-900 font-mono">
-                        {selectedHistoryRecord.serviceDate || selectedHistoryRecord.date || 'Recorded'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400 text-[10px] block font-semibold uppercase">Mileage</span>
-                      <span className="font-mono text-gray-900 font-bold">
-                        {selectedHistoryRecord.mileage ? `${Number(selectedHistoryRecord.mileage).toLocaleString()} KM` : '-'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400 text-[10px] block font-semibold uppercase">Invoice / Reference</span>
-                      <span className="font-mono text-blue-700 font-bold">
-                        #{selectedHistoryRecord.serviceHistoryId || selectedHistoryRecord.id || 'N/A'}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400 text-[10px] block font-semibold uppercase">Status</span>
-                      <span className="font-bold text-emerald-800">
-                        {selectedHistoryRecord.status || 'COMPLETED'}
-                      </span>
-                    </div>
-                    {(selectedHistoryRecord.batteryId || selectedHistoryRecord.batteryID || historyDetailData?.batteryId || historyDetailData?.batteryID) && (
-                      <div>
-                        <span className="text-gray-400 text-[10px] block font-semibold uppercase">Battery ID</span>
-                        <span className="font-mono text-blue-700 font-bold">
-                          {selectedHistoryRecord.batteryId || selectedHistoryRecord.batteryID || historyDetailData?.batteryId || historyDetailData?.batteryID}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <span className="text-gray-500 font-bold text-[11px] block mb-1">Service Operations & Labor</span>
-                    <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl text-gray-800 text-xs leading-relaxed font-medium">
-                      {historyDetailData?.operations || historyDetailData?.description || selectedHistoryRecord.operationDescription || selectedHistoryRecord.description || 'Periodic Maintenance & Safety Inspections'}
-                    </div>
-                  </div>
-
-                  {historyDetailData?.parts && (
-                    <div>
-                      <span className="text-gray-500 font-bold text-[11px] block mb-1">Parts Replaced</span>
-                      <div className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 text-[11px]">
-                        {Array.isArray(historyDetailData.parts) ? (
-                          historyDetailData.parts.map((p, pIdx) => (
-                            <div key={pIdx} className="flex justify-between py-1 border-b border-gray-100 last:border-0">
-                              <span>{p.description || p.partNumber}</span>
-                              <span className="font-mono font-bold">AED {p.price || p.amount || 0}</span>
-                            </div>
-                          ))
-                        ) : (
-                          <span>{String(historyDetailData.parts)}</span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                    <div>
-                      <span className="text-[10px] text-gray-400 uppercase font-bold block">Total Amount</span>
-                      <span className="font-mono font-bold text-gray-900 text-sm">
-                        {selectedHistoryRecord.cost ? `AED ${Number(selectedHistoryRecord.cost).toLocaleString()}` : selectedHistoryRecord.amount ? `AED ${selectedHistoryRecord.amount}` : 'AED 0.00'}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedHistoryRecord(null)}
-                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs rounded-xl cursor-pointer transition-colors shadow-2xs"
-                    >
-                      Close Details
-                    </button>
-                  </div>
+                <div className="w-24 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono text-center text-gray-900 min-h-[22px]">
+                  {fmtDate(selectedItem?.registrationDate)}
                 </div>
-              )}
+              </div>
+            </div>
+
+            {/* VIN */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">VIN:</span>
+              <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] truncate">
+                {selectedItem?.vin || '-'}
+              </div>
+            </div>
+
+            {/* Base Currency VAT Value */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Base Currency VAT:</span>
+              <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] truncate">
+                {selectedItem?.baseCurrencyVatValue || '-'}
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="flex items-start gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0 pt-0.5">Additional Info:</span>
+              <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs text-gray-900 min-h-[22px] text-[10px] break-words">
+                {selectedItem?.additionalInformation || '-'}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* ===================================================================== */}
+        {/* CARD 2: Service Data                                                 */}
+        {/* ===================================================================== */}
+        <div className="border border-gray-300 rounded-lg overflow-hidden bg-white shadow-2xs flex flex-col">
+          <div className="bg-gradient-to-r from-blue-50/90 to-gray-50 border-b border-gray-300 px-3 py-1.5 flex items-center justify-between">
+            <span className="font-bold text-blue-950 text-xs tracking-wide">Service Data</span>
+          </div>
+
+          <div className="p-3 flex flex-col gap-2 text-[11px] flex-1">
+            {/* Display odometer as */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Display odometer as:</span>
+              <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-medium text-gray-900 min-h-[22px]">
+                {displayOdometerType}
+              </div>
+            </div>
+
+            {/* Last service date */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Last service date:</span>
+              <div className="flex items-center gap-1 flex-1">
+                <div className="w-24 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] text-center">
+                  {fmtDate(selectedItem?.lastServiceDate)}
+                </div>
+                <span className="text-gray-500 text-[10px] font-bold px-0.5">@</span>
+                <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-bold text-gray-900 min-h-[22px] text-right">
+                  {selectedItem?.lastServiceOdometer && selectedItem.lastServiceOdometer !== '0' ? Number(selectedItem.lastServiceOdometer).toLocaleString() : '-'}
+                </div>
+                {odoUnit && <span className="text-blue-700 font-semibold text-[10px]">{odoUnit}</span>}
+              </div>
+            </div>
+
+            {/* Next service due */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Next service due:</span>
+              <div className="flex items-center gap-1 flex-1">
+                <div className="w-24 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] text-center">
+                  {fmtDate(selectedItem?.nextServiceDate)}
+                </div>
+                <span className="text-gray-500 text-[10px] font-bold px-0.5">@</span>
+                <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-bold text-gray-900 min-h-[22px] text-right">
+                  {selectedItem?.nextServiceOdometer && selectedItem.nextServiceOdometer !== '0' ? Number(selectedItem.nextServiceOdometer).toLocaleString() : '-'}
+                </div>
+                {odoUnit && <span className="text-blue-700 font-semibold text-[10px]">{odoUnit}</span>}
+              </div>
+            </div>
+
+            {/* Next service due (2) */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Next service due (2):</span>
+              <div className="flex items-center gap-1 flex-1">
+                <div className="w-24 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] text-center">
+                  {fmtDate(selectedItem?.nextServiceDate2)}
+                </div>
+                <span className="text-gray-500 text-[10px] font-bold px-0.5">@</span>
+                <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-bold text-gray-900 min-h-[22px] text-right">
+                  {selectedItem?.nextServiceOdometer2 && selectedItem.nextServiceOdometer2 !== '0' ? Number(selectedItem.nextServiceOdometer2).toLocaleString() : '-'}
+                </div>
+                {odoUnit && <span className="text-blue-700 font-semibold text-[10px]">{odoUnit}</span>}
+              </div>
+            </div>
+
+            {/* Date of last work */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Date of last work:</span>
+              <div className="flex items-center gap-1 flex-1">
+                <div className="w-24 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] text-center">
+                  {fmtDate(selectedItem?.dateOfLastWork)}
+                </div>
+                <span className="text-gray-500 text-[10px] font-bold px-0.5">@</span>
+                <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-bold text-gray-900 min-h-[22px] text-right">
+                  {selectedItem?.odometerAtLastWork && selectedItem.odometerAtLastWork !== '0' ? Number(selectedItem.odometerAtLastWork).toLocaleString() : '-'}
+                </div>
+                {odoUnit && <span className="text-blue-700 font-semibold text-[10px]">{odoUnit}</span>}
+              </div>
+            </div>
+
+            {/* Odometer at last work (2) */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Odometer last work (2):</span>
+              <div className="flex items-center gap-1 flex-1">
+                <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-bold text-gray-900 min-h-[22px] text-right">
+                  {selectedItem?.odometerAtLastWork2 && selectedItem.odometerAtLastWork2 !== '0' ? Number(selectedItem.odometerAtLastWork2).toLocaleString() : '-'}
+                </div>
+                {odoUnit && <span className="text-blue-700 font-semibold text-[10px]">{odoUnit}</span>}
+              </div>
+            </div>
+
+            {/* Odometer change date */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Odometer change date:</span>
+              <div className="flex items-center gap-1 flex-1">
+                <div className="w-24 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] text-center">
+                  {fmtDate(selectedItem?.odometerChangeDate || selectedItem?.documentDate)}
+                </div>
+                <span className="text-gray-500 text-[10px] font-bold px-0.5">@</span>
+                <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-bold text-gray-900 min-h-[22px] text-right">
+                  {selectedItem?.odometer && selectedItem.odometer !== '0' ? Number(selectedItem.odometer).toLocaleString() : '-'}
+                </div>
+                {odoUnit && <span className="text-blue-700 font-semibold text-[10px]">{odoUnit}</span>}
+              </div>
+            </div>
+
+            {/* Timing belt */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Timing belt:</span>
+              <div className="flex items-center gap-1 flex-1">
+                <div className="w-24 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] text-center">
+                  {selectedItem?.timingBeltMonths && selectedItem.timingBeltMonths !== '0' ? `${selectedItem.timingBeltMonths} Months` : '-'}
+                </div>
+                <span className="text-gray-500 text-[10px] font-medium px-0.5">or:</span>
+                <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] text-center">
+                  {selectedItem?.timingBeltOdometer && selectedItem.timingBeltOdometer !== '0' ? `${Number(selectedItem.timingBeltOdometer).toLocaleString()} ${odoUnit}` : '-'}
+                </div>
+              </div>
+            </div>
+
+            {/* Service interval */}
+            <div className="flex items-center gap-2">
+              <span className="w-36 text-gray-600 font-medium shrink-0">Service interval:</span>
+              <div className="flex items-center gap-1 flex-1">
+                <div className="w-24 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] text-center">
+                  {selectedItem?.serviceIntervalMonths && selectedItem.serviceIntervalMonths !== '0' ? `${selectedItem.serviceIntervalMonths} Months` : '-'}
+                </div>
+                <span className="text-gray-500 text-[10px] font-medium px-0.5">or:</span>
+                <div className="flex-1 bg-[#e4e7eb] border border-gray-400 px-2 py-0.5 rounded-xs font-mono font-medium text-gray-900 min-h-[22px] text-center">
+                  {selectedItem?.serviceIntervalOdometer && selectedItem.serviceIntervalOdometer !== '0' ? `${Number(selectedItem.serviceIntervalOdometer).toLocaleString()} ${odoUnit}` : '-'}
+                </div>
+              </div>
             </div>
           </div>
-        </div>,
-        document.body
+        </div>
+
+        {/* ===================================================================== */}
+        {/* CARD 3: Inspection                                                   */}
+        {/* ========================================================================= */}
+        <div className="border border-gray-300 rounded-lg overflow-hidden bg-white shadow-2xs flex flex-col">
+          <div className="bg-gradient-to-r from-blue-50/90 to-gray-50 border-b border-gray-300 px-3 py-1.5 flex items-center justify-between">
+            <span className="font-bold text-blue-950 text-xs tracking-wide">Inspection</span>
+          </div>
+
+          <div className="p-3 flex flex-col gap-1.5 text-[11px] flex-1">
+            
+            {/* Row 1: Last road safety test | Return parts */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium truncate pr-1">Last road safety test:</span>
+                <div className="w-20 bg-[#e4e7eb] border border-gray-400 px-1 py-0.5 rounded-xs font-mono text-center min-h-[22px]">
+                  {fmtDate(selectedItem?.lastRoadSafetyTestDate)}
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-gray-600 font-medium">Return parts:</span>
+                <div className="w-6 h-[22px] bg-[#e4e7eb] border border-gray-400 rounded-xs flex items-center justify-center font-bold">
+                  {selectedItem?.returnParts === '1' ? '✓' : ''}
+                </div>
+              </div>
+            </div>
+
+            {/* Row 2: First road safety test interval | Camchain */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium truncate pr-1">First road safety test interval:</span>
+                <div className="w-20 bg-[#e4e7eb] border border-gray-400 px-1 py-0.5 rounded-xs font-mono text-center min-h-[22px]">
+                  {selectedItem?.firstRoadSafetyTestIntervalMonths && selectedItem.firstRoadSafetyTestIntervalMonths !== '0' ? selectedItem.firstRoadSafetyTestIntervalMonths : '-'}
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-gray-600 font-medium">Camchain:</span>
+                <div className="w-6 h-[22px] bg-[#e4e7eb] border border-gray-400 rounded-xs flex items-center justify-center font-bold">
+                  {selectedItem?.camchain === '1' ? '✓' : ''}
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: Road Safety Test expiry | CO2 */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium truncate pr-1">Road Safety Test expiry:</span>
+                <div className="w-20 bg-[#e4e7eb] border border-gray-400 px-1 py-0.5 rounded-xs font-mono text-center min-h-[22px]">
+                  {fmtDate(selectedItem?.roadSafetyTestExpiryDate)}
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-gray-600 font-medium">CO2:</span>
+                <div className="w-20 bg-[#e4e7eb] border border-gray-400 px-1.5 py-0.5 rounded-xs font-mono text-right min-h-[22px]">
+                  {selectedItem?.co2Emissions && selectedItem.co2Emissions !== '0' ? selectedItem.co2Emissions : '-'}
+                </div>
+              </div>
+            </div>
+
+            {/* Row 4: Road Safety Test interval | RFL expiry */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium truncate pr-1">Road Safety Test interval:</span>
+                <div className="w-20 bg-[#e4e7eb] border border-gray-400 px-1 py-0.5 rounded-xs font-mono text-center min-h-[22px]">
+                  {selectedItem?.roadSafetyTestIntervalMonths && selectedItem.roadSafetyTestIntervalMonths !== '0' ? selectedItem.roadSafetyTestIntervalMonths : '-'}
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-gray-600 font-medium">RFL expiry:</span>
+                <div className="w-20 bg-[#e4e7eb] border border-gray-400 px-1 py-0.5 rounded-xs font-mono text-center min-h-[22px]">
+                  {fmtDate(selectedItem?.rflExpiryDate)}
+                </div>
+              </div>
+            </div>
+
+            {/* Row 5: Next emission | PDI completed */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600 font-medium truncate pr-1">Next emission:</span>
+                <div className="w-20 bg-[#e4e7eb] border border-gray-400 px-1 py-0.5 rounded-xs font-mono text-center min-h-[22px]">
+                  {fmtDate(selectedItem?.nextEmissionCheckDate)}
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-1.5">
+                <span className="text-gray-600 font-medium">PDI completed:</span>
+                <div className="w-20 bg-[#e4e7eb] border border-gray-400 px-1 py-0.5 rounded-xs font-mono text-center min-h-[22px]">
+                  {fmtDate(selectedItem?.pdiCompleted)}
+                </div>
+              </div>
+            </div>
+
+            {/* Row 6: Brake fluid */}
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600 font-medium">Brake fluid:</span>
+              <div className="w-20 bg-[#e4e7eb] border border-gray-400 px-1 py-0.5 rounded-xs font-mono text-center min-h-[22px]">
+                {fmtDate(selectedItem?.brakeFluidChange)}
+              </div>
+            </div>
+
+            {/* Row 7: Air con inspection */}
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600 font-medium">Air con inspection:</span>
+              <div className="w-20 bg-[#e4e7eb] border border-gray-400 px-1 py-0.5 rounded-xs font-mono text-center min-h-[22px]">
+                {fmtDate(selectedItem?.airConInspection)}
+              </div>
+            </div>
+
+            {/* Row 8: Cambelt inspection */}
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600 font-medium">Cambelt inspection:</span>
+              <div className="w-20 bg-[#e4e7eb] border border-gray-400 px-1 py-0.5 rounded-xs font-mono text-center min-h-[22px]">
+                {fmtDate(selectedItem?.cambeltInspection)}
+              </div>
+            </div>
+
+            {/* Row 9: Transm. oil change */}
+            <div className="flex items-center justify-between">
+              <span className="text-gray-600 font-medium">Transm. oil change:</span>
+              <div className="w-20 bg-[#e4e7eb] border border-gray-400 px-1 py-0.5 rounded-xs font-mono text-center min-h-[22px]">
+                {fmtDate(selectedItem?.transmissionOilChange)}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
       )}
 
     </div>
