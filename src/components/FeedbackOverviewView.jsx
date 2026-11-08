@@ -13,11 +13,64 @@ import {
   FaComments,
   FaEye,
   FaTimes,
-  FaInfoCircle
+  FaInfoCircle,
+  FaWrench,
+  FaCar,
+  FaChartPie,
+  FaClipboardList,
+  FaFilter,
+  FaUser,
+  FaPhoneAlt,
+  FaEnvelope,
+  FaMapMarkerAlt,
+  FaIdCard,
+  FaBuilding,
+  FaCalendarAlt,
+  FaTools
 } from 'react-icons/fa';
 
+// Standard Automotive Customer Survey Categories and Subcategories
+export const SURVEY_STRUCTURE = {
+  'Aftersales Survey': {
+    label: 'Aftersales Survey',
+    icon: FaWrench,
+    subcategories: [
+      { id: 'all', label: 'All Aftersales Surveys' },
+      { id: 'workshop_quality', label: 'Workshop & Repair Quality', typeMatch: ['SERVICE', 'WORKSHOP', 'REPAIR'] },
+      { id: 'service_advisor', label: 'Service Advisor Experience', typeMatch: ['ADVISOR', 'STAFF'] },
+      { id: 'parts_availability', label: 'Parts & Accessories', typeMatch: ['PARTS'] },
+      { id: 'timeliness_delivery', label: 'Timeliness & Vehicle Handover', typeMatch: ['DELIVERY', 'TIME'] },
+      { id: 'service_csi', label: 'Service CSI', typeMatch: ['CSI', 'SERVICE_CSI'] },
+    ]
+  },
+  'Sales Survey': {
+    label: 'Sales Survey',
+    icon: FaCar,
+    subcategories: [
+      { id: 'all', label: 'All Sales Surveys' },
+      { id: 'showroom_experience', label: 'Showroom & Reception', typeMatch: ['SHOWROOM', 'SALES'] },
+      { id: 'sales_executive', label: 'Sales Consultant Consultation', typeMatch: ['EXECUTIVE', 'CONSULTANT'] },
+      { id: 'test_drive_feedback', label: 'Test Drive Feedback', typeMatch: ['TEST_DRIVE'] },
+      { id: 'vehicle_delivery', label: 'New Vehicle Delivery (CSI)', typeMatch: ['DELIVERY', 'SALES_CSI'] },
+      { id: 'lost_sales_survey', label: 'Lost Sales & Cancellation', typeMatch: ['LOST_SALE', 'CANCELLATION'] },
+    ]
+  },
+  'Marketing Research': {
+    label: 'Marketing Research',
+    icon: FaChartPie,
+    subcategories: [
+      { id: 'all', label: 'All Marketing Research' },
+      { id: 'brand_perception', label: 'Brand Perception & Loyalty', typeMatch: ['BRAND', 'LOYALTY'] },
+      { id: 'nps_study', label: 'Net Promoter Score (NPS) Study', typeMatch: ['NPS'] },
+      { id: 'campaign_awareness', label: 'Campaign & Media Awareness', typeMatch: ['CAMPAIGN', 'MEDIA'] },
+      { id: 'competitor_benchmark', label: 'Competitive Benchmarking', typeMatch: ['COMPETITOR', 'BENCHMARK'] },
+      { id: 'product_interest', label: 'Product Interest & EV Transition', typeMatch: ['PRODUCT', 'EV'] },
+    ]
+  }
+};
+
 export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
-  const { customer, getFormattedName, group: contextGroup } = useCustomer();
+  const { customer, vehicles, getFormattedName, group: contextGroup } = useCustomer();
   const customerName = getFormattedName();
   const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
   const customerNumber = customer?.customerNumber || customer?.id || "";
@@ -30,6 +83,16 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
   const [lostSalesDetails, setLostSalesDetails] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Selected Subcategory State (per main tab)
+  const [selectedSubcategories, setSelectedSubcategories] = useState({
+    'Aftersales Survey': 'all',
+    'Sales Survey': 'all',
+    'Marketing Research': 'all',
+  });
+
+  const currentCategoryDef = SURVEY_STRUCTURE[activeSubTab] || null;
+  const currentSubcatId = currentCategoryDef ? (selectedSubcategories[activeSubTab] || 'all') : 'all';
 
   // Feedback Details Modal State (Postman API 4)
   const [selectedFeedbackDetails, setSelectedFeedbackDetails] = useState(null);
@@ -249,8 +312,52 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
   ];
 
   const displayedFeedback = allFeedback.filter(f => {
-    if (activeSubTab === 'CSI') return (f.type || '').toUpperCase() === 'CSI';
-    if (activeSubTab === 'NPS') return (f.type || '').toUpperCase() === 'NPS' || f.npsScore !== undefined;
+    const fType = String(f.type || '').toUpperCase();
+    const commentsUpper = String(f.comments || '').toUpperCase();
+    const surveyIdUpper = String(f.surveyId || '').toUpperCase();
+
+    if (activeSubTab === 'Aftersales Survey') {
+      const isAftersales = fType === 'SERVICE' || fType === 'CSI' || f.origin === 'KEYLOOP' || commentsUpper.includes('SERVICE') || commentsUpper.includes('WORKSHOP') || commentsUpper.includes('REPAIR');
+      if (!isAftersales && fType !== 'GENERAL') return false;
+
+      if (currentSubcatId && currentSubcatId !== 'all') {
+        const sub = currentCategoryDef?.subcategories.find(s => s.id === currentSubcatId);
+        if (sub?.typeMatch) {
+          const match = sub.typeMatch.some(m => fType.includes(m) || commentsUpper.includes(m) || surveyIdUpper.includes(m));
+          return match;
+        }
+      }
+      return true;
+    }
+
+    if (activeSubTab === 'Sales Survey') {
+      const isSales = fType === 'SALES' || commentsUpper.includes('SALES') || commentsUpper.includes('SHOWROOM') || commentsUpper.includes('TEST DRIVE') || commentsUpper.includes('DELIVERY') || fType === 'GENERAL';
+      if (!isSales) return false;
+
+      if (currentSubcatId && currentSubcatId !== 'all') {
+        const sub = currentCategoryDef?.subcategories.find(s => s.id === currentSubcatId);
+        if (sub?.typeMatch) {
+          const match = sub.typeMatch.some(m => fType.includes(m) || commentsUpper.includes(m) || surveyIdUpper.includes(m));
+          return match;
+        }
+      }
+      return true;
+    }
+
+    if (activeSubTab === 'Marketing Research') {
+      const isMktg = fType === 'NPS' || f.npsScore !== undefined || commentsUpper.includes('BRAND') || commentsUpper.includes('CAMPAIGN') || commentsUpper.includes('MARKETING') || fType === 'GENERAL';
+      if (!isMktg) return false;
+
+      if (currentSubcatId && currentSubcatId !== 'all') {
+        const sub = currentCategoryDef?.subcategories.find(s => s.id === currentSubcatId);
+        if (sub?.typeMatch) {
+          const match = sub.typeMatch.some(m => fType.includes(m) || commentsUpper.includes(m) || surveyIdUpper.includes(m));
+          return match;
+        }
+      }
+      return true;
+    }
+
     return true;
   });
 
@@ -258,10 +365,9 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
 
   const getSubTabHeading = () => {
     switch (activeSubTab) {
-      case 'CSI': return 'CSI Survey Responses';
-      case 'NPS': return 'Net Promoter Score (NPS) Responses';
-      case 'Lost Sales Analysis': return 'Lost Sales Analysis & Reasons';
-      case 'Open Bookings': return 'Open Workshop Bookings';
+      case 'Aftersales Survey': return 'Aftersales Survey & Service Feedback';
+      case 'Sales Survey': return 'Sales Experience & Delivery Survey';
+      case 'Marketing Research': return 'Marketing Research & Brand Perception';
       default: return 'Customer Survey';
     }
   };
@@ -276,7 +382,7 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
             {getSubTabHeading()}
           </h2>
           <p className="text-[11px] text-gray-500">
-            Customer experience metrics for <span className="font-semibold text-gray-800">{customerName || 'Customer'}</span> (Cust #{customerNumber || 'N/A'})
+            Customer experience metrics for <span className="font-semibold text-gray-800">{customerName || '-'}</span> (Cust #{customerNumber || '-'})
           </p>
         </div>
 
@@ -315,9 +421,12 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
                 onChange={(e) => setType(e.target.value)}
                 className="w-full p-2 bg-white border border-gray-300 rounded-lg font-semibold"
               >
+                <option value="AFTERSALES">Aftersales Survey</option>
+                <option value="SALES">Sales Survey</option>
+                <option value="MARKETING">Marketing Research</option>
                 <option value="CSI">CSI</option>
                 <option value="NPS">NPS</option>
-                <option value="GENERAL">GENERAL</option>
+                <option value="GENERAL">General</option>
               </select>
             </div>
 
@@ -364,336 +473,384 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
         </div>
       )}
 
-      {/* Top Metric Cards - Shown ONLY on Overview Tab */}
+      {/* Top Metric Cards removed per user request */}
+
+      {/* OVERVIEW TAB: Split Section - Left Customer Details & Right Vehicle Details */}
       {activeSubTab === 'Overview' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* CSI Score Card */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500 font-bold text-[11px] uppercase tracking-wider block">CSI Score</span>
-                <div className="w-8 h-8 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-500 shadow-2xs">
-                  <FaStar className="text-xs" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          
+          {/* LEFT SECTION: Full Customer Details from API */}
+          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-xs border border-gray-200 flex flex-col gap-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold text-xs">
+                  {customer?.initials || <FaUser />}
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-gray-900 text-xs sm:text-sm">Customer Profile Details</h3>
+                  <p className="text-[10px] text-gray-400 font-medium">Complete record retrieved from customer profile API</p>
                 </div>
               </div>
-
-              <div className="mt-2.5 flex items-baseline gap-2">
-                {hasCsiScore ? (
-                  <>
-                    <span className="text-2xl sm:text-3xl font-black text-gray-900">{numericCsiScore.toFixed(1)}</span>
-                    <span className="text-gray-400 font-bold text-xs">/ 5</span>
-                  </>
-                ) : (
-                  <span className="text-2xl sm:text-3xl font-black text-gray-400">-</span>
-                )}
-                {csiScore?.trend && (
-                  <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 ml-auto">
-                    {csiScore.trend}
-                  </span>
-                )}
-              </div>
-
-              {hasCsiScore && (
-                <div className="flex text-amber-400 text-xs my-1">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <FaStar
-                      key={star}
-                      className={star <= Math.round(numericCsiScore) ? 'text-amber-400' : 'text-gray-200'}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-              <span className="font-medium">
-                {responseCount > 0 ? `Based on ${responseCount} response${responseCount === 1 ? '' : 's'}` : '0 responses recorded'}
+              <span className="font-mono text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                Cust #{customerNumber || '-'}
               </span>
             </div>
-          </div>
 
-          {/* NPS Score Card */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500 font-bold text-[11px] uppercase tracking-wider block">NPS Score</span>
-                <div className="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-2xs">
-                  <FaChartLine className="text-xs" />
-                </div>
-              </div>
-
-              <div className="mt-2.5 flex items-baseline gap-2">
-                {hasNps ? (
-                  <span className="text-2xl sm:text-3xl font-black text-emerald-600">{npsScoreDisplay}</span>
-                ) : (
-                  <span className="text-2xl sm:text-3xl font-black text-gray-400">-</span>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-3 pt-2.5 border-t border-gray-100 text-[11px] text-gray-500">
-              {hasNps ? (
-                <div className="space-y-0.5 font-semibold text-gray-600">
-                  <div className="flex justify-between"><span>Promoters</span><span className="text-emerald-600">{promotersPct}%</span></div>
-                  <div className="flex justify-between"><span>Detractors</span><span className="text-rose-600">{detractorsPct}%</span></div>
-                </div>
-              ) : (
-                <span className="font-medium">0 responses recorded</span>
-              )}
-            </div>
-          </div>
-
-          {/* Lost Sales Card */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500 font-bold text-[11px] uppercase tracking-wider block">Lost Sales</span>
-                <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-500 shadow-2xs">
-                  <FaTag className="text-xs" />
-                </div>
-              </div>
-
-              <div className="mt-2.5 flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-gray-900">{lostSalesDetails.length}</span>
-              </div>
-            </div>
-
-            <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-              <span className="font-medium text-gray-600">Tracked Records</span>
-              {lostSalesDetails.length > 0 && (
-                <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
-                  Keyloop
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Full Name</span>
+                <span className="font-extrabold text-gray-800 text-xs block truncate" title={customerName || customer?.fullName || '-'}>
+                  {customerName || customer?.fullName || [customer?.firstName, customer?.middleName, customer?.surname].filter(Boolean).join(" ") || '-'}
                 </span>
-              )}
-            </div>
-          </div>
+              </div>
 
-          {/* Total Feedbacks Card */}
-          <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 hover:shadow-md hover:border-gray-300 transition-all duration-200 flex flex-col justify-between">
-            <div>
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500 font-bold text-[11px] uppercase tracking-wider block">Total Surveys</span>
-                <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs">
-                  <FaComments className="text-xs" />
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Initials</span>
+                <span className="font-mono font-bold text-gray-800 text-xs block">
+                  {customer?.initials || '-'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Customer / Prospect ID</span>
+                <span className="font-mono font-bold text-gray-800 text-xs block">
+                  {customerNumber || customer?.prospectNumber || customer?.id || '-'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Personal ID</span>
+                <span className="font-mono font-bold text-gray-800 text-xs block">
+                  {customer?.personalId || customer?.idCardNumber || '-'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Salutation / Type</span>
+                <span className="font-bold text-gray-800 text-xs block">
+                  {[customer?.salutation, customer?.customerType || (customer?.isProspect ? 'Prospect' : null)].filter(Boolean).join(' • ') || '-'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Mobile Number</span>
+                <span className="font-mono font-bold text-gray-800 text-xs flex items-center gap-1.5">
+                  <FaPhoneAlt className="text-gray-400 text-[10px]" />
+                  <span>{customer?.mobile || customer?.mobileRaw || '-'}</span>
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Primary Email</span>
+                <span className="font-bold text-gray-800 text-xs flex items-center gap-1.5 truncate">
+                  <FaEnvelope className="text-gray-400 text-[10px]" />
+                  <span className="truncate">{customer?.email || '-'}</span>
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Home & Work Email</span>
+                <span className="font-semibold text-gray-800 text-xs block truncate" title={`Home: ${customer?.homeEmail || '-'} | Work: ${customer?.workEmail || '-'}`}>
+                  {customer?.homeEmail || customer?.workEmail 
+                    ? [customer?.homeEmail ? `Home: ${customer.homeEmail}` : null, customer?.workEmail ? `Work: ${customer.workEmail}` : null].filter(Boolean).join(' | ')
+                    : '-'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Keyloop Group</span>
+                <span className="font-bold text-blue-700 text-xs flex items-center gap-1.5">
+                  <FaBuilding className="text-blue-500 text-[10px]" />
+                  <span>{group || customer?.keyloopGroup || '-'}</span>
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Branch Code</span>
+                <span className="font-mono font-bold text-gray-800 text-xs block">
+                  {customer?.branchCode || customer?.branch || '-'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Address ID</span>
+                <span className="font-mono font-bold text-gray-800 text-xs block">
+                  {customer?.addressId || '-'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">City, Area & Address</span>
+                <span className="font-bold text-gray-800 text-xs flex items-center gap-1.5 truncate">
+                  <FaMapMarkerAlt className="text-gray-400 text-[10px] shrink-0" />
+                  <span className="truncate">
+                    {[
+                      customer?.address2 && customer?.address2 !== 'N/A' ? customer?.address2 : null,
+                      customer?.location?.flatBuilding && customer?.location?.flatBuilding !== 'N/A' ? customer?.location?.flatBuilding : null,
+                      customer?.address4 || customer?.location?.area || customer?.area,
+                      customer?.address5 || customer?.location?.city || customer?.city
+                    ].filter(Boolean).join(', ') || '-'}
+                  </span>
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Date of Birth</span>
+                <span className="font-bold text-gray-800 text-xs block">
+                  {customer?.dateOfBirth ? String(customer.dateOfBirth).split('T')[0] : '-'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Nationality</span>
+                <span className="font-bold text-gray-800 text-xs block">
+                  {customer?.nationality || '-'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Customer Since</span>
+                <span className="font-mono font-bold text-gray-800 text-xs block">
+                  {customer?.customerSince ? String(customer.customerSince).split('T')[0] : '-'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Last Profile Update</span>
+                <span className="font-mono font-bold text-gray-800 text-xs block">
+                  {customer?.lastUpdated ? String(customer.lastUpdated).split('T')[0] : '-'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">VIP & Do Not Contact</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${customer?.vip ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-600'}`}>
+                    {customer?.vip ? 'VIP Member' : 'Standard'}
+                  </span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${customer?.doNotContact ? 'bg-rose-100 text-rose-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                    {customer?.doNotContact ? 'Do Not Contact' : 'Contactable'}
+                  </span>
                 </div>
               </div>
 
-              <div className="mt-2.5 flex items-baseline gap-2">
-                <span className="text-2xl sm:text-3xl font-black text-blue-600">{allFeedback.length}</span>
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Data Verification</span>
+                <span className="font-semibold text-gray-800 text-xs block">
+                  {customer?.dataVerified || '-'}
+                </span>
+              </div>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80 sm:col-span-2">
+                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Contact Consents</span>
+                <div className="flex flex-wrap gap-1.5 mt-0.5">
+                  {customer?.consents ? (
+                    Object.entries(customer.consents).map(([k, v]) => (
+                      <span key={k} className={`text-[9px] font-extrabold px-2 py-0.5 rounded uppercase ${v ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-600'}`}>
+                        {k}: {v ? 'YES' : 'NO'}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-gray-500 font-medium">-</span>
+                  )}
+                </div>
               </div>
             </div>
+          </div>
 
-            <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
-              <span className="flex items-center gap-1.5 text-gray-600 font-medium">
-                <FaCheckCircle className="text-[10px] text-emerald-600" /> Synced from Keyloop
+          {/* RIGHT SECTION: Full Vehicle Details from API */}
+          <div className="bg-white rounded-xl p-4 sm:p-5 shadow-xs border border-gray-200 flex flex-col gap-3">
+            <div className="flex items-center justify-between pb-2.5 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center font-bold text-xs">
+                  <FaCar />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-gray-900 text-xs sm:text-sm">Registered Vehicle Details</h3>
+                  <p className="text-[10px] text-gray-400 font-medium">Complete vehicle specification and workshop data</p>
+                </div>
+              </div>
+              <span className="font-mono text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                {(vehicles && vehicles.length) || 0} Registered
               </span>
             </div>
+
+            {vehicles && vehicles.length > 0 ? (
+              <div className="flex flex-col gap-3 max-h-[560px] overflow-y-auto pr-1">
+                {vehicles.map((v, vIdx) => {
+                  const plate = v.registrationNumber || v.plateNumber || v.licensePlate || '-';
+                  const model = v.description || v.model || v.vehicleModel || `${v.brand || ''} Vehicle`.trim() || '-';
+                  const vin = v.vin || v.chassisNumber || '-';
+                  const year = v.modelYear || v.year || '-';
+                  const extColor = v.colourDescription || v.colour || v.color || v.exteriorColor || '-';
+                  const intColor = v.trimDescription || v.interiorColor || v.upholstery || '-';
+                  const rawMileage = v.mileageKm !== undefined && v.mileageKm !== null ? v.mileageKm : (v.lastOdometer || v.odometerReading?.value || v.mileage || v.lastOdometerReading?.value);
+                  const mileage = rawMileage !== undefined && rawMileage !== null && rawMileage !== '' ? rawMileage : '-';
+                  const mileageUnit = v.odometerType === 'K' ? 'KM' : (v.odometerReading?.unit || v.mileageUnit || 'KM');
+                  const engineNo = v.engineNumber || '-';
+                  const engineCap = v.engineCapacity ? `${v.engineCapacity} cc` : '-';
+                  const rawTrans = v.transmission || v.genericTransmissionCode || v.transmissionType || '';
+                  const transmission = rawTrans === 'A' ? 'Automatic' : (rawTrans === 'M' ? 'Manual' : (rawTrans || '-'));
+                  const fuel = v.fuelType || (v.fuelTypeCode === 'U' ? 'Unleaded' : '-');
+                  const bodyType = [v.bodyStyle, v.variantClass].filter(Boolean).join(' • ') || '-';
+                  const doorsSteering = `${v.numberOfDoors ? `${v.numberOfDoors} Doors` : '-'} • ${v.driverSide === 'L' ? 'LHD' : (v.driverSide || '-')}`;
+                  const regDate = v.registrationDate || v.deliveryDate || v.firstRegistrationDate || '-';
+                  const nextService = v.nextServiceDate 
+                    ? `${String(v.nextServiceDate).split('T')[0]}${v.nextServiceOdometerKm || v.nextServiceOdometer ? ` (${Number(v.nextServiceOdometerKm || v.nextServiceOdometer).toLocaleString()} KM)` : ''}`
+                    : '-';
+                  const lastWorkDate = v.dateOfLastWork ? String(v.dateOfLastWork).split('T')[0] : '-';
+                  const pdiDate = v.pdiCompleted ? String(v.pdiCompleted).split('T')[0] : '-';
+                  const rtaExpiry = v.roadSafetyTestExpiryDate ? String(v.roadSafetyTestExpiryDate).split('T')[0] : '-';
+                  const dmsVehNo = v.vehicleNumber ? `#${v.vehicleNumber}` : '-';
+                  const dmsLoc = v.locationDescription || v.locationCode || '-';
+                  const stockProg = v.progressName || v.stockProgress || '-';
+                  const enqNum = v.purchaseEnquiryNumber ? `#${v.purchaseEnquiryNumber}` : '-';
+
+                  return (
+                    <div key={v.id || vin || vIdx} className="bg-slate-50 p-3.5 rounded-xl border border-slate-200/90 space-y-2.5 shadow-2xs">
+                      {/* Vehicle Header */}
+                      <div className="flex items-center justify-between pb-1.5 border-b border-slate-200/70">
+                        <div className="flex items-center gap-2 font-extrabold text-gray-900 text-xs sm:text-sm">
+                          <div className="w-6 h-6 rounded bg-blue-100 text-blue-700 flex items-center justify-center text-xs">
+                            <FaCar />
+                          </div>
+                          <span>{model}</span>
+                        </div>
+                        <span className="font-mono text-[11px] font-extrabold text-slate-800 bg-white px-2.5 py-0.5 rounded-md border border-slate-300 shadow-2xs">
+                          {plate}
+                        </span>
+                      </div>
+
+                      {/* Simple Uniform Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">VIN / Chassis</span>
+                          <span className="font-mono font-bold text-blue-700 block truncate" title={vin}>{vin}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Model Year</span>
+                          <span className="font-bold text-gray-800 block">{year}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Current Mileage</span>
+                          <span className="font-mono font-bold text-emerald-700 block">{mileage !== '-' ? `${mileage} ${mileageUnit}` : '-'}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Exterior Color</span>
+                          <span className="font-bold text-gray-800 block truncate" title={extColor}>{extColor}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70 sm:col-span-2">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Interior Trim</span>
+                          <span className="font-bold text-gray-800 block truncate" title={intColor}>{intColor}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Engine Number</span>
+                          <span className="font-mono font-bold text-gray-800 block truncate" title={engineNo}>{engineNo}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Engine Capacity</span>
+                          <span className="font-bold text-gray-800 block">{engineCap}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Transmission & Fuel</span>
+                          <span className="font-bold text-gray-800 block truncate">{transmission} • {fuel}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Body / Class</span>
+                          <span className="font-bold text-gray-800 block">{bodyType}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Doors & Steering</span>
+                          <span className="font-bold text-gray-800 block">{doorsSteering}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Registration Date</span>
+                          <span className="font-mono font-bold text-gray-800 block">{regDate !== '-' ? String(regDate).split('T')[0] : '-'}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Next Service Due</span>
+                          <span className="font-bold text-blue-800 block truncate">{nextService}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Last Workshop Work</span>
+                          <span className="font-bold text-gray-800 block">{lastWorkDate}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">PDI Completed</span>
+                          <span className="font-bold text-gray-800 block">{pdiDate}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Road Safety Expiry</span>
+                          <span className="font-bold text-gray-800 block">{rtaExpiry}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">DMS Vehicle #</span>
+                          <span className="font-mono font-bold text-gray-800 block">{dmsVehNo}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Stock Progress</span>
+                          <span className="font-bold text-gray-800 block truncate">{stockProg}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Location</span>
+                          <span className="font-bold text-gray-800 block truncate">{dmsLoc}</span>
+                        </div>
+
+                        <div className="bg-white p-2 rounded-lg border border-slate-200/70">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase block">Linked Enquiry</span>
+                          <span className="font-mono font-bold text-indigo-700 block">{enqNum}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ): (
+              <div className="py-16 flex flex-col items-center justify-center bg-slate-50/60 rounded-xl border border-dashed border-slate-200 text-gray-400 gap-1.5">
+                <FaCar className="text-2xl text-gray-300" />
+                <span className="text-xs font-semibold text-gray-600">No vehicles recorded for this customer</span>
+                <span className="text-[10px] text-gray-400">Vehicles linked to this profile in Keyloop will appear here</span>
+              </div>
+            )}
           </div>
+
         </div>
       )}
 
-      {/* Main Content Area based on activeSubTab */}
-      {activeSubTab === 'Lost Sales Analysis' ? (
-        /* View: Lost Sales Analysis */
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-200 space-y-4 text-xs">
-          <div className="flex items-center justify-between pb-2 border-b border-gray-100">
-            <h3 className="font-bold text-gray-900 text-sm">Lost Sales Analysis & Reasons</h3>
-            <span className="text-xs text-gray-500 font-semibold">{lostSalesDetails.length} Records</span>
+      {/* SURVEY TYPES: Aftersales Survey, Sales Survey, Marketing Research -> UNDER DEVELOPMENT */}
+      {activeSubTab !== 'Overview' && (
+        <div className="bg-white rounded-xl p-8 sm:p-12 shadow-xs border border-gray-200 flex flex-col items-center justify-center text-center gap-3">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-2xl shadow-xs">
+            <FaTools />
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Reasons List */}
-            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
-              <span className="font-bold text-gray-900 block text-xs mb-1">Lost Sales Reasons</span>
-              {lostSalesReasons.length === 0 ? (
-                <div className="py-6 text-center text-gray-400 italic text-xs">No lost sales reasons found for branch</div>
-              ) : (
-                <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
-                  {lostSalesReasons.map((r, idx) => {
-                    const code = Array.isArray(r.reasonCodes) ? r.reasonCodes.join(', ') : (r.code || '');
-                    return (
-                      <div key={idx} className="flex justify-between items-center bg-white p-2 rounded border border-gray-200 text-xs">
-                        <div className="flex items-center gap-2">
-                          {code && <span className="font-mono font-bold text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded text-[10px]">{code}</span>}
-                          <span className="text-gray-800 font-medium">{r.reason || r.description}</span>
-                        </div>
-                        {r.percentage ? <span className="font-bold text-gray-900 text-xs">{r.percentage}</span> : null}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Customer Lost Sales Opportunities */}
-            <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
-              <span className="font-bold text-gray-900 block text-xs mb-1">Customer Lost Opportunities</span>
-              {lostSalesDetails.length === 0 ? (
-                <div className="py-6 text-center text-gray-400 italic text-xs">No lost sales records for this customer</div>
-              ) : (
-                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
-                  {lostSalesDetails.map((det, idx) => (
-                    <div key={idx} className="bg-white p-2.5 rounded border border-gray-200 text-xs space-y-1.5 shadow-2xs">
-                      <div className="flex justify-between items-center font-bold">
-                        <span className="text-blue-600 font-mono text-[11px]">Lead #{det.leadId || det.enquiryNumber || 'N/A'}</span>
-                        <span className="bg-rose-100 text-rose-700 text-[10px] px-1.5 py-0.2 rounded font-bold">LOST</span>
-                      </div>
-                      <div className="text-gray-900 font-bold">{det.model || 'N/A'}</div>
-                      <div className="text-gray-600 text-[11px]">
-                        <span className="text-gray-400">Reason: </span>
-                        <span className="font-medium">{det.reason || 'N/A'}</span>
-                        {det.reasonCode && <span className="ml-1 text-[10px] font-mono text-gray-500 font-bold">({det.reasonCode})</span>}
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-gray-400 border-t border-gray-100 pt-1">
-                        <span>Date: <span className="font-mono text-gray-600">{det.date || 'N/A'}</span></span>
-                        <span>Branch: <span className="text-gray-600">{det.branch || 'N/A'}</span></span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="space-y-1">
+            <h3 className="font-extrabold text-gray-900 text-sm sm:text-base">
+              {activeSubTab}
+            </h3>
+            <span className="inline-block bg-amber-100 text-amber-900 font-extrabold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">
+              Under Development
+            </span>
           </div>
-        </div>
-      ) : activeSubTab === 'Open Bookings' ? (
-        /* View: Service Bookings from /service-bookings */
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-200 flex flex-col justify-between text-xs">
-          <div>
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-3">
-              <h3 className="font-bold text-gray-900 text-sm">{getSubTabHeading()}</h3>
-              <span className="text-xs text-gray-400 font-semibold">{displayedBookings.length} Records</span>
-            </div>
-
-            {loading ? (
-              <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
-                <FaSpinner className="animate-spin text-xl text-blue-600" />
-                <span className="text-xs font-medium">Loading bookings...</span>
-              </div>
-            ) : displayedBookings.length === 0 ? (
-              <div className="py-10 text-center text-gray-400 bg-gray-50/70 rounded-xl border border-dashed border-gray-300 font-medium">
-                No {activeSubTab.toLowerCase()} found for this customer.
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[9px] border-b border-gray-100">
-                    <tr>
-                      <th className="py-2.5 px-2">WIP / Booking #</th>
-                      <th className="py-2.5 px-2">Date</th>
-                      <th className="py-2.5 px-2">Vehicle / VIN</th>
-                      <th className="py-2.5 px-2">Service Advisor</th>
-                      <th className="py-2.5 px-2">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
-                    {displayedBookings.map((b, i) => (
-                      <tr key={i} className="hover:bg-gray-50">
-                        <td className="py-2.5 px-2 font-mono font-bold text-blue-600">{b.wipNumber || b.bookingId || b.id || '—'}</td>
-                        <td className="py-2.5 px-2 font-mono text-gray-500">{b.date || b.bookingDate || '—'}</td>
-                        <td className="py-2.5 px-2 font-semibold text-gray-900">{b.vehicle || b.vin || '—'}</td>
-                        <td className="py-2.5 px-2 text-gray-600">{b.advisor || b.serviceAdvisor || '—'}</td>
-                        <td className="py-2.5 px-2">
-                          <span className={`font-bold text-[10px] px-1.5 py-0.2 rounded uppercase ${
-                            (b.status || '').toLowerCase().includes('cancel') 
-                              ? 'bg-rose-100 text-rose-700' 
-                              : 'bg-emerald-100 text-emerald-700'
-                          }`}>
-                            {b.status || 'ACTIVE'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* View: Default / CSI / NPS Feedback Table */
-        <div className="bg-white rounded-xl p-4 sm:p-5 shadow-sm border border-gray-200 flex flex-col justify-between text-xs">
-          <div>
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-3">
-              <h3 className="font-bold text-gray-900 text-sm">{getSubTabHeading()}</h3>
-              <span className="text-xs text-gray-400 font-semibold">{displayedFeedback.length} Records</span>
-            </div>
-
-            {loading ? (
-              <div className="py-8 flex flex-col items-center justify-center text-gray-400 gap-2">
-                <FaSpinner className="animate-spin text-xl text-blue-600" />
-                <span className="text-xs font-medium">Loading feedback details...</span>
-              </div>
-            ) : displayedFeedback.length === 0 ? (
-              <div className="py-10 text-center text-gray-400 bg-gray-50/70 rounded-xl border border-dashed border-gray-300 font-medium">
-                No survey records found for filter: {activeSubTab}
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-gray-50 text-gray-400 font-bold uppercase text-[9px] border-b border-gray-100">
-                    <tr>
-                      <th className="py-2.5 px-2">Type</th>
-                      <th className="py-2.5 px-2">Reference / Survey ID</th>
-                      <th className="py-2.5 px-2">Score</th>
-                      <th className="py-2.5 px-2">Survey / Comments</th>
-                      <th className="py-2.5 px-2">Date</th>
-                      <th className="py-2.5 px-2">Channel</th>
-                      <th className="py-2.5 px-2">Status</th>
-                      <th className="py-2.5 px-2 text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
-                    {displayedFeedback.map((f, i) => (
-                      <tr key={i} className="hover:bg-gray-50 transition-colors">
-                        <td className="py-2.5 px-2">
-                          <span className={`font-bold px-1.5 py-0.2 rounded text-[10px] ${
-                            (f.type || '').toUpperCase() === 'CSI' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
-                          }`}>
-                            {f.type || 'SURVEY'}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-2 font-mono font-bold text-gray-800">
-                          {f.surveyId || f.ref || f.feedbackId || f.responseId || '—'}
-                        </td>
-                        <td className="py-2.5 px-2 font-black">
-                          {f.score ? (
-                            <span className={Number(f.score) >= 3 ? 'text-emerald-600' : 'text-rose-500'}>
-                              {f.score} / 5
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 font-normal">-</span>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-2 text-gray-600 max-w-[250px] truncate" title={f.comments || f.comment || ''}>
-                          {f.comments || f.comment || '—'}
-                        </td>
-                        <td className="py-2.5 px-2 text-gray-400 text-[10px] font-mono">
-                          {f.submittedDate || f.date || '—'}
-                        </td>
-                        <td className="py-2.5 px-2 text-gray-500">
-                          {f.channel || '—'}
-                        </td>
-                        <td className="py-2.5 px-2">
-                          <span className="bg-emerald-100 text-emerald-700 font-bold text-[10px] px-1.5 py-0.2 rounded uppercase">
-                            {f.status || 'RECORDED'}
-                          </span>
-                        </td>
-                        <td className="py-2.5 px-2 text-right">
-                          <button
-                            onClick={() => handleOpenFeedbackDetails(f)}
-                            className="text-blue-600 hover:text-blue-800 font-bold inline-flex items-center gap-1 cursor-pointer hover:underline text-[11px]"
-                            title="View Survey Record"
-                          >
-                            <FaEye className="text-[10px]" /> View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          <p className="text-xs text-gray-500 max-w-md leading-relaxed">
+            The <strong className="text-gray-700">{activeSubTab}</strong> workflow and its subcategories are currently under development. Detailed surveys and analytics will be enabled here soon.
+          </p>
         </div>
       )}
 

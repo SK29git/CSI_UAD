@@ -821,158 +821,198 @@ export default function ServiceOverviewView() {
           </div>
         )}
 
-        {/* 3. Dynamic Vehicle Specifications Grid (with Battery ID - Change 28 & Service Eligibility - Change 26) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-y-3.5 gap-x-4 text-xs pt-2">
-          {vin && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                VIN
-              </span>
-              <span className="font-mono font-bold text-gray-900 text-[11px]">
-                {vin}
-              </span>
+        {/* 3. Modern DMS-Structured Vehicle Specifications (Tabbed & Organized) */}
+        <div className="pt-2">
+          {/* TOP SECTION: 2 Primary DMS Panels (Identity + Definition) with internal 4-column bordered layout */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+
+            {/* PANEL 1: Vehicle Identity */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+              <div className="bg-gradient-to-r from-blue-50/90 to-gray-50 border-b border-gray-200 px-3 py-1.5 text-center">
+                <span className="font-bold text-blue-950 text-xs tracking-wide">Vehicle Identity</span>
+              </div>
+              <div className="p-2 sm:p-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2">
+                  {/* Left Column */}
+                  <div className="sm:pr-3.5 sm:border-r border-gray-200 flex flex-col justify-between">
+                    {[
+                      { label: 'Registration number', value: currentVehicle?.registrationNumber },
+                      { label: 'VIN', value: currentVehicle?.vin || vin, mono: true, bold: true },
+                      { label: 'Model analysis code', value: currentVehicle?.modelAnalysisCode },
+                      { label: 'Battery ID', value: currentVehicle?.batteryIdentificationNumber || batteryId, red: true },
+                      { label: 'Odometer at last work', value: currentVehicle?.odometerAtLastWork ? `${currentVehicle.odometerAtLastWork} KM` : null },
+                      { label: 'Driver side', value: currentVehicle?.driverSide === 'L' ? 'Left hand drive' : currentVehicle?.driverSide === 'R' ? 'Right hand drive' : currentVehicle?.driverSide },
+                      { label: 'Previous reg. date', value: currentVehicle?.previousRegistrationDate ? String(currentVehicle.previousRegistrationDate).split('T')[0] : null },
+                    ].map(({ label, value, mono, bold, red }) => (
+                      <div key={label} className="flex items-center justify-between py-1 border-b border-gray-100/70 gap-2 hover:bg-gray-50/50 transition-colors">
+                        <span className={`font-medium text-[11px] truncate ${red ? 'text-red-600 font-bold' : 'text-gray-500'}`}>{label}:</span>
+                        <span className={`text-[11px] truncate text-right ${mono ? 'font-mono' : ''} ${bold ? 'font-bold' : 'font-semibold'} ${red ? 'text-red-600 font-bold bg-red-50 border border-red-200 px-1.5 py-0.2 rounded inline-block text-[10px]' : 'text-gray-900'}`}>
+                          {value || '-'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="sm:pl-3.5 flex flex-col justify-between max-sm:mt-1">
+                    {[
+                      { label: 'Registration date', value: currentVehicle?.registrationDate ? String(currentVehicle.registrationDate).split('T')[0] : null },
+                      { label: 'Vehicle number (#DMS)', value: currentVehicle?.vehicleNumber ? `#${currentVehicle.vehicleNumber}` : null, mono: true, bold: true, highlight: 'text-blue-900 bg-blue-50/60 px-1.5 py-0.2 rounded border border-blue-100 inline-block' },
+                      { label: 'Engine number', value: currentVehicle?.engineNumber, mono: true },
+                      { label: 'Mileage (KM)', value: currentVehicle?.mileageKm != null ? `${Number(currentVehicle.mileageKm).toLocaleString()} KM` : (currentVehicle?.lastOdometer ? `${currentVehicle.lastOdometer} KM` : null), bold: true },
+                      { label: 'Last odometer', value: currentVehicle?.lastOdometer ? `${currentVehicle.lastOdometer} KM` : (currentVehicle?.mileageKm != null ? `${Number(currentVehicle.mileageKm).toLocaleString()} KM` : null) },
+                      { label: 'Odometer type', value: currentVehicle?.odometerType === 'K' ? 'Kilometres' : (currentVehicle?.odometerType || '-') },
+                      { label: 'Previous reg. number', value: currentVehicle?.previousRegistrationNumber },
+                      { label: 'Status', value: currentVehicle?.vehicleStatusIndicator ? `${currentVehicle.vehicleStatusIndicator} (Current vehicle)` : null },
+                    ].map(({ label, value, mono, bold, highlight }) => (
+                      <div key={label} className="flex items-center justify-between py-1 border-b border-gray-100/70 gap-2 hover:bg-gray-50/50 transition-colors">
+                        <span className="text-gray-500 font-medium text-[11px] truncate">{label}:</span>
+                        <span className={`text-[11px] truncate text-right ${highlight ? highlight : ''} ${mono ? 'font-mono' : ''} ${bold ? 'font-bold' : 'font-semibold'} ${highlight ? '' : 'text-gray-900'}`}>
+                          {value || '-'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
 
-          {registrationNumber && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                Registration Number
-              </span>
-              <span className="font-bold text-gray-900">
-                {registrationNumber}
-              </span>
+            {/* PANEL 2: Vehicle Definition */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+              <div className="bg-gradient-to-r from-blue-50/90 to-gray-50 border-b border-gray-200 px-3 py-1.5 text-center">
+                <span className="font-bold text-blue-950 text-xs tracking-wide">Vehicle Definition</span>
+              </div>
+              <div className="p-2 sm:p-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2">
+                  {/* Left Column */}
+                  <div className="sm:pr-3.5 sm:border-r border-gray-200 flex flex-col justify-between">
+                    {[
+                      { label: 'Manufacturer', value: currentVehicle?.brand || currentVehicle?.manufacturerCode, bold: true },
+                      { label: 'Variant', value: currentVehicle?.variant },
+                      { label: 'Model year', value: currentVehicle?.modelYear, bold: true },
+                      { label: 'Colour', value: [currentVehicle?.colourCode, currentVehicle?.colourDescription || currentVehicle?.colour].filter(Boolean).join('  ') },
+                      { label: 'Variant Class', value: currentVehicle?.variantClass },
+                      { label: 'Doors', value: currentVehicle?.numberOfDoors },
+                      { label: 'Transmission', value: currentVehicle?.transmission === 'A' ? 'Automatic' : currentVehicle?.transmission === 'M' ? 'Manual' : currentVehicle?.transmission },
+                      { label: 'Valuation adjustment', value: currentVehicle?.valuationAdjustmentCode },
+                      { label: 'Country of origin', value: currentVehicle?.countryOfOrigin },
+                    ].map(({ label, value, bold }) => (
+                      <div key={label} className="flex items-center justify-between py-1 border-b border-gray-100/70 gap-2 hover:bg-gray-50/50 transition-colors">
+                        <span className="text-gray-500 font-medium text-[11px] truncate">{label}:</span>
+                        <span className={`text-[11px] truncate text-right text-gray-900 ${bold ? 'font-bold' : 'font-semibold'}`} title={String(value || '')}>
+                          {value || '-'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Right Column */}
+                  <div className="sm:pl-3.5 flex flex-col justify-between max-sm:mt-1">
+                    {[
+                      { label: 'Model', value: currentVehicle?.model, bold: true },
+                      { label: 'Sub-variant', value: currentVehicle?.subVariantCode },
+                      { label: 'Description', value: currentVehicle?.description },
+                      { label: 'Trim', value: [currentVehicle?.trimCode, currentVehicle?.trimDescription].filter(Boolean).join('  ') },
+                      { label: 'Body style', value: currentVehicle?.bodyStyle },
+                      { label: 'Fuel type', value: currentVehicle?.fuelType || currentVehicle?.fuelTypeCode },
+                      { label: 'Engine capacity', value: currentVehicle?.engineCapacity ? `${currentVehicle.engineCapacity} cc` : null },
+                      { label: 'Owner type', value: currentVehicle?.companyOrPrivatelyOwned === '0' ? 'Company' : currentVehicle?.companyOrPrivatelyOwned === '2' ? 'Privately owned' : currentVehicle?.companyOrPrivatelyOwned },
+                      { label: 'VSB', value: currentVehicle?.vsb },
+                    ].map(({ label, value, bold }) => (
+                      <div key={label} className="flex items-center justify-between py-1 border-b border-gray-100/70 gap-2 hover:bg-gray-50/50 transition-colors">
+                        <span className="text-gray-500 font-medium text-[11px] truncate">{label}:</span>
+                        <span className={`text-[11px] truncate text-right text-gray-900 ${bold ? 'font-bold' : 'font-semibold'}`} title={String(value || '')}>
+                          {value || '-'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-
-          {registrationDate && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                Registration Date
-              </span>
-              <span className="font-medium text-gray-800">
-                {registrationDate}
-              </span>
-            </div>
-          )}
-
-          {(brand || model || variant) && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                Brand / Model / Variant
-              </span>
-              <span className="font-bold text-gray-900">
-                {brand || ""} {model || ""} ({variant || "N/A"})
-              </span>
-            </div>
-          )}
-
-          {description && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                Description
-              </span>
-              <span className="font-medium text-gray-800">{description}</span>
-            </div>
-          )}
-
-          {modelYear && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                Model Year
-              </span>
-              <span className="font-bold text-gray-900">{modelYear}</span>
-            </div>
-          )}
-
-          {fuelType && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                Fuel Type
-              </span>
-              <span className="font-semibold text-gray-800">{fuelType}</span>
-            </div>
-          )}
-
-          {colour && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                Colour
-              </span>
-              <span className="font-semibold text-gray-800">{colour}</span>
-            </div>
-          )}
-
-          {mileageKm !== undefined && mileageKm !== null && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                Current Mileage
-              </span>
-              <span className="font-black text-gray-900 text-sm">
-                {Number(mileageKm).toLocaleString()} KM
-              </span>
-            </div>
-          )}
-
-          {deliveryDate && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                Delivery Date
-              </span>
-              <span className="font-medium text-gray-800">{deliveryDate}</span>
-            </div>
-          )}
-
-          {stockProgress && (
-            <div>
-              <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-                Stock Progress
-              </span>
-              <span className="font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 inline-block">
-                {stockProgress}
-              </span>
-            </div>
-          )}
-
-          {/* Service Eligibility in Specs */}
-          <div>
-            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-              Service Eligibility
-            </span>
-            {(() => {
-              const rawVal = serviceEligibilityData?.eligibility || serviceEligibilityData?.status || eligibility || "";
-              const val = typeof rawVal === "string" ? rawVal.trim() : String(rawVal || "").trim();
-
-              if (!val) {
-                return (
-                  <span className="font-semibold text-gray-500 bg-gray-50 px-2 py-0.5 rounded border border-gray-200 inline-block text-[11px]">
-                    N/A
-                  </span>
-                );
-              }
-
-              const upper = val.toUpperCase();
-              const isEligible = upper.includes("ELIGIB") && !upper.includes("NOT") && !upper.includes("INELIGIB");
-              return (
-                <span className={`font-bold px-2 py-0.5 rounded border inline-block text-[11px] ${
-                  isEligible
-                    ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-                    : "text-amber-700 bg-amber-50 border-amber-200"
-                }`}>
-                  {val}
-                </span>
-              );
-            })()}
           </div>
 
-          {/* Battery ID in Specs (Change 28) */}
-          <div>
-            <span className="text-gray-400 block text-[10px] uppercase tracking-wider font-semibold">
-              Battery ID
-            </span>
-            <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 inline-block text-[11px]">
-              {batteryId || "N/A"}
-            </span>
+          {/* BOTTOM SECTION: 3-Column Strip (Owners, Enquiry & Stock Link, Milestones & Workshop) */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs pt-3">
+
+            {/* 1. Owners Panel */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+              <div className="bg-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center justify-between">
+                <span className="font-bold text-gray-800 text-xs">Owners & Accounts</span>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {[
+                  { label: 'Sales customer', value: currentVehicle?.salesCustomer },
+                  { label: 'Aftersales customer', value: currentVehicle?.aftersalesCustomer },
+                  { label: 'Driver customer', value: currentVehicle?.driveCustomer },
+                  { label: 'Keyloop group', value: currentVehicle?.keyloopGroup || group },
+                  { label: 'MS company', value: currentVehicle?.msCompany },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex items-center justify-between px-3 py-1 gap-2 hover:bg-gray-50/60">
+                    <span className="text-gray-500 font-medium text-[11px]">{label}:</span>
+                    <span className="font-bold text-gray-900 text-[11px] font-mono">{value || '-'}</span>
+                  </div>
+                ))}
+                {Array.isArray(currentVehicle?.linkedVia) && currentVehicle.linkedVia.length > 0 && (
+                  <div className="px-3 py-1.5 bg-blue-50/30">
+                    <span className="text-gray-400 text-[10px] block mb-1">Linked via:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {currentVehicle.linkedVia.map((link, i) => (
+                        <span key={i} className="bg-blue-600 text-white font-bold text-[9px] px-2 py-0.5 rounded shadow-2xs">{link}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 2. Enquiry & Stock Link */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+              <div className="bg-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center justify-between">
+                <span className="font-bold text-gray-800 text-xs">Enquiry & Stock Link</span>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {[
+                  { label: 'Purchase enquiry #', value: currentVehicle?.purchaseEnquiryNumber ? `#${currentVehicle.purchaseEnquiryNumber}` : null, mono: true, bold: true },
+                  { label: 'Sales enquiry #', value: currentVehicle?.enquiryNumber },
+                  { label: 'Stock progress', value: currentVehicle?.stockProgress, bold: true, color: 'text-blue-700' },
+                  { label: 'Progress name', value: currentVehicle?.progressName },
+                  { label: 'Progress code', value: currentVehicle?.progressCode },
+                  { label: 'Vehicle type', value: currentVehicle?.vehicleType },
+                  { label: 'Stock sequence', value: currentVehicle?.stockSequenceNumber },
+                  { label: 'Location', value: [currentVehicle?.locationCode, currentVehicle?.locationDescription].filter(Boolean).join(' ') },
+                ].map(({ label, value, mono, bold, color }) => (
+                  <div key={label} className="flex items-center justify-between px-3 py-1 gap-2 hover:bg-gray-50/60">
+                    <span className="text-gray-500 font-medium text-[11px]">{label}:</span>
+                    <span className={`text-[11px] truncate text-right ${mono ? 'font-mono' : ''} ${bold ? 'font-bold' : 'font-semibold'} ${color ? color : 'text-gray-900'}`}>{value || '-'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* 3. Milestones & Workshop Timeline */}
+            <div className="border border-gray-200 rounded-lg overflow-hidden bg-white shadow-2xs">
+              <div className="bg-gray-50 border-b border-gray-200 px-3 py-1.5 flex items-center justify-between">
+                <span className="font-bold text-gray-800 text-xs">Workshop Milestones</span>
+              </div>
+              <div className="divide-y divide-gray-100">
+                {[
+                  { label: 'Delivery date', value: currentVehicle?.deliveryDate ? String(currentVehicle.deliveryDate).split('T')[0] : null },
+                  { label: 'Date of last work', value: currentVehicle?.dateOfLastWork ? String(currentVehicle.dateOfLastWork).split('T')[0] : null },
+                  { label: 'Next service date', value: currentVehicle?.nextServiceDate ? String(currentVehicle.nextServiceDate).split('T')[0] : null, green: true },
+                  { label: 'Next service odometer', value: currentVehicle?.nextServiceOdometerKm != null ? `${currentVehicle.nextServiceOdometerKm} KM` : (currentVehicle?.nextServiceOdometer || null), green: true },
+                  { label: 'PDI completed', value: currentVehicle?.pdiCompleted ? String(currentVehicle.pdiCompleted).split('T')[0] : null },
+                  { label: 'RTA expiry', value: currentVehicle?.roadSafetyTestExpiryDate ? String(currentVehicle.roadSafetyTestExpiryDate).split('T')[0] : null },
+                  { label: 'Service Eligibility', value: serviceEligibilityData?.eligibility || currentVehicle?.eligibility || null },
+                ].map(({ label, value, green }) => (
+                  <div key={label} className="flex items-center justify-between px-3 py-1 gap-2 hover:bg-gray-50/60">
+                    <span className="text-gray-500 font-medium text-[11px]">{label}:</span>
+                    <span className={`text-[11px] truncate text-right ${green ? 'text-emerald-700 font-bold' : 'text-gray-900 font-semibold'}`}>{value || '-'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
         </div>
 
@@ -1091,16 +1131,14 @@ export default function ServiceOverviewView() {
                 <p className="text-[10px] text-gray-500">Service remarks, workshop special instructions, and vehicle comments</p>
               </div>
             </div>
-            <span className="text-[10px] font-bold text-gray-600 bg-gray-100 px-2.5 py-0.5 rounded uppercase">
-              DMS Remarks
-            </span>
+            
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs pt-1">
             {/* Workshop Notes Card */}
             <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200 flex flex-col gap-1.5">
               <span className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1">
-                <FaWrench className="text-blue-500 text-[10px]" /> Workshop Notes & Special Handling
+                <FaWrench className="text-blue-500 text-[10px]" /> Workshop Notes 
               </span>
               <p className="text-xs text-gray-800 leading-relaxed font-medium">
                 {currentVehicle?.workshopNotes ||
@@ -1115,7 +1153,7 @@ export default function ServiceOverviewView() {
             {/* Vehicle Remarks & Customer Notes Card */}
             <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-200 flex flex-col gap-1.5">
               <span className="text-[10px] font-bold text-gray-500 uppercase flex items-center gap-1">
-                <FaClipboardList className="text-amber-500 text-[10px]" /> Vehicle Remarks & Customer Requests
+                <FaClipboardList className="text-amber-500 text-[10px]" /> Vehicle Notes
               </span>
               <p className="text-xs text-gray-800 leading-relaxed font-medium">
                 {currentVehicle?.vehicleNotes ||

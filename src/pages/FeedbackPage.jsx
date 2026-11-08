@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import CenterNavTabs from '../components/CenterNavTabs';
 import LeftSidebar from '../components/LeftSidebar';
 import FeedbackOverviewView from '../components/FeedbackOverviewView';
-import RightSidebar from '../components/RightSidebar';
 import CustomerFormView from '../components/CustomerFormView';
 import { useCustomer } from '../context/CustomerContext';
 
@@ -16,7 +15,6 @@ export default function FeedbackPage() {
     }
     return false;
   });
-  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
 
   React.useEffect(() => {
     const handleResize = () => {
@@ -80,8 +78,6 @@ export default function FeedbackPage() {
             setActiveSubTab={setActiveSubTab} 
             isLeftCollapsed={isLeftCollapsed}
             onToggleLeft={() => setIsLeftCollapsed(!isLeftCollapsed)}
-            isRightCollapsed={isRightCollapsed}
-            onToggleRight={() => setIsRightCollapsed(!isRightCollapsed)}
           />
 
           <div className="transition-all duration-200">
@@ -92,14 +88,6 @@ export default function FeedbackPage() {
             )}
           </div>
         </main>
-
-        {/* RIGHT COLUMN: Activity Log Timeline */}
-        <aside className="hidden xl:block w-auto flex-shrink-0 sticky top-5 z-10 transition-all duration-300">
-          <RightSidebar 
-            isCollapsed={isRightCollapsed}
-            onToggleCollapse={() => setIsRightCollapsed(!isRightCollapsed)}
-          />
-        </aside>
 
       </div>
     </div>

@@ -7,271 +7,14 @@ import { isFullMobileNumber } from '../utils/phoneUtils';
 
 const CustomerContext = createContext(null);
 
-// Profile response dataset for Suzanne Marie Bacha & fallbacks
-export const PROFILE_DEMO_DATA = {
-    "keyloopGroup": "BMW",
-    "customerNumber": "80496",
-    "customerType": "LOYAL",
-    "salutation": "Ms.",
-    "firstName": "Suzanne",
-    "middleName": "Marie",
-    "surname": "Bacha",
-    "fullName": "Suzanne Marie Bacha",
-    "mobile": "+971 50 123 4292",
-    "mobileRaw": "0501234292",
-    "mobileValid": true,
-    "email": "s***@gmail.com",
-    "emailValid": true,
-    "location": {
-        "flatBuilding": "N/A",
-        "area": "Umm Suqeim First",
-        "city": "Dubai"
-    },
-    "branchCode": "10",
-    "customerSince": "2012-01-21",
-    "lastUpdated": "2024-12-26",
-    "dateOfBirth": "1962-05-20",
-    "nationality": "Germany",
-    "vip": false,
-    "doNotContact": false,
-    "consents": {
-        "email": false,
-        "phone": false,
-        "sms": false,
-        "whatsapp": false
-    },
-    "language": "",
-    "id": "",
-    "loyaltyTier": "",
-    "preferredBranch": "",
-    "communicationPreference": ""
-};
-
-export const DEMO_VEHICLES = [
-  {
-    "keyloopGroup": "BMW",
-    "vin": "WBA31HC04SFT82888",
-    "customerNumber": "80496",
-    "registrationNumber": "66164-CC-DXB",
-    "registrationDate": "2024-12-19",
-    "brand": "BMW",
-    "model": "G26",
-    "variant": "31HCA",
-    "description": "G26 430i Gran Coupe M Sport",
-    "modelYear": 2025,
-    "fuelType": "Unleaded",
-    "colour": "Brooklyn Grey metallic",
-    "mileageKm": 2,
-    "deliveryDate": "2024-12-20",
-    "stockProgress": "Closed",
-    "nextServiceDate": "2025-02-20",
-    "nextServiceOdometerKm": 1000,
-    "insurance": [],
-    "warranty": {
-      "status": "ACTIVE",
-      "provider": "BMW Extended Warranty 3y/200,000 km",
-      "contractType": "A7CG",
-      "expiryDate": "2027-12-18"
-    },
-    "serviceContract": {
-      "status": "EXPIRED",
-      "provider": "BMW Service Inclusive",
-      "contractType": "SERVICEINCL",
-      "expiryDate": "2024-07-10"
-    },
-    "packages": [
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "17\" Lt/Aly wheels V-spoke 778 (Removable)",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "19\" BMW Individual Lt/Aly wheels Y-spokestyle 1038|Bicolour/MT,emerg. run. prop.",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "1 Year Campaign Insurance Premium",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "2 Yrs. Unlimited KM BMW Warranty from Regn.Date",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "5Yr Extended Warranty Cost",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "Adaptive LED headlights",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "Ambient light (Removable)",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "BMW Drive Recorder",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "BMW Live Cockpit Professional",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "BSI Plus 5 Years or 100,000 KM W.E.C.F",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "ConnectedDrive Services",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "Harman Kardon surround sound system",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "M Sport package Pro",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "Parking Assistant Plus",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      },
-      {
-        "vehicleNumber": "167781",
-        "sequenceNumber": "0",
-        "packageDescription": "Storage for wireless charging",
-        "vin": "WBA31HC04SFT82888",
-        "registrationDate": "2024-12-19"
-      }
-    ],
-    "serviceType": "",
-    "package": "",
-    "price": "",
-    "eligibility": ""
-  },
-  {
-    "keyloopGroup": "BMW",
-    "vin": "WBA68FF04R8E45580",
-    "customerNumber": "80496",
-    "registrationNumber": "28391-AA-DXB",
-    "registrationDate": "2024-06-21",
-    "brand": "BMW",
-    "model": "G20",
-    "variant": "68FFA",
-    "description": "G20 330i Sedan M Sport",
-    "modelYear": 2024,
-    "fuelType": "Unleaded",
-    "colour": "Mineral White metalic",
-    "mileageKm": 3865,
-    "stockProgress": "Available/Instock",
-    "nextServiceDate": "2024-08-20",
-    "nextServiceOdometerKm": 1000,
-    "insurance": [],
-    "warranty": {
-      "status": "ACTIVE",
-      "provider": "BMW Extended Warranty 3y/200,000 km",
-      "contractType": "A7CG",
-      "expiryDate": "2027-06-19"
-    },
-    "serviceContract": {
-      "status": "NONE"
-    },
-    "eligibility": "",
-    "offer": "",
-    "messageId": "",
-    "deliveryStatus": ""
-  }
-];
-
-export const DEMO_INSURANCE = [
-  {
-    provider: "Sukoon Insurance (Oman Insurance)",
-    policyNumber: "POL-984215",
-    contractType: "COMPREHENSIVE",
-    startDate: "2024-12-19",
-    expiryDate: "2025-12-18",
-    status: "ACTIVE",
-    premium: "AED 3,450"
-  }
-];
-
-export const DEMO_FINANCE = [
-  {
-    institution: "Emirates NBD Auto Finance",
-    accountNumber: "FIN-774910",
-    financeType: "Auto Loan",
-    monthlyInstallment: "AED 2,850",
-    tenureMonths: 48,
-    remainingMonths: 28,
-    status: "ACTIVE"
-  }
-];
-
-export const DEMO_TRADE_IN = [
-  {
-    tradeInId: "TRD-4412",
-    vehicle: "2021 BMW 330i Sedan",
-    vin: "WBA330I2021EX123",
-    appraisedValue: "AED 95,000",
-    tradeInDate: "2024-06-20",
-    status: "COMPLETED"
-  }
-];
-
-export const DEMO_RISK_OVERVIEW = {
-  riskTier: "LOW",
-  score: 95,
-  flags: [],
-  notes: "Good payment history & active warranty"
-};
-
-export const DEMO_VERIFICATION = {
-  status: "VERIFIED",
-  lastVerifiedOn: "2026-09-28, 02:14 PM",
-  verifiedBy: "Sara Ahmed"
-};
+// Profile response dataset fallbacks (strictly populated by live API)
+export const PROFILE_DEMO_DATA = null;
+export const DEMO_VEHICLES = [];
+export const DEMO_INSURANCE = [];
+export const DEMO_FINANCE = [];
+export const DEMO_TRADE_IN = [];
+export const DEMO_RISK_OVERVIEW = null;
+export const DEMO_VERIFICATION = null;
 
 export const KNOWN_GROUPS = ['BMW', 'MINI', 'GEELY', 'ROLLS-ROYCE', 'AUDI'];
 
@@ -680,8 +423,15 @@ export function CustomerProvider({ children }) {
     }
     try {
       // 1. Fetch vehicle list for customer: GET /api/v1/vehicles?group={group}&customerNumber={customerNumber}
-      const listUrl = `/api/v1/vehicles?group=${encodeURIComponent(g)}&customerNumber=${encodeURIComponent(c)}`;
-      const res = await apiFetch(listUrl);
+      const primaryUrl = `/api/v1/customers/${encodeURIComponent(g)}/${encodeURIComponent(c)}/vehicles`;
+      let res = await apiFetch(primaryUrl);
+      if (!res || !res.ok || !res.data || (Array.isArray(res.data) && res.data.length === 0)) {
+        const fallbackUrl = `/api/v1/vehicles?group=${encodeURIComponent(g)}&customerNumber=${encodeURIComponent(c)}`;
+        const fallbackRes = await apiFetch(fallbackUrl);
+        if (fallbackRes && fallbackRes.ok && fallbackRes.data) {
+          res = fallbackRes;
+        }
+      }
       let list = [];
       if (res && res.ok && res.data) {
         if (Array.isArray(res.data)) {

@@ -1,50 +1,68 @@
-import React, { useState, useEffect } from 'react';
-import { useCustomer } from '../context/CustomerContext';
-import { createComplaintCase } from '../utils/api';
-import { 
+import React, { useState, useEffect } from "react";
+import { useCustomer } from "../context/CustomerContext";
+import { createComplaintCase } from "../utils/api";
+import {
   COMPLAINT_BRANCHES,
   COMPLAINT_DEPARTMENTS,
   COMPLAINT_SOURCES,
   COMPLAINT_PRIORITIES,
   getGroupsForDepartment,
-  getCategoriesForDepartmentAndGroup
-} from '../data/complaintHierarchy';
-import { 
-  FaPlusCircle, 
-  FaPaperPlane, 
-  FaSpinner, 
-  FaUser, 
-  FaBuilding, 
-  FaLayerGroup, 
-  FaBriefcase, 
-  FaPhoneAlt, 
+  getCategoriesForDepartmentAndGroup,
+} from "../data/complaintHierarchy";
+import {
+  FaPlusCircle,
+  FaPaperPlane,
+  FaSpinner,
+  FaUser,
+  FaBuilding,
+  FaLayerGroup,
+  FaBriefcase,
+  FaPhoneAlt,
   FaEnvelope,
-  FaFlag, 
-  FaClipboardList, 
-  FaTag, 
-  FaUserCheck, 
-  FaAlignLeft, 
-  FaCar, 
+  FaFlag,
+  FaClipboardList,
+  FaTag,
+  FaUserCheck,
+  FaAlignLeft,
+  FaCar,
   FaCheckCircle,
   FaShieldAlt,
-  FaMapMarkerAlt
-} from 'react-icons/fa';
+  FaMapMarkerAlt,
+} from "react-icons/fa";
 
 export default function CreateComplaintView() {
-  const { customer, getFormattedName, agentId, group: contextGroup, currentMobile } = useCustomer();
+  const {
+    customer,
+    getFormattedName,
+    agentId,
+    group: contextGroup,
+    currentMobile,
+  } = useCustomer();
 
   const customerNameFormatted = getFormattedName();
-  const initialCustomerNo = customer?.customerNumber || customer?.id || "123456";
-  const initialCustomerName = customerNameFormatted && customerNameFormatted !== 'Walk-in Customer' && customerNameFormatted !== 'Unknown'
-    ? customerNameFormatted 
-    : (customer?.name || customer?.customerName || "Ahmed Ali");
-  const initialGroup = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "Geely");
+  const initialCustomerNo =
+    customer?.customerNumber || customer?.id || "123456";
+  const initialCustomerName =
+    customerNameFormatted &&
+    customerNameFormatted !== "Walk-in Customer" &&
+    customerNameFormatted !== "Unknown"
+      ? customerNameFormatted
+      : customer?.name || customer?.customerName || "Ahmed Ali";
+  const initialGroup =
+    contextGroup ||
+    customer?.keyloopGroup ||
+    new URLSearchParams(window.location.search).get("group") ||
+    "Geely";
   const initialPhone = customer?.mobile || currentMobile || "971454378907";
   const initialEmail = customer?.email || "ahmedali@agmc.com";
 
   // Match initial branch with customer's branch code if available
-  const initialBranch = (customer?.branchCode && COMPLAINT_BRANCHES.find(b => b.startsWith(String(customer.branchCode))))
-    || COMPLAINT_BRANCHES[0];
+  const initialBranch =
+    (customer?.branchCode &&
+      COMPLAINT_BRANCHES.find((b) =>
+        b.startsWith(String(customer.branchCode)),
+      )) ||
+    COMPLAINT_BRANCHES[0];
 
   // FORM FIELDS MATCHING POST /api/v1/complaints & EXCEL HIERARCHY
   const [group, setGroup] = useState(initialGroup);
@@ -57,14 +75,61 @@ export default function CreateComplaintView() {
   // Cascading classification state
   const [department, setDepartment] = useState(COMPLAINT_DEPARTMENTS[0]); // "Service"
   const initialGroups = getGroupsForDepartment(COMPLAINT_DEPARTMENTS[0]);
-  const [complaintGroup, setComplaintGroup] = useState(initialGroups[0] || "Process");
-  const initialCategories = getCategoriesForDepartmentAndGroup(COMPLAINT_DEPARTMENTS[0], initialGroups[0] || "Process");
-  const [category, setCategory] = useState(initialCategories[0] || "Service Delay");
+  const [complaintGroup, setComplaintGroup] = useState(
+    initialGroups[0] || "Process",
+  );
+  const initialCategories = getCategoriesForDepartmentAndGroup(
+    COMPLAINT_DEPARTMENTS[0],
+    initialGroups[0] || "Process",
+  );
+  const [category, setCategory] = useState(
+    initialCategories[0] || "Service Delay",
+  );
 
   const [source, setSource] = useState(COMPLAINT_SOURCES[0]); // "Customer Call"
-  const [complaintPriority, setComplaintPriority] = useState(COMPLAINT_PRIORITIES[0]); // "Urgent"
-  const [complaint, setComplaint] = useState("Car not ready on the promised date");
-  const [externalRef, setExternalRef] = useState(`GENESYS-000${Math.floor(10 + Math.random() * 90)}`);
+  const [complaintPriority, setComplaintPriority] = useState(
+    COMPLAINT_PRIORITIES[0],
+  ); // "Urgent"
+  const [complaint, setComplaint] = useState(
+    "Car not ready on the promised date",
+  );
+  // Helper: Generate Complaint reference: Date(Day,Month,Year) + 4 digits from the last customer's name / customer id
+  const generateComplaintReference = (name, custId) => {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = String(now.getFullYear());
+    const datePart = `${day}${month}${year}`;
+
+    const nameStr = String(name || "").trim();
+    const digitsFromName = nameStr.replace(/\D/g, "");
+    let suffix = "";
+
+    if (digitsFromName.length >= 4) {
+      suffix = digitsFromName.slice(-4);
+    } else {
+      const idDigits = String(custId || "").replace(/\D/g, "");
+      const combined = digitsFromName + idDigits;
+      if (combined.length >= 4) {
+        suffix = combined.slice(-4);
+      } else {
+        // Fallback: character codes from last name / name
+        const words = nameStr.split(/\s+/).filter(Boolean);
+        const lastWord = words.length > 0 ? words[words.length - 1] : "CUST";
+        let hash = 0;
+        for (let i = 0; i < lastWord.length; i++) {
+          hash = (hash * 31 + lastWord.charCodeAt(i)) % 10000;
+        }
+        suffix = String(hash).padStart(4, "0");
+      }
+    }
+
+    return `${datePart}${suffix}`;
+  };
+
+  const [externalRef, setExternalRef] = useState(() =>
+    generateComplaintReference(initialCustomerName, initialCustomerNo),
+  );
 
   // Cascading change handlers
   const handleDepartmentChange = (newDept) => {
@@ -83,23 +148,35 @@ export default function CreateComplaintView() {
   };
 
   const availableGroups = getGroupsForDepartment(department);
-  const availableCategories = getCategoriesForDepartmentAndGroup(department, complaintGroup);
+  const availableCategories = getCategoriesForDepartmentAndGroup(
+    department,
+    complaintGroup,
+  );
 
   // TOAST & SUBMIT STATE
   const [submitting, setSubmitting] = useState(false);
+  const [isSuccessCreated, setIsSuccessCreated] = useState(false);
   const [toast, setToast] = useState(null);
 
   // Sync state when active customer changes
   useEffect(() => {
     if (customer) {
-      if (customer?.customerNumber || customer?.id) {
-        setCustomerId(customer?.customerNumber || customer?.id);
+      const cId = customer?.customerNumber || customer?.id || "";
+      if (cId) {
+        setCustomerId(cId);
       }
       const formatted = getFormattedName();
-      if (formatted && formatted !== 'Walk-in Customer' && formatted !== 'Unknown') {
+      let cName = "";
+      if (
+        formatted &&
+        formatted !== "Walk-in Customer" &&
+        formatted !== "Unknown"
+      ) {
+        cName = formatted;
         setCustomerName(formatted);
       } else if (customer?.name || customer?.customerName) {
-        setCustomerName(customer?.name || customer?.customerName);
+        cName = customer?.name || customer?.customerName;
+        setCustomerName(cName);
       }
       if (customer?.mobile || currentMobile) {
         setCustomerPhone(customer?.mobile || currentMobile);
@@ -111,9 +188,15 @@ export default function CreateComplaintView() {
         setGroup(customer.keyloopGroup);
       }
       if (customer?.branchCode) {
-        const matchingBranch = COMPLAINT_BRANCHES.find(b => b.startsWith(String(customer.branchCode)));
+        const matchingBranch = COMPLAINT_BRANCHES.find((b) =>
+          b.startsWith(String(customer.branchCode)),
+        );
         if (matchingBranch) setBranch(matchingBranch);
       }
+      // Set external complaint reference for active customer
+      setExternalRef(
+        generateComplaintReference(cName || customerName, cId || customerId),
+      );
     }
   }, [customer, currentMobile]);
 
@@ -133,7 +216,7 @@ export default function CreateComplaintView() {
     }
   }, [toast]);
 
-  const brandGroups = ['Geely', 'BMW', 'MINI', 'Rolls-Royce'];
+  const brandGroups = ["Geely", "BMW", "MINI", "Rolls-Royce"];
 
   const complaintTemplates = [
     "Car not ready on the promised date",
@@ -143,13 +226,17 @@ export default function CreateComplaintView() {
     "Invoice amount differs from initial cost estimate.",
     "Quality of repair unsatisfactory upon vehicle collection.",
     "Delay in spare parts procurement from central warehouse.",
-    "Staff behavior during customer reception was unprofessional."
+    "Staff behavior during customer reception was unprofessional.",
   ];
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!complaint.trim() || !customerId.trim() || !customerName.trim()) {
-      setToast({ isError: true, message: "Please fill in Customer ID, Customer Name, and Complaint description." });
+      setToast({
+        isError: true,
+        message:
+          "Please fill in Customer ID, Customer Name, and Complaint description.",
+      });
       return;
     }
 
@@ -169,39 +256,33 @@ export default function CreateComplaintView() {
       department: department || "Service",
       source: source || "Customer Call",
       complaintGroup: complaintGroup || availableGroups[0] || "Process",
-      externalRef: String(externalRef || "").trim() || `GENESYS-000${Math.floor(10 + Math.random() * 90)}`
+      externalRef:
+        String(externalRef || "").trim() ||
+        generateComplaintReference(customerName, customerId),
     };
 
     try {
       const res = await createComplaintCase(details);
 
       if (res && res.ok) {
-        setToast({
-          isError: false,
-          message: "Complaint ticket registered successfully!",
-          referenceId: res.referenceId,
-          ticketNumber: res.ticketNumber,
-          keyloopStatus: res.keyloopStatus,
-          cxpulseStatus: res.cxpulseStatus,
-          keyloopRef: res.keyloopRef,
-          company: res.company,
-          data: res.data
-        });
-        // Generate fresh externalRef for the next complaint
-        setExternalRef(`GENESYS-000${Math.floor(10 + Math.random() * 90)}`);
+        setIsSuccessCreated(true);
         // Clear complaint description
         setComplaint("");
+        // Keep "Created" state with check tick for 5 seconds
+        setTimeout(() => {
+          setIsSuccessCreated(false);
+        }, 5000);
       } else {
         setToast({
           isError: true,
-          message: res?.errorMessage || "Failed to create complaint ticket"
+          message: res?.errorMessage || "Failed to create complaint ticket",
         });
       }
     } catch (err) {
       console.error("Create Complaint error:", err);
       setToast({
         isError: true,
-        message: err.message || "Failed to submit complaint ticket"
+        message: err.message || "Failed to submit complaint ticket",
       });
     } finally {
       setSubmitting(false);
@@ -210,87 +291,27 @@ export default function CreateComplaintView() {
 
   return (
     <div className="flex flex-col gap-3 text-xs w-full">
-      
-      {/* TOAST MESSAGE (Appears on API 200 or Error) */}
-      {toast && (
-        <div className={`p-4 rounded-xl flex flex-col gap-2.5 shadow-xs border transition-all animate-fade-in ${
-          toast.isError
-            ? "bg-rose-50 border-rose-200 text-rose-900"
-            : "bg-emerald-50 border-emerald-200 text-emerald-950"
-        }`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] text-white shadow-2xs ${
-                toast.isError ? "bg-rose-500" : "bg-emerald-600"
-              }`}>
-                {toast.isError ? "✕" : "✓"}
-              </div>
-              <div>
-                <h4 className="font-bold text-xs">{toast.message}</h4>
-              </div>
-            </div>
-            <button 
-              type="button"
-              onClick={() => setToast(null)} 
-              className="text-gray-400 hover:text-gray-700 font-bold p-1 cursor-pointer"
-            >
+      {/* ERROR TOAST MESSAGE (Only on failure) */}
+      {toast && toast.isError && (
+        <div className="p-4 rounded-xl flex items-center justify-between gap-2.5 shadow-xs border bg-rose-50 border-rose-200 text-rose-900 animate-fade-in">
+          <div className="flex items-center gap-2.5">
+            <div className="w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] text-white shadow-2xs bg-rose-500 shrink-0">
               ✕
-            </button>
-          </div>
-
-          {!toast.isError && (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-2 border-t border-emerald-200/80 text-xs">
-              {toast.referenceId && (
-                <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-200 shadow-2xs">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase block">Reference ID</span>
-                  <span className="font-mono font-bold text-emerald-900 text-xs block truncate">{toast.referenceId}</span>
-                  {toast.company && (
-                    <span className="text-[10px] text-gray-500">Company: <strong>{toast.company}</strong></span>
-                  )}
-                </div>
-              )}
-              <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-200 shadow-2xs">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase block">CXPulse CRM</span>
-                  {toast.cxpulseStatus && (
-                    <span className={`text-[9px] px-1.5 py-0.2 rounded font-extrabold uppercase ${
-                      toast.cxpulseStatus === 'CREATED' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                    }`}>
-                      {toast.cxpulseStatus}
-                    </span>
-                  )}
-                </div>
-                {toast.ticketNumber ? (
-                  <span className="font-mono font-bold text-blue-900 text-xs block">Ticket #{toast.ticketNumber}</span>
-                ) : (
-                  <span className="text-[11px] text-gray-500">Ticket Queued</span>
-                )}
-              </div>
-              <div className="bg-white/90 p-2.5 rounded-lg border border-emerald-200 shadow-2xs">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-[10px] font-bold text-gray-500 uppercase block">Keyloop DMS</span>
-                  {toast.keyloopStatus && (
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-100 text-slate-700 font-extrabold uppercase">
-                      {toast.keyloopStatus}
-                    </span>
-                  )}
-                </div>
-                {toast.keyloopRef ? (
-                  <span className="font-mono text-[10px] text-gray-700 block truncate" title={toast.keyloopRef}>
-                    Ref: {toast.keyloopRef}
-                  </span>
-                ) : (
-                  <span className="text-[11px] text-gray-500">{toast.keyloopStatus || 'Handled'}</span>
-                )}
-              </div>
             </div>
-          )}
+            <h4 className="font-bold text-xs">{toast.message}</h4>
+          </div>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="text-gray-400 hover:text-gray-700 font-bold p-1 cursor-pointer shrink-0"
+          >
+            ✕
+          </button>
         </div>
       )}
 
       {/* MAIN COMPLAINT FORM CARD */}
       <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
-        
         {/* Header Bar matching New Enquiry */}
         <div className="bg-slate-50/80 px-4 py-3 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div className="flex items-center gap-2.5">
@@ -298,16 +319,25 @@ export default function CreateComplaintView() {
               <FaPlusCircle />
             </div>
             <div>
-              <h2 className="font-bold text-gray-900 text-xs leading-tight">Create Customer Complaint</h2>
+              <h2 className="font-bold text-gray-900 text-xs leading-tight">
+                Create Customer Complaint
+              </h2>
               <p className="text-[10px] text-gray-400">
-                Register an escalation for <span className="font-semibold text-gray-700">{customerName}</span>
+                Register an escalation for{" "}
+                <span className="font-semibold text-gray-700">
+                  {customerName}
+                </span>
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
             <span className="text-[10px] text-gray-500 font-medium">
-              Company: <span className="font-bold text-gray-800">{group}</span> | <span className="font-bold text-gray-800">Customer #{customerId}</span>
+              Company: <span className="font-bold text-gray-800">{group}</span>{" "}
+              |{" "}
+              <span className="font-bold text-gray-800">
+                Customer #{customerId}
+              </span>
             </span>
             <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-2xs shrink-0">
               <FaCar className="text-[10px]" />
@@ -316,14 +346,16 @@ export default function CreateComplaintView() {
         </div>
 
         {/* Form Body with Clean 3-Column Grid */}
-        <form onSubmit={handleSubmit} className="p-4 sm:p-5 flex flex-col gap-4">
-          
+        <form
+          onSubmit={handleSubmit}
+          className="p-4 sm:p-5 flex flex-col gap-4"
+        >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            
             {/* 1. Company / Brand */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                Company / Brand <span className="text-rose-500 font-bold">*</span>
+                Company / Brand{" "}
+                <span className="text-rose-500 font-bold">*</span>
               </label>
               <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
                 <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
@@ -334,8 +366,10 @@ export default function CreateComplaintView() {
                   onChange={(e) => setGroup(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
                 >
-                  {brandGroups.map(bg => (
-                    <option key={bg} value={bg}>{bg}</option>
+                  {brandGroups.map((bg) => (
+                    <option key={bg} value={bg}>
+                      {bg}
+                    </option>
                   ))}
                   {!brandGroups.includes(group) && (
                     <option value={group}>{group}</option>
@@ -387,7 +421,8 @@ export default function CreateComplaintView() {
             {/* 4. Customer Phone */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                Customer Phone <span className="text-rose-500 font-bold">*</span>
+                Customer Phone{" "}
+                <span className="text-rose-500 font-bold">*</span>
               </label>
               <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
                 <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
@@ -437,8 +472,10 @@ export default function CreateComplaintView() {
                   onChange={(e) => setBranch(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer truncate"
                 >
-                  {COMPLAINT_BRANCHES.map(b => (
-                    <option key={b} value={b}>{b}</option>
+                  {COMPLAINT_BRANCHES.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -458,8 +495,10 @@ export default function CreateComplaintView() {
                   onChange={(e) => handleDepartmentChange(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
                 >
-                  {COMPLAINT_DEPARTMENTS.map(d => (
-                    <option key={d} value={d}>{d}</option>
+                  {COMPLAINT_DEPARTMENTS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -468,7 +507,8 @@ export default function CreateComplaintView() {
             {/* 8. Complaint Group (Cascading level 2) */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                Complaint Group <span className="text-rose-500 font-bold">*</span>
+                Complaint Group{" "}
+                <span className="text-rose-500 font-bold">*</span>
               </label>
               <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
                 <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
@@ -479,8 +519,10 @@ export default function CreateComplaintView() {
                   onChange={(e) => handleGroupChange(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
                 >
-                  {availableGroups.map(cg => (
-                    <option key={cg} value={cg}>{cg}</option>
+                  {availableGroups.map((cg) => (
+                    <option key={cg} value={cg}>
+                      {cg}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -500,8 +542,10 @@ export default function CreateComplaintView() {
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer truncate"
                 >
-                  {availableCategories.map(c => (
-                    <option key={c} value={c}>{c}</option>
+                  {availableCategories.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -510,7 +554,8 @@ export default function CreateComplaintView() {
             {/* 10. Complaint Source */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                Complaint Source <span className="text-rose-500 font-bold">*</span>
+                Complaint Source{" "}
+                <span className="text-rose-500 font-bold">*</span>
               </label>
               <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
                 <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
@@ -521,8 +566,10 @@ export default function CreateComplaintView() {
                   onChange={(e) => setSource(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer truncate"
                 >
-                  {COMPLAINT_SOURCES.map(s => (
-                    <option key={s} value={s}>{s}</option>
+                  {COMPLAINT_SOURCES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -542,8 +589,10 @@ export default function CreateComplaintView() {
                   onChange={(e) => setComplaintPriority(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
                 >
-                  {COMPLAINT_PRIORITIES.map(p => (
-                    <option key={p} value={p}>{p}</option>
+                  {COMPLAINT_PRIORITIES.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -552,22 +601,22 @@ export default function CreateComplaintView() {
             {/* 12. External Reference */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-                External Reference <span className="text-gray-400 font-normal">(Auto-generated)</span>
+                External Reference
               </label>
-              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+              <div className="w-full h-8 px-2 bg-slate-50 border border-slate-200/90 rounded-lg shadow-2xs flex items-center transition-all">
                 <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
                   <FaTag />
                 </div>
                 <input
                   type="text"
                   value={externalRef}
-                  onChange={(e) => setExternalRef(e.target.value)}
-                  placeholder="e.g. GENESYS-00029"
-                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs font-mono placeholder:text-gray-400"
+                  readOnly
+                  disabled
+                  placeholder="Auto-generated Reference"
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-700 text-xs font-mono cursor-not-allowed select-none"
                 />
               </div>
             </div>
-
           </div>
 
           {/* 12. Complaint Description (Textarea + Quick Templates Dropdown) */}
@@ -581,7 +630,9 @@ export default function CreateComplaintView() {
 
               {/* Quick Template Dropdown */}
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-medium text-gray-400">Template:</span>
+                <span className="text-[10px] font-medium text-gray-400">
+                  Template:
+                </span>
                 <select
                   onChange={(e) => {
                     if (e.target.value) setComplaint(e.target.value);
@@ -589,9 +640,13 @@ export default function CreateComplaintView() {
                   defaultValue=""
                   className="h-6 px-2 bg-white border border-slate-200/90 rounded-md text-[11px] font-medium text-gray-700 focus:outline-none focus:border-blue-500 cursor-pointer shadow-2xs"
                 >
-                  <option value="" disabled>-- Select Quick Template --</option>
+                  <option value="" disabled>
+                    -- Select Quick Template --
+                  </option>
                   {complaintTemplates.map((tmpl, idx) => (
-                    <option key={idx} value={tmpl}>{tmpl}</option>
+                    <option key={idx} value={tmpl}>
+                      {tmpl}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -616,13 +671,24 @@ export default function CreateComplaintView() {
           <div className="pt-1 flex items-center justify-end border-t border-gray-100">
             <button
               type="submit"
-              disabled={submitting}
-              className="h-8.5 px-5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-50"
+              disabled={submitting || isSuccessCreated}
+              className={`h-8.5 px-5 font-bold text-xs rounded-lg shadow-xs transition-all flex items-center gap-1.5 ${
+                isSuccessCreated
+                  ? "bg-emerald-600 text-white cursor-default"
+                  : submitting
+                  ? "bg-blue-500 text-white cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700 text-white cursor-pointer active:scale-[0.98]"
+              }`}
             >
               {submitting ? (
                 <>
                   <FaSpinner className="animate-spin text-xs" />
-                  <span>Submitting Complaint...</span>
+                  <span>Processing...</span>
+                </>
+              ) : isSuccessCreated ? (
+                <>
+                  <FaCheckCircle className="text-xs text-white" />
+                  <span>Created</span>
                 </>
               ) : (
                 <>
@@ -632,10 +698,8 @@ export default function CreateComplaintView() {
               )}
             </button>
           </div>
-
         </form>
       </div>
-
     </div>
   );
 }

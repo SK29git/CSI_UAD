@@ -19,9 +19,6 @@ export const SERVICE_REQUEST_REFERENCES = [
   { type: "IPE", label: "Inbound Parts Enq." },
   { type: "CMO", label: "Inbound other service Enq." },
   { type: "CMQ", label: "Inbound Quote - No Booking" },
-  { type: "ES3", label: "Recovery AGMC" },
-  { type: "ES5", label: "Service mobile inprogress" },
-  { type: "ES9", label: "Recovery AAA" },
   { type: "CALL0001", label: "Connected Drive" },
   { type: "CALL0002", label: "Service Contract" },
   { type: "CDRN", label: "CD Motorshow Renewal" },
@@ -30,7 +27,16 @@ export const SERVICE_REQUEST_REFERENCES = [
   { type: "DSCi", label: "DSCi Campaigns" },
 ];
 
-export default function CreateServiceView() {
+export const BREAKDOWN_REFERENCES = [
+  { type: "ES5", label: "Service mobile in progress" },
+  { type: "ES3", label: "Recovery AGMC" },
+  { type: "ES9", label: "Recovery AAA" },
+];
+
+export default function CreateServiceView({ mode = "other_request" }) {
+  const isBreakdown = mode === "breakdown";
+  const title = isBreakdown ? "Breakdown" : "Other Request";
+  const activeReferences = isBreakdown ? BREAKDOWN_REFERENCES : SERVICE_REQUEST_REFERENCES;
   const {
     customer,
     currentGroup,
@@ -48,10 +54,7 @@ export default function CreateServiceView() {
     "BMW";
 
   const customerId =
-    customer?.customerNumber ||
-    customer?.id ||
-    customer?.customerId ||
-    "";
+    customer?.customerNumber || customer?.id || customer?.customerId || "";
 
   // Properly retrieve customer name using getFormattedName() or fallback fields
   const formattedName = getFormattedName ? getFormattedName() : "";
@@ -65,10 +68,7 @@ export default function CreateServiceView() {
         "";
 
   const branchCode =
-    customer?.branchCode ||
-    customer?.branch ||
-    customer?.branch_code ||
-    "10";
+    customer?.branchCode || customer?.branch || customer?.branch_code || "10";
 
   const advisorId =
     customer?.salesExecutiveId ||
@@ -77,8 +77,14 @@ export default function CreateServiceView() {
     null;
 
   // Editable fields state
-  const [reference, setReference] = useState("ES5");
+  const [selectedReferences, setSelectedReferences] = useState([]);
   const [notes, setNotes] = useState("");
+
+  const toggleReference = (type) => {
+    setSelectedReferences((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
+    );
+  };
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,8 +95,8 @@ export default function CreateServiceView() {
     e.preventDefault();
     setErrorMsg("");
 
-    if (!reference) {
-      setErrorMsg("Please select a Reference.");
+    if (selectedReferences.length === 0) {
+      setErrorMsg("Please select at least one Reference.");
       return;
     }
 
@@ -103,23 +109,30 @@ export default function CreateServiceView() {
     setIsProcessing(true);
 
     try {
-      const payload = {
-        group: String(group || "BMW").trim(),
-        customerId: String(customerId || "").trim(),
-        customerName: String(customerName || "").trim(),
-        eventType: reference, // Sent as eventType to RPA API
-        branchCode: String(branchCode || "10").trim(),
-        salesExecutiveId: advisorId ? String(advisorId).trim() : null,
-        notes: notes.trim(),
-      };
+      // Submit service request notes for each selected reference
+      const results = await Promise.all(
+        selectedReferences.map((refType) =>
+          createServiceRequestNotes({
+            group: String(group || "BMW").trim(),
+            customerId: String(customerId || "").trim(),
+            customerName: String(customerName || "").trim(),
+            eventType: refType,
+            eventTypes: selectedReferences,
+            branchCode: String(branchCode || "10").trim(),
+            salesExecutiveId: advisorId ? String(advisorId).trim() : null,
+            notes: notes.trim(),
+          }),
+        ),
+      );
 
-      const result = await createServiceRequestNotes(payload);
+      const hasError = results.some((r) => r && r.ok === false);
 
-      if (result && result.ok !== false) {
+      if (!hasError) {
         // Show processing state without showing any success popups or alerts
         setTimeout(() => {
           setIsSubmitting(false);
           setNotes("");
+          setSelectedReferences([]);
           setTimeout(() => {
             setIsProcessing(false);
           }, 3500);
@@ -127,10 +140,11 @@ export default function CreateServiceView() {
       } else {
         setIsSubmitting(false);
         setIsProcessing(false);
+        const errObj = results.find((r) => r && r.ok === false);
         setErrorMsg(
-          result?.error ||
-            result?.errorMessage ||
-            "Failed to submit service request notes."
+          errObj?.error ||
+            errObj?.errorMessage ||
+            "Failed to submit service request notes.",
         );
       }
     } catch (err) {
@@ -138,7 +152,7 @@ export default function CreateServiceView() {
       setIsSubmitting(false);
       setIsProcessing(false);
       setErrorMsg(
-        err?.message || "An unexpected error occurred while submitting."
+        err?.message || "An unexpected error occurred while submitting.",
       );
     }
   };
@@ -153,12 +167,13 @@ export default function CreateServiceView() {
           </div>
           <div>
             <h2 className="text-xs sm:text-sm font-extrabold text-gray-900 leading-tight">
-              Other Request
+              {title}
             </h2>
             <p className="text-[10px] text-gray-400 font-medium">
-              Create other request notes for{" "}
+              Create {title.toLowerCase()} notes for{" "}
               <span className="font-semibold text-gray-700">
-                {customerName || (customerId ? `Customer #${customerId}` : "Customer")}
+                {customerName ||
+                  (customerId ? `Customer #${customerId}` : "Customer")}
               </span>
             </p>
           </div>
@@ -180,7 +195,7 @@ export default function CreateServiceView() {
 
       {/* Main Form: 3x3 Grid Layout */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 text-xs">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-3 gap-y-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
           {/* 1. Customer Name */}
           <div>
             <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
@@ -256,30 +271,80 @@ export default function CreateServiceView() {
               />
             </div>
           </div>
+        </div>
 
-          {/* 5. Reference Dropdown (width kept small/compact) */}
-          <div className="w-full max-w-[280px]">
-            <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-              Reference <span className="text-rose-500 font-bold">*</span>
+        {/* Reference Selection - Multi-Select Checkboxes */}
+        <div className="w-full bg-slate-50/60 p-3 rounded-xl border border-slate-200/90 flex flex-col gap-2">
+          <div className="flex items-center justify-between flex-wrap gap-2 pb-1.5 border-b border-slate-200/60">
+            <label className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5">
+              <FaListUl className="text-blue-500 text-[11px]" />
+              <span>Reference Types</span>
+              <span className="text-rose-500 font-bold">*</span>
+              <span className="text-[10px] font-normal text-gray-500">
+                (Select one or multiple)
+              </span>
             </label>
-            <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
-              <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
-                <FaListUl />
-              </div>
-              <select
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                disabled={isSubmitting}
-                className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer truncate"
+
+            <div className="flex items-center gap-2">
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all ${
+                  selectedReferences.length > 0
+                    ? "bg-blue-100 text-blue-800 border-blue-200"
+                    : "bg-gray-100 text-gray-500 border-gray-200"
+                }`}
               >
-                <option value="" disabled>-- Select Reference --</option>
-                {SERVICE_REQUEST_REFERENCES.map((item) => (
-                  <option key={item.type} value={item.type}>
-                    {item.label} ({item.type})
-                  </option>
-                ))}
-              </select>
+                {selectedReferences.length} Selected
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    selectedReferences.length ===
+                    activeReferences.length
+                  ) {
+                    setSelectedReferences([]);
+                  } else {
+                    setSelectedReferences(
+                      activeReferences.map((r) => r.type),
+                    );
+                  }
+                }}
+                disabled={isSubmitting}
+                className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer underline disabled:opacity-50"
+              >
+                {selectedReferences.length === activeReferences.length
+                  ? "Deselect All"
+                  : "Select All"}
+              </button>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-0.5">
+            {activeReferences.map((item) => {
+              const isChecked = selectedReferences.includes(item.type);
+              return (
+                <label
+                  key={item.type}
+                  className={`flex items-center gap-2.5 p-2 rounded-lg border transition-all cursor-pointer text-xs select-none ${
+                    isChecked
+                      ? "bg-blue-50/80 border-blue-400 text-blue-950 font-semibold shadow-2xs ring-1 ring-blue-300"
+                      : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 text-gray-700 font-medium"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    value={item.type}
+                    checked={isChecked}
+                    onChange={() => toggleReference(item.type)}
+                    disabled={isSubmitting}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 cursor-pointer accent-blue-600 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="truncate block">{item.label}</span>
+                  </div>
+                </label>
+              );
+            })}
           </div>
         </div>
 
@@ -322,12 +387,15 @@ export default function CreateServiceView() {
             type="button"
             onClick={() => {
               setNotes("");
+              setSelectedReferences([]);
               setErrorMsg("");
             }}
-            disabled={isSubmitting || !notes}
+            disabled={
+              isSubmitting || (!notes && selectedReferences.length === 0)
+            }
             className="px-4 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Clear Notes
+            Clear Form
           </button>
           <button
             type="submit"
@@ -346,7 +414,7 @@ export default function CreateServiceView() {
             ) : (
               <>
                 <FaPaperPlane className="text-xs" />
-                <span>Submit Other Request</span>
+                <span>Submit {title}</span>
               </>
             )}
           </button>

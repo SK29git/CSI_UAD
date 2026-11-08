@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
-import { apiFetch } from '../utils/api';
+import { getCustomerComplaintsByStatus } from '../utils/api';
 import { 
   FaFilter, 
   FaPhoneAlt, 
@@ -26,10 +26,14 @@ export default function RightSidebar({ isCollapsed = false, onToggleCollapse }) 
   const [loading, setLoading] = useState(true);
 
   const fetchComplaintTimeline = async () => {
+    if (!customerNumber) {
+      setLoading(false);
+      setComplaintActivities([]);
+      return;
+    }
     setLoading(true);
     try {
-      const apiUrl = `/api/v1/customers/${group}/${customerNumber}/complaints?limit=50`;
-      const res = await apiFetch(apiUrl);
+      const res = await getCustomerComplaintsByStatus(group || 'BMW', customerNumber);
 
       if (res && res.ok && Array.isArray(res.data)) {
         setComplaintActivities(res.data);

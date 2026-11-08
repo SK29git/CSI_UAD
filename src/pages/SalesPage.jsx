@@ -9,7 +9,7 @@ import SalesSegmentsView from '../components/SalesSegmentsView';
 import SalesAfterSalesView from '../components/SalesAfterSalesView';
 import SalesEnquiriesView from '../components/SalesEnquiriesView';
 import SalesCreateTaskView from '../components/SalesCreateTaskView';
-import RightSidebar from '../components/RightSidebar';
+import EventHistoryView from '../components/EventHistoryView';
 import CustomerFormView from '../components/CustomerFormView';
 import { useCustomer, isExistingCustomer } from '../context/CustomerContext';
 
@@ -24,7 +24,6 @@ export default function SalesPage() {
     }
     return false;
   });
-  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -96,8 +95,10 @@ export default function SalesPage() {
         return <SalesVehicleOrdersView />;
       case 'Customer Segments':
         return <SalesSegmentsView />;
-      case 'After-Sales & Follow Up':
+      case 'After-Sales':
         return <SalesAfterSalesView />;
+      case 'Event History':
+        return <EventHistoryView />;
       default:
         return <SalesNewLeadView onNavigateToEnquiries={() => setActiveSubTab('Enquiries')} />;
     }
@@ -146,22 +147,12 @@ export default function SalesPage() {
             setActiveSubTab={setActiveSubTab} 
             isLeftCollapsed={isLeftCollapsed}
             onToggleLeft={() => setIsLeftCollapsed(!isLeftCollapsed)}
-            isRightCollapsed={isRightCollapsed}
-            onToggleRight={() => setIsRightCollapsed(!isRightCollapsed)}
           />
 
           <div className="transition-all duration-200">
             {renderSalesContent()}
           </div>
         </main>
-
-        {/* RIGHT COLUMN: Activity Log Timeline */}
-        <aside className="hidden xl:block w-auto flex-shrink-0 sticky top-5 z-10 transition-all duration-300">
-          <RightSidebar 
-            isCollapsed={isRightCollapsed}
-            onToggleCollapse={() => setIsRightCollapsed(!isRightCollapsed)}
-          />
-        </aside>
 
       </div>
     </div>

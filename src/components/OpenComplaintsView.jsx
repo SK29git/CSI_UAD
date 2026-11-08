@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useCustomer } from '../context/CustomerContext';
-import { apiFetch } from '../utils/api';
+import { getCustomerComplaintsByStatus, apiFetch } from '../utils/api';
 import { 
   FaSearch, 
   FaFilter, 
@@ -10,7 +10,10 @@ import {
   FaEye,
   FaCalendarAlt,
   FaDesktop,
-  FaTag
+  FaTag,
+  FaBuilding,
+  FaUserTie,
+  FaMapMarkerAlt
 } from 'react-icons/fa';
 
 export default function OpenComplaintsView() {
@@ -29,7 +32,19 @@ export default function OpenComplaintsView() {
     setLoading(true);
     setError(null);
     try {
-      const apiUrl = `/api/v1/complaints?group=${group}&customerNumber=${customerNumber}&status=open`;
+      // 1. Primary: Detailed Customer Complaints endpoint
+      // GET /api/v1/complaints/{group}/customers/{customerNumber}?status=open
+      const statusRes = await getCustomerComplaintsByStatus(group || 'BMW', customerNumber, 'open');
+
+      if (statusRes && statusRes.ok && Array.isArray(statusRes.data) && statusRes.data.length > 0) {
+        setComplaints(statusRes.data);
+        if (setOpenComplaintsCount) setOpenComplaintsCount(statusRes.data.length);
+        return;
+      }
+
+      // 2. Fallback: Query-param endpoint
+      // GET /api/v1/complaints?group={group}&customerNumber={customerNumber}&status=open
+      const apiUrl = `/api/v1/complaints?group=${group || 'BMW'}&customerNumber=${customerNumber}&status=open`;
       const res = await apiFetch(apiUrl);
 
       if (res && res.ok && Array.isArray(res.data)) {
@@ -58,9 +73,14 @@ export default function OpenComplaintsView() {
     return (
       (item.complaintId && item.complaintId.toLowerCase().includes(query)) ||
       (item.category && item.category.toLowerCase().includes(query)) ||
+      (item.department && item.department.toLowerCase().includes(query)) ||
+      (item.description && item.description.toLowerCase().includes(query)) ||
+      (item.raisedBy && item.raisedBy.toLowerCase().includes(query)) ||
+      (item.location && String(item.location).toLowerCase().includes(query)) ||
+      (item.source && item.source.toLowerCase().includes(query)) ||
       (item.origin && item.origin.toLowerCase().includes(query)) ||
-      (item.priority && item.priority.toLowerCase().includes(query)) ||
-      (item.customerNumber && item.customerNumber.toLowerCase().includes(query))
+      (item.status && item.status.toLowerCase().includes(query)) ||
+      (item.raisedDate && item.raisedDate.toLowerCase().includes(query))
     );
   });
 
@@ -115,65 +135,91 @@ export default function OpenComplaintsView() {
           <p className="text-[11px] text-gray-400">No active escalation records match the selected customer filter.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-500 font-semibold uppercase text-[10px] tracking-wider border-b border-gray-200">
+        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-2xs">
+          <table className="w-full text-center text-xs">
+            <thead className="bg-gray-50 text-gray-600 font-bold uppercase text-[10px] tracking-wider border-b border-gray-200">
               <tr>
-                <th className="py-2.5 px-3">Complaint ID</th>
-                <th className="py-2.5 px-3">Customer Number</th>
-                <th className="py-2.5 px-3">Category</th>
-                <th className="py-2.5 px-3">Origin</th>
-                <th className="py-2.5 px-3">Priority</th>
-                <th className="py-2.5 px-3">Open Date</th>
-                <th className="py-2.5 px-3">Status</th>
-                <th className="py-2.5 px-3">SLA Due</th>
+                <th className="py-3 px-3 text-center">Complaint ID</th>
+                <th className="py-3 px-3 text-center">Category</th>
+                <th className="py-3 px-3 text-center">Department</th>
+                <th className="py-3 px-3 text-center">Description</th>
+                <th className="py-3 px-3 text-center">Raised By</th>
+                <th className="py-3 px-3 text-center">Location</th>
+                <th className="py-3 px-3 text-center">Origin / Source</th>
+                <th className="py-3 px-3 text-center">Raised Date</th>
+                <th className="py-3 px-3 text-center">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
               {filtered.map((item, idx) => (
                 <tr key={item.complaintId || idx} className="hover:bg-blue-50/40 transition-colors">
-                  <td className="py-3 px-3 font-bold text-blue-600 font-mono">
-                    {item.complaintId}
-                  </td>
-                  <td className="py-3 px-3 font-semibold text-gray-800 font-mono">
-                    {item.customerNumber || customerNumber}
-                  </td>
-                  <td className="py-3 px-3 font-semibold text-gray-900">
-                    <div className="flex items-center gap-1.5">
-                      <FaTag className="text-gray-400 text-[10px]" />
-                      <span>{item.category || 'General'}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-3 text-gray-600 uppercase font-semibold text-[10px]">
-                    <div className="flex items-center gap-1 text-gray-500">
-                      <FaDesktop className="text-[10px]" />
-                      <span>{item.origin || 'DESKTOP'}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-3">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      item.priority === 'HIGH' || item.priority === 'CRITICAL'
-                        ? 'bg-rose-100 text-rose-700 border border-rose-200' 
-                        : item.priority === 'MEDIUM' 
-                        ? 'bg-amber-100 text-amber-700 border border-amber-200' 
-                        : 'bg-blue-100 text-blue-700 border border-blue-200'
-                    }`}>
-                      {item.priority || 'NORMAL'}
+                  {/* Complaint ID */}
+                  <td className="py-3.5 px-3 text-center align-middle whitespace-nowrap">
+                    <span className="font-mono font-bold text-blue-600 bg-blue-50/80 px-2.5 py-1 rounded-md border border-blue-200 inline-block text-xs">
+                      {item.complaintId || '-'}
                     </span>
                   </td>
-                  <td className="py-3 px-3 text-gray-600 font-mono text-[11px]">
-                    <div className="flex items-center gap-1">
-                      <FaCalendarAlt className="text-gray-400 text-[10px]" />
-                      <span>{item.openDate || 'N/A'}</span>
+
+                  {/* Category */}
+                  <td className="py-3.5 px-3 text-center align-middle font-semibold text-gray-900 whitespace-nowrap">
+                    <div className="inline-flex items-center justify-center gap-1.5">
+                      <FaTag className="text-gray-400 text-[10px]" />
+                      <span>{item.category || '-'}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-3">
-                    <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase">
+
+                  {/* Department */}
+                  <td className="py-3.5 px-3 text-center align-middle font-semibold text-gray-800 whitespace-nowrap">
+                    <div className="inline-flex items-center justify-center gap-1.5">
+                      <FaBuilding className="text-gray-400 text-[10px]" />
+                      <span>{item.department || '-'}</span>
+                    </div>
+                  </td>
+
+                  {/* Description */}
+                  <td className="py-3.5 px-3 text-center align-middle text-gray-700 text-xs min-w-[200px] max-w-sm">
+                    <div className="inline-block text-center leading-relaxed" title={item.description || ''}>
+                      {item.description || '-'}
+                    </div>
+                  </td>
+
+                  {/* Raised By */}
+                  <td className="py-3.5 px-3 text-center align-middle text-gray-700 font-mono text-[11px] whitespace-nowrap">
+                    <div className="inline-flex items-center justify-center gap-1.5">
+                      <FaUserTie className="text-gray-400 text-[10px]" />
+                      <span>{item.raisedBy || item.owner || '-'}</span>
+                    </div>
+                  </td>
+
+                  {/* Location */}
+                  <td className="py-3.5 px-3 text-center align-middle text-gray-600 whitespace-nowrap">
+                    <div className="inline-flex items-center justify-center gap-1.5">
+                      <FaMapMarkerAlt className="text-gray-400 text-[10px]" />
+                      <span>{item.location || '-'}</span>
+                    </div>
+                  </td>
+
+                  {/* Origin / Source */}
+                  <td className="py-3.5 px-3 text-center align-middle text-gray-600 uppercase font-semibold text-[10px] whitespace-nowrap">
+                    <div className="inline-flex items-center justify-center gap-1 text-gray-600 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded">
+                      <FaDesktop className="text-[10px]" />
+                      <span>{item.source || item.origin || '-'}</span>
+                    </div>
+                  </td>
+
+                  {/* Raised Date */}
+                  <td className="py-3.5 px-3 text-center align-middle text-gray-600 font-mono text-[11px] whitespace-nowrap">
+                    <div className="inline-flex items-center justify-center gap-1.5">
+                      <FaCalendarAlt className="text-gray-400 text-[10px]" />
+                      <span>{item.raisedDate || (item.createdAt ? item.createdAt.slice(0, 10) : item.openDate || '-')}</span>
+                    </div>
+                  </td>
+
+                  {/* Status */}
+                  <td className="py-3.5 px-3 text-center align-middle whitespace-nowrap">
+                    <span className="inline-block bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase">
                       {item.status || 'OPEN'}
                     </span>
-                  </td>
-                  <td className="py-3 px-3 text-gray-600 text-[11px]">
-                    {item.slaDue || 'On Track'}
                   </td>
                 </tr>
               ))}

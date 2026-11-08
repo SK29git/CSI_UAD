@@ -15,39 +15,75 @@ export async function apiFetch(path, options = {}) {
     const res = await fetch(relativeUrl, options);
     const contentType = res.headers.get("content-type") || "";
 
-    // If response is valid JSON (not an HTML fallback page)
-    if (res.ok && contentType.includes("application/json")) {
-      const data = await res.json();
-      return { ok: true, data, status: res.status };
+    let data = null;
+    if (contentType.includes("application/json")) {
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+    } else {
+      try {
+        const text = await res.text();
+        // If it's an HTML fallback page from Vite/SPA, don't treat it as a valid API response
+        if (!text.includes("<!DOCTYPE html>") && !text.includes("<html")) {
+          data = { message: text };
+        }
+      } catch {
+        data = null;
+      }
+    }
+
+    // If we received an actual response from the proxy/server
+    if (data !== null || contentType.includes("application/json")) {
+      if (res.ok) {
+        return { ok: true, data, status: res.status };
+      }
+      return { 
+        ok: false, 
+        status: res.status, 
+        data, 
+        error: data?.message || `Request failed with status ${res.status}` 
+      };
+    }
+
+    if (res.ok) {
+      return { ok: true, data: null, status: res.status };
     }
   } catch (err) {
-    console.warn(
-      `Relative fetch to ${relativeUrl} failed, falling back to direct URL:`,
-      err,
-    );
+    // Only logged if relative fetch threw a network exception (e.g. offline)
+    console.warn(`Relative fetch to ${relativeUrl} error:`, err?.message || err);
   }
 
-  // 2. Direct fetch fallback to https://ccaas.agmcgroup.ae
+  // 2. Direct fetch fallback (only for non-localhost or server environments)
+  // When running on localhost in browser, direct fetch to ccaas.agmcgroup.ae is blocked by CORS.
+  if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) {
+    return { ok: false, status: 404, error: "Endpoint returned not found or unreachable via local proxy" };
+  }
+
   try {
     const directRes = await fetch(directUrl, options);
     const contentType = directRes.headers.get("content-type") || "";
 
-    if (directRes.ok) {
-      if (contentType.includes("application/json")) {
-        const data = await directRes.json();
-        return { ok: true, data, status: directRes.status };
-      }
+    let data = null;
+    if (contentType.includes("application/json")) {
       try {
-        const textData = await directRes.json();
-        return { ok: true, data: textData, status: directRes.status };
+        data = await directRes.json();
       } catch {
-        return { ok: true, data: null, status: directRes.status };
+        data = null;
       }
     }
-    return { ok: false, status: directRes.status };
+    if (directRes.ok) {
+      return { ok: true, data, status: directRes.status };
+    }
+    return { 
+      ok: false, 
+      status: directRes.status, 
+      data, 
+      error: data?.message || `Direct request failed with status ${directRes.status}` 
+    };
   } catch (err) {
-    console.error(`Direct fetch to ${directUrl} failed:`, err);
-    return { ok: false, error: err.message };
+    return { ok: false, error: err.message || "Network request failed" };
   }
 }
 
@@ -1264,3 +1300,83 @@ export async function deleteServiceAppointment(appointmentId) {
   );
 }
 export const deleteGeelyAppointment = deleteServiceAppointment;
+
+/**
+ * 16. Get Events of a Customer (GET /api/v1/events?group={group}&customerNumber={customerNumber}&limit={limit})
+ * Query params: group, customerNumber, limit, from, to, type, open
+ */
+export async function getCustomerEvents({
+  group = "BMW",
+  customerNumber,
+  prospectNumber,
+  limit = 20,
+  from,
+  to,
+  type,
+  open,
+} = {}) {
+  if (!customerNumber && !prospectNumber) {
+    return { ok: false, error: "Customer or Prospect number is required" };
+  }
+  const q = new URLSearchParams();
+  q.set("group", group || "BMW");
+  if (customerNumber) q.set("customerNumber", String(customerNumber).trim());
+  if (prospectNumber) q.set("prospectNumber", String(prospectNumber).trim());
+  if (limit) q.set("limit", String(limit));
+  if (from) q.set("from", from);
+  if (to) q.set("to", to);
+  if (type) q.set("type", type);
+  if (open !== undefined && open !== null && open !== "") q.set("open", String(open));
+
+  const res = await apiFetch(`/api/v1/events?${q.toString()}`);
+  
+  // If customerNumber returned 404 (e.g. record is an unconverted prospect), auto-fallback to prospectNumber
+  if (!res.ok && res.status === 404 && customerNumber && !prospectNumber) {
+    const pq = new URLSearchParams(q);
+    pq.delete("customerNumber");
+    pq.set("prospectNumber", String(customerNumber).trim());
+    const pres = await apiFetch(`/api/v1/events?${pq.toString()}`);
+    if (pres.ok) {
+      return pres;
+    }
+  }
+
+  return res;
+}
+
+/**
+ * 17. Get One Event (GET /api/v1/events?group={group}&eventNumber={eventNumber})
+ * Query params: group, eventNumber
+ */
+export async function getEventByNumber({
+  group = "BMW",
+  eventNumber,
+} = {}) {
+  if (!eventNumber) {
+    return { ok: false, error: "Event number is required" };
+  }
+  const q = new URLSearchParams();
+  q.set("group", group || "BMW");
+  q.set("eventNumber", String(eventNumber).trim());
+
+  return await apiFetch(`/api/v1/events?${q.toString()}`);
+}
+
+/**
+ * 18. Get Sales Executive Details (GET /api/v1/sales-executives?group={group}&userId={userId})
+ * Query params: group, userId
+ */
+export async function getSalesExecutiveDetails({
+  group = "BMW",
+  userId,
+} = {}) {
+  if (!userId) {
+    return { ok: false, error: "User ID is required" };
+  }
+  const q = new URLSearchParams();
+  q.set("group", group || "BMW");
+  q.set("userId", String(userId).trim());
+
+  return await apiFetch(`/api/v1/sales-executives?${q.toString()}`);
+}
+

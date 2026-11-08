@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { useCustomer } from '../context/CustomerContext';
-import { apiFetch, createSalesFollowUpCase } from '../utils/api';
-import VehiclePackagesModal from './VehiclePackagesModal';
-import { 
-  FaWrench, 
-  FaCalendarAlt, 
+import React, { useState, useEffect } from "react";
+import { useCustomer } from "../context/CustomerContext";
+import { apiFetch, createSalesFollowUpCase } from "../utils/api";
+import VehiclePackagesModal from "./VehiclePackagesModal";
+import {
+  FaWrench,
+  FaCalendarAlt,
   FaCalendarPlus,
-  FaUserCheck, 
-  FaExclamationCircle, 
-  FaSpinner, 
-  FaRedo, 
-  FaPhoneAlt, 
-  FaCheckCircle, 
-  FaSearch, 
-  FaCar, 
-  FaBell, 
-  FaPaperPlane, 
+  FaUserCheck,
+  FaExclamationCircle,
+  FaSpinner,
+  FaRedo,
+  FaPhoneAlt,
+  FaCheckCircle,
+  FaSearch,
+  FaCar,
+  FaBell,
+  FaPaperPlane,
   FaInfoCircle,
   FaShieldAlt,
   FaFileContract,
@@ -26,9 +26,9 @@ import {
   FaBuilding,
   FaTimes,
   FaLayerGroup,
-  FaBoxes
-} from 'react-icons/fa';
-import { getFullMobileNumber } from '../utils/phoneUtils';
+  FaBoxes,
+} from "react-icons/fa";
+import { getFullMobileNumber } from "../utils/phoneUtils";
 
 const BRANCH_OPTIONS = [
   { code: "10", name: "10 - Sheikh Zayed Rd" },
@@ -40,21 +40,34 @@ const BRANCH_OPTIONS = [
   { code: "50", name: "50 - Fujairah" },
   { code: "60", name: "60 - Motor City" },
   { code: "70", name: "70 - City Walk" },
-  { code: "99", name: "99 - Head Office" }
+  { code: "99", name: "99 - Head Office" },
 ];
 
 export default function SalesAfterSalesView() {
-  const { customer, vehicles: contextVehicles = [], currentMobile: contextMobile, group: contextGroup } = useCustomer();
-  const group = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || 'BMW');
+  const {
+    customer,
+    vehicles: contextVehicles = [],
+    currentMobile: contextMobile,
+    group: contextGroup,
+  } = useCustomer();
+  const group =
+    contextGroup ||
+    customer?.keyloopGroup ||
+    new URLSearchParams(window.location.search).get("group") ||
+    "BMW";
   const customerNumber = customer?.customerNumber || customer?.id || "";
-  const customerName = customer?.fullName || `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() || "Customer Record";
+  const customerName =
+    customer?.fullName ||
+    `${customer?.firstName || ""} ${customer?.surname || ""}`.trim() ||
+    "Customer Record";
 
   const cleanMobile = getFullMobileNumber(customer, contextMobile);
 
   // Tabs: 'CustomerVehicles' | 'ServiceBookings' | 'RetentionAlerts'
-  const [activeTab, setActiveTab] = useState('CustomerVehicles');
+  const [activeTab, setActiveTab] = useState("CustomerVehicles");
   const [vehiclesList, setVehiclesList] = useState([]);
-  const [selectedVehicleForPackages, setSelectedVehicleForPackages] = useState(null);
+  const [selectedVehicleForPackages, setSelectedVehicleForPackages] =
+    useState(null);
   const [bookingsList, setBookingsList] = useState([]);
   const [serviceDueList, setServiceDueList] = useState([]);
   const [noServiceList, setNoServiceList] = useState([]);
@@ -79,10 +92,12 @@ export default function SalesAfterSalesView() {
   const [followUpDueDate, setFollowUpDueDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split('T')[0];
+    return tomorrow.toISOString().split("T")[0];
   });
   const [followUpDueTime, setFollowUpDueTime] = useState("11:00");
-  const [followUpNotes, setFollowUpNotes] = useState("please do a follow up on this customer");
+  const [followUpNotes, setFollowUpNotes] = useState(
+    "please do a follow up on this customer",
+  );
   const [submittingFollowUp, setSubmittingFollowUp] = useState(false);
   const [followUpToast, setFollowUpToast] = useState(null);
 
@@ -109,8 +124,13 @@ export default function SalesAfterSalesView() {
     if (rawAdvisorName && rawAdvisorId) {
       if (rawAdvisorName.toLowerCase().includes(rawAdvisorId.toLowerCase())) {
         displayAdvisor = rawAdvisorName;
-      } else if (rawAdvisorName === "Assigned Service Advisor" || rawAdvisorName === "Service Advisor") {
-        displayAdvisor = rawAdvisorId ? `Advisor #${rawAdvisorId}` : rawAdvisorName;
+      } else if (
+        rawAdvisorName === "Assigned Service Advisor" ||
+        rawAdvisorName === "Service Advisor"
+      ) {
+        displayAdvisor = rawAdvisorId
+          ? `Advisor #${rawAdvisorId}`
+          : rawAdvisorName;
       } else {
         displayAdvisor = `${rawAdvisorName} (${rawAdvisorId})`;
       }
@@ -120,7 +140,9 @@ export default function SalesAfterSalesView() {
       displayAdvisor = rawAdvisorId;
     }
 
-    const defaultNotes = options.notes || `Please follow up on this customer with Service Advisor ${displayAdvisor}`;
+    const defaultNotes =
+      options.notes ||
+      `Please follow up on this customer with Service Advisor ${displayAdvisor}`;
 
     setFollowUpCustomerId(custId);
     setFollowUpCustomerName(custName);
@@ -139,7 +161,9 @@ export default function SalesAfterSalesView() {
     setFollowUpToast(null);
 
     // Extract advisor ID/code from display string if present
-    let resolvedAdvisorId = String(followUpAdvisorDisplay || followUpAdvisorId || "kunnath").trim();
+    let resolvedAdvisorId = String(
+      followUpAdvisorDisplay || followUpAdvisorId || "kunnath",
+    ).trim();
     const parensMatch = resolvedAdvisorId.match(/\(([^)]+)\)/);
     if (parensMatch && parensMatch[1]) {
       resolvedAdvisorId = parensMatch[1].trim();
@@ -152,10 +176,12 @@ export default function SalesAfterSalesView() {
       customerId: String(followUpCustomerId || customerNumber || "").trim(),
       customerName: String(followUpCustomerName || customerName || "").trim(),
       followupId: resolvedAdvisorId || "kunnath",
-      dueDate: followUpDueDate || new Date().toISOString().split('T')[0],
+      dueDate: followUpDueDate || new Date().toISOString().split("T")[0],
       dueTime: followUpDueTime || "11:00",
       branchCode: followUpBranchCode || "10",
-      notes: String(followUpNotes || "").trim() || "please do a follow up on this customer"
+      notes:
+        String(followUpNotes || "").trim() ||
+        "please do a follow up on this customer",
     };
 
     try {
@@ -166,35 +192,35 @@ export default function SalesAfterSalesView() {
           message: `Sales follow-up scheduled successfully via Keyloop RPA!`,
           taskId: res.taskId || res.result?.taskId,
           status: res.status || "QUEUED",
-          details: payload
+          details: payload,
         });
         setShowFollowUpModal(false);
       } else {
         setFollowUpToast({
           isError: true,
-          message: res?.errorMessage || "Failed to schedule sales follow-up."
+          message: res?.errorMessage || "Failed to schedule sales follow-up.",
         });
       }
     } catch (err) {
       console.error("Create follow up error:", err);
       setFollowUpToast({
         isError: true,
-        message: err.message || "Failed to submit sales follow-up task."
+        message: err.message || "Failed to submit sales follow-up task.",
       });
     } finally {
       setSubmittingFollowUp(false);
     }
   };
 
-  const formatDisplayVal = (val, fallback = 'N/A') => {
-    if (val === null || val === undefined || val === '') return fallback;
-    if (typeof val === 'object') {
+  const formatDisplayVal = (val, fallback = "N/A") => {
+    if (val === null || val === undefined || val === "") return fallback;
+    if (typeof val === "object") {
       if (val.name) return val.name;
       if (val.description) return val.description;
       return fallback;
     }
     const str = String(val).trim();
-    if (str === '{}' || str === '[]' || str === '') return fallback;
+    if (str === "{}" || str === "[]" || str === "") return fallback;
     return str;
   };
 
@@ -215,7 +241,9 @@ export default function SalesAfterSalesView() {
     try {
       // 1. Fetch customer's vehicles: /api/v1/vehicles?group={group}&customerNumber={customerNumber}
       if (customerNumber) {
-        const vehRes = await apiFetch(`/api/v1/vehicles?group=${group}&customerNumber=${customerNumber}`);
+        const vehRes = await apiFetch(
+          `/api/v1/vehicles?group=${group}&customerNumber=${customerNumber}`,
+        );
         let vList = [];
         if (vehRes && vehRes.ok && Array.isArray(vehRes.data)) {
           vList = vehRes.data;
@@ -225,7 +253,9 @@ export default function SalesAfterSalesView() {
         setVehiclesList(vList);
 
         // 2. Fetch customer's service bookings: /api/v1/customers/{group}/{customerNumber}/service-bookings
-        const bookRes = await apiFetch(`/api/v1/customers/${group}/${customerNumber}/service-bookings`);
+        const bookRes = await apiFetch(
+          `/api/v1/customers/${group}/${customerNumber}/service-bookings`,
+        );
         let bList = [];
         if (bookRes && bookRes.ok) {
           if (Array.isArray(bookRes.data)) {
@@ -238,14 +268,18 @@ export default function SalesAfterSalesView() {
       }
 
       // 3. Customer-specific After-sales Segments (filtered by cleanMobile)
-      const mobileQuery = cleanMobile ? `&mobile=${cleanMobile}` : '';
+      const mobileQuery = cleanMobile ? `&mobile=${cleanMobile}` : "";
 
       // a. Service Due within 30 days
-      const dueRes = await apiFetch(`/api/v1/segments/service-due?group=${group}&withinDays=30${mobileQuery}`);
+      const dueRes = await apiFetch(
+        `/api/v1/segments/service-due?group=${group}&withinDays=30${mobileQuery}`,
+      );
       if (dueRes && dueRes.ok && Array.isArray(dueRes.data?.members)) {
         let members = dueRes.data.members;
         if (!cleanMobile && customerNumber) {
-          members = members.filter(m => String(m.customerNumber || '') === String(customerNumber));
+          members = members.filter(
+            (m) => String(m.customerNumber || "") === String(customerNumber),
+          );
         }
         setServiceDueList(members);
       } else {
@@ -253,11 +287,15 @@ export default function SalesAfterSalesView() {
       }
 
       // b. No Service in 18+ Months
-      const noServRes = await apiFetch(`/api/v1/segments/no-service?group=${group}&months=18${mobileQuery}`);
+      const noServRes = await apiFetch(
+        `/api/v1/segments/no-service?group=${group}&months=18${mobileQuery}`,
+      );
       if (noServRes && noServRes.ok && Array.isArray(noServRes.data?.members)) {
         let members = noServRes.data.members;
         if (!cleanMobile && customerNumber) {
-          members = members.filter(m => String(m.customerNumber || '') === String(customerNumber));
+          members = members.filter(
+            (m) => String(m.customerNumber || "") === String(customerNumber),
+          );
         }
         setNoServiceList(members);
       } else {
@@ -265,17 +303,20 @@ export default function SalesAfterSalesView() {
       }
 
       // c. Reactivated Customers
-      const reactRes = await apiFetch(`/api/v1/segments/reactivated?group=${group}&months=18${mobileQuery}`);
+      const reactRes = await apiFetch(
+        `/api/v1/segments/reactivated?group=${group}&months=18${mobileQuery}`,
+      );
       if (reactRes && reactRes.ok && Array.isArray(reactRes.data?.members)) {
         let members = reactRes.data.members;
         if (!cleanMobile && customerNumber) {
-          members = members.filter(m => String(m.customerNumber || '') === String(customerNumber));
+          members = members.filter(
+            (m) => String(m.customerNumber || "") === String(customerNumber),
+          );
         }
         setReactivatedList(members);
       } else {
         setReactivatedList([]);
       }
-
     } catch (err) {
       console.warn("Failed to fetch customer after-sales data:", err);
     } finally {
@@ -297,22 +338,34 @@ export default function SalesAfterSalesView() {
 
     try {
       let endpoint = `/api/v1/service-bookings/${group}/${wipNo}`;
-      if (actionType === 'confirm') endpoint += `/confirmation`;
-      else if (actionType === 'reminder') endpoint += `/reminder`;
+      if (actionType === "confirm") endpoint += `/confirmation`;
+      else if (actionType === "reminder") endpoint += `/reminder`;
 
       const res = await apiFetch(endpoint);
       if (res && res.ok) {
-        setActionOutput({ action: actionType, wipNo, data: res.data || res, ok: true });
+        setActionOutput({
+          action: actionType,
+          wipNo,
+          data: res.data || res,
+          ok: true,
+        });
       } else {
-        setActionOutput({ 
-          action: actionType, 
-          wipNo, 
-          error: res?.statusText || "No booking record found for this WIP number in Keyloop", 
-          ok: false 
+        setActionOutput({
+          action: actionType,
+          wipNo,
+          error:
+            res?.statusText ||
+            "No booking record found for this WIP number in Keyloop",
+          ok: false,
         });
       }
     } catch (err) {
-      setActionOutput({ action: actionType, wipNo, error: err.message || "Failed to execute action", ok: false });
+      setActionOutput({
+        action: actionType,
+        wipNo,
+        error: err.message || "Failed to execute action",
+        ok: false,
+      });
     } finally {
       setActionLoading(false);
     }
@@ -321,15 +374,15 @@ export default function SalesAfterSalesView() {
   const handleLookupWipSubmit = (e) => {
     e.preventDefault();
     if (searchWipInput.trim()) {
-      handleTriggerWipAction('read', searchWipInput.trim());
+      handleTriggerWipAction("read", searchWipInput.trim());
     }
   };
 
-  const totalAlertsCount = serviceDueList.length + noServiceList.length + reactivatedList.length;
+  const totalAlertsCount =
+    serviceDueList.length + noServiceList.length + reactivatedList.length;
 
   return (
     <div className="bg-white rounded-xl p-5 shadow-xs border border-gray-100 flex flex-col gap-4 text-xs">
-      
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
@@ -338,21 +391,27 @@ export default function SalesAfterSalesView() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-bold text-gray-900 leading-tight">After-Sales & Service Tracking</h2>
+              <h2 className="text-base font-bold text-gray-900 leading-tight">
+                After-Sales
+              </h2>
               <span className="bg-teal-50 text-teal-700 font-mono font-bold text-[10px] px-2 py-0.5 rounded border border-teal-200">
                 {group}
               </span>
             </div>
             <p className="text-[11px] text-gray-500 font-medium">
-              Customer: <span className="font-bold text-gray-800">{customerName}</span> 
-              {customerNumber ? ` (#${customerNumber})` : ''}
+              Customer:{" "}
+              <span className="font-bold text-gray-800">{customerName}</span>
+              {customerNumber ? ` (#${customerNumber})` : ""}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           {/* WIP / Booking Lookup Search Bar */}
-          <form onSubmit={handleLookupWipSubmit} className="flex items-center gap-1.5">
+          <form
+            onSubmit={handleLookupWipSubmit}
+            className="flex items-center gap-1.5"
+          >
             <div className="relative">
               <FaSearch className="absolute left-2.5 top-2.5 text-gray-400 text-[10px]" />
               <input
@@ -368,16 +427,20 @@ export default function SalesAfterSalesView() {
               disabled={!searchWipInput.trim() || actionLoading}
               className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs cursor-pointer flex items-center gap-1 transition-colors"
             >
-              {actionLoading ? <FaSpinner className="animate-spin text-xs" /> : 'Lookup'}
+              {actionLoading ? (
+                <FaSpinner className="animate-spin text-xs" />
+              ) : (
+                "Lookup"
+              )}
             </button>
           </form>
 
-          <button 
+          <button
             onClick={fetchCustomerAfterSalesData}
             className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 cursor-pointer flex items-center gap-1.5 font-medium text-xs transition-colors"
             title="Refresh Data"
           >
-            <FaRedo className={`text-xs ${loading ? 'animate-spin' : ''}`} />
+            <FaRedo className={`text-xs ${loading ? "animate-spin" : ""}`} />
             <span>Refresh</span>
           </button>
 
@@ -395,29 +458,31 @@ export default function SalesAfterSalesView() {
       </div>
 
       {/* SALES FOLLOW-UP STATUS INDICATOR */}
-      {followUpToast && !followUpToast.isError && followUpToast.status === 'Processing' && (
-        <div className="p-2.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-xs font-semibold flex items-center justify-between gap-3 animate-fade-in">
-          <div className="flex items-center gap-2">
-            <FaSpinner className="animate-spin text-amber-600 text-xs shrink-0" />
-            <span>Processing follow-up request...</span>
+      {followUpToast &&
+        !followUpToast.isError &&
+        followUpToast.status === "Processing" && (
+          <div className="p-2.5 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-xs font-semibold flex items-center justify-between gap-3 animate-fade-in">
+            <div className="flex items-center gap-2">
+              <FaSpinner className="animate-spin text-amber-600 text-xs shrink-0" />
+              <span>Processing follow-up request...</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setFollowUpToast(null)}
+              className="text-amber-500 hover:text-amber-800 font-bold p-1 cursor-pointer"
+            >
+              ✕
+            </button>
           </div>
-          <button 
-            type="button" 
-            onClick={() => setFollowUpToast(null)}
-            className="text-amber-500 hover:text-amber-800 font-bold p-1 cursor-pointer"
-          >
-            ✕
-          </button>
-        </div>
-      )}
+        )}
       {followUpToast && followUpToast.isError && (
         <div className="p-2.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-800 text-xs font-semibold flex items-center justify-between gap-3 animate-fade-in">
           <div className="flex items-center gap-2">
             <FaExclamationTriangle className="text-rose-600 text-xs shrink-0" />
             <span>{followUpToast.message}</span>
           </div>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={() => setFollowUpToast(null)}
             className="text-rose-400 hover:text-rose-700 font-bold p-1 cursor-pointer"
           >
@@ -429,54 +494,66 @@ export default function SalesAfterSalesView() {
       {/* Tabs Selector */}
       <div className="flex items-center gap-2 border-b border-gray-100 pb-2 flex-wrap">
         <button
-          onClick={() => setActiveTab('CustomerVehicles')}
+          onClick={() => setActiveTab("CustomerVehicles")}
           className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 ${
-            activeTab === 'CustomerVehicles' 
-              ? 'bg-teal-600 text-white shadow-2xs' 
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            activeTab === "CustomerVehicles"
+              ? "bg-teal-600 text-white shadow-2xs"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
           }`}
         >
           <FaCar className="text-xs" />
           <span>Customer Vehicles & Contracts</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-            activeTab === 'CustomerVehicles' ? 'bg-white/30 text-white' : 'bg-teal-100 text-teal-800'
-          }`}>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              activeTab === "CustomerVehicles"
+                ? "bg-white/30 text-white"
+                : "bg-teal-100 text-teal-800"
+            }`}
+          >
             {vehiclesList.length}
           </span>
         </button>
 
         <button
-          onClick={() => setActiveTab('ServiceBookings')}
+          onClick={() => setActiveTab("ServiceBookings")}
           className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 ${
-            activeTab === 'ServiceBookings' 
-              ? 'bg-teal-600 text-white shadow-2xs' 
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            activeTab === "ServiceBookings"
+              ? "bg-teal-600 text-white shadow-2xs"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
           }`}
         >
           <FaWrench className="text-xs" />
           <span>Open Service Bookings & WIPs</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-            activeTab === 'ServiceBookings' ? 'bg-white/30 text-white' : 'bg-teal-100 text-teal-800'
-          }`}>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              activeTab === "ServiceBookings"
+                ? "bg-white/30 text-white"
+                : "bg-teal-100 text-teal-800"
+            }`}
+          >
             {bookingsList.length}
           </span>
         </button>
 
         <button
-          onClick={() => setActiveTab('RetentionAlerts')}
+          onClick={() => setActiveTab("RetentionAlerts")}
           className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 ${
-            activeTab === 'RetentionAlerts' 
-              ? 'bg-teal-600 text-white shadow-2xs' 
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            activeTab === "RetentionAlerts"
+              ? "bg-teal-600 text-white shadow-2xs"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
           }`}
         >
           <FaBell className="text-xs" />
           <span>Retention & Cohort Alerts</span>
-          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-            totalAlertsCount > 0 
-              ? (activeTab === 'RetentionAlerts' ? 'bg-white/30 text-white' : 'bg-amber-100 text-amber-900 border border-amber-300') 
-              : 'bg-gray-200 text-gray-600'
-          }`}>
+          <span
+            className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+              totalAlertsCount > 0
+                ? activeTab === "RetentionAlerts"
+                  ? "bg-white/30 text-white"
+                  : "bg-amber-100 text-amber-900 border border-amber-300"
+                : "bg-gray-200 text-gray-600"
+            }`}
+          >
             {totalAlertsCount}
           </span>
         </button>
@@ -484,29 +561,35 @@ export default function SalesAfterSalesView() {
 
       {/* Action API Output Result Card (shown when a WIP is inspected or looked up) */}
       {actionOutput && (
-        <div className={`p-4 rounded-xl text-xs space-y-2 animate-fade-in ${
-          actionOutput.ok 
-            ? 'bg-teal-50/80 border border-teal-200 text-teal-900' 
-            : 'bg-rose-50/80 border border-rose-200 text-rose-900'
-        }`}>
+        <div
+          className={`p-4 rounded-xl text-xs space-y-2 animate-fade-in ${
+            actionOutput.ok
+              ? "bg-teal-50/80 border border-teal-200 text-teal-900"
+              : "bg-rose-50/80 border border-rose-200 text-rose-900"
+          }`}
+        >
           <div className="flex items-center justify-between pb-2 border-b border-teal-200/60">
             <h4 className="font-extrabold text-sm flex items-center gap-2">
-              <FaCheckCircle className={actionOutput.ok ? 'text-teal-600' : 'text-rose-600'} />
+              <FaCheckCircle
+                className={actionOutput.ok ? "text-teal-600" : "text-rose-600"}
+              />
               <span>WIP #{actionOutput.wipNo} Service Job Details</span>
             </h4>
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => handleOpenFollowUp({
-                  notes: `Follow up on WIP #${actionOutput.wipNo} (${actionOutput.data?.vehicle || customerName})`
-                })}
+                onClick={() =>
+                  handleOpenFollowUp({
+                    notes: `Follow up on WIP #${actionOutput.wipNo} (${actionOutput.data?.vehicle || customerName})`,
+                  })
+                }
                 className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-bold text-[10px] cursor-pointer flex items-center gap-1"
               >
                 <FaCalendarPlus className="text-[9px]" />
                 <span>Follow-Up on WIP</span>
               </button>
-              <button 
-                onClick={() => setActionOutput(null)} 
+              <button
+                onClick={() => setActionOutput(null)}
                 className="text-gray-400 hover:text-gray-700 text-sm font-bold cursor-pointer"
                 title="Close"
               >
@@ -515,29 +598,53 @@ export default function SalesAfterSalesView() {
             </div>
           </div>
 
-          {actionOutput.ok && typeof actionOutput.data === 'object' && (
+          {actionOutput.ok && typeof actionOutput.data === "object" && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1 text-[11px]">
               <div>
-                <span className="text-gray-500 block text-[10px]">Job Number / Status</span>
-                <span className="font-mono font-bold text-gray-900">{actionOutput.data.jobNumber || actionOutput.data.status || 'Active'}</span>
+                <span className="text-gray-500 block text-[10px]">
+                  Job Number / Status
+                </span>
+                <span className="font-mono font-bold text-gray-900">
+                  {actionOutput.data.jobNumber ||
+                    actionOutput.data.status ||
+                    "Active"}
+                </span>
               </div>
               <div>
-                <span className="text-gray-500 block text-[10px]">Service Code / Brand</span>
-                <span className="font-bold text-gray-900">{actionOutput.data.serviceCode || actionOutput.data.brand || group}</span>
+                <span className="text-gray-500 block text-[10px]">
+                  Service Code / Brand
+                </span>
+                <span className="font-bold text-gray-900">
+                  {actionOutput.data.serviceCode ||
+                    actionOutput.data.brand ||
+                    group}
+                </span>
               </div>
               <div>
-                <span className="text-gray-500 block text-[10px]">Due Out Date</span>
-                <span className="font-mono font-semibold text-gray-800">{actionOutput.data.dueOutDate || actionOutput.data.date || 'Scheduled'}</span>
+                <span className="text-gray-500 block text-[10px]">
+                  Due Out Date
+                </span>
+                <span className="font-mono font-semibold text-gray-800">
+                  {actionOutput.data.dueOutDate ||
+                    actionOutput.data.date ||
+                    "Scheduled"}
+                </span>
               </div>
               <div>
-                <span className="text-gray-500 block text-[10px]">Customer / Vehicle</span>
-                <span className="font-semibold text-gray-800">{actionOutput.data.vehicle || customerName}</span>
+                <span className="text-gray-500 block text-[10px]">
+                  Customer / Vehicle
+                </span>
+                <span className="font-semibold text-gray-800">
+                  {actionOutput.data.vehicle || customerName}
+                </span>
               </div>
             </div>
           )}
 
           {!actionOutput.ok && (
-            <p className="text-rose-700 font-medium text-[11px]">{actionOutput.error}</p>
+            <p className="text-rose-700 font-medium text-[11px]">
+              {actionOutput.error}
+            </p>
           )}
         </div>
       )}
@@ -545,15 +652,21 @@ export default function SalesAfterSalesView() {
       {loading ? (
         <div className="py-16 flex flex-col items-center justify-center text-gray-400 gap-2">
           <FaSpinner className="animate-spin text-2xl text-teal-600" />
-          <span className="text-xs font-medium">Fetching customer after-sales data...</span>
+          <span className="text-xs font-medium">
+            Fetching customer after-sales data...
+          </span>
         </div>
-      ) : activeTab === 'CustomerVehicles' ? (
+      ) : activeTab === "CustomerVehicles" ? (
         /* TAB 1: CUSTOMER VEHICLES & CONTRACTS */
         vehiclesList.length === 0 ? (
           <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-2">
             <FaCar className="mx-auto text-xl text-gray-300 mb-1" />
-            <p className="font-bold text-gray-700 text-xs">No registered vehicles found for customer #{customerNumber}.</p>
-            <p className="text-[11px] text-gray-400">There are no vehicles linked to this customer account in Keyloop.</p>
+            <p className="font-bold text-gray-700 text-xs">
+              No registered vehicles found for customer #{customerNumber}.
+            </p>
+            <p className="text-[11px] text-gray-400">
+              There are no vehicles linked to this customer account in Keyloop.
+            </p>
             <div className="pt-2">
               <button
                 type="button"
@@ -582,37 +695,57 @@ export default function SalesAfterSalesView() {
               </thead>
               <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
                 {vehiclesList.map((v, idx) => {
-                  const vin = v.vin || v.chassisNumber || `VIN-${idx+1}`;
-                  const modelName = v.model || v.description || v.variant || `${v.brand || ''} Vehicle`.trim();
+                  const vin = v.vin || v.chassisNumber || `VIN-${idx + 1}`;
+                  const modelName =
+                    v.model ||
+                    v.description ||
+                    v.variant ||
+                    `${v.brand || ""} Vehicle`.trim();
                   const mileage = v.mileageKm || v.odometerKm;
-                  const regNo = v.registrationNumber || v.plateNumber || 'N/A';
+                  const regNo = v.registrationNumber || v.plateNumber || "N/A";
                   const warranty = v.warranty;
-                  const ins = v.insurance && v.insurance.length > 0 ? v.insurance[0] : null;
+                  const ins =
+                    v.insurance && v.insurance.length > 0
+                      ? v.insurance[0]
+                      : null;
 
                   return (
-                    <tr key={idx} className="hover:bg-teal-50/40 transition-colors">
+                    <tr
+                      key={idx}
+                      className="hover:bg-teal-50/40 transition-colors"
+                    >
                       <td className="py-3 px-3 font-bold text-gray-900 whitespace-nowrap">
                         <span className="flex items-center gap-1.5">
                           <FaCar className="text-gray-400 text-xs" />
                           <span>{modelName}</span>
                         </span>
                       </td>
-                      <td className="py-3 px-3 font-mono font-bold text-teal-700 whitespace-nowrap">{vin}</td>
-                      <td className="py-3 px-3 font-mono text-gray-600 whitespace-nowrap">{regNo}</td>
+                      <td className="py-3 px-3 font-mono font-bold text-teal-700 whitespace-nowrap">
+                        {vin}
+                      </td>
+                      <td className="py-3 px-3 font-mono text-gray-600 whitespace-nowrap">
+                        {regNo}
+                      </td>
                       <td className="py-3 px-3 font-mono text-gray-800 whitespace-nowrap">
-                        {mileage ? `${Number(mileage).toLocaleString()} KM` : 'N/A'}
+                        {mileage
+                          ? `${Number(mileage).toLocaleString()} KM`
+                          : "N/A"}
                       </td>
                       <td className="py-3 px-3 whitespace-nowrap">
                         {warranty && warranty.status ? (
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            warranty.status === 'ACTIVE' 
-                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
-                              : 'bg-gray-100 text-gray-600'
-                          }`}>
-                            {warranty.status} ({warranty.provider || 'OEM'})
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              warranty.status === "ACTIVE"
+                                ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {warranty.status} ({warranty.provider || "OEM"})
                           </span>
                         ) : (
-                          <span className="text-gray-400 italic">No warranty</span>
+                          <span className="text-gray-400 italic">
+                            No warranty
+                          </span>
                         )}
                       </td>
                       <td className="py-3 px-3 whitespace-nowrap">
@@ -627,29 +760,35 @@ export default function SalesAfterSalesView() {
                             <span>{v.packages.length} Packages</span>
                           </button>
                         ) : (
-                          <span className="text-gray-400 text-[10px] italic">None</span>
+                          <span className="text-gray-400 text-[10px] italic">
+                            None
+                          </span>
                         )}
                       </td>
                       <td className="py-3 px-3 whitespace-nowrap text-[10px]">
                         {ins ? (
                           <div className="flex flex-col">
                             <span className="px-1.5 py-0.2 rounded bg-blue-100 text-blue-800 font-extrabold text-[9px] uppercase inline-block">
-                              {ins.status || 'Active'} ({ins.provider})
+                              {ins.status || "Active"} ({ins.provider})
                             </span>
                             <span className="text-gray-500 mt-0.5">
-                              Exp: {ins.expiryDate || 'N/A'}
+                              Exp: {ins.expiryDate || "N/A"}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-gray-400 italic">No insurance</span>
+                          <span className="text-gray-400 italic">
+                            No insurance
+                          </span>
                         )}
                       </td>
                       <td className="py-3 px-3 text-right whitespace-nowrap">
                         <button
                           type="button"
-                          onClick={() => handleOpenFollowUp({
-                            notes: `Vehicle follow-up for ${modelName} (VIN: ${vin}, Reg: ${regNo})`
-                          })}
+                          onClick={() =>
+                            handleOpenFollowUp({
+                              notes: `Vehicle follow-up for ${modelName} (VIN: ${vin}, Reg: ${regNo})`,
+                            })
+                          }
                           className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-[10px] font-bold cursor-pointer transition-colors inline-flex items-center gap-1"
                         >
                           <FaCalendarPlus className="text-[9px]" />
@@ -663,13 +802,18 @@ export default function SalesAfterSalesView() {
             </table>
           </div>
         )
-      ) : activeTab === 'ServiceBookings' ? (
+      ) : activeTab === "ServiceBookings" ? (
         /* TAB 2: SERVICE BOOKINGS & OPEN WIPS */
         bookingsList.length === 0 ? (
           <div className="p-8 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-200 space-y-2">
             <FaWrench className="mx-auto text-xl text-gray-300 mb-1" />
-            <p className="font-bold text-gray-700 text-xs">No open service bookings found for customer #{customerNumber}.</p>
-            <p className="text-[11px] text-gray-400">There are currently no active workshop WIPs or scheduled service appointments for this customer in Keyloop.</p>
+            <p className="font-bold text-gray-700 text-xs">
+              No open service bookings found for customer #{customerNumber}.
+            </p>
+            <p className="text-[11px] text-gray-400">
+              There are currently no active workshop WIPs or scheduled service
+              appointments for this customer in Keyloop.
+            </p>
             <div className="pt-2">
               <button
                 type="button"
@@ -696,19 +840,45 @@ export default function SalesAfterSalesView() {
               </thead>
               <tbody className="divide-y divide-gray-100 font-medium text-gray-700 text-[11px]">
                 {bookingsList.map((b, idx) => {
-                  const wipNo = b.wipNumber || b.bookingNumber || b.id || `WIP-${idx+1}`;
-                  const veh = b.vehicle || b.vin || 'Customer Vehicle';
-                  const date = b.scheduledDate || b.bookingDate || b.date || 'N/A';
-                  const status = b.status || b.bookingStatus || 'Open';
-                  const advId = b.advisorId || b.advisor?.code || b.advisorCode || (typeof b.advisor === 'string' && /^\d+$/.test(b.advisor.trim()) ? b.advisor : '');
-                  const advName = b.advisorName || b.advisor?.name || b.serviceAdvisorName || (typeof b.advisor === 'string' && isNaN(b.advisor) ? b.advisor : '');
+                  const wipNo =
+                    b.wipNumber || b.bookingNumber || b.id || `WIP-${idx + 1}`;
+                  const veh = b.vehicle || b.vin || "Customer Vehicle";
+                  const date =
+                    b.scheduledDate || b.bookingDate || b.date || "N/A";
+                  const status = b.status || b.bookingStatus || "Open";
+                  const advId =
+                    b.advisorId ||
+                    b.advisor?.code ||
+                    b.advisorCode ||
+                    (typeof b.advisor === "string" &&
+                    /^\d+$/.test(b.advisor.trim())
+                      ? b.advisor
+                      : "");
+                  const advName =
+                    b.advisorName ||
+                    b.advisor?.name ||
+                    b.serviceAdvisorName ||
+                    (typeof b.advisor === "string" && isNaN(b.advisor)
+                      ? b.advisor
+                      : "");
 
                   return (
-                    <tr key={idx} className="hover:bg-teal-50/40 transition-colors">
-                      <td className="py-3 px-3 font-mono font-bold text-teal-700">#{customerNumber}</td>
-                      <td className="py-3 px-3 font-mono font-bold text-gray-900">#{wipNo}</td>
-                      <td className="py-3 px-3 font-medium text-gray-800">{veh}</td>
-                      <td className="py-3 px-3 font-mono text-gray-600">{date}</td>
+                    <tr
+                      key={idx}
+                      className="hover:bg-teal-50/40 transition-colors"
+                    >
+                      <td className="py-3 px-3 font-mono font-bold text-teal-700">
+                        #{customerNumber}
+                      </td>
+                      <td className="py-3 px-3 font-mono font-bold text-gray-900">
+                        #{wipNo}
+                      </td>
+                      <td className="py-3 px-3 font-medium text-gray-800">
+                        {veh}
+                      </td>
+                      <td className="py-3 px-3 font-mono text-gray-600">
+                        {date}
+                      </td>
                       <td className="py-3 px-3">
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800 border border-teal-300 uppercase">
                           {status}
@@ -717,18 +887,22 @@ export default function SalesAfterSalesView() {
                       <td className="py-3 px-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => handleTriggerWipAction('read', wipNo)}
+                            onClick={() =>
+                              handleTriggerWipAction("read", wipNo)
+                            }
                             className="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded text-[10px] font-bold cursor-pointer transition-colors"
                           >
                             Inspect #{wipNo}
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleOpenFollowUp({
-                              advisorId: advId,
-                              advisorName: advName,
-                              notes: `Follow up on WIP #${wipNo} (${veh}, Scheduled: ${date})`
-                            })}
+                            onClick={() =>
+                              handleOpenFollowUp({
+                                advisorId: advId,
+                                advisorName: advName,
+                                notes: `Follow up on WIP #${wipNo} (${veh}, Scheduled: ${date})`,
+                              })
+                            }
                             className="px-2.5 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded text-[10px] font-bold cursor-pointer transition-colors inline-flex items-center gap-1"
                           >
                             <FaCalendarPlus className="text-[9px]" />
@@ -748,36 +922,52 @@ export default function SalesAfterSalesView() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {/* 1. Service Due Alert Card */}
-            <div className={`p-4 rounded-xl border flex flex-col justify-between ${
-              serviceDueList.length > 0 
-                ? 'bg-amber-50/80 border-amber-300 text-amber-900' 
-                : 'bg-gray-50 border-gray-200 text-gray-600'
-            }`}>
+            <div
+              className={`p-4 rounded-xl border flex flex-col justify-between ${
+                serviceDueList.length > 0
+                  ? "bg-amber-50/80 border-amber-300 text-amber-900"
+                  : "bg-gray-50 border-gray-200 text-gray-600"
+              }`}
+            >
               <div className="flex items-center justify-between mb-2">
                 <span className="font-extrabold text-xs flex items-center gap-1.5">
-                  <FaBell className={serviceDueList.length > 0 ? 'text-amber-600' : 'text-gray-400'} />
+                  <FaBell
+                    className={
+                      serviceDueList.length > 0
+                        ? "text-amber-600"
+                        : "text-gray-400"
+                    }
+                  />
                   Service Due within 30 Days
                 </span>
-                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
-                  serviceDueList.length > 0 ? 'bg-amber-200 text-amber-950' : 'bg-gray-200 text-gray-600'
-                }`}>
-                  {serviceDueList.length > 0 ? `${serviceDueList.length} Due` : 'Clear'}
+                <span
+                  className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                    serviceDueList.length > 0
+                      ? "bg-amber-200 text-amber-950"
+                      : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {serviceDueList.length > 0
+                    ? `${serviceDueList.length} Due`
+                    : "Clear"}
                 </span>
               </div>
               <p className="text-[11px] text-gray-600 mb-2">
                 {serviceDueList.length > 0
-                  ? `Next service due date: ${serviceDueList[0].nextServiceDate || 'Upcoming'} (${serviceDueList[0].vehicle || 'Vehicle'})`
-                  : 'Customer has no vehicles scheduled or due for routine maintenance in the next 30 days.'}
+                  ? `Next service due date: ${serviceDueList[0].nextServiceDate || "Upcoming"} (${serviceDueList[0].vehicle || "Vehicle"})`
+                  : "Customer has no vehicles scheduled or due for routine maintenance in the next 30 days."}
               </p>
               {serviceDueList.length > 0 && (
                 <div className="pt-1 border-t border-amber-200/60">
                   <button
                     type="button"
-                    onClick={() => handleOpenFollowUp({
-                      customerId: serviceDueList[0].customerNumber,
-                      customerName: serviceDueList[0].customerName,
-                      notes: `Upcoming service window follow-up: ${serviceDueList[0].vehicle || 'Vehicle'} due on ${serviceDueList[0].nextServiceDate || 'soon'}`
-                    })}
+                    onClick={() =>
+                      handleOpenFollowUp({
+                        customerId: serviceDueList[0].customerNumber,
+                        customerName: serviceDueList[0].customerName,
+                        notes: `Upcoming service window follow-up: ${serviceDueList[0].vehicle || "Vehicle"} due on ${serviceDueList[0].nextServiceDate || "soon"}`,
+                      })
+                    }
                     className="w-full py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[10px] font-bold cursor-pointer transition-colors flex items-center justify-center gap-1"
                   >
                     <FaCalendarPlus className="text-[9px]" />
@@ -788,36 +978,52 @@ export default function SalesAfterSalesView() {
             </div>
 
             {/* 2. No Service 18+ Months Card */}
-            <div className={`p-4 rounded-xl border flex flex-col justify-between ${
-              noServiceList.length > 0 
-                ? 'bg-rose-50/80 border-rose-300 text-rose-900' 
-                : 'bg-gray-50 border-gray-200 text-gray-600'
-            }`}>
+            <div
+              className={`p-4 rounded-xl border flex flex-col justify-between ${
+                noServiceList.length > 0
+                  ? "bg-rose-50/80 border-rose-300 text-rose-900"
+                  : "bg-gray-50 border-gray-200 text-gray-600"
+              }`}
+            >
               <div className="flex items-center justify-between mb-2">
                 <span className="font-extrabold text-xs flex items-center gap-1.5">
-                  <FaExclamationTriangle className={noServiceList.length > 0 ? 'text-rose-600' : 'text-gray-400'} />
+                  <FaExclamationTriangle
+                    className={
+                      noServiceList.length > 0
+                        ? "text-rose-600"
+                        : "text-gray-400"
+                    }
+                  />
                   No Service (18+ Months)
                 </span>
-                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
-                  noServiceList.length > 0 ? 'bg-rose-200 text-rose-950' : 'bg-gray-200 text-gray-600'
-                }`}>
-                  {noServiceList.length > 0 ? `${noServiceList.length} Inactive` : 'Active'}
+                <span
+                  className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                    noServiceList.length > 0
+                      ? "bg-rose-200 text-rose-950"
+                      : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {noServiceList.length > 0
+                    ? `${noServiceList.length} Inactive`
+                    : "Active"}
                 </span>
               </div>
               <p className="text-[11px] text-gray-600 mb-2">
                 {noServiceList.length > 0
-                  ? `Vehicle ${noServiceList[0].vehicle || ''} has not visited the service workshop in > 18 months.`
-                  : 'Customer is actively servicing their vehicles with AGMC.'}
+                  ? `Vehicle ${noServiceList[0].vehicle || ""} has not visited the service workshop in > 18 months.`
+                  : "Customer is actively servicing their vehicles with AGMC."}
               </p>
               {noServiceList.length > 0 && (
                 <div className="pt-1 border-t border-rose-200/60">
                   <button
                     type="button"
-                    onClick={() => handleOpenFollowUp({
-                      customerId: noServiceList[0].customerNumber,
-                      customerName: noServiceList[0].customerName,
-                      notes: `Retention outreach: ${noServiceList[0].vehicle || 'Vehicle'} (VIN: ${noServiceList[0].vin || ''}) inactive > 18 months`
-                    })}
+                    onClick={() =>
+                      handleOpenFollowUp({
+                        customerId: noServiceList[0].customerNumber,
+                        customerName: noServiceList[0].customerName,
+                        notes: `Retention outreach: ${noServiceList[0].vehicle || "Vehicle"} (VIN: ${noServiceList[0].vin || ""}) inactive > 18 months`,
+                      })
+                    }
                     className="w-full py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-[10px] font-bold cursor-pointer transition-colors flex items-center justify-center gap-1"
                   >
                     <FaCalendarPlus className="text-[9px]" />
@@ -828,36 +1034,50 @@ export default function SalesAfterSalesView() {
             </div>
 
             {/* 3. Reactivated Customer Card */}
-            <div className={`p-4 rounded-xl border flex flex-col justify-between ${
-              reactivatedList.length > 0 
-                ? 'bg-emerald-50/80 border-emerald-300 text-emerald-900' 
-                : 'bg-gray-50 border-gray-200 text-gray-600'
-            }`}>
+            <div
+              className={`p-4 rounded-xl border flex flex-col justify-between ${
+                reactivatedList.length > 0
+                  ? "bg-emerald-50/80 border-emerald-300 text-emerald-900"
+                  : "bg-gray-50 border-gray-200 text-gray-600"
+              }`}
+            >
               <div className="flex items-center justify-between mb-2">
                 <span className="font-extrabold text-xs flex items-center gap-1.5">
-                  <FaUserCheck className={reactivatedList.length > 0 ? 'text-emerald-600' : 'text-gray-400'} />
+                  <FaUserCheck
+                    className={
+                      reactivatedList.length > 0
+                        ? "text-emerald-600"
+                        : "text-gray-400"
+                    }
+                  />
                   Reactivated Customer
                 </span>
-                <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
-                  reactivatedList.length > 0 ? 'bg-emerald-200 text-emerald-950' : 'bg-gray-200 text-gray-600'
-                }`}>
-                  {reactivatedList.length > 0 ? 'Reactivated' : 'Regular'}
+                <span
+                  className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${
+                    reactivatedList.length > 0
+                      ? "bg-emerald-200 text-emerald-950"
+                      : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {reactivatedList.length > 0 ? "Reactivated" : "Regular"}
                 </span>
               </div>
               <p className="text-[11px] text-gray-600 mb-2">
                 {reactivatedList.length > 0
-                  ? `Customer returned for service on ${reactivatedList[0].bookingDate || 'recent date'}.`
-                  : 'Customer maintains regular service cadence with AGMC.'}
+                  ? `Customer returned for service on ${reactivatedList[0].bookingDate || "recent date"}.`
+                  : "Customer maintains regular service cadence with AGMC."}
               </p>
               {reactivatedList.length > 0 && (
                 <div className="pt-1 border-t border-emerald-200/60">
                   <button
                     type="button"
-                    onClick={() => handleOpenFollowUp({
-                      customerId: reactivatedList[0].customerNumber,
-                      customerName: reactivatedList[0].customerName,
-                      notes: `Reactivated customer welcome follow-up: Returned on ${reactivatedList[0].bookingDate || 'recently'}`
-                    })}
+                    onClick={() =>
+                      handleOpenFollowUp({
+                        customerId: reactivatedList[0].customerNumber,
+                        customerName: reactivatedList[0].customerName,
+                        notes: `Reactivated customer welcome follow-up: Returned on ${reactivatedList[0].bookingDate || "recently"}`,
+                      })
+                    }
                     className="w-full py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold cursor-pointer transition-colors flex items-center justify-center gap-1"
                   >
                     <FaCalendarPlus className="text-[9px]" />
@@ -876,18 +1096,30 @@ export default function SalesAfterSalesView() {
               </div>
               <div className="p-3 space-y-2 text-[11px]">
                 {noServiceList.map((item, idx) => (
-                  <div key={`no-serv-${idx}`} className="p-2.5 bg-rose-50/70 border border-rose-200 rounded-lg flex items-center justify-between gap-3">
+                  <div
+                    key={`no-serv-${idx}`}
+                    className="p-2.5 bg-rose-50/70 border border-rose-200 rounded-lg flex items-center justify-between gap-3"
+                  >
                     <div>
-                      <span className="font-bold text-rose-900 block text-xs">Retention Risk: No Service in 18+ Months</span>
-                      <span className="text-gray-600">Vehicle: {item.vehicle} | VIN: {item.vin} | Mileage: {item.mileageKm ? `${item.mileageKm.toLocaleString()} KM` : 'N/A'}</span>
+                      <span className="font-bold text-rose-900 block text-xs">
+                        Retention Risk: No Service in 18+ Months
+                      </span>
+                      <span className="text-gray-600">
+                        Vehicle: {item.vehicle} | VIN: {item.vin} | Mileage:{" "}
+                        {item.mileageKm
+                          ? `${item.mileageKm.toLocaleString()} KM`
+                          : "N/A"}
+                      </span>
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleOpenFollowUp({
-                        customerId: item.customerNumber,
-                        customerName: item.customerName,
-                        notes: `Retention outreach: ${item.vehicle || 'Vehicle'} (VIN: ${item.vin || ''}) has no service for > 18 months`
-                      })}
+                      onClick={() =>
+                        handleOpenFollowUp({
+                          customerId: item.customerNumber,
+                          customerName: item.customerName,
+                          notes: `Retention outreach: ${item.vehicle || "Vehicle"} (VIN: ${item.vin || ""}) has no service for > 18 months`,
+                        })
+                      }
                       className="text-[10px] bg-rose-600 hover:bg-rose-700 text-white px-2.5 py-1 rounded font-bold cursor-pointer transition-colors shrink-0 flex items-center gap-1"
                     >
                       <FaCalendarPlus className="text-[9px]" />
@@ -896,18 +1128,29 @@ export default function SalesAfterSalesView() {
                   </div>
                 ))}
                 {serviceDueList.map((item, idx) => (
-                  <div key={`serv-due-${idx}`} className="p-2.5 bg-amber-50/70 border border-amber-200 rounded-lg flex items-center justify-between gap-3">
+                  <div
+                    key={`serv-due-${idx}`}
+                    className="p-2.5 bg-amber-50/70 border border-amber-200 rounded-lg flex items-center justify-between gap-3"
+                  >
                     <div>
-                      <span className="font-bold text-amber-900 block text-xs">Upcoming Service Window</span>
-                      <span className="text-gray-600">Vehicle: {item.vehicle} | Next Service: {item.nextServiceDate} | Registration: {item.registrationNumber}</span>
+                      <span className="font-bold text-amber-900 block text-xs">
+                        Upcoming Service Window
+                      </span>
+                      <span className="text-gray-600">
+                        Vehicle: {item.vehicle} | Next Service:{" "}
+                        {item.nextServiceDate} | Registration:{" "}
+                        {item.registrationNumber}
+                      </span>
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleOpenFollowUp({
-                        customerId: item.customerNumber,
-                        customerName: item.customerName,
-                        notes: `Upcoming service window outreach: ${item.vehicle || 'Vehicle'} due on ${item.nextServiceDate || 'soon'}`
-                      })}
+                      onClick={() =>
+                        handleOpenFollowUp({
+                          customerId: item.customerNumber,
+                          customerName: item.customerName,
+                          notes: `Upcoming service window outreach: ${item.vehicle || "Vehicle"} due on ${item.nextServiceDate || "soon"}`,
+                        })
+                      }
                       className="text-[10px] bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded font-bold cursor-pointer transition-colors shrink-0 flex items-center gap-1"
                     >
                       <FaCalendarPlus className="text-[9px]" />
@@ -925,7 +1168,6 @@ export default function SalesAfterSalesView() {
       {showFollowUpModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
-            
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-5 py-3.5 text-white flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -933,9 +1175,12 @@ export default function SalesAfterSalesView() {
                   <FaCalendarPlus className="text-sm" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm leading-tight">Create Sales & Advisor Follow-Up</h3>
+                  <h3 className="font-bold text-sm leading-tight">
+                    Create Sales & Advisor Follow-Up
+                  </h3>
                   <p className="text-[10px] text-blue-100 font-mono">
-                    Keyloop RPA Task: <span className="font-bold">CREATE_SALES_FOLLOW_UP</span>
+                    Keyloop RPA Task:{" "}
+                    <span className="font-bold">CREATE_SALES_FOLLOW_UP</span>
                   </p>
                 </div>
               </div>
@@ -949,8 +1194,10 @@ export default function SalesAfterSalesView() {
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleFollowUpSubmit} className="p-5 overflow-y-auto space-y-3.5 text-xs">
-              
+            <form
+              onSubmit={handleFollowUpSubmit}
+              className="p-5 overflow-y-auto space-y-3.5 text-xs"
+            >
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Customer ID */}
                 <div>
@@ -986,7 +1233,7 @@ export default function SalesAfterSalesView() {
                   </label>
                   <input
                     type="text"
-                    value={followUpAdvisorName || 'Assigned Service Advisor'}
+                    value={followUpAdvisorName || "Assigned Service Advisor"}
                     readOnly
                     className="w-full h-8 px-2.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 cursor-not-allowed select-none focus:outline-none truncate"
                   />
@@ -1049,7 +1296,9 @@ export default function SalesAfterSalesView() {
                     <span>Follow-Up Instructions / Notes</span>
                     <span className="text-rose-500 font-bold">*</span>
                   </label>
-                  <span className="text-[10px] text-gray-400">Quick templates:</span>
+                  <span className="text-[10px] text-gray-400">
+                    Quick templates:
+                  </span>
                 </div>
 
                 {/* Quick Note Template Chips */}
@@ -1058,7 +1307,7 @@ export default function SalesAfterSalesView() {
                     "please do a follow up on this customer",
                     "Customer requested status update on vehicle",
                     "Retention Follow-Up: Service maintenance due",
-                    "Inquiry regarding service invoice / estimate"
+                    "Inquiry regarding service invoice / estimate",
                   ].map((tpl, i) => (
                     <button
                       key={i}
@@ -1109,9 +1358,7 @@ export default function SalesAfterSalesView() {
                   )}
                 </button>
               </div>
-
             </form>
-
           </div>
         </div>
       )}
@@ -1122,7 +1369,6 @@ export default function SalesAfterSalesView() {
         onClose={() => setSelectedVehicleForPackages(null)}
         vehicle={selectedVehicleForPackages}
       />
-
     </div>
   );
 }

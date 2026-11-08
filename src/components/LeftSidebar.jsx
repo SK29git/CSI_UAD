@@ -378,19 +378,27 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                 <div className="mt-1 space-y-1 text-xs text-gray-600">
                   <div className="flex items-center gap-1.5">
                     <FaPhoneAlt className="text-gray-400 text-[11px]" />
-                    <span className="font-medium truncate">{getDisplayMobileNumber(customer, currentMobile) || 'N/A'}</span>
+                    <span className="font-medium truncate">{getDisplayMobileNumber(customer, currentMobile) || '-'}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <FaEnvelope className="text-gray-400 text-[11px]" />
-                    <span className="truncate max-w-[190px]">{customer?.email || 'N/A'}</span>
+                    <span className="truncate max-w-[190px]">{customer?.email || '-'}</span>
                   </div>
+                  {(customer?.homeEmail || customer?.workEmail) && (
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                      <FaEnvelope className="text-gray-400 text-[10px]" />
+                      <span className="truncate max-w-[190px]" title={`Home: ${customer?.homeEmail || '-'} | Work: ${customer?.workEmail || '-'}`}>
+                        {[customer?.homeEmail ? `Home: ${customer.homeEmail}` : null, customer?.workEmail ? `Work: ${customer.workEmail}` : null].filter(Boolean).join(' | ')}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-1.5">
                     <FaMapMarkerAlt className="text-gray-400 text-[11px]" />
-                    <span className="truncate max-w-[190px]">{locationStr}</span>
+                    <span className="truncate max-w-[190px]">{locationStr || '-'}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <FaGlobe className="text-gray-400 text-[11px]" />
-                    <span>{customer?.language || 'N/A'}</span>
+                    <span>{customer?.language || '-'}</span>
                   </div>
                 </div>
               </div>
@@ -416,28 +424,46 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <span className="font-semibold text-gray-800">
                 {customer?.customerNumber && customer.customerNumber !== 'PROSPECT'
                   ? customer.customerNumber 
-                  : (customer?.rpaTaskId || customer?.status === 'Processing' || customer?.isNewRegistration ? 'Processing' : (customer?.prospectNumber || customerId || 'Pending'))}
+                  : (customer?.rpaTaskId || customer?.status === 'Processing' || customer?.isNewRegistration ? 'Processing' : (customer?.prospectNumber || customerId || '-'))}
               </span>
             </div>
 
             <div>
+              <span className="text-gray-400 block text-[11px]">Initials</span>
+              <span className="font-semibold text-gray-800">{customer?.initials || '-'}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Personal ID</span>
+              <span className="font-semibold text-gray-800">{customer?.personalId || customer?.idCardNumber || '-'}</span>
+            </div>
+
+            <div>
               <span className="text-gray-400 block text-[11px]">Group / Brand</span>
-              <span className="font-semibold text-gray-800">{customer?.keyloopGroup || ""}</span>
+              <span className="font-semibold text-gray-800">{customer?.keyloopGroup || "-"}</span>
             </div>
             <div>
               <span className="text-gray-400 block text-[11px]">Last Updated</span>
-              <span className="font-semibold text-gray-800">{getFormattedDate ? getFormattedDate(customer?.lastUpdated) : (customer?.lastUpdated || 'N/A')}</span>
+              <span className="font-semibold text-gray-800">{getFormattedDate ? getFormattedDate(customer?.lastUpdated) : (customer?.lastUpdated || '-')}</span>
+            </div>
+
+            <div>
+              <span className="text-gray-400 block text-[11px]">Address ID</span>
+              <span className="font-mono font-semibold text-gray-800">{customer?.addressId || '-'}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 block text-[11px]">Data Verification</span>
+              <span className="font-semibold text-gray-800">{customer?.dataVerified || '-'}</span>
             </div>
 
             {customer?.isProspect ? (
               <>
                 <div>
                   <span className="text-gray-400 block text-[11px]">Lead Source</span>
-                  <span className="font-semibold text-indigo-700 truncate block">{customer?.leadSource || 'Inbound'}</span>
+                  <span className="font-semibold text-indigo-700 truncate block">{customer?.leadSource || '-'}</span>
                 </div>
                 <div>
                   <span className="text-gray-400 block text-[11px]">Lead Status</span>
-                  <span className="font-semibold text-amber-700">{customer?.status || 'OPEN'}</span>
+                  <span className="font-semibold text-amber-700">{customer?.status || '-'}</span>
                 </div>
               </>
             ) : (customer?.isNewRegistration || !customer?.customerNumber || customer?.rpaTaskId || customer?.status === 'Processing') ? (
@@ -459,22 +485,22 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <>
                 <div>
                   <span className="text-gray-400 block text-[11px]">Loyalty Tier</span>
-                  <span className="font-semibold text-gray-800">{loyaltyTier}</span>
+                  <span className="font-semibold text-gray-800">{loyaltyTier !== 'N/A' ? loyaltyTier : '-'}</span>
                 </div>
                 <div>
                   <span className="text-gray-400 block text-[11px]">Nationality</span>
-                  <span className="font-semibold text-gray-800">{customer?.nationality || 'N/A'}</span>
+                  <span className="font-semibold text-gray-800">{customer?.nationality || '-'}</span>
                 </div>
               </>
             )}
 
             <div>
               <span className="text-gray-400 block text-[11px]">Date of Birth</span>
-              <span className="font-semibold text-gray-800">{dobValue ? (getFormattedDate ? getFormattedDate(dobValue) : dobValue) : 'N/A'}</span>
+              <span className="font-semibold text-gray-800">{dobValue ? (getFormattedDate ? getFormattedDate(dobValue) : dobValue) : '-'}</span>
             </div>
             <div>
               <span className="text-gray-400 block text-[11px]">Branch Code</span>
-              <span className="font-semibold text-gray-800">{branchName}</span>
+              <span className="font-semibold text-gray-800">{branchName || '-'}</span>
             </div>
 
             <div>
@@ -488,32 +514,36 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
               <span className="font-medium text-gray-700">{getConsentsDisplay ? getConsentsDisplay() : 'None'}</span>
             </div>
 
-            <div>
-              <span className="text-gray-400 block text-[11px]">Link Type</span>
-              <span className="font-semibold text-gray-800">{customer?.linkType || '-'}</span>
-            </div>
-            <div>
-              <span className="text-gray-400 block text-[11px]">Prospect Number</span>
-              <span className="font-semibold text-gray-800">{customer?.prospectNumber || '-'}</span>
-            </div>
+            {customer?.isProspect && (
+              <>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Link Type</span>
+                  <span className="font-semibold text-gray-800">{customer?.linkType || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Prospect Number</span>
+                  <span className="font-semibold text-gray-800">{customer?.prospectNumber || '-'}</span>
+                </div>
 
-            <div>
-              <span className="text-gray-400 block text-[11px]">Campaign</span>
-              <span className="font-semibold text-gray-800 truncate block" title={customer?.campaign || '-'}>{customer?.campaign || '-'}</span>
-            </div>
-            <div>
-              <span className="text-gray-400 block text-[11px]">Marketing Campaign Code</span>
-              <span className="font-semibold text-gray-800 truncate block" title={customer?.marketingCampaignCode || '-'}>{customer?.marketingCampaignCode || '-'}</span>
-            </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Campaign</span>
+                  <span className="font-semibold text-gray-800 truncate block" title={customer?.campaign || '-'}>{customer?.campaign || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Marketing Campaign Code</span>
+                  <span className="font-semibold text-gray-800 truncate block" title={customer?.marketingCampaignCode || '-'}>{customer?.marketingCampaignCode || '-'}</span>
+                </div>
 
-            <div>
-              <span className="text-gray-400 block text-[11px]">Source</span>
-              <span className="font-semibold text-gray-800 truncate block" title={customer?.source || customer?.leadSource || '-'}>{customer?.source || customer?.leadSource || '-'}</span>
-            </div>
-            <div>
-              <span className="text-gray-400 block text-[11px]">Channel</span>
-              <span className="font-semibold text-gray-800 truncate block" title={customer?.channel || '-'}>{customer?.channel || '-'}</span>
-            </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Source</span>
+                  <span className="font-semibold text-gray-800 truncate block" title={customer?.source || customer?.leadSource || '-'}>{customer?.source || customer?.leadSource || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Channel</span>
+                  <span className="font-semibold text-gray-800 truncate block" title={customer?.channel || '-'}>{customer?.channel || '-'}</span>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

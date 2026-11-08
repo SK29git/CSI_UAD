@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CenterNavTabs from '../components/CenterNavTabs';
 import LeftSidebar from '../components/LeftSidebar';
-import RightSidebar from '../components/RightSidebar';
 import OverviewView from '../components/OverviewView';
 import CreateComplaintView from '../components/CreateComplaintView';
 import OpenComplaintsView from '../components/OpenComplaintsView';
@@ -25,7 +24,6 @@ export default function ComplaintsDashboardPage() {
     }
     return false;
   });
-  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -123,22 +121,12 @@ export default function ComplaintsDashboardPage() {
             setActiveSubTab={setActiveTab} 
             isLeftCollapsed={isLeftCollapsed}
             onToggleLeft={() => setIsLeftCollapsed(!isLeftCollapsed)}
-            isRightCollapsed={isRightCollapsed}
-            onToggleRight={() => setIsRightCollapsed(!isRightCollapsed)}
           />
 
           <div className="transition-all duration-200">
             {renderMainTabContent()}
           </div>
         </main>
-
-        {/* RIGHT COLUMN: Complaint Activity Timeline */}
-        <aside className="hidden xl:block w-auto flex-shrink-0 sticky top-5 z-10 transition-all duration-300">
-          <RightSidebar 
-            isCollapsed={isRightCollapsed}
-            onToggleCollapse={() => setIsRightCollapsed(!isRightCollapsed)}
-          />
-        </aside>
 
       </div>
     </div>

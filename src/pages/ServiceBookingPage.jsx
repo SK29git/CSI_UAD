@@ -53,7 +53,9 @@ export default function ServiceBookingPage() {
         return <ServiceOverviewView />;
       case 'Other Request':
       case 'Create Service':
-        return <CreateServiceView />;
+        return <CreateServiceView mode="other_request" />;
+      case 'Breakdown':
+        return <CreateServiceView mode="breakdown" />;
       case 'Book Service':
         return <ServiceBookingMainPanel />;
       case 'Open Bookings':

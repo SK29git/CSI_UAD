@@ -37,7 +37,10 @@ import {
   FaCheck,
   FaArrowRight,
   FaChevronLeft,
-  FaChevronRight
+  FaChevronRight,
+  FaSun,
+  FaCloudSun,
+  FaMoon
 } from 'react-icons/fa';
 
 /**
@@ -515,6 +518,40 @@ export default function ServiceBookingMainPanel() {
     }
   };
 
+  // Organize time slots into Morning / Afternoon / Evening and group by hour row
+  const categorizedSlots = useMemo(() => {
+    const categories = {
+      Morning: { label: 'Morning', icon: FaSun, color: 'text-amber-500', hours: {} },
+      Afternoon: { label: 'Afternoon', icon: FaCloudSun, color: 'text-orange-500', hours: {} },
+      Evening: { label: 'Evening', icon: FaMoon, color: 'text-indigo-500', hours: {} },
+    };
+
+    (geelyTimeSlots || []).forEach((slot) => {
+      const timeStr = slot.timeSlot || '';
+      const match = timeStr.match(/^(\d{1,2}):(\d{2})/);
+      const hour = match ? parseInt(match[1], 10) : 9;
+
+      let catKey = 'Morning';
+      if (hour >= 12 && hour < 16) catKey = 'Afternoon';
+      else if (hour >= 16) catKey = 'Evening';
+
+      const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+      const ampm = hour < 12 ? 'AM' : 'PM';
+      const hourKey = `${hour12} ${ampm}`;
+
+      if (!categories[catKey].hours[hourKey]) {
+        categories[catKey].hours[hourKey] = {
+          hourLabel: hourKey,
+          hour24: hour,
+          slots: [],
+        };
+      }
+      categories[catKey].hours[hourKey].slots.push(slot);
+    });
+
+    return categories;
+  }, [geelyTimeSlots]);
+
   // Submit Service Booking (POST /api/service)
   const handleSubmitGeelyBooking = async (e) => {
     e.preventDefault();
@@ -907,6 +944,8 @@ export default function ServiceBookingMainPanel() {
           <span>2. Service Eligibility</span>
         </button>
 
+        {/* 3. Lookup WIP Booking (Hidden / Commented out as requested) */}
+        {/*
         <button
           onClick={() => { setActiveToolTab('ModifyWip'); setLookupResult(null); }}
           className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap cursor-pointer transition-all ${
@@ -918,6 +957,7 @@ export default function ServiceBookingMainPanel() {
           <FaSearch className="text-xs" />
           <span>3. Lookup WIP Booking</span>
         </button>
+        */}
 
         <button
           onClick={() => { setActiveToolTab('Requests'); setLookupResult(null); }}
@@ -1098,10 +1138,10 @@ export default function ServiceBookingMainPanel() {
                   </div>
                 </div>
 
-                <form onSubmit={handleSubmitGeelyBooking} className="p-6 space-y-6 text-xs bg-slate-50/40">
+                <form onSubmit={handleSubmitGeelyBooking} className="p-3.5 sm:p-4 space-y-3 text-xs bg-slate-50/40">
                   
                   {/* STEP 0: Vehicle Brand / Make Selector Strip */}
-                  <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-2">
+                  <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
                         <FaCar className="text-blue-600 text-xs" /> Target Brand / Make <span className="text-rose-500 font-bold">*</span>
@@ -1111,7 +1151,7 @@ export default function ServiceBookingMainPanel() {
                       </span>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      {['BMW', 'MINI', 'Rolls-Royce', 'Geely'].map((br) => (
+                      {['BMW', 'MINI', 'Rolls-Royce'].map((br) => (
                         <button
                           key={br}
                           type="button"
@@ -1139,10 +1179,10 @@ export default function ServiceBookingMainPanel() {
                   </div>
 
                   {/* STEP 1: Customer Phone & License Plate */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     
-                    {/* Customer Phone + Quick Lookup */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1.5">
+                    {/* Customer Phone */}
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
                       <label className="text-[11px] font-extrabold text-gray-800 flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
                           <FaUser className="text-blue-600 text-xs" /> Customer Phone Number <span className="text-rose-500 font-bold">*</span>
@@ -1153,24 +1193,14 @@ export default function ServiceBookingMainPanel() {
                           </span>
                         )}
                       </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={geelyPhone}
-                          onChange={(e) => setGeelyPhone(e.target.value)}
-                          placeholder="e.g. 0543408597"
-                          required
-                          className="flex-1 p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleFindGeelyCustomer}
-                          disabled={geelyCustomerSearching || !geelyPhone}
-                          className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-md cursor-pointer transition-colors shrink-0 disabled:opacity-50"
-                        >
-                          {geelyCustomerSearching ? <FaSpinner className="animate-spin text-xs" /> : 'Find Customer'}
-                        </button>
-                      </div>
+                      <input
+                        type="text"
+                        value={geelyPhone}
+                        onChange={(e) => setGeelyPhone(e.target.value)}
+                        placeholder="e.g. 0543408597"
+                        required
+                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                      />
                       {geelyCustomerFound && (
                         <div className="text-[10px] text-gray-500 font-medium pt-1 border-t border-gray-100 flex items-center justify-between">
                           <span>{geelyCustomerFound.name || 'Found'} ({geelyCustomerFound.reference || 'Ref'})</span>
@@ -1179,8 +1209,8 @@ export default function ServiceBookingMainPanel() {
                       )}
                     </div>
 
-                    {/* License Plate + Vehicle Lookup */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1.5">
+                    {/* License Plate */}
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
                       <label className="text-[11px] font-extrabold text-gray-800 flex items-center justify-between">
                         <span className="flex items-center gap-1.5">
                           <FaCar className="text-blue-600 text-xs" /> Vehicle License Plate No <span className="text-rose-500 font-bold">*</span>
@@ -1191,24 +1221,14 @@ export default function ServiceBookingMainPanel() {
                           </span>
                         )}
                       </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={geelyPlateNo}
-                          onChange={(e) => setGeelyPlateNo(e.target.value)}
-                          placeholder="e.g. 240153"
-                          required
-                          className="flex-1 p-2 bg-gray-50 border border-gray-300 rounded-md font-mono font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs uppercase"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleLookupGeelyVehicle}
-                          disabled={geelyVehicleSearching || !geelyPlateNo}
-                          className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs rounded-md cursor-pointer transition-colors shrink-0 disabled:opacity-50"
-                        >
-                          {geelyVehicleSearching ? <FaSpinner className="animate-spin text-xs" /> : 'Lookup Vehicle'}
-                        </button>
-                      </div>
+                      <input
+                        type="text"
+                        value={geelyPlateNo}
+                        onChange={(e) => setGeelyPlateNo(e.target.value)}
+                        placeholder="e.g. 240153"
+                        required
+                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-mono font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs uppercase"
+                      />
                       {geelyVehicleData && (
                         <div className="text-[10px] text-gray-500 font-medium pt-1 border-t border-gray-100 flex items-center justify-between">
                           <span>{geelyVehicleData.vehicleMakeCode} {geelyVehicleData.vehicleModal} ({geelyVehicleData.modalYear})</span>
@@ -1220,10 +1240,10 @@ export default function ServiceBookingMainPanel() {
                   </div>
 
                   {/* STEP 2: Dealership Workshop Location & Recommended Service */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     
                     {/* Dealership Workshop Location (GET /api/service-locations?type=workshop) */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1.5">
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
                       <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
                         <FaMapMarkerAlt className="text-blue-600 text-xs" /> Dealership Workshop Location <span className="text-rose-500 font-bold">*</span>
                       </label>
@@ -1253,7 +1273,7 @@ export default function ServiceBookingMainPanel() {
                     </div>
 
                     {/* Recommended Service Package (GET /api/service/recommended-services?type=workshop) */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1.5">
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
                       <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
                         <FaWrench className="text-blue-600 text-xs" /> Recommended Service Package <span className="text-rose-500 font-bold">*</span>
                       </label>
@@ -1282,10 +1302,10 @@ export default function ServiceBookingMainPanel() {
                   </div>
 
                   {/* STEP 3: Real-Time Appointment Date & Timeslots */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     
                     {/* Appointment Date (POST /api/service/appointment-dates) */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-2">
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1.5">
                       <div className="flex items-center justify-between">
                         <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
                           <FaCalendarAlt className="text-blue-600 text-xs" /> Appointment Date <span className="text-rose-500 font-bold">*</span>
@@ -1311,9 +1331,9 @@ export default function ServiceBookingMainPanel() {
                     </div>
 
                     {/* Appointment Timeslots (POST /api/service/appointment-time) */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-2 flex flex-col justify-between">
+                    <div className="bg-white p-3 rounded-lg border border-gray-300 shadow-2xs space-y-1.5 flex flex-col justify-between">
                       <div>
-                        <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center justify-between mb-1">
                           <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
                             <FaClock className="text-blue-600 text-xs" /> Drop-off Timeslot <span className="text-rose-500 font-bold">*</span>
                           </label>
@@ -1329,49 +1349,80 @@ export default function ServiceBookingMainPanel() {
                         </div>
 
                         {geelyTimesLoading ? (
-                          <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-2 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
-                            <FaSpinner className="animate-spin text-xl text-blue-600" />
+                          <div className="flex flex-col items-center justify-center py-8 text-slate-400 gap-1.5 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+                            <FaSpinner className="animate-spin text-lg text-blue-600" />
                             <span className="text-xs font-medium text-slate-600">Fetching available slots for {geelySelectedDate}...</span>
                           </div>
                         ) : geelyTimeSlots.length > 0 ? (
-                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[220px] overflow-y-auto pr-1">
-                            {geelyTimeSlots.map((slot, sIdx) => {
-                              const isSelected = geelySelectedTimeSlot === slot.timeSlot;
+                          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                            {Object.entries(categorizedSlots).map(([catName, catData]) => {
+                              const hourEntries = Object.values(catData.hours);
+                              if (hourEntries.length === 0) return null;
+                              const CatIcon = catData.icon;
+
                               return (
-                                <button
-                                  key={slot.timeSlot || sIdx}
-                                  type="button"
-                                  onClick={() => {
-                                    setGeelySelectedTimeSlot(slot.timeSlot);
-                                    if (slot.advisorId) setGeelyAdvisorId(String(slot.advisorId));
-                                  }}
-                                  className={`p-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer border flex flex-col items-center justify-center gap-0.5 ${
-                                    isSelected
-                                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs ring-2 ring-blue-300'
-                                      : 'bg-slate-50 hover:bg-blue-50/80 text-slate-800 hover:text-blue-700 border-slate-200'
-                                  }`}
-                                >
-                                  <span className="text-xs">{slot.timeSlot}</span>
-                                  {slot.advisorId && (
-                                    <span className={`text-[9px] font-normal ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
-                                      Advisor: {slot.advisorId}
+                                <div key={catName} className="border border-slate-200 rounded-lg p-2 bg-slate-50/40 space-y-1.5">
+                                  {/* Category Header: Morning / Afternoon / Evening */}
+                                  <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60">
+                                    <CatIcon className={`text-xs ${catData.color}`} />
+                                    <span className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider">{catData.label}</span>
+                                    <span className="text-[9px] font-bold text-slate-400 ml-auto">
+                                      {hourEntries.reduce((acc, h) => acc + h.slots.length, 0)} slots
                                     </span>
-                                  )}
-                                </button>
+                                  </div>
+
+                                  {/* Hour-by-Hour Rows (e.g., 8 AM, 9 AM, 10 AM, 1 PM...) */}
+                                  <div className="space-y-1">
+                                    {hourEntries.map((hourGroup) => (
+                                      <div key={hourGroup.hourLabel} className="flex items-center gap-1.5 bg-white p-1 rounded-md border border-slate-200/80">
+                                        <div className="w-14 shrink-0 text-center font-extrabold text-[10px] text-slate-600 bg-slate-100 py-1 rounded">
+                                          {hourGroup.hourLabel}
+                                        </div>
+                                        <div className="flex-1 flex flex-wrap gap-1">
+                                          {hourGroup.slots.map((slot, sIdx) => {
+                                            const isSelected = geelySelectedTimeSlot === slot.timeSlot;
+                                            return (
+                                              <button
+                                                key={slot.timeSlot || sIdx}
+                                                type="button"
+                                                onClick={() => {
+                                                  setGeelySelectedTimeSlot(slot.timeSlot);
+                                                  if (slot.advisorId) setGeelyAdvisorId(String(slot.advisorId));
+                                                }}
+                                                className={`px-2 py-1 rounded text-[11px] font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                                                  isSelected
+                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-2xs ring-1 ring-blue-300'
+                                                    : 'bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border-slate-200'
+                                                }`}
+                                              >
+                                                <span>{slot.timeSlot}</span>
+                                                {slot.advisorId && (
+                                                  <span className={`text-[8px] font-normal ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                                    #{slot.advisorId}
+                                                  </span>
+                                                )}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
                               );
                             })}
                           </div>
                         ) : (
-                          <div className="p-8 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-500 text-xs">
+                          <div className="p-6 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-500 text-xs">
                             No drop-off timeslots available for <span className="font-bold text-slate-700">{geelySelectedDate}</span>. Please choose another date on the calendar.
                           </div>
                         )}
                       </div>
 
                       {geelySelectedTimeSlot && (
-                        <div className="pt-2 border-t border-slate-200 text-[11px] text-slate-600 flex items-center justify-between">
+                        <div className="pt-1.5 border-t border-slate-200 text-[10px] text-slate-600 flex items-center justify-between">
                           <span>Selected Slot:</span>
-                          <span className="font-bold font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                          <span className="font-bold font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-[11px]">
                             {geelySelectedTimeSlot} {geelyAdvisorId ? `(Advisor: ${geelyAdvisorId})` : ''}
                           </span>
                         </div>
@@ -1381,10 +1432,10 @@ export default function ServiceBookingMainPanel() {
                   </div>
 
                   {/* STEP 4: Mileage, Advisor, Notes */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                     
                     {/* Mileage */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
                       <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
                         <FaClock className="text-gray-400 text-xs" /> Current Mileage (KM) <span className="text-rose-500 font-bold">*</span>
                       </label>
@@ -1401,7 +1452,7 @@ export default function ServiceBookingMainPanel() {
                     </div>
 
                     {/* Service Advisor (GET /api/service/advisors) */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
                       <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
                         <FaUser className="text-gray-400 text-xs" /> Service Advisor (Optional)
                       </label>
@@ -1415,7 +1466,7 @@ export default function ServiceBookingMainPanel() {
                     </div>
 
                     {/* Customer Notes */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
                       <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
                         <FaClipboardList className="text-gray-400 text-xs" /> Customer Notes (Optional)
                       </label>
@@ -1431,11 +1482,11 @@ export default function ServiceBookingMainPanel() {
                   </div>
 
                   {/* Submit Button Bar */}
-                  <div className="flex items-center justify-center pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-center pt-2 border-t border-gray-200">
                     <button
                       type="submit"
                       disabled={geelySubmitting || !geelySelectedDate || !geelySelectedTimeSlot}
-                      className="px-8 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 min-w-[240px]"
+                      className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 min-w-[220px]"
                     >
                       {geelySubmitting ? (
                         <>
@@ -1718,7 +1769,8 @@ export default function ServiceBookingMainPanel() {
         </div>
       )}
 
-      {/* 3. LOOKUP WIP BOOKING */}
+      {/* 3. LOOKUP WIP BOOKING (Hidden / Commented out as requested) */}
+      {/*
       {activeToolTab === 'ModifyWip' && (
         <div className="bg-white rounded-xl shadow-xs border border-gray-300 overflow-hidden flex flex-col">
           <div className="bg-slate-100/80 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
@@ -1750,7 +1802,6 @@ export default function ServiceBookingMainPanel() {
               </div>
             </div>
 
-            {/* Formatted WIP Booking UI Card */}
             {lookupResult?.type === 'wip' && (
               <div className="bg-white rounded-xl border border-indigo-300 shadow-sm overflow-hidden text-xs">
                 <div className={`px-4 py-2.5 text-white flex items-center justify-between font-bold ${lookupResult.ok ? 'bg-indigo-600' : 'bg-rose-600'}`}>
@@ -1774,6 +1825,7 @@ export default function ServiceBookingMainPanel() {
           </div>
         </div>
       )}
+      */}
 
       {/* 4. SAVE REQUEST / COMPLAINT */}
       {activeToolTab === 'Requests' && (
