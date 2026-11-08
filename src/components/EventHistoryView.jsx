@@ -298,11 +298,11 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
   const initialCustNo = isProspectParam
     ? (urlProspectNo || customer?.prospectNumber || (customer?.isProspect ? customer?.id : null) || (urlCustomerNo === '167062' ? '167062' : '') || '167062')
     : (customer?.customerNumber || urlCustomerNo || '76876');
-  const initialGroup = contextGroup || customer?.keyloopGroup || urlGroup || 'BMW';
+  const initialGroup = urlGroup || customer?.keyloopGroup || contextGroup || 'BMW';
 
   const [group, setGroup] = useState(initialGroup);
   const [customerNumber, setCustomerNumber] = useState(initialCustNo);
-  const [limit, setLimit] = useState(20);
+  const [limit, setLimit] = useState(2);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -343,9 +343,8 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
         : String(customer?.customerNumber || customer?.id || '');
       if (val) setCustomerNumber(val);
     }
-    if (customer?.keyloopGroup || contextGroup) {
-      setGroup(customer?.keyloopGroup || contextGroup || 'BMW');
-    }
+    const derivedGroup = urlParams.get('group') || customer?.keyloopGroup || contextGroup || 'BMW';
+    setGroup(derivedGroup);
   }, [customer, contextGroup]);
 
   // 1. Fetch Events of a Customer (GET /api/v1/events?group=BMW&customerNumber=76876&limit=...)
@@ -605,151 +604,142 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
   return (
     <div className="flex flex-col gap-3 font-sans text-xs">
       
-      {/* 1. Header & Configuration Toolbar */}
-      <div className="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200 shadow-2xs flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shadow-2xs border border-blue-100">
-              <FaHistory className="text-base" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold text-gray-900 leading-tight">
-                  Event History & Sales Executive Tracker
-                </h2>
-                <span className="bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200">
-                  {events.length} {events.length === 1 ? 'Event' : 'Events'}
-                </span>
+      {/* 1. Header & Configuration Toolbar + 2. KPI Metrics Ribbon (Only shown on Customer Event tab) */}
+      {isCustomerEventTab && (
+        <>
+          <div className="bg-white rounded-xl p-3.5 sm:p-4 border border-slate-200 shadow-2xs flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold shadow-2xs border border-blue-100">
+                  <FaHistory className="text-base" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-bold text-gray-900 leading-tight">
+                      Event History & Sales Executive Tracker
+                    </h2>
+                    <span className="bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200">
+                      {events.length} {events.length === 1 ? 'Event' : 'Events'}
+                    </span>
+                    <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200">
+                      {group || 'BMW'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500">
+                    Customer interaction history & sales executive assignments
+                  </p>
+                </div>
               </div>
-              <p className="text-[11px] text-gray-500">
-                Customer interaction history & sales executive assignments
-              </p>
             </div>
-          </div>
-        </div>
 
-        {/* Filter Input Grid */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            fetchCustomerEvents();
-          }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1"
-        >
-          <div>
-            <label className="block text-[10px] font-extrabold text-gray-600 uppercase mb-1">
-              Keyloop Group / Brand
-            </label>
-            <select
-              value={group}
-              onChange={(e) => setGroup(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-xs text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
+            {/* Filter Input Grid - Removed Keyloop Group box per specification */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                fetchCustomerEvents();
+              }}
+              className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 pt-1"
             >
-              <option value="BMW">BMW</option>
-              <option value="MINI">MINI</option>
-              <option value="ROLLS-ROYCE">ROLLS-ROYCE</option>
-              <option value="GEELY">GEELY</option>
-            </select>
+              <div className="sm:col-span-6">
+                <label className="block text-[10px] font-extrabold text-gray-600 uppercase mb-1">
+                  Customer Number <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={customerNumber}
+                  onChange={(e) => setCustomerNumber(e.target.value)}
+                  placeholder="e.g. 76876"
+                  required
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-mono font-bold text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="sm:col-span-3">
+                <label className="block text-[10px] font-extrabold text-gray-600 uppercase mb-1">
+                  Result Limit
+                </label>
+                <select
+                  value={limit}
+                  onChange={(e) => setLimit(Number(e.target.value))}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-xs text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
+                >
+                  <option value={2}>2 Records (Default - Latest 2)</option>
+                  <option value={5}>5 Records</option>
+                  <option value={10}>10 Records</option>
+                  <option value={20}>20 Records</option>
+                  <option value={50}>50 Records</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-3 flex items-end">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs transition-colors shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {loading ? (
+                    <>
+                      <FaSpinner className="animate-spin text-xs" />
+                      <span>Loading Events...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaSearch className="text-xs" />
+                      <span>Fetch Events</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
 
-          <div>
-            <label className="block text-[10px] font-extrabold text-gray-600 uppercase mb-1">
-              Customer Number <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={customerNumber}
-              onChange={(e) => setCustomerNumber(e.target.value)}
-              placeholder="e.g. 76876"
-              required
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-mono font-bold text-xs text-slate-800 focus:outline-none focus:border-blue-500"
-            />
-          </div>
+          {/* 2. KPI Metrics Ribbon */}
+          {events.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                  <FaFileAlt className="text-sm" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Events</span>
+                  <strong className="text-base font-extrabold text-slate-800">{stats.total}</strong>
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-[10px] font-extrabold text-gray-600 uppercase mb-1">
-              Result Limit
-            </label>
-            <select
-              value={limit}
-              onChange={(e) => setLimit(Number(e.target.value))}
-              className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 font-semibold text-xs text-slate-800 focus:outline-none focus:border-blue-500 cursor-pointer"
-            >
-              <option value={2}>2 Records</option>
-              <option value={5}>5 Records</option>
-              <option value={10}>10 Records</option>
-              <option value={20}>20 Records</option>
-              <option value={50}>50 Records</option>
-            </select>
-          </div>
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                  <FaUserTie className="text-sm" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Sales Executives</span>
+                  <strong className="text-base font-extrabold text-purple-700">{stats.salesExecCount}</strong>
+                </div>
+              </div>
 
-          <div className="flex items-end">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-1.5 px-3 rounded-lg text-xs transition-colors shadow-2xs flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              {loading ? (
-                <>
-                  <FaSpinner className="animate-spin text-xs" />
-                  <span>Loading Events...</span>
-                </>
-              ) : (
-                <>
-                  <FaSearch className="text-xs" />
-                  <span>Fetch Events</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+                  <FaCheckCircle className="text-sm" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Closed Events</span>
+                  <strong className="text-base font-extrabold text-emerald-700">{stats.closed}</strong>
+                </div>
+              </div>
 
-      {/* 2. KPI Metrics Ribbon */}
-      {events.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-              <FaFileAlt className="text-sm" />
+              <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                  <FaCar className="text-sm" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Vehicle Models</span>
+                  <strong className="text-base font-extrabold text-amber-700 truncate block">
+                    {stats.modelsList.join(', ') || 'N/A'}
+                  </strong>
+                </div>
+              </div>
             </div>
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Events</span>
-              <strong className="text-base font-extrabold text-slate-800">{stats.total}</strong>
-            </div>
-          </div>
-
-          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-              <FaUserTie className="text-sm" />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Sales Executives</span>
-              <strong className="text-base font-extrabold text-purple-700">{stats.salesExecCount}</strong>
-            </div>
-          </div>
-
-          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-              <FaCheckCircle className="text-sm" />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Closed Events</span>
-              <strong className="text-base font-extrabold text-emerald-700">{stats.closed}</strong>
-            </div>
-          </div>
-
-          <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-              <FaCar className="text-sm" />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Vehicle Models</span>
-              <strong className="text-base font-extrabold text-amber-700 truncate block">
-                {stats.modelsList.join(', ') || 'N/A'}
-              </strong>
-            </div>
-          </div>
-        </div>
+          )}
+        </>
       )}
 
       {/* 3. Sub-Tab Section Rendering: ONE EVENT DIRECT INSPECTOR */}

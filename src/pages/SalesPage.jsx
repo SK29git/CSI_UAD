@@ -9,7 +9,6 @@ import SalesSegmentsView from '../components/SalesSegmentsView';
 import SalesAfterSalesView from '../components/SalesAfterSalesView';
 import SalesEnquiriesView from '../components/SalesEnquiriesView';
 import SalesCreateTaskView from '../components/SalesCreateTaskView';
-import EventHistoryView from '../components/EventHistoryView';
 import CustomerFormView from '../components/CustomerFormView';
 import { useCustomer, isExistingCustomer } from '../context/CustomerContext';
 
@@ -97,8 +96,6 @@ export default function SalesPage() {
         return <SalesSegmentsView />;
       case 'After-Sales':
         return <SalesAfterSalesView />;
-      case 'Event History':
-        return <EventHistoryView />;
       default:
         return <SalesNewLeadView onNavigateToEnquiries={() => setActiveSubTab('Enquiries')} />;
     }

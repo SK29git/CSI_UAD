@@ -237,7 +237,6 @@ export default function CenterNavTabs({
     { id: "Vehicle Orders", label: "Vehicle Orders" },
     { id: "Customer Segments", label: "Customer Segments" },
     { id: "After-Sales", label: "After-Sales" },
-    { id: "Event History", label: "Event History" },
   ];
 
   const eventSubTabs = [
