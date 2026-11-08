@@ -1,28 +1,32 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useCustomer } from '../context/CustomerContext';
-import { getCustomerEvents, getEventByNumber, getSalesExecutiveDetails } from '../utils/api';
-import { 
-  FaHistory, 
-  FaUserTie, 
-  FaCar, 
-  FaBuilding, 
-  FaPhoneAlt, 
-  FaClock, 
-  FaCheckCircle, 
-  FaExclamationCircle, 
-  FaSearch, 
-  FaSpinner, 
-  FaChevronDown, 
-  FaChevronUp, 
-  FaFileAlt, 
-  FaCalendarAlt, 
+import React, { useState, useEffect, useMemo } from "react";
+import { useCustomer } from "../context/CustomerContext";
+import {
+  getCustomerEvents,
+  getEventByNumber,
+  getSalesExecutiveDetails,
+} from "../utils/api";
+import {
+  FaHistory,
+  FaUserTie,
+  FaCar,
+  FaBuilding,
+  FaPhoneAlt,
+  FaClock,
+  FaCheckCircle,
+  FaExclamationCircle,
+  FaSearch,
+  FaSpinner,
+  FaChevronDown,
+  FaChevronUp,
+  FaFileAlt,
+  FaCalendarAlt,
   FaIdBadge,
   FaEnvelope,
   FaTimes,
   FaArrowRight,
   FaInfoCircle,
-  FaLayerGroup
-} from 'react-icons/fa';
+  FaLayerGroup,
+} from "react-icons/fa";
 
 // Sample events fallback for customer #76876 matching collection specification
 const SAMPLE_EVENTS_FALLBACK = [
@@ -65,7 +69,8 @@ const SAMPLE_EVENTS_FALLBACK = [
     dateRequiredTo: "",
     enquiryNo: "",
     statusOfEnquiry: "",
-    eventTaskNotes: "RPA v14 test: recovery requested for 25539DB (no sales executive sent).",
+    eventTaskNotes:
+      "RPA v14 test: recovery requested for 25539DB (no sales executive sent).",
     notesFromBranch: "10",
     campaignNameFromNotes: "",
     makeFromNotes: "BMW",
@@ -112,7 +117,8 @@ const SAMPLE_EVENTS_FALLBACK = [
     eventTaskActionId: "hamdan",
     eventTaskDate2: "2026-11-01",
     eventTaskEntityType: "6",
-    eventTaskNotes2: "RPA v14 test: recovery requested for 25539DB (no sales executive sent).",
+    eventTaskNotes2:
+      "RPA v14 test: recovery requested for 25539DB (no sales executive sent).",
     eventTaskStructureId: "",
     eventTaskTime2: "17:53:54",
     eventTaskType: "0",
@@ -152,7 +158,7 @@ const SAMPLE_EVENTS_FALLBACK = [
     eventSourceCode: "CALLCENT",
     manufacturerRestriction: "",
     marketingCampaignCode2: "????????????????",
-    originOfTheRow: "0"
+    originOfTheRow: "0",
   },
   {
     keyloopGroup: "BMW",
@@ -193,7 +199,8 @@ const SAMPLE_EVENTS_FALLBACK = [
     dateRequiredTo: "",
     enquiryNo: "",
     statusOfEnquiry: "",
-    eventTaskNotes: "Customer needs recovery of 25539DB to the Sheikh Zayed Rd workshop.",
+    eventTaskNotes:
+      "Customer needs recovery of 25539DB to the Sheikh Zayed Rd workshop.",
     notesFromBranch: "10",
     campaignNameFromNotes: "",
     makeFromNotes: "BMW",
@@ -240,7 +247,8 @@ const SAMPLE_EVENTS_FALLBACK = [
     eventTaskActionId: "pattepu",
     eventTaskDate2: "2026-11-01",
     eventTaskEntityType: "6",
-    eventTaskNotes2: "Customer needs recovery of 25539DB to the Sheikh Zayed Rd workshop.",
+    eventTaskNotes2:
+      "Customer needs recovery of 25539DB to the Sheikh Zayed Rd workshop.",
     eventTaskStructureId: "",
     eventTaskTime2: "13:29:05",
     eventTaskType: "0",
@@ -280,25 +288,48 @@ const SAMPLE_EVENTS_FALLBACK = [
     eventSourceCode: "CALLCENT",
     manufacturerRestriction: "",
     marketingCampaignCode2: "????????????????",
-    originOfTheRow: "0"
-  }
+    originOfTheRow: "0",
+  },
 ];
 
-export default function EventHistoryView({ activeSubTab = 'Customer Event', onSubTabChange }) {
+export default function EventHistoryView({
+  activeSubTab = "Customer Event",
+  onSubTabChange,
+}) {
   const { customer, group: contextGroup } = useCustomer();
 
-  const isCustomerEventTab = activeSubTab === 'Customer Event' || activeSubTab === 'Overview' || activeSubTab === 'Event History' || !activeSubTab;
+  const isCustomerEventTab =
+    activeSubTab === "Customer Event" ||
+    activeSubTab === "Overview" ||
+    activeSubTab === "Event History" ||
+    !activeSubTab;
 
-  const urlParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-  const urlProspectNo = urlParams.get('prospectNumber') || '';
-  const urlCustomerNo = urlParams.get('customerNumber') || urlParams.get('customerNo') || urlParams.get('id') || '';
-  const urlGroup = urlParams.get('group') || '';
+  const urlParams = new URLSearchParams(
+    typeof window !== "undefined" ? window.location.search : "",
+  );
+  const urlProspectNo = urlParams.get("prospectNumber") || "";
+  const urlCustomerNo =
+    urlParams.get("customerNumber") ||
+    urlParams.get("customerNo") ||
+    urlParams.get("id") ||
+    "";
+  const urlGroup = urlParams.get("group") || "";
 
-  const isProspectParam = Boolean(urlProspectNo || customer?.isProspect || customer?.customerType === 'PROSPECT' || urlCustomerNo === '167062');
+  const isProspectParam = Boolean(
+    urlProspectNo ||
+    customer?.isProspect ||
+    customer?.customerType === "PROSPECT" ||
+    urlCustomerNo === "167062",
+  );
   const initialCustNo = isProspectParam
-    ? (urlProspectNo || customer?.prospectNumber || (customer?.isProspect ? customer?.id : null) || (urlCustomerNo === '167062' ? '167062' : '') || '167062')
-    : (customer?.customerNumber || urlCustomerNo || '76876');
-  const initialGroup = urlGroup || customer?.keyloopGroup || contextGroup || 'BMW';
+    ? urlProspectNo ||
+      customer?.prospectNumber ||
+      (customer?.isProspect ? customer?.id : null) ||
+      (urlCustomerNo === "167062" ? "167062" : "") ||
+      "167062"
+    : customer?.customerNumber || urlCustomerNo || "76876";
+  const initialGroup =
+    urlGroup || customer?.keyloopGroup || contextGroup || "BMW";
 
   const [group, setGroup] = useState(initialGroup);
   const [customerNumber, setCustomerNumber] = useState(initialCustNo);
@@ -306,8 +337,7 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [searchFilter, setSearchFilter] = useState('');
-  
+
   // Track detailed One Event API responses cached by eventNumber
   const [oneEventsData, setOneEventsData] = useState({});
   const [oneEventsLoading, setOneEventsLoading] = useState({});
@@ -319,38 +349,28 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
     loading: false,
     data: null,
     error: null,
-    userId: ''
+    userId: "",
   });
 
   // Direct One Event Search State (for 'One Event' sub-tab or direct lookup)
-  const [directEventNumber, setDirectEventNumber] = useState('14316687');
+  const [directEventNumber, setDirectEventNumber] = useState("14316687");
   const [directEventLoading, setDirectEventLoading] = useState(false);
   const [directEventData, setDirectEventData] = useState(null);
   const [directEventError, setDirectEventError] = useState(null);
 
   // Manual Sales Executive Search State (for 'Sales Executives' sub-tab)
-  const [manualSalesExecUserId, setManualSalesExecUserId] = useState('v18051');
+  const [manualSalesExecUserId, setManualSalesExecUserId] = useState("v18051");
   const [manualSalesExecLoading, setManualSalesExecLoading] = useState(false);
   const [manualSalesExecData, setManualSalesExecData] = useState(null);
   const [manualSalesExecError, setManualSalesExecError] = useState(null);
 
-  // Sync if customer context changes
-  useEffect(() => {
-    if (customer?.customerNumber || customer?.id || customer?.prospectNumber) {
-      const isProspectCust = Boolean(customer?.isProspect || customer?.customerType === 'PROSPECT');
-      const val = isProspectCust 
-        ? String(customer?.prospectNumber || customer?.id || '')
-        : String(customer?.customerNumber || customer?.id || '');
-      if (val) setCustomerNumber(val);
-    }
-    const derivedGroup = urlParams.get('group') || customer?.keyloopGroup || contextGroup || 'BMW';
-    setGroup(derivedGroup);
-  }, [customer, contextGroup]);
-
   // 1. Fetch Events of a Customer (GET /api/v1/events?group=BMW&customerNumber=76876&limit=...)
-  const fetchCustomerEvents = async (custNoOverride = null, groupOverride = null) => {
+  const fetchCustomerEvents = async (
+    custNoOverride = null,
+    groupOverride = null,
+  ) => {
     const targetCustNo = custNoOverride || customerNumber;
-    const targetGroup = groupOverride || group || 'BMW';
+    const targetGroup = groupOverride || group || "BMW";
 
     if (!targetCustNo) {
       setError("Please specify a customer number to fetch event history.");
@@ -362,18 +382,18 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
 
     try {
       const isRecordProspect = Boolean(
-        customer?.isProspect || 
-        customer?.customerType === 'PROSPECT' || 
-        urlParams.get('prospectNumber') === targetCustNo ||
-        targetCustNo === '167062' || // Known unconverted prospect
-        String(customer?.prospectNumber) === String(targetCustNo)
+        customer?.isProspect ||
+        customer?.customerType === "PROSPECT" ||
+        urlParams.get("prospectNumber") === targetCustNo ||
+        targetCustNo === "167062" || // Known unconverted prospect
+        String(customer?.prospectNumber) === String(targetCustNo),
       );
 
       const res = await getCustomerEvents({
         group: targetGroup,
         customerNumber: isRecordProspect ? undefined : targetCustNo,
         prospectNumber: isRecordProspect ? targetCustNo : undefined,
-        limit
+        limit,
       });
 
       if (res && res.ok && Array.isArray(res.data)) {
@@ -382,7 +402,7 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
         setEvents(res.data.events);
       } else {
         // Fallback to sample events if testing with sample customer
-        if (String(targetCustNo) === '76876') {
+        if (String(targetCustNo) === "76876") {
           setEvents(SAMPLE_EVENTS_FALLBACK);
         } else {
           setEvents([]);
@@ -391,7 +411,7 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
       }
     } catch (err) {
       console.warn("Failed to fetch customer events:", err);
-      if (String(targetCustNo) === '76876') {
+      if (String(targetCustNo) === "76876") {
         setEvents(SAMPLE_EVENTS_FALLBACK);
       } else {
         setError(err.message || "Failed to load event history.");
@@ -402,10 +422,39 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
     }
   };
 
-  // Initial fetch on mount or when customer/group changes
+  // Sync if customer context changes from outside (e.g. sidebar customer selection)
   useEffect(() => {
-    fetchCustomerEvents();
-  }, [customerNumber, group]);
+    if (customer?.customerNumber || customer?.id || customer?.prospectNumber) {
+      const isProspectCust = Boolean(
+        customer?.isProspect || customer?.customerType === "PROSPECT",
+      );
+      const val = isProspectCust
+        ? String(customer?.prospectNumber || customer?.id || "")
+        : String(customer?.customerNumber || customer?.id || "");
+      if (val && val !== customerNumber) {
+        setCustomerNumber(val);
+        const derivedGroup =
+          urlParams.get("group") ||
+          customer?.keyloopGroup ||
+          contextGroup ||
+          "BMW";
+        setGroup(derivedGroup);
+        fetchCustomerEvents(val, derivedGroup);
+      }
+    }
+  }, [
+    customer?.customerNumber,
+    customer?.id,
+    customer?.prospectNumber,
+    contextGroup,
+  ]);
+
+  // Initial fetch on component mount only
+  useEffect(() => {
+    if (initialCustNo) {
+      fetchCustomerEvents(initialCustNo, initialGroup);
+    }
+  }, []);
 
   // 2. Fetch One Event (GET /api/v1/events?group=BMW&eventNumber=14316688)
   const fetchOneEvent = async (eventNo, autoExpand = true) => {
@@ -413,40 +462,48 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
     const cleanEventNo = String(eventNo).trim();
 
     // Set loading for this specific event
-    setOneEventsLoading(prev => ({ ...prev, [cleanEventNo]: true }));
+    setOneEventsLoading((prev) => ({ ...prev, [cleanEventNo]: true }));
     if (autoExpand) {
       setExpandedOneEventId(cleanEventNo);
     }
 
     try {
       const res = await getEventByNumber({
-        group: group || 'BMW',
-        eventNumber: cleanEventNo
+        group: group || "BMW",
+        eventNumber: cleanEventNo,
       });
 
       if (res && res.ok && res.data) {
-        setOneEventsData(prev => ({ ...prev, [cleanEventNo]: res.data }));
+        setOneEventsData((prev) => ({ ...prev, [cleanEventNo]: res.data }));
       } else {
         // Fallback: check if we already have it in local events list
-        const match = events.find(e => String(e.eventNumber || e.chainNumber) === cleanEventNo);
+        const match = events.find(
+          (e) => String(e.eventNumber || e.chainNumber) === cleanEventNo,
+        );
         if (match) {
-          setOneEventsData(prev => ({ ...prev, [cleanEventNo]: match }));
+          setOneEventsData((prev) => ({ ...prev, [cleanEventNo]: match }));
         } else {
-          setOneEventsData(prev => ({ 
-            ...prev, 
-            [cleanEventNo]: { error: res?.error || `Could not find event #${cleanEventNo}` } 
+          setOneEventsData((prev) => ({
+            ...prev,
+            [cleanEventNo]: {
+              error: res?.error || `Could not find event #${cleanEventNo}`,
+            },
           }));
         }
       }
     } catch (err) {
       console.warn(`Failed to fetch event #${cleanEventNo}:`, err);
-      const match = events.find(e => String(e.eventNumber || e.chainNumber) === cleanEventNo);
-      setOneEventsData(prev => ({ 
-        ...prev, 
-        [cleanEventNo]: match || { error: err.message || "Failed to load event details." } 
+      const match = events.find(
+        (e) => String(e.eventNumber || e.chainNumber) === cleanEventNo,
+      );
+      setOneEventsData((prev) => ({
+        ...prev,
+        [cleanEventNo]: match || {
+          error: err.message || "Failed to load event details.",
+        },
       }));
     } finally {
-      setOneEventsLoading(prev => ({ ...prev, [cleanEventNo]: false }));
+      setOneEventsLoading((prev) => ({ ...prev, [cleanEventNo]: false }));
     }
   };
 
@@ -461,17 +518,21 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
 
     try {
       const res = await getEventByNumber({
-        group: group || 'BMW',
-        eventNumber: String(directEventNumber).trim()
+        group: group || "BMW",
+        eventNumber: String(directEventNumber).trim(),
       });
 
       if (res && res.ok && res.data) {
         setDirectEventData(res.data);
       } else {
-        setDirectEventError(res?.error || `No event found matching #${directEventNumber}`);
+        setDirectEventError(
+          res?.error || `No event found matching #${directEventNumber}`,
+        );
       }
     } catch (err) {
-      setDirectEventError(err.message || `Failed to fetch event #${directEventNumber}`);
+      setDirectEventError(
+        err.message || `Failed to fetch event #${directEventNumber}`,
+      );
     } finally {
       setDirectEventLoading(false);
     }
@@ -487,33 +548,35 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
       loading: true,
       data: null,
       error: null,
-      userId: cleanUserId
+      userId: cleanUserId,
     });
 
     try {
       const res = await getSalesExecutiveDetails({
-        group: group || 'BMW',
-        userId: cleanUserId
+        group: group || "BMW",
+        userId: cleanUserId,
       });
 
       if (res && res.ok && res.data) {
-        setSalesExecModal(prev => ({
+        setSalesExecModal((prev) => ({
           ...prev,
           loading: false,
-          data: res.data
+          data: res.data,
         }));
       } else {
-        setSalesExecModal(prev => ({
+        setSalesExecModal((prev) => ({
           ...prev,
           loading: false,
-          error: res?.error || `Sales executive profile not found for user ID: ${cleanUserId}`
+          error:
+            res?.error ||
+            `Sales executive profile not found for user ID: ${cleanUserId}`,
         }));
       }
     } catch (err) {
-      setSalesExecModal(prev => ({
+      setSalesExecModal((prev) => ({
         ...prev,
         loading: false,
-        error: err.message || "Failed to fetch sales executive details."
+        error: err.message || "Failed to fetch sales executive details.",
       }));
     }
   };
@@ -529,58 +592,54 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
 
     try {
       const res = await getSalesExecutiveDetails({
-        group: group || 'BMW',
-        userId: String(manualSalesExecUserId).trim()
+        group: group || "BMW",
+        userId: String(manualSalesExecUserId).trim(),
       });
 
       if (res && res.ok && res.data) {
         setManualSalesExecData(res.data);
       } else {
-        setManualSalesExecError(res?.error || `Sales executive profile not found for user: ${manualSalesExecUserId}`);
+        setManualSalesExecError(
+          res?.error ||
+            `Sales executive profile not found for user: ${manualSalesExecUserId}`,
+        );
       }
     } catch (err) {
-      setManualSalesExecError(err.message || "Failed to fetch sales executive details.");
+      setManualSalesExecError(
+        err.message || "Failed to fetch sales executive details.",
+      );
     } finally {
       setManualSalesExecLoading(false);
     }
   };
 
-  // Filtered customer events
-  const filteredEvents = useMemo(() => {
-    if (!searchFilter.trim()) return events;
-    const q = searchFilter.toLowerCase();
-    return events.filter(ev => {
-      const notes = (ev.eventTaskNotes || ev.eventTaskNotes2 || '').toLowerCase();
-      const creator = (ev.creatorName || ev.createdByUser || '').toLowerCase();
-      const followup = (ev.followupUsername || '').toLowerCase();
-      const ref = (ev.reference || '').toLowerCase();
-      const type = (ev.eventType || '').toLowerCase();
-      const evNo = String(ev.eventNumber || '').toLowerCase();
-      const make = (ev.makeFromNotes || ev.eventMake || '').toLowerCase();
-      const model = (ev.modelFromNotes || ev.eventModel || '').toLowerCase();
-      return notes.includes(q) || creator.includes(q) || followup.includes(q) || 
-             ref.includes(q) || type.includes(q) || evNo.includes(q) || make.includes(q) || model.includes(q);
-    });
-  }, [events, searchFilter]);
+  // Customer events list
+  const filteredEvents = events;
 
   // Derived KPI Stats
   const stats = useMemo(() => {
     const total = events.length;
-    const closed = events.filter(e => e.closedFlag === '1' || e.closedDate).length;
+    const closed = events.filter(
+      (e) => e.closedFlag === "1" || e.closedDate,
+    ).length;
     const open = total - closed;
-    
+
     // Unique sales executives with their userIds if available
     const salesExecMap = new Map();
-    events.forEach(e => {
+    events.forEach((e) => {
       const name = e.followupUsername || e.creatorName;
-      const uid = e.eventTaskActionId || e.escalateActionId || e.createdByUser || e.closedByUser;
+      const uid =
+        e.eventTaskActionId ||
+        e.escalateActionId ||
+        e.createdByUser ||
+        e.closedByUser;
       if (name) {
-        salesExecMap.set(name, { name, userId: uid || '' });
+        salesExecMap.set(name, { name, userId: uid || "" });
       }
     });
 
     const vehicleModels = new Set(
-      events.map(e => e.modelFromNotes || e.eventModel).filter(Boolean)
+      events.map((e) => e.modelFromNotes || e.eventModel).filter(Boolean),
     );
 
     return {
@@ -589,21 +648,22 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
       open,
       salesExecList: Array.from(salesExecMap.values()),
       salesExecCount: salesExecMap.size,
-      modelsList: Array.from(vehicleModels)
+      modelsList: Array.from(vehicleModels),
     };
   }, [events]);
 
   const getEventTypeColor = (type) => {
-    const t = String(type || '').toUpperCase();
-    if (t.includes('ES5')) return 'bg-purple-100 text-purple-800 border-purple-200';
-    if (t.includes('ES3')) return 'bg-blue-100 text-blue-800 border-blue-200';
-    if (t.includes('ES1')) return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-    return 'bg-amber-100 text-amber-800 border-amber-200';
+    const t = String(type || "").toUpperCase();
+    if (t.includes("ES5"))
+      return "bg-purple-100 text-purple-800 border-purple-200";
+    if (t.includes("ES3")) return "bg-blue-100 text-blue-800 border-blue-200";
+    if (t.includes("ES1"))
+      return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    return "bg-amber-100 text-amber-800 border-amber-200";
   };
 
   return (
     <div className="flex flex-col gap-3 font-sans text-xs">
-      
       {/* 1. Header & Configuration Toolbar + 2. KPI Metrics Ribbon (Only shown on Customer Event tab) */}
       {isCustomerEventTab && (
         <>
@@ -616,13 +676,13 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-base font-bold text-gray-900 leading-tight">
-                      Event History & Sales Executive Tracker
+                      Event History & Sales Executive
                     </h2>
                     <span className="bg-blue-100 text-blue-800 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-blue-200">
-                      {events.length} {events.length === 1 ? 'Event' : 'Events'}
+                      {events.length} {events.length === 1 ? "Event" : "Events"}
                     </span>
                     <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-slate-200">
-                      {group || 'BMW'}
+                      {group || "BMW"}
                     </span>
                   </div>
                   <p className="text-[11px] text-gray-500">
@@ -701,8 +761,12 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                   <FaFileAlt className="text-sm" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Events</span>
-                  <strong className="text-base font-extrabold text-slate-800">{stats.total}</strong>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Total Events
+                  </span>
+                  <strong className="text-base font-extrabold text-slate-800">
+                    {stats.total}
+                  </strong>
                 </div>
               </div>
 
@@ -711,8 +775,12 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                   <FaUserTie className="text-sm" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Sales Executives</span>
-                  <strong className="text-base font-extrabold text-purple-700">{stats.salesExecCount}</strong>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Sales Executives
+                  </span>
+                  <strong className="text-base font-extrabold text-purple-700">
+                    {stats.salesExecCount}
+                  </strong>
                 </div>
               </div>
 
@@ -721,8 +789,12 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                   <FaCheckCircle className="text-sm" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Closed Events</span>
-                  <strong className="text-base font-extrabold text-emerald-700">{stats.closed}</strong>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Closed Events
+                  </span>
+                  <strong className="text-base font-extrabold text-emerald-700">
+                    {stats.closed}
+                  </strong>
                 </div>
               </div>
 
@@ -731,9 +803,11 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                   <FaCar className="text-sm" />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Vehicle Models</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Vehicle Models
+                  </span>
                   <strong className="text-base font-extrabold text-amber-700 truncate block">
-                    {stats.modelsList.join(', ') || 'N/A'}
+                    {stats.modelsList.join(", ") || "N/A"}
                   </strong>
                 </div>
               </div>
@@ -743,7 +817,7 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
       )}
 
       {/* 3. Sub-Tab Section Rendering: ONE EVENT DIRECT INSPECTOR */}
-      {activeSubTab === 'One Event' && (
+      {activeSubTab === "One Event" && (
         <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col gap-3">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <FaSearch className="text-blue-600" />
@@ -751,8 +825,11 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
               Inspect Event by Number
             </h3>
           </div>
-          
-          <form onSubmit={handleDirectOneEventSearch} className="flex gap-2 max-w-lg">
+
+          <form
+            onSubmit={handleDirectOneEventSearch}
+            className="flex gap-2 max-w-lg"
+          >
             <input
               type="text"
               value={directEventNumber}
@@ -765,7 +842,11 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
               disabled={directEventLoading}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              {directEventLoading ? <FaSpinner className="animate-spin text-xs" /> : <FaSearch className="text-xs" />}
+              {directEventLoading ? (
+                <FaSpinner className="animate-spin text-xs" />
+              ) : (
+                <FaSearch className="text-xs" />
+              )}
               <span>Inspect Event</span>
             </button>
           </form>
@@ -780,43 +861,83 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
             <div className="mt-2 p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col gap-3">
               <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                 <span className="font-mono font-bold text-blue-700 text-sm">
-                  Event Details: #{directEventData.eventNumber || directEventNumber}
+                  Event Details: #
+                  {directEventData.eventNumber || directEventNumber}
                 </span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getEventTypeColor(directEventData.eventType)}`}>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getEventTypeColor(directEventData.eventType)}`}
+                >
                   {directEventData.eventType}
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 <div className="bg-white p-3 rounded-lg border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Customer</span>
-                  <strong className="text-xs text-slate-900 block">{directEventData.customer || `${directEventData.title || ''} ${directEventData.firstName || ''} ${directEventData.surname || ''}`}</strong>
-                  <span className="text-[10px] text-slate-600 font-mono block">Cust #{directEventData.customerNumber}</span>
-                  <span className="text-[10px] text-slate-500 font-mono block">{directEventData.mobileNumber}</span>
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                    Customer
+                  </span>
+                  <strong className="text-xs text-slate-900 block">
+                    {directEventData.customer ||
+                      `${directEventData.title || ""} ${directEventData.firstName || ""} ${directEventData.surname || ""}`}
+                  </strong>
+                  <span className="text-[10px] text-slate-600 font-mono block">
+                    Cust #{directEventData.customerNumber}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-mono block">
+                    {directEventData.mobileNumber}
+                  </span>
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Assigned Staff</span>
-                  <strong className="text-xs text-slate-900 block">{directEventData.followupUsername || directEventData.creatorName || 'Unassigned'}</strong>
-                  <span className="text-[10px] text-slate-600 block">Location: {directEventData.followupUserLocation || 'N/A'}</span>
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                    Assigned Staff
+                  </span>
+                  <strong className="text-xs text-slate-900 block">
+                    {directEventData.followupUsername ||
+                      directEventData.creatorName ||
+                      "Unassigned"}
+                  </strong>
+                  <span className="text-[10px] text-slate-600 block">
+                    Location: {directEventData.followupUserLocation || "N/A"}
+                  </span>
                   {directEventData.eventTaskActionId && (
                     <button
                       type="button"
-                      onClick={() => openSalesExecutiveModal(directEventData.eventTaskActionId)}
+                      onClick={() =>
+                        openSalesExecutiveModal(
+                          directEventData.eventTaskActionId,
+                        )
+                      }
                       className="mt-1 text-[10px] text-purple-700 hover:text-purple-900 font-bold underline flex items-center gap-1 cursor-pointer"
                     >
-                      <FaUserTie className="text-[9px]" /> View Profile ({directEventData.eventTaskActionId})
+                      <FaUserTie className="text-[9px]" /> View Profile (
+                      {directEventData.eventTaskActionId})
                     </button>
                   )}
                 </div>
                 <div className="bg-white p-3 rounded-lg border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 block uppercase">Vehicle & Branch</span>
-                  <strong className="text-xs text-slate-900 block">{directEventData.makeFromNotes || directEventData.keyloopGroup} {directEventData.modelFromNotes || directEventData.eventModel}</strong>
-                  <span className="text-[10px] text-slate-600 block">{directEventData.branchName || `Branch ${directEventData.branchCode}`}</span>
-                  <span className="text-[10px] text-slate-500 font-mono block">Call #{directEventData.callNumber} | Chain #{directEventData.chainNumber}</span>
+                  <span className="text-[10px] font-bold text-slate-400 block uppercase">
+                    Vehicle & Branch
+                  </span>
+                  <strong className="text-xs text-slate-900 block">
+                    {directEventData.makeFromNotes ||
+                      directEventData.keyloopGroup}{" "}
+                    {directEventData.modelFromNotes ||
+                      directEventData.eventModel}
+                  </strong>
+                  <span className="text-[10px] text-slate-600 block">
+                    {directEventData.branchName ||
+                      `Branch ${directEventData.branchCode}`}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-mono block">
+                    Call #{directEventData.callNumber} | Chain #
+                    {directEventData.chainNumber}
+                  </span>
                 </div>
               </div>
               {directEventData.eventTaskNotes && (
                 <div className="bg-blue-50/70 p-3 rounded-lg border border-blue-100 text-xs text-slate-800">
-                  <span className="font-bold text-blue-900 block text-[10px] uppercase mb-0.5">Task Notes:</span>
+                  <span className="font-bold text-blue-900 block text-[10px] uppercase mb-0.5">
+                    Task Notes:
+                  </span>
                   {directEventData.eventTaskNotes}
                 </div>
               )}
@@ -826,7 +947,7 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
       )}
 
       {/* 4. Sub-Tab Section Rendering: SALES EXECUTIVES DIRECTORY */}
-      {activeSubTab === 'Sales Executives' && (
+      {activeSubTab === "Sales Executives" && (
         <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-2xs flex flex-col gap-3">
           <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
             <FaUserTie className="text-purple-600" />
@@ -835,7 +956,10 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
             </h3>
           </div>
 
-          <form onSubmit={handleManualSalesExecSearch} className="flex gap-2 max-w-lg">
+          <form
+            onSubmit={handleManualSalesExecSearch}
+            className="flex gap-2 max-w-lg"
+          >
             <input
               type="text"
               value={manualSalesExecUserId}
@@ -848,7 +972,11 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
               disabled={manualSalesExecLoading}
               className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              {manualSalesExecLoading ? <FaSpinner className="animate-spin text-xs" /> : <FaSearch className="text-xs" />}
+              {manualSalesExecLoading ? (
+                <FaSpinner className="animate-spin text-xs" />
+              ) : (
+                <FaSearch className="text-xs" />
+              )}
               <span>Lookup Executive</span>
             </button>
           </form>
@@ -866,23 +994,39 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                   <FaUserTie />
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">{manualSalesExecData.name}</h4>
-                  <p className="text-[11px] text-purple-800 font-mono">User ID: {manualSalesExecData.userId}</p>
-                  <p className="text-[11px] text-slate-500">{manualSalesExecData.branchName}</p>
+                  <h4 className="text-sm font-bold text-slate-900">
+                    {manualSalesExecData.name}
+                  </h4>
+                  <p className="text-[11px] text-purple-800 font-mono">
+                    User ID: {manualSalesExecData.userId}
+                  </p>
+                  <p className="text-[11px] text-slate-500">
+                    {manualSalesExecData.branchName}
+                  </p>
                 </div>
               </div>
               <div className="flex flex-col sm:items-end gap-1 text-[11px]">
                 {manualSalesExecData.email && (
-                  <a href={`mailto:${manualSalesExecData.email}`} className="text-blue-600 hover:underline flex items-center gap-1.5 font-medium">
-                    <FaEnvelope className="text-slate-400 text-xs" /> {manualSalesExecData.email}
+                  <a
+                    href={`mailto:${manualSalesExecData.email}`}
+                    className="text-blue-600 hover:underline flex items-center gap-1.5 font-medium"
+                  >
+                    <FaEnvelope className="text-slate-400 text-xs" />{" "}
+                    {manualSalesExecData.email}
                   </a>
                 )}
                 {manualSalesExecData.mobile ? (
-                  <a href={`tel:${manualSalesExecData.mobile}`} className="text-slate-700 hover:underline flex items-center gap-1.5 font-medium">
-                    <FaPhoneAlt className="text-slate-400 text-xs" /> {manualSalesExecData.mobile}
+                  <a
+                    href={`tel:${manualSalesExecData.mobile}`}
+                    className="text-slate-700 hover:underline flex items-center gap-1.5 font-medium"
+                  >
+                    <FaPhoneAlt className="text-slate-400 text-xs" />{" "}
+                    {manualSalesExecData.mobile}
                   </a>
                 ) : (
-                  <span className="text-slate-400 text-[10px]">No mobile recorded</span>
+                  <span className="text-slate-400 text-[10px]">
+                    No mobile recorded
+                  </span>
                 )}
               </div>
             </div>
@@ -896,11 +1040,18 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                 {stats.salesExecList.map((exec, idx) => (
-                  <div key={idx} className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex items-center justify-between">
+                  <div
+                    key={idx}
+                    className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex items-center justify-between"
+                  >
                     <div>
-                      <strong className="text-slate-900 text-xs block">{exec.name}</strong>
+                      <strong className="text-slate-900 text-xs block">
+                        {exec.name}
+                      </strong>
                       {exec.userId && (
-                        <span className="text-[10px] text-slate-500 font-mono">ID: {exec.userId}</span>
+                        <span className="text-[10px] text-slate-500 font-mono">
+                          ID: {exec.userId}
+                        </span>
                       )}
                     </div>
                     {exec.userId && (
@@ -920,29 +1071,6 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
         </div>
       )}
 
-      {/* 5. In-Page Filter for Customer Events */}
-      {events.length > 0 && isCustomerEventTab && (
-        <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2">
-          <FaSearch className="text-slate-400 text-xs ml-1" />
-          <input
-            type="text"
-            value={searchFilter}
-            onChange={(e) => setSearchFilter(e.target.value)}
-            placeholder="Quick search events by event #, sales executive, notes, event type, model..."
-            className="w-full bg-transparent text-xs text-slate-800 placeholder-slate-400 focus:outline-none"
-          />
-          {searchFilter && (
-            <button
-              type="button"
-              onClick={() => setSearchFilter('')}
-              className="text-xs text-slate-400 hover:text-slate-600 font-bold px-1.5"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-      )}
-
       {/* 6. Customer Events Cards List */}
       {isCustomerEventTab && (
         <>
@@ -957,7 +1085,9 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
             <div className="p-8 bg-amber-50/80 border border-amber-200 rounded-xl text-amber-900 text-center space-y-3 shadow-2xs">
               <FaExclamationCircle className="mx-auto text-2xl text-amber-600" />
               <div>
-                <p className="font-bold text-xs text-slate-800">Events Query Notice</p>
+                <p className="font-bold text-xs text-slate-800">
+                  Events Query Notice
+                </p>
                 <p className="text-[11px] text-slate-600 mt-0.5">{error}</p>
               </div>
             </div>
@@ -965,40 +1095,62 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
             <div className="p-12 text-center text-slate-500 bg-white rounded-xl border border-dashed border-slate-300 space-y-3 shadow-2xs">
               <FaHistory className="mx-auto text-3xl text-slate-300" />
               <div>
-                <p className="font-bold text-xs text-slate-700">No Events Found</p>
+                <p className="font-bold text-xs text-slate-700">
+                  No Events Found
+                </p>
                 <p className="text-[11px] text-slate-500 max-w-sm mx-auto mt-0.5">
-                  No interaction events were returned for customer <strong>#{customerNumber}</strong> in group <strong>{group}</strong>.
+                  No interaction events were returned for customer{" "}
+                  <strong>#{customerNumber}</strong> in group{" "}
+                  <strong>{group}</strong>.
                 </p>
               </div>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
               {filteredEvents.map((ev, idx) => {
-                const eventNum = ev.eventNumber || ev.callNumber || String(idx + 1);
+                const eventNum =
+                  ev.eventNumber || ev.callNumber || String(idx + 1);
                 const evId = ev.eventUid || eventNum;
                 const isExpanded = expandedOneEventId === eventNum;
-                const isClosed = ev.closedFlag === '1' || Boolean(ev.closedDate);
-                const followupSalesExecutive = ev.followupUsername || 'Unassigned';
-                const creatorSalesExecutive = ev.creatorName || ev.createdByUser || 'System';
-                const salesExecUserId = ev.eventTaskActionId || ev.escalateActionId || ev.closedByUser || ev.createdByUser;
+                const isClosed =
+                  ev.closedFlag === "1" || Boolean(ev.closedDate);
+                const followupSalesExecutive =
+                  ev.followupUsername || "Unassigned";
+                const creatorSalesExecutive =
+                  ev.creatorName || ev.createdByUser || "System";
+                const salesExecUserId =
+                  ev.eventTaskActionId ||
+                  ev.escalateActionId ||
+                  ev.closedByUser ||
+                  ev.createdByUser;
                 const oneEventResult = oneEventsData[eventNum];
                 const isOneEventLoading = oneEventsLoading[eventNum];
 
                 return (
                   <div
                     key={evId}
-                    className="bg-white rounded-xl border border-slate-200 shadow-2xs p-4 flex flex-col gap-3 hover:border-blue-300 transition-all"
+                    className={`rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 ${
+                      isExpanded
+                        ? "bg-blue-50/20 border-2 border-blue-500 shadow-md ring-4 ring-blue-100/70"
+                        : "bg-white border border-slate-200 shadow-2xs hover:border-blue-300"
+                    }`}
                   >
                     {/* Event Card Header */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+                    <div
+                      className={`flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b transition-colors ${
+                        isExpanded ? "border-blue-200" : "border-slate-100"
+                      }`}
+                    >
                       <div className="flex items-center gap-2 flex-wrap">
                         {/* Event Type Badge */}
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getEventTypeColor(ev.eventType)}`}>
-                          {ev.eventType || 'EVENT'}
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getEventTypeColor(ev.eventType)}`}
+                        >
+                          {ev.eventType || "EVENT"}
                         </span>
 
                         {/* Event Number Badge */}
-                        <span 
+                        <span
                           onClick={() => {
                             if (isExpanded) {
                               setExpandedOneEventId(null);
@@ -1006,30 +1158,45 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                               fetchOneEvent(eventNum);
                             }
                           }}
-                          className="font-mono font-bold text-blue-700 text-xs bg-blue-50 px-2.5 py-0.5 rounded-md border border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors flex items-center gap-1"
+                          className={`font-mono font-bold text-xs px-2.5 py-0.5 rounded-md cursor-pointer transition-colors flex items-center gap-1.5 ${
+                            isExpanded
+                              ? "bg-blue-600 text-white shadow-xs"
+                              : "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100"
+                          }`}
                           title={`Click to view details for Event #${eventNum}`}
                         >
                           <span>Event #{eventNum}</span>
+                          {isExpanded && (
+                            <span className="bg-white text-blue-700 text-[9px] font-extrabold px-1.5 py-0.2 rounded-xs uppercase">
+                              Active
+                            </span>
+                          )}
                         </span>
 
                         {/* Reference Title */}
                         <span className="font-bold text-slate-800 text-xs">
-                          {ev.reference || ev.description || 'Customer Interaction'}
+                          {ev.reference ||
+                            ev.description ||
+                            "Customer Interaction"}
                         </span>
 
                         {/* Status Badge */}
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                          isClosed 
-                            ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
-                            : 'bg-amber-50 text-amber-800 border border-amber-200'
-                        }`}>
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            isClosed
+                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                              : "bg-amber-50 text-amber-800 border border-amber-200"
+                          }`}
+                        >
                           {isClosed ? (
                             <>
-                              <FaCheckCircle className="text-emerald-600 text-[9px]" /> Closed
+                              <FaCheckCircle className="text-emerald-600 text-[9px]" />{" "}
+                              Closed
                             </>
                           ) : (
                             <>
-                              <FaClock className="text-amber-600 text-[9px]" /> In Progress
+                              <FaClock className="text-amber-600 text-[9px]" />{" "}
+                              In Progress
                             </>
                           )}
                         </span>
@@ -1038,7 +1205,7 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                         {ev.createdDate && (
                           <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
                             <FaCalendarAlt className="text-slate-400 text-[9px]" />
-                            {ev.createdDate} {ev.createdTime || ''}
+                            {ev.createdDate} {ev.createdTime || ""}
                           </span>
                         )}
                       </div>
@@ -1055,10 +1222,10 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                               fetchOneEvent(eventNum);
                             }
                           }}
-                          className={`text-[11px] font-bold px-3 py-1 rounded-md transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
-                            isExpanded 
-                              ? 'bg-blue-600 text-white' 
-                              : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
+                          className={`text-[11px] font-extrabold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                            isExpanded
+                              ? "bg-blue-600 text-white ring-2 ring-blue-300 shadow-sm"
+                              : "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
                           }`}
                         >
                           {isOneEventLoading ? (
@@ -1066,8 +1233,16 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                           ) : (
                             <FaInfoCircle className="text-xs" />
                           )}
-                          <span>{isExpanded ? 'Hide Details' : `Event Details (#${eventNum})`}</span>
-                          {isExpanded ? <FaChevronUp className="text-[9px]" /> : <FaChevronDown className="text-[9px]" />}
+                          <span>
+                            {isExpanded
+                              ? "Hide Details"
+                              : `Event Details (#${eventNum})`}
+                          </span>
+                          {isExpanded ? (
+                            <FaChevronUp className="text-[9px]" />
+                          ) : (
+                            <FaChevronDown className="text-[9px]" />
+                          )}
                         </button>
                       </div>
                     </div>
@@ -1079,12 +1254,15 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                         <div>
                           <div className="flex items-center justify-between mb-0.5">
                             <span className="text-[10px] font-extrabold text-purple-900 uppercase tracking-wider flex items-center gap-1">
-                              <FaUserTie className="text-purple-600" /> Sales Executive
+                              <FaUserTie className="text-purple-600" /> Sales
+                              Executive
                             </span>
                             {salesExecUserId && (
                               <button
                                 type="button"
-                                onClick={() => openSalesExecutiveModal(salesExecUserId)}
+                                onClick={() =>
+                                  openSalesExecutiveModal(salesExecUserId)
+                                }
                                 className="text-[9px] font-extrabold text-purple-700 hover:text-purple-900 bg-purple-100 hover:bg-purple-200 px-1.5 py-0.5 rounded cursor-pointer transition-colors"
                                 title={`Fetch Sales Executive details for user ${salesExecUserId}`}
                               >
@@ -1092,7 +1270,10 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                               </button>
                             )}
                           </div>
-                          <strong className="text-slate-900 text-xs block truncate" title={followupSalesExecutive}>
+                          <strong
+                            className="text-slate-900 text-xs block truncate"
+                            title={followupSalesExecutive}
+                          >
                             {followupSalesExecutive}
                           </strong>
                         </div>
@@ -1103,7 +1284,9 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                             </span>
                           )}
                           {salesExecUserId && (
-                            <span className="truncate">User: {salesExecUserId}</span>
+                            <span className="truncate">
+                              User: {salesExecUserId}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -1114,7 +1297,10 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5 flex items-center gap-1">
                             <FaIdBadge className="text-slate-400" /> Created By
                           </span>
-                          <strong className="text-slate-900 text-xs block truncate" title={creatorSalesExecutive}>
+                          <strong
+                            className="text-slate-900 text-xs block truncate"
+                            title={creatorSalesExecutive}
+                          >
                             {creatorSalesExecutive}
                           </strong>
                         </div>
@@ -1135,8 +1321,11 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                             <FaCar className="text-slate-400" /> Vehicle Model
                           </span>
                           <strong className="text-slate-900 text-xs block truncate">
-                            {ev.makeFromNotes || ev.eventMake || ev.keyloopGroup || 'BMW'}{' '}
-                            {ev.modelFromNotes || ev.eventModel || ''}
+                            {ev.makeFromNotes ||
+                              ev.eventMake ||
+                              ev.keyloopGroup ||
+                              "BMW"}{" "}
+                            {ev.modelFromNotes || ev.eventModel || ""}
                           </strong>
                         </div>
                         <div className="flex items-center gap-1.5 text-slate-500 text-[10px] mt-1 font-mono">
@@ -1155,15 +1344,22 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                       <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex flex-col justify-between">
                         <div>
                           <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5 flex items-center gap-1">
-                            <FaBuilding className="text-slate-400" /> Branch & Channel
+                            <FaBuilding className="text-slate-400" /> Branch &
+                            Channel
                           </span>
-                          <strong className="text-slate-900 text-xs block truncate" title={ev.branchName}>
-                            {ev.branchName || (ev.branchCode ? `Branch ${ev.branchCode}` : 'Sheikh Zayed Rd')}
+                          <strong
+                            className="text-slate-900 text-xs block truncate"
+                            title={ev.branchName}
+                          >
+                            {ev.branchName ||
+                              (ev.branchCode
+                                ? `Branch ${ev.branchCode}`
+                                : "Sheikh Zayed Rd")}
                           </strong>
                         </div>
                         <div className="flex items-center gap-1.5 text-slate-500 text-[10px] mt-1">
                           <span className="bg-blue-50 text-blue-700 px-1 rounded text-[9px] font-bold border border-blue-200">
-                            {ev.source1 || ev.contactMethod || 'CRM Outbound'}
+                            {ev.source1 || ev.contactMethod || "CRM Outbound"}
                           </span>
                           {ev.source2 && (
                             <span className="truncate">({ev.source2})</span>
@@ -1176,7 +1372,8 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                     {(ev.eventTaskNotes || ev.eventTaskNotes2) && (
                       <div className="bg-blue-50/40 p-2.5 rounded-lg border border-blue-100 flex flex-col gap-1">
                         <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider flex items-center gap-1">
-                          <FaFileAlt className="text-blue-500 text-[10px]" /> Event Task Notes
+                          <FaFileAlt className="text-blue-500 text-[10px]" />{" "}
+                          Event Task Notes
                         </span>
                         <p className="text-xs text-slate-800 font-medium leading-relaxed">
                           {ev.eventTaskNotes || ev.eventTaskNotes2}
@@ -1186,21 +1383,27 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
 
                     {/* ONE EVENT DETAILS CONTAINER (Fetched via GET /api/v1/events?group=...&eventNumber=...) */}
                     {isExpanded && (
-                      <div className="mt-1 bg-gradient-to-br from-blue-50/60 to-slate-50 border border-blue-200 rounded-xl p-3.5 shadow-2xs flex flex-col gap-3 animate-fade-in">
-                        <div className="flex items-center justify-between pb-2 border-b border-blue-200/80">
+                      <div className="mt-1 bg-gradient-to-br from-blue-50/70 via-white to-slate-50 border-2 border-blue-400 rounded-xl p-3.5 shadow-sm flex flex-col gap-3 animate-fade-in ring-2 ring-blue-100">
+                        <div className="flex items-center justify-between pb-2 border-b border-blue-200">
                           <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                            <span className="w-6 h-6 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
                               <FaFileAlt className="text-xs" />
                             </span>
                             <div>
-                              <strong className="text-blue-950 text-xs font-bold">
-                                Event Details #{eventNum}
+                              <strong className="text-blue-950 text-xs font-bold flex items-center gap-2">
+                                <span>
+                                  Active Event Details — Event #{eventNum}
+                                </span>
+                                <span className="bg-blue-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-xs uppercase tracking-wide">
+                                  Currently Open
+                                </span>
                               </strong>
                             </div>
                           </div>
                           {isOneEventLoading && (
                             <span className="text-xs text-blue-600 font-bold flex items-center gap-1">
-                              <FaSpinner className="animate-spin text-xs" /> Loading details...
+                              <FaSpinner className="animate-spin text-xs" />{" "}
+                              Loading details...
                             </span>
                           )}
                         </div>
@@ -1214,22 +1417,40 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                               </span>
                               <div className="space-y-1">
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Event Number:</span>
-                                  <strong className="font-mono text-blue-700">{oneEventResult.eventNumber || eventNum}</strong>
+                                  <span className="text-slate-500">
+                                    Event Number:
+                                  </span>
+                                  <strong className="font-mono text-blue-700">
+                                    {oneEventResult.eventNumber || eventNum}
+                                  </strong>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Event UID:</span>
-                                  <span className="font-mono text-[9px] text-slate-700 truncate max-w-[150px]" title={oneEventResult.eventUid}>
+                                  <span className="text-slate-500">
+                                    Event UID:
+                                  </span>
+                                  <span
+                                    className="font-mono text-[9px] text-slate-700 truncate max-w-[150px]"
+                                    title={oneEventResult.eventUid}
+                                  >
                                     {oneEventResult.eventUid}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Type / Category:</span>
-                                  <span className="font-bold text-slate-800">{oneEventResult.eventType} ({oneEventResult.eventGroup || 'conv'})</span>
+                                  <span className="text-slate-500">
+                                    Type / Category:
+                                  </span>
+                                  <span className="font-bold text-slate-800">
+                                    {oneEventResult.eventType} (
+                                    {oneEventResult.eventGroup || "conv"})
+                                  </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Reference:</span>
-                                  <span className="font-medium text-slate-800">{oneEventResult.reference || '-'}</span>
+                                  <span className="text-slate-500">
+                                    Reference:
+                                  </span>
+                                  <span className="font-medium text-slate-800">
+                                    {oneEventResult.reference || "-"}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -1241,20 +1462,41 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                               </span>
                               <div className="space-y-1">
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Follow-up User:</span>
-                                  <strong className="text-slate-900">{oneEventResult.followupUsername || 'Unassigned'}</strong>
+                                  <span className="text-slate-500">
+                                    Follow-up User:
+                                  </span>
+                                  <strong className="text-slate-900">
+                                    {oneEventResult.followupUsername ||
+                                      "Unassigned"}
+                                  </strong>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Action User ID:</span>
-                                  <span className="font-mono text-purple-700 font-bold">{oneEventResult.eventTaskActionId || oneEventResult.escalateActionId || '-'}</span>
+                                  <span className="text-slate-500">
+                                    Action User ID:
+                                  </span>
+                                  <span className="font-mono text-purple-700 font-bold">
+                                    {oneEventResult.eventTaskActionId ||
+                                      oneEventResult.escalateActionId ||
+                                      "-"}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Task Date & Time:</span>
-                                  <span className="font-mono text-slate-700">{oneEventResult.eventTaskDate} {oneEventResult.eventTaskTime}</span>
+                                  <span className="text-slate-500">
+                                    Task Date & Time:
+                                  </span>
+                                  <span className="font-mono text-slate-700">
+                                    {oneEventResult.eventTaskDate}{" "}
+                                    {oneEventResult.eventTaskTime}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Closed Date & Time:</span>
-                                  <span className="font-mono text-slate-700">{oneEventResult.closedDate || '-'} {oneEventResult.closedTime || ''}</span>
+                                  <span className="text-slate-500">
+                                    Closed Date & Time:
+                                  </span>
+                                  <span className="font-mono text-slate-700">
+                                    {oneEventResult.closedDate || "-"}{" "}
+                                    {oneEventResult.closedTime || ""}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -1266,20 +1508,37 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                               </span>
                               <div className="space-y-1">
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Call Number:</span>
-                                  <span className="font-mono font-bold text-slate-800">{oneEventResult.callNumber || '-'}</span>
+                                  <span className="text-slate-500">
+                                    Call Number:
+                                  </span>
+                                  <span className="font-mono font-bold text-slate-800">
+                                    {oneEventResult.callNumber || "-"}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Chain Number:</span>
-                                  <span className="font-mono font-bold text-slate-800">{oneEventResult.chainNumber || '-'}</span>
+                                  <span className="text-slate-500">
+                                    Chain Number:
+                                  </span>
+                                  <span className="font-mono font-bold text-slate-800">
+                                    {oneEventResult.chainNumber || "-"}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Prompted By:</span>
-                                  <span className="font-mono text-slate-700">{oneEventResult.whoPromptedEventTask || 'CALLCENT'}</span>
+                                  <span className="text-slate-500">
+                                    Prompted By:
+                                  </span>
+                                  <span className="font-mono text-slate-700">
+                                    {oneEventResult.whoPromptedEventTask ||
+                                      "CALLCENT"}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span className="text-slate-500">Last Updated By:</span>
-                                  <span className="font-mono text-slate-700">{oneEventResult.lastUpdateUser || '-'}</span>
+                                  <span className="text-slate-500">
+                                    Last Updated By:
+                                  </span>
+                                  <span className="font-mono text-slate-700">
+                                    {oneEventResult.lastUpdateUser || "-"}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -1315,7 +1574,9 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
               </div>
               <button
                 type="button"
-                onClick={() => setSalesExecModal(prev => ({ ...prev, isOpen: false }))}
+                onClick={() =>
+                  setSalesExecModal((prev) => ({ ...prev, isOpen: false }))
+                }
                 className="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <FaTimes />
@@ -1335,16 +1596,22 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                 <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-center space-y-1">
                   <FaExclamationCircle className="mx-auto text-xl text-rose-500" />
                   <p className="font-bold text-xs">Lookup Error</p>
-                  <p className="text-[11px] text-rose-700">{salesExecModal.error}</p>
+                  <p className="text-[11px] text-rose-700">
+                    {salesExecModal.error}
+                  </p>
                 </div>
               ) : salesExecModal.data ? (
                 <div className="flex flex-col gap-3">
                   <div className="flex items-center gap-3 pb-3 border-b border-slate-100">
                     <div className="w-12 h-12 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xl font-bold">
-                      {salesExecModal.data.name ? salesExecModal.data.name.charAt(0) : 'U'}
+                      {salesExecModal.data.name
+                        ? salesExecModal.data.name.charAt(0)
+                        : "U"}
                     </div>
                     <div>
-                      <h4 className="font-extrabold text-sm text-slate-900">{salesExecModal.data.name}</h4>
+                      <h4 className="font-extrabold text-sm text-slate-900">
+                        {salesExecModal.data.name}
+                      </h4>
                       <span className="text-[11px] font-mono font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
                         User ID: {salesExecModal.data.userId}
                       </span>
@@ -1358,7 +1625,7 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                       </span>
                       <strong className="text-slate-900 flex items-center gap-1.5">
                         <FaBuilding className="text-slate-400 text-xs" />
-                        {salesExecModal.data.branchName || 'Sheikh Zayed Rd'}
+                        {salesExecModal.data.branchName || "Sheikh Zayed Rd"}
                       </strong>
                     </div>
 
@@ -1375,7 +1642,9 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                           {salesExecModal.data.email}
                         </a>
                       ) : (
-                        <span className="text-slate-400 italic">Not available</span>
+                        <span className="text-slate-400 italic">
+                          Not available
+                        </span>
                       )}
                     </div>
 
@@ -1392,7 +1661,9 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
                           {salesExecModal.data.mobile}
                         </a>
                       ) : (
-                        <span className="text-slate-400 italic">No direct number recorded</span>
+                        <span className="text-slate-400 italic">
+                          No direct number recorded
+                        </span>
                       )}
                     </div>
                   </div>
@@ -1401,7 +1672,9 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
 
               <button
                 type="button"
-                onClick={() => setSalesExecModal(prev => ({ ...prev, isOpen: false }))}
+                onClick={() =>
+                  setSalesExecModal((prev) => ({ ...prev, isOpen: false }))
+                }
                 className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-xl text-xs transition-colors cursor-pointer mt-1"
               >
                 Close Profile
@@ -1410,7 +1683,6 @@ export default function EventHistoryView({ activeSubTab = 'Customer Event', onSu
           </div>
         </div>
       )}
-
     </div>
   );
 }
