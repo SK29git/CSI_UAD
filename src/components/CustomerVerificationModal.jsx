@@ -65,7 +65,11 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
     country: 'United Arab Emirates',
     postcode: '',
     mobile: '',
+    homePhone: '',
+    workPhone: '',
     email: '',
+    homeEmail: '',
+    workEmail: '',
     preferredPhone: '',
     preferredEmail: '',
     nationality: ''
@@ -106,7 +110,11 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
         country: customer.country || customer.location?.country || '',
         postcode: customer.location?.postcode || customer.postcode || '',
         mobile: resolvedMobile,
+        homePhone: customer.homePhone || customer.homeTelephone || '',
+        workPhone: customer.workPhone || customer.businessPhone || customer.officePhone || '',
         email: emailVal,
+        homeEmail: customer.homeEmail || '',
+        workEmail: customer.workEmail || customer.businessEmail || customer.officeEmail || '',
         preferredPhone: customer.preferredPhone || resolvedMobile,
         preferredEmail: customer.preferredEmail || emailVal,
         nationality: resolvedNationality
@@ -409,10 +417,38 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
                   />
                 </div>
 
+                {/* Home Phone */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaPhoneAlt className="text-gray-400 text-xs" /> Home Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.homePhone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, homePhone: e.target.value }))}
+                    placeholder="e.g. 041234567"
+                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg font-semibold text-gray-900 text-xs focus:outline-none focus:border-blue-500 shadow-2xs"
+                  />
+                </div>
+
+                {/* Work Phone */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaPhoneAlt className="text-gray-400 text-xs" /> Work Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.workPhone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, workPhone: e.target.value }))}
+                    placeholder="e.g. 049876543"
+                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg font-semibold text-gray-900 text-xs focus:outline-none focus:border-blue-500 shadow-2xs"
+                  />
+                </div>
+
                 {/* Email */}
                 <div>
                   <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
-                    <FaEnvelope className="text-gray-400 text-xs" /> Email Address
+                    <FaEnvelope className="text-gray-400 text-xs" /> Email Address (Primary)
                   </label>
                   <input
                     type="email"
@@ -433,6 +469,34 @@ export default function CustomerVerificationModal({ isOpen = false, onClose, cus
                     value={formData.preferredEmail}
                     onChange={(e) => setFormData(prev => ({ ...prev, preferredEmail: e.target.value }))}
                     placeholder={formData.email || "e.g. customer@example.com"}
+                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg font-semibold text-gray-900 text-xs focus:outline-none focus:border-blue-500 shadow-2xs"
+                  />
+                </div>
+
+                {/* Home Email */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaEnvelope className="text-gray-400 text-xs" /> Home Email
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.homeEmail}
+                    onChange={(e) => setFormData(prev => ({ ...prev, homeEmail: e.target.value }))}
+                    placeholder="e.g. home@example.com"
+                    className="w-full p-2.5 bg-white border border-gray-300 rounded-lg font-semibold text-gray-900 text-xs focus:outline-none focus:border-blue-500 shadow-2xs"
+                  />
+                </div>
+
+                {/* Work Email */}
+                <div>
+                  <label className="text-[11px] font-bold text-gray-700 mb-1 flex items-center gap-1.5">
+                    <FaEnvelope className="text-gray-400 text-xs" /> Work Email
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.workEmail}
+                    onChange={(e) => setFormData(prev => ({ ...prev, workEmail: e.target.value }))}
+                    placeholder="e.g. work@example.com"
                     className="w-full p-2.5 bg-white border border-gray-300 rounded-lg font-semibold text-gray-900 text-xs focus:outline-none focus:border-blue-500 shadow-2xs"
                   />
                 </div>

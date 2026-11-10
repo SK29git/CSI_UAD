@@ -91,6 +91,23 @@ export function mapSourceToSourceOfInfo(src) {
   }
 }
 
+export function formatDobForInput(raw) {
+  if (!raw) return '';
+  const s = String(raw).trim();
+  if (s.includes('T')) return s.split('T')[0];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const parts = s.split(/[\/\-]/);
+  if (parts.length === 3) {
+    if (parts[2].length === 4) {
+      return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+    }
+    if (parts[0].length === 4) {
+      return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+    }
+  }
+  return s;
+}
+
 export default function CustomerFormView({ mode = 'create', onClose }) {
   const { 
     customer, 
@@ -159,7 +176,17 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     city: 'Dubai',
     country: 'United Arab Emirates',
     mobile: '',
+    phone1: '',
+    phone2: '',
+    phone3: '',
+    phone4: '',
+    homePhone: '',
+    workPhone: '',
     email: '',
+    homeEmail: '',
+    workEmail: '',
+    otherEmail1: '',
+    otherEmail2: '',
     consents: {
       phone: true,
       email: false,
@@ -256,7 +283,45 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     }
 
     if (mode === 'edit' && customer) {
-      const emailVal = customer.email || customer.emailRaw || '';
+      const homeEmailVal = customer.homeEmail || customer.home_email || (customer.email && !customer.workEmail && !customer.otherEmail1 ? customer.email : '') || '';
+      const workEmailVal = customer.workEmail || customer.businessEmail || customer.officeEmail || customer.work_email || '';
+      const otherEmail1Val = customer.otherEmail1 || customer.other_email_1 || customer.otherEmail || '';
+      const otherEmail2Val = customer.otherEmail2 || customer.other_email_2 || '';
+      const primaryEmailVal = homeEmailVal || workEmailVal || otherEmail1Val || otherEmail2Val || customer.email || customer.emailRaw || '';
+
+      let p1 = customer.phone1 || customer.telephoneNumber1 || '';
+      let p2 = customer.phone2 || customer.telephoneNumber2 || customer.homePhone || customer.homeTelephone || '';
+      let p3 = customer.phone3 || customer.telephoneNumber3 || customer.workPhone || customer.businessPhone || customer.officePhone || '';
+      let p4 = customer.phone4 || customer.telephoneNumber4 || '';
+
+      // Match resolvedMobile against the 4 phone slots
+      const cleanDigits = (resolvedMobile || '').replace(/\D/g, '');
+      const lastDigits = cleanDigits.slice(-4);
+
+      if (cleanDigits) {
+        if (p4 && lastDigits && String(p4).replace(/\D/g, '').endsWith(lastDigits)) {
+          p4 = resolvedMobile;
+        } else if (p3 && lastDigits && String(p3).replace(/\D/g, '').endsWith(lastDigits)) {
+          p3 = resolvedMobile;
+        } else if (p2 && lastDigits && String(p2).replace(/\D/g, '').endsWith(lastDigits)) {
+          p2 = resolvedMobile;
+        } else if (p1 && lastDigits && String(p1).replace(/\D/g, '').endsWith(lastDigits)) {
+          p1 = resolvedMobile;
+        } else if (customer.preferredPhoneSlot === '4' || customer.preferredPhoneCode === 'PHONE4') {
+          p4 = resolvedMobile;
+        } else if (customer.preferredPhoneSlot === '2' || customer.preferredPhoneCode === 'PHONE2') {
+          p2 = resolvedMobile;
+        } else if (customer.preferredPhoneSlot === '3' || customer.preferredPhoneCode === 'PHONE3') {
+          p3 = resolvedMobile;
+        } else if (!p1 && !p2 && !p3 && !p4) {
+          p1 = resolvedMobile;
+        } else if (p1) {
+          p1 = resolvedMobile;
+        }
+      }
+
+      const effectiveMobile = p1 || p4 || p2 || p3 || resolvedMobile || customer.mobile || '';
+
       const initialGrp = customer.keyloopGroup || currentGroup || 'BMW';
       const branches = getBranchesForGroup(initialGrp);
       const matchingBranch = branches.find(b => customer.branchCode && String(b.code) === String(customer.branchCode));
@@ -273,15 +338,25 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         sourceOfInformation: customer.sourceOfInformation || mapSourceToSourceOfInfo(initialSource),
         personalId: customer.personalId || customer.nationalId || '',
         nationality: customer.nationality || '',
-        dob: customer.dateOfBirth || customer.dob || '',
+        dob: formatDobForInput(customer.dateOfBirth || customer.dob || ''),
         area: customer.location?.area || 'Deira',
         city: customer.location?.city || 'Dubai',
         country: customer.country || customer.nationality || 'United Arab Emirates',
-        mobile: resolvedMobile || customer.mobile || customer.mobileRaw || customer.mobilePhone || customer.phone || customer.telephone || currentMobile || '',
-        email: emailVal,
+        mobile: effectiveMobile,
+        phone1: p1,
+        phone2: p2,
+        phone3: p3,
+        phone4: p4,
+        homePhone: p2,
+        workPhone: p3,
+        email: primaryEmailVal,
+        homeEmail: homeEmailVal,
+        workEmail: workEmailVal,
+        otherEmail1: otherEmail1Val,
+        otherEmail2: otherEmail2Val,
         consents: customer.consents || {
           phone: true,
-          email: Boolean(emailVal && emailVal.includes('@')),
+          email: Boolean(primaryEmailVal && primaryEmailVal.includes('@')),
           sms: true,
           whatsapp: true
         }
@@ -303,12 +378,22 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         sourceOfInformation: mapSourceToSourceOfInfo(prev.source || initialSource),
         personalId: prev.personalId || customer?.personalId || '',
         nationality: prev.nationality || customer?.nationality || '',
-        dob: prev.dob || customer?.dateOfBirth || customer?.dob || '',
+        dob: prev.dob || formatDobForInput(customer?.dateOfBirth || customer?.dob || ''),
         area: prev.area || customer?.location?.area || 'Deira',
         city: prev.city || customer?.location?.city || 'Dubai',
         country: prev.country || customer?.country || 'United Arab Emirates',
-        mobile: prev.mobile || resolvedMobile || customer?.mobile || customer?.mobileRaw || urlMobile || (currentMobile && !String(currentMobile).includes('*') ? currentMobile.replace(/\D/g, '') : ''),
-        email: prev.email || (customer?.email || ''),
+        phone1: prev.phone1 || resolvedMobile || '',
+        phone2: prev.phone2 || '',
+        phone3: prev.phone3 || '',
+        phone4: prev.phone4 || '',
+        mobile: prev.phone1 || prev.phone4 || prev.phone2 || prev.phone3 || prev.mobile || resolvedMobile || '',
+        homePhone: prev.phone2 || '',
+        workPhone: prev.phone3 || '',
+        email: prev.homeEmail || prev.email || '',
+        homeEmail: prev.homeEmail || '',
+        workEmail: prev.workEmail || '',
+        otherEmail1: prev.otherEmail1 || '',
+        otherEmail2: prev.otherEmail2 || '',
         consents: prev.consents || {
           phone: true,
           email: false,
@@ -329,8 +414,9 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
       setFeedback({ type: 'error', message: 'Surname is required.' });
       return;
     }
-    if (!formData.mobile.trim()) {
-      setFeedback({ type: 'error', message: 'Mobile number is required.' });
+    const activeMobile = formData.phone1 || formData.phone4 || formData.phone2 || formData.phone3 || formData.mobile;
+    if (!activeMobile.trim()) {
+      setFeedback({ type: 'error', message: 'At least one contact phone number is required.' });
       return;
     }
     if (!formData.area.trim()) {
@@ -345,8 +431,17 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     setIsSubmitting(true);
     setFeedback(null);
 
+    const activeEmail = formData.homeEmail || formData.workEmail || formData.otherEmail1 || formData.otherEmail2 || formData.email;
     const submissionPayload = {
       ...formData,
+      mobile: activeMobile,
+      email: activeEmail,
+      homePhone: formData.phone2 || formData.homePhone,
+      workPhone: formData.phone3 || formData.workPhone,
+      telephoneNumber1: formData.phone1,
+      telephoneNumber2: formData.phone2,
+      telephoneNumber3: formData.phone3,
+      telephoneNumber4: formData.phone4,
       sourceOfInformation: mapSourceToSourceOfInfo(formData.source)
     };
 
@@ -395,7 +490,11 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 {mode === 'create' ? 'Create New Customer' : 'Edit Customer Profile'}
               </h1>
               <span className="bg-blue-50 text-blue-700 border border-blue-200 font-bold text-[10px] px-2 py-0.5 rounded-full uppercase">
-                {mode === 'create' ? 'New Registration' : `Cust #${customer?.customerNumber || ''}`}
+                {mode === 'create' 
+                  ? 'New Registration' 
+                  : (customer?.isProspect 
+                      ? (customer?.prospectNumber ? `Prospect #${customer.prospectNumber}` : `Lead #${customer?.leadId || customer?.customerNumber || ''}`)
+                      : `Cust #${customer?.customerNumber || ''}`)}
               </span>
             </div>
             <p className="text-[11px] text-gray-500">
@@ -449,15 +548,15 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
 
         <form onSubmit={handleSubmit} className="space-y-3.5">
           {/* SECTION 1: Personal & Contact Information */}
-          <div>
-            <div className="flex items-center justify-between pb-1.5 mb-2.5 border-b border-gray-100">
+          <div className="space-y-3.5">
+            <div className="flex items-center justify-between pb-1.5 border-b border-gray-100">
               <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                <FaUser className="text-blue-600 text-[11px]" /> Personal & Contact Information
+                <FaUser className="text-blue-600 text-[11px]" /> Personal Information
               </h3>
               <span className="text-[10px] text-gray-400 font-medium">* Required fields</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
               {/* Title Code */}
               <div>
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
@@ -504,35 +603,6 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 />
               </div>
 
-              {/* Mobile Number */}
-              <div>
-                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                  <FaPhoneAlt className="text-gray-400 text-[10px]" /> Mobile Number <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  value={formData.mobile}
-                  onChange={(e) => setFormData(prev => ({ ...prev, mobile: e.target.value }))}
-                  placeholder="e.g. 0561277913"
-                  required
-                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
-                />
-              </div>
-
-              {/* Email Address */}
-              <div>
-                <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                  <FaEnvelope className="text-gray-400 text-[10px]" /> Email Address
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="e.g. customer@example.com"
-                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
-                />
-              </div>
-
               {/* Personal / Emirates ID */}
               <div>
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
@@ -572,6 +642,141 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                   onChange={(e) => setFormData(prev => ({ ...prev, dob: e.target.value }))}
                   className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
                 />
+              </div>
+            </div>
+
+            {/* Phone Numbers Subsection (4 Slots from Keyloop API) */}
+            <div className="pt-2.5 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <FaPhoneAlt className="text-blue-600 text-[10px]" />
+                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">Phone Numbers (4 Slots)</span>
+                </div>
+                <span className="text-[10px] text-gray-400">At least 1 contact number required</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Phone 1 */}
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaPhoneAlt className="text-gray-400 text-[10px]" /> Phone 1 (Mobile)
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone1}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone1: e.target.value, mobile: e.target.value || prev.mobile }))}
+                    placeholder="e.g. 0561277913"
+                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                  />
+                </div>
+
+                {/* Phone 2 */}
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaPhoneAlt className="text-gray-400 text-[10px]" /> Phone 2
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone2}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone2: e.target.value, homePhone: e.target.value }))}
+                    placeholder="e.g. 041234567"
+                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                  />
+                </div>
+
+                {/* Phone 3 */}
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaPhoneAlt className="text-gray-400 text-[10px]" /> Phone 3
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone3}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone3: e.target.value, workPhone: e.target.value }))}
+                    placeholder="e.g. 049876543"
+                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                  />
+                </div>
+
+                {/* Phone 4 */}
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaPhoneAlt className="text-gray-400 text-[10px]" /> Phone 4
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone4}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone4: e.target.value }))}
+                    placeholder="e.g. 0501234567"
+                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Email Addresses Subsection (4 Slots from Keyloop API) */}
+            <div className="pt-2.5 border-t border-gray-100">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-1.5">
+                  <FaEnvelope className="text-blue-600 text-[10px]" />
+                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">Email Addresses (4 Slots)</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Home Email */}
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaEnvelope className="text-gray-400 text-[10px]" /> Home Email
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.homeEmail}
+                    onChange={(e) => setFormData(prev => ({ ...prev, homeEmail: e.target.value, email: e.target.value || prev.email }))}
+                    placeholder="e.g. customer@example.com"
+                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+
+                {/* Work Email */}
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaEnvelope className="text-gray-400 text-[10px]" /> Work Email
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.workEmail}
+                    onChange={(e) => setFormData(prev => ({ ...prev, workEmail: e.target.value }))}
+                    placeholder="e.g. work@agmc.ae"
+                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+
+                {/* Other Email 1 */}
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaEnvelope className="text-gray-400 text-[10px]" /> Other Email 1
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.otherEmail1}
+                    onChange={(e) => setFormData(prev => ({ ...prev, otherEmail1: e.target.value }))}
+                    placeholder="e.g. other1@example.com"
+                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
+
+                {/* Other Email 2 */}
+                <div>
+                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                    <FaEnvelope className="text-gray-400 text-[10px]" /> Other Email 2
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.otherEmail2}
+                    onChange={(e) => setFormData(prev => ({ ...prev, otherEmail2: e.target.value }))}
+                    placeholder="e.g. other2@example.com"
+                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                </div>
               </div>
             </div>
           </div>

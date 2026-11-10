@@ -19,6 +19,7 @@ import {
   FaArrowRight,
   FaChevronDown,
   FaChevronUp,
+  FaPhoneAlt,
   FaEnvelope,
   FaIdBadge,
   FaTag,
@@ -532,12 +533,75 @@ export default function SalesEnquiriesView() {
               status: merged.status || '',
               salesOrderNumber: merged.salesOrderNumber || merged.orderNumber || ''
             };
-            const cust = merged.customer || {
-              name: customer?.fullName || `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() || 'N/A',
-              customerNumber: customer?.customerNumber || customer?.id || '',
-              mobile: customer?.mobile || currentMobile || ''
+            const cust = {
+              name:
+                merged.customer?.name ||
+                enq.customer?.name ||
+                merged.customerName ||
+                customer?.fullName ||
+                `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() ||
+                'N/A',
+              customerNumber:
+                merged.customer?.customerNumber ||
+                enq.customer?.customerNumber ||
+                merged.customerNumber ||
+                customer?.customerNumber ||
+                customer?.id ||
+                '',
+              mobile:
+                merged.customer?.mobile ||
+                enq.customer?.mobile ||
+                merged.mobile ||
+                customer?.mobile ||
+                currentMobile ||
+                '',
+              email:
+                merged.customer?.email ||
+                enq.customer?.email ||
+                merged.email ||
+                enq.email ||
+                customer?.email ||
+                '',
+              ...(merged.customer || enq.customer || {}),
             };
-            const adv = merged.advisor || {};
+            if (!cust.email && (merged.email || enq.email)) {
+              cust.email = merged.email || enq.email;
+            }
+            if (!cust.mobile && (merged.mobile || enq.mobile)) {
+              cust.mobile = merged.mobile || enq.mobile;
+            }
+
+            const adv = {
+              ...(merged.advisor || enq.advisor || {}),
+              name:
+                merged.advisor?.name ||
+                enq.advisor?.name ||
+                merged.salesExecutive ||
+                enq.salesExecutive ||
+                '',
+              code:
+                merged.advisor?.code ||
+                enq.advisor?.code ||
+                merged.salesAdvisorCode ||
+                '',
+              branchCode:
+                merged.advisor?.branchCode ||
+                enq.advisor?.branchCode ||
+                merged.branchCode ||
+                enq.branchCode ||
+                '',
+              mobile:
+                merged.advisor?.mobile ||
+                enq.advisor?.mobile ||
+                merged.advisorMobile ||
+                merged.salesAdvisorMobile ||
+                '',
+              email:
+                merged.advisor?.email ||
+                enq.advisor?.email ||
+                merged.advisorEmail ||
+                '',
+            };
             const isExpanded = expandedEnquiryId === enqId;
 
             return (
@@ -614,7 +678,7 @@ export default function SalesEnquiriesView() {
                   <div>
                     <span className="text-[10px] text-gray-400 font-bold uppercase block">Customer</span>
                     <span className="font-bold text-gray-900 block truncate">{cust.name || 'N/A'}</span>
-                    <div className="flex items-center gap-1.5 text-gray-500 font-mono text-[10px]">
+                    <div className="flex items-center gap-1.5 text-gray-500 font-mono text-[10px] flex-wrap">
                       {cust.customerNumber && (
                         <span className="bg-gray-100 text-gray-600 px-1 rounded text-[9px] font-semibold">
                           #{cust.customerNumber}
@@ -622,18 +686,33 @@ export default function SalesEnquiriesView() {
                       )}
                       <span className="truncate">{cust.mobile || ''}</span>
                     </div>
+                    {cust.email && (
+                      <span className="text-gray-400 text-[9px] block truncate font-mono" title={cust.email}>
+                        {cust.email}
+                      </span>
+                    )}
                   </div>
 
                   <div>
                     <span className="text-[10px] text-gray-400 font-bold uppercase block">Branch & Advisor</span>
                     <span className="font-bold text-gray-800 block truncate">
-                      {enq.branchName || (enq.branchCode ? `Branch ${enq.branchCode}` : 'N/A')}
+                      {enq.branchName || merged.branchName || (enq.branchCode ? `Branch ${enq.branchCode}` : 'N/A')}
                     </span>
                     <div className="flex items-center gap-1.5 truncate">
                       <span className="text-blue-700 font-semibold text-[10px] truncate">
                         {adv.name || enq.salesExecutive || (adv.code ? `Advisor: ${adv.code}` : 'N/A')}
                       </span>
+                      {adv.code && (
+                        <span className="text-[9px] bg-blue-50 text-blue-700 font-mono px-1 rounded border border-blue-100 shrink-0">
+                          {adv.code}
+                        </span>
+                      )}
                     </div>
+                    {adv.mobile && (
+                      <span className="text-gray-700 text-[10px] block font-mono font-medium">
+                        {adv.mobile}
+                      </span>
+                    )}
                     {adv.email && (
                       <span className="text-gray-400 text-[9px] block truncate font-mono">{adv.email}</span>
                     )}
@@ -744,6 +823,20 @@ export default function SalesEnquiriesView() {
                             </div>
                           </div>
 
+                          {/* Customer Email */}
+                          {cust.email && (
+                            <div>
+                              <span className="text-[10px] text-gray-400 font-bold uppercase block">Customer Email</span>
+                              <a
+                                href={`mailto:${cust.email}`}
+                                className="font-mono text-blue-700 text-[10px] block truncate hover:underline"
+                                title={cust.email}
+                              >
+                                {cust.email}
+                              </a>
+                            </div>
+                          )}
+
                           <div className="pt-1.5 border-t border-gray-100">
                             <span className="text-[10px] text-gray-400 font-bold uppercase block">Sales Advisor</span>
                             <div className="flex items-center gap-1.5">
@@ -754,10 +847,24 @@ export default function SalesEnquiriesView() {
                                 </span>
                               )}
                             </div>
+                            {adv.mobile && (
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <a
+                                  href={`tel:${adv.mobile}`}
+                                  className="text-[10px] text-gray-800 font-mono block hover:text-blue-700 hover:underline font-semibold"
+                                >
+                                  {adv.mobile}
+                                </a>
+                              </div>
+                            )}
                             {adv.email && (
-                              <span className="text-[10px] text-gray-500 font-mono block truncate" title={adv.email}>
+                              <a
+                                href={`mailto:${adv.email}`}
+                                className="text-[10px] text-gray-500 font-mono block truncate hover:text-blue-600 hover:underline"
+                                title={adv.email}
+                              >
                                 {adv.email}
-                              </span>
+                              </a>
                             )}
                           </div>
 
@@ -837,6 +944,31 @@ export default function SalesEnquiriesView() {
                               <span className="font-bold text-[10px] text-emerald-700">{veh.stockProgress || 'N/A'}</span>
                             </div>
                           </div>
+
+                          {/* Test Drive Details */}
+                          {(merged.testDrive || merged.testDriveOfferedDate) && (
+                            <div className="pt-1.5 border-t border-gray-100 bg-purple-50/60 p-2 rounded-lg border border-purple-200/70">
+                              <span className="text-[10px] text-purple-900 font-bold uppercase block flex items-center gap-1 mb-1">
+                                <FaCar className="text-purple-600 text-[10px]" /> Test Drive
+                              </span>
+                              <div className="grid grid-cols-2 gap-2 text-[10px]">
+                                <div>
+                                  <span className="text-gray-500 text-[9px] block">Offered Date</span>
+                                  <span className="font-mono font-bold text-gray-800">
+                                    {formatDate(merged.testDrive?.offeredDate || merged.testDriveOfferedDate) || '-'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-gray-500 text-[9px] block">
+                                    {merged.testDrive?.declinedDate ? 'Declined Date' : (merged.testDrive?.completedDate ? 'Completed Date' : 'Status / Date')}
+                                  </span>
+                                  <span className="font-mono font-bold text-gray-800">
+                                    {formatDate(merged.testDrive?.declinedDate || merged.testDrive?.completedDate) || '-'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -900,11 +1032,46 @@ export default function SalesEnquiriesView() {
                             <div className="flex items-center gap-1.5 mt-0.5">
                               {getOutcomeBadge(merged.outcome, merged.status)}
                             </div>
+
+                            {/* Lost Sale Details */}
+                            {(merged.lostSale || merged.lostReason || (merged.outcome || '').toUpperCase() === 'LOST') && (
+                              <div className="mt-1.5 p-2 bg-rose-50/80 rounded-lg border border-rose-200 space-y-1">
+                                <span className="text-[10px] font-bold text-rose-900 uppercase tracking-wider block flex items-center gap-1">
+                                  <FaTimesCircle className="text-rose-600 text-[9px]" /> Lost Sale Details
+                                </span>
+                                <div className="space-y-0.5 text-[10px]">
+                                  {(merged.lostSale?.reason || merged.lostReason) && (
+                                    <div className="flex items-start justify-between gap-1">
+                                      <span className="text-gray-500 text-[9px] shrink-0">Reason:</span>
+                                      <span className="font-bold text-rose-900 text-right leading-tight">
+                                        {merged.lostSale?.reason || merged.lostReason}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {merged.lostSale?.reasonCode && (
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span className="text-gray-500 text-[9px]">Reason Code:</span>
+                                      <span className="font-mono font-bold text-rose-800 bg-rose-100 px-1 rounded text-[9px]">
+                                        {merged.lostSale.reasonCode}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {merged.lostSale?.date && (
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span className="text-gray-500 text-[9px]">Lost Date:</span>
+                                      <span className="font-mono font-medium text-gray-700">
+                                        {formatDate(merged.lostSale.date)}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           <div className="pt-1 border-t border-gray-100">
                             <span className="text-[10px] text-gray-400 font-bold uppercase block">Created Date</span>
-                            <span className="font-mono text-gray-800 block text-[10px]">{formatDate(merged.createdAt)}</span>
+                            <span className="font-mono text-gray-800 block text-[10px]">{formatDate(merged.createdAt || merged.createdDate)}</span>
                           </div>
 
                           <div>
@@ -913,13 +1080,20 @@ export default function SalesEnquiriesView() {
                           </div>
 
                           <div className="pt-1 border-t border-gray-100">
-                            <span className="text-[10px] text-gray-400 font-bold uppercase block">Source of Business</span>
-                            <span className="font-semibold text-gray-800 block">{merged.sourceOfBusiness || 'N/A'}</span>
-                          </div>
-
-                          <div>
-                            <span className="text-[10px] text-gray-400 font-bold uppercase block">Keyloop Group</span>
-                            <span className="font-bold text-gray-700 block">{merged.keyloopGroup || group}</span>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <span className="text-[10px] text-gray-400 font-bold uppercase block">Source of Business</span>
+                                <span className="font-bold text-gray-800 block text-[10px] bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                                  {merged.sourceOfBusiness || 'N/A'}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-[10px] text-gray-400 font-bold uppercase block">Creation Source</span>
+                                <span className="font-mono font-bold text-gray-800 block text-[10px] bg-slate-50 px-1.5 py-0.5 rounded border border-slate-200">
+                                  {merged.creationSource ? `Source ${merged.creationSource}` : 'N/A'}
+                                </span>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>

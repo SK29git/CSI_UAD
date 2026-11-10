@@ -540,6 +540,27 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
                 </span>
               </div>
 
+              {/* Secondary Phones (Only if non-null and not duplicate of primary) */}
+              {(() => {
+                const secondary = [
+                  customer?.phone2 && customer.phone2 !== customer?.mobile ? `P2: ${customer.phone2}` : null,
+                  customer?.phone3 && customer.phone3 !== customer?.mobile ? `P3: ${customer.phone3}` : null,
+                  customer?.phone4 && customer.phone4 !== customer?.mobile && !String(customer?.mobile || '').endsWith(String(customer.phone4).slice(-4)) ? `P4: ${customer.phone4}` : null,
+                  customer?.homePhone && customer.homePhone !== customer?.mobile ? `Home: ${customer.homePhone}` : null,
+                  customer?.workPhone && customer.workPhone !== customer?.mobile ? `Work: ${customer.workPhone}` : null
+                ].filter(Boolean);
+                const uniqueSec = Array.from(new Set(secondary));
+                if (uniqueSec.length === 0) return null;
+                return (
+                  <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Other Phone Numbers</span>
+                    <span className="font-semibold text-gray-800 text-xs block truncate" title={uniqueSec.join(' | ')}>
+                      {uniqueSec.join(' | ')}
+                    </span>
+                  </div>
+                );
+              })()}
+
               <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
                 <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Primary Email</span>
                 <span className="font-bold text-gray-800 text-xs flex items-center gap-1.5 truncate">
@@ -548,14 +569,25 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
                 </span>
               </div>
 
-              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
-                <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Home & Work Email</span>
-                <span className="font-semibold text-gray-800 text-xs block truncate" title={`Home: ${customer?.homeEmail || '-'} | Work: ${customer?.workEmail || '-'}`}>
-                  {customer?.homeEmail || customer?.workEmail 
-                    ? [customer?.homeEmail ? `Home: ${customer.homeEmail}` : null, customer?.workEmail ? `Work: ${customer.workEmail}` : null].filter(Boolean).join(' | ')
-                    : '-'}
-                </span>
-              </div>
+              {/* Secondary Emails (Only if non-null and not duplicate of primary) */}
+              {(() => {
+                const secondary = [
+                  customer?.homeEmail && customer.homeEmail.toLowerCase() !== String(customer?.email || '').toLowerCase() ? `${customer.homeEmailDescription || 'Home'}: ${customer.homeEmail}` : null,
+                  customer?.workEmail && customer.workEmail.toLowerCase() !== String(customer?.email || '').toLowerCase() ? `${customer.workEmailDescription || 'Work'}: ${customer.workEmail}` : null,
+                  customer?.otherEmail1 && customer.otherEmail1.toLowerCase() !== String(customer?.email || '').toLowerCase() ? `${customer.otherEmail1Description || 'Other 1'}: ${customer.otherEmail1}` : null,
+                  customer?.otherEmail2 && customer.otherEmail2.toLowerCase() !== String(customer?.email || '').toLowerCase() ? `${customer.otherEmail2Description || 'Other 2'}: ${customer.otherEmail2}` : null
+                ].filter(Boolean);
+                const uniqueSec = Array.from(new Set(secondary));
+                if (uniqueSec.length === 0) return null;
+                return (
+                  <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Other Emails</span>
+                    <span className="font-semibold text-gray-800 text-xs block truncate" title={uniqueSec.join(' | ')}>
+                      {uniqueSec.join(' | ')}
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
                 <span className="text-[10px] font-bold text-gray-400 uppercase block mb-0.5">Keyloop Group</span>

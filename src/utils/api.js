@@ -635,7 +635,18 @@ export async function createComplaintCase(details, options = {}) {
   }
 
   const ticketNumber =
-    cxpulseDetail?.ticketNumber || data?.cxpulse?.reference || null;
+    cxpulseDetail?.ticketNumber ||
+    cxpulseDetail?.ticketId ||
+    cxpulseDetail?.id ||
+    cxpulseDetail?.ticket_number ||
+    data?.cxpulse?.ticketNumber ||
+    data?.cxpulse?.ticketId ||
+    data?.cxpulse?.reference ||
+    data?.cxpulse?.id ||
+    data?.cxTicketId ||
+    data?.ticketId ||
+    data?.ticketNumber ||
+    null;
   const keyloopRef = data?.keyloop?.reference || null;
 
   return {
@@ -645,6 +656,7 @@ export async function createComplaintCase(details, options = {}) {
     referenceId: data?.referenceId || uniqueRef,
     company: data?.company || payload.company,
     ticketNumber,
+    cxTicketId: ticketNumber,
     keyloopRef,
     keyloopStatus: data?.keyloop?.status || null,
     cxpulseStatus: data?.cxpulse?.status || null,

@@ -3,6 +3,7 @@ import { apiFetch, executeRpaCase, updateCustomerCase, sendCustomerSmsMessage } 
 import GlobalToast from '../components/GlobalToast';
 import CustomerVerificationModal from '../components/CustomerVerificationModal';
 import FloatingSmsWidget from '../components/FloatingSmsWidget';
+import AccountResolutionModal from '../components/AccountResolutionModal';
 import { isFullMobileNumber } from '../utils/phoneUtils';
 
 const CustomerContext = createContext(null);
@@ -168,6 +169,13 @@ export function CustomerProvider({ children }) {
   const [customerFormMode, setCustomerFormMode] = useState(null); // 'create' | 'edit' | null
   const openCustomerForm = (mode = 'create') => setCustomerFormMode(mode);
   const closeCustomerForm = () => setCustomerFormMode(null);
+
+  // Dual-Pane Account Resolution Modal (Customer vs Prospect split)
+  const [customerMatches, setCustomerMatches] = useState([]);
+  const [prospectMatches, setProspectMatches] = useState([]);
+  const [isAccountResolutionModalOpen, setIsAccountResolutionModalOpen] = useState(false);
+  const openAccountResolutionModal = () => setIsAccountResolutionModalOpen(true);
+  const closeAccountResolutionModal = () => setIsAccountResolutionModalOpen(false);
 
   // Customer Data Verification Modal (RPA UPDATE_CUSTOMER)
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
@@ -744,155 +752,153 @@ export function CustomerProvider({ children }) {
       let allResults = [];
       const activeGroup = group || currentGroup || '';
 
-      // 1. Primary Query: Prospects API (/api/v1/prospects?group={group}&mobile={mobile})
-      let prospectResults = [];
-      if (activeGroup && activeGroup.trim() !== '') {
-        const pUrl = `/api/v1/prospects?group=${encodeURIComponent(activeGroup.trim())}&mobile=${cleanedMobile}`;
-        const pRes = await apiFetch(pUrl);
-        if (pRes && pRes.ok && Array.isArray(pRes.data) && pRes.data.length > 0) {
-          prospectResults = pRes.data;
+      // 1. Concurrently query Customers, Prospects, and E00MI APIs in parallel
+      const customerPromise = (async () => {
+        try {
+          if (activeGroup && activeGroup.trim() !== '') {
+            const res = await apiFetch(`/api/v1/customers?group=${encodeURIComponent(activeGroup.trim())}&mobile=${cleanedMobile}`);
+            return (res && res.ok && res.data) ? (Array.isArray(res.data) ? res.data : [res.data]) : [];
+          } else {
+            const groupPromises = KNOWN_GROUPS.map(g =>
+              apiFetch(`/api/v1/customers?group=${g}&mobile=${cleanedMobile}`)
+                .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
+                .catch(() => [])
+            );
+            const results = await Promise.all(groupPromises);
+            return results.flat();
+          }
+        } catch (e) {
+          console.warn("Customer mobile query error:", e);
+          return [];
         }
-      } else {
-        const pPromises = KNOWN_GROUPS.map(g =>
-          apiFetch(`/api/v1/prospects?group=${g}&mobile=${cleanedMobile}`)
-            .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
-            .catch(() => [])
-        );
-        const pResults = await Promise.all(pPromises);
-        prospectResults = pResults.flat();
+      })();
+
+      const prospectPromise = (async () => {
+        try {
+          if (activeGroup && activeGroup.trim() !== '') {
+            const res = await apiFetch(`/api/v1/prospects?group=${encodeURIComponent(activeGroup.trim())}&mobile=${cleanedMobile}`);
+            return (res && res.ok && Array.isArray(res.data)) ? res.data : [];
+          } else {
+            const groupPromises = KNOWN_GROUPS.map(g =>
+              apiFetch(`/api/v1/prospects?group=${g}&mobile=${cleanedMobile}`)
+                .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
+                .catch(() => [])
+            );
+            const results = await Promise.all(groupPromises);
+            return results.flat();
+          }
+        } catch (e) {
+          console.warn("Prospect mobile query error:", e);
+          return [];
+        }
+      })();
+
+      const e00miPromise = (async () => {
+        try {
+          if (activeGroup && activeGroup.trim() !== '') {
+            const res = await apiFetch(`/api/v1/e00mi?group=${encodeURIComponent(activeGroup.trim())}&mobile=${cleanedMobile}`);
+            return (res && res.ok && Array.isArray(res.data)) ? res.data : [];
+          } else {
+            const groupPromises = KNOWN_GROUPS.map(g =>
+              apiFetch(`/api/v1/e00mi?group=${g}&mobile=${cleanedMobile}`)
+                .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
+                .catch(() => [])
+            );
+            const results = await Promise.all(groupPromises);
+            return results.flat();
+          }
+        } catch (e) {
+          console.warn("E00MI mobile query error:", e);
+          return [];
+        }
+      })();
+
+      const [rawCustomers, rawProspects, rawE00mi] = await Promise.all([
+        customerPromise,
+        prospectPromise,
+        e00miPromise
+      ]);
+
+      // Normalize Customers
+      const normalizedCustomers = rawCustomers.map(c => ({
+        ...c,
+        isProspect: false,
+        customerType: c.customerType || 'CUSTOMER'
+      }));
+
+      // Normalize Prospects
+      const normalizedProspects = [
+        ...rawProspects.map(p => normalizeProspectRecord(p, p.keyloopGroup || activeGroup, cleanedMobile)),
+        ...rawE00mi.map(e => normalizeE00MIRecord(e, e.brand || activeGroup, cleanedMobile))
+      ];
+
+      setCustomerMatches(normalizedCustomers);
+      setProspectMatches(normalizedProspects);
+
+      const allMatches = [...normalizedCustomers, ...normalizedProspects];
+      setCustomerList(allMatches);
+      localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(allMatches));
+
+      const totalMatches = allMatches.length;
+
+      if (totalMatches === 0) {
+        setCustomer(null);
+        setCustomerList([]);
+        setIsAccountResolutionModalOpen(false);
+        return { ok: false, message: `No prospect or customer found for mobile "${mobileNum}"` };
       }
 
-      if (prospectResults.length > 0) {
-        const normalized = prospectResults.map(p => normalizeProspectRecord(p, activeGroup, cleanedMobile));
-        localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(normalized));
-        localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(normalized[0]));
-        setCustomerList(normalized);
-        setSelectedIndex(0);
-        setCustomer(normalized[0]);
-        const mob = normalized[0].mobile || normalized[0].mobileRaw || '';
-        if (mob) setCurrentMobile(mob);
-        setCurrentCustomerNumber(normalized[0].prospectNumber || normalized[0].customerNumber || '');
-        const detectedGroup = normalized[0].keyloopGroup || activeGroup || 'BMW';
-        if (detectedGroup) {
-          setCurrentGroup(detectedGroup);
-        }
-        syncCustomerToUrl(normalized[0], detectedGroup);
+      // Check whether both categories or multiple accounts exist:
+      const hasBothCategories = normalizedCustomers.length > 0 && normalizedProspects.length > 0;
+      const hasMultipleAccounts = hasBothCategories || totalMatches > 1;
+
+      // Select initial active record: prefer verified customer if available, else first prospect
+      let activeItem = normalizedCustomers.length > 0 ? normalizedCustomers[0] : normalizedProspects[0];
+      const activeIdx = allMatches.indexOf(activeItem);
+      setSelectedIndex(activeIdx !== -1 ? activeIdx : 0);
+
+      const detectedGroup = activeItem.keyloopGroup || activeGroup || 'BMW';
+      if (detectedGroup) setCurrentGroup(detectedGroup);
+      setCurrentMobile(cleanedMobile);
+
+      if (activeItem.isProspect) {
+        setCustomer(activeItem);
+        setCurrentCustomerNumber(activeItem.prospectNumber || activeItem.customerNumber || '');
+        syncCustomerToUrl(activeItem, detectedGroup, cleanedMobile);
         setVehicles([]);
         setSelectedVin("");
         setVehicleDetails(null);
         setRiskOverview(null);
         setVerificationStatus(null);
-        return { 
-          ok: true, 
-          count: normalized.length, 
-          customer: normalized[0], 
-          group: detectedGroup, 
-          isProspect: true,
-          type: normalized[0].customerType
-        };
-      }
-
-      // 2. Secondary Query: E00MI Inbound Events API (/api/v1/e00mi?group={group}&mobile={mobile})
-      let e00miResults = [];
-      if (activeGroup && activeGroup.trim() !== '') {
-        const eUrl = `/api/v1/e00mi?group=${encodeURIComponent(activeGroup.trim())}&mobile=${cleanedMobile}`;
-        const eRes = await apiFetch(eUrl);
-        if (eRes && eRes.ok && Array.isArray(eRes.data) && eRes.data.length > 0) {
-          e00miResults = eRes.data;
-        }
       } else {
-        const ePromises = KNOWN_GROUPS.map(g =>
-          apiFetch(`/api/v1/e00mi?group=${g}&mobile=${cleanedMobile}`)
-            .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
-            .catch(() => [])
-        );
-        const eResults = await Promise.all(ePromises);
-        e00miResults = eResults.flat();
+        const custNo = activeItem.customerNumber || activeItem.id;
+        if (custNo) {
+          setCurrentCustomerNumber(String(custNo));
+          syncCustomerToUrl(activeItem, detectedGroup, cleanedMobile);
+          await fetchProfileByCustomerNumber(detectedGroup, custNo, prefix, { searchedMobile: cleanedMobile }, activeItem);
+        } else {
+          syncEnquiriesFromCustomer(activeItem);
+          setCustomer(activeItem);
+          syncCustomerToUrl(activeItem, detectedGroup, cleanedMobile);
+        }
       }
 
-      if (e00miResults.length > 0) {
-        const normalized = e00miResults.map(e => normalizeE00MIRecord(e, activeGroup, cleanedMobile));
-        localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(normalized));
-        localStorage.setItem(prefix + 'customer_profile_data', JSON.stringify(normalized[0]));
-        setCustomerList(normalized);
-        setSelectedIndex(0);
-        setCustomer(normalized[0]);
-        const mob = normalized[0].mobile || normalized[0].mobileRaw || '';
-        if (mob) setCurrentMobile(mob);
-        setCurrentCustomerNumber(normalized[0].prospectNumber || normalized[0].customerNumber || '');
-        const detectedGroup = normalized[0].keyloopGroup || activeGroup || 'BMW';
-        if (detectedGroup) {
-          setCurrentGroup(detectedGroup);
-        }
-        syncCustomerToUrl(normalized[0], detectedGroup);
-        setVehicles([]);
-        setSelectedVin("");
-        setVehicleDetails(null);
-        setRiskOverview(null);
-        setVerificationStatus(null);
-        return { 
-          ok: true, 
-          count: normalized.length, 
-          customer: normalized[0], 
-          group: detectedGroup, 
-          isProspect: true,
-          isWebLead: false,
-          type: 'PROSPECT'
-        };
-      }
-
-      // 3. Fallback Query: Customers API (/api/v1/customers?group={group}&mobile={mobile})
-      if (activeGroup && activeGroup.trim() !== '') {
-        const searchUrl = `/api/v1/customers?group=${encodeURIComponent(activeGroup.trim())}&mobile=${cleanedMobile}`;
-        const res = await apiFetch(searchUrl);
-        if (res && res.ok && res.data) {
-          allResults = Array.isArray(res.data) ? res.data : [res.data];
-        }
+      // If multiple accounts found (Customer + Prospect or Multiple), pop up the Dual-Pane Account Selection Modal!
+      if (hasMultipleAccounts) {
+        setIsAccountResolutionModalOpen(true);
       } else {
-        // Query known groups in parallel to discover which group the mobile belongs to dynamically
-        const groupPromises = KNOWN_GROUPS.map(g =>
-          apiFetch(`/api/v1/customers?group=${g}&mobile=${cleanedMobile}`)
-            .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
-            .catch(() => [])
-        );
-        const groupResults = await Promise.all(groupPromises);
-        allResults = groupResults.flat();
-      }
-      
-      if (allResults.length > 0) {
-        // Save customer search response array to localStorage with prefix
-        localStorage.setItem(prefix + 'customer_search_data', JSON.stringify(allResults));
-
-        let storedIdx = 0;
-        const savedIdxStr = localStorage.getItem(prefix + 'selected_index');
-        if (savedIdxStr !== null && !isNaN(Number(savedIdxStr))) {
-          storedIdx = Number(savedIdxStr);
-        }
-
-        setCustomerList(allResults);
-        const validIdx = storedIdx < allResults.length ? storedIdx : 0;
-        setSelectedIndex(validIdx);
-        const targetItem = allResults[validIdx];
-
-        if (targetItem && targetItem.customerNumber) {
-          const detectedGroup = targetItem.keyloopGroup || group || '';
-          setCurrentCustomerNumber(String(targetItem.customerNumber));
-          setCurrentMobile(cleanedMobile);
-          await fetchProfileByCustomerNumber(detectedGroup, targetItem.customerNumber, prefix, { searchedMobile: cleanedMobile }, targetItem);
-          return { ok: true, count: allResults.length, customer: targetItem, group: detectedGroup, isProspect: false };
-        } else if (targetItem) {
-          syncEnquiriesFromCustomer(targetItem);
-          setCustomer(targetItem);
-          setCurrentCustomerNumber(targetItem.customerNumber || '');
-          setCurrentMobile(cleanedMobile);
-          syncCustomerToUrl(targetItem, activeGroup || 'BMW', cleanedMobile);
-          return { ok: true, count: allResults.length, customer: targetItem, group: activeGroup || 'BMW', isProspect: false };
-        }
+        setIsAccountResolutionModalOpen(false);
       }
 
-      setCustomer(null);
-      setCustomerList([]);
-      return { ok: false, message: `No prospect or customer found for mobile "${mobileNum}"` };
+      return {
+        ok: true,
+        count: totalMatches,
+        customer: activeItem,
+        group: detectedGroup,
+        isProspect: activeItem.isProspect,
+        customerMatches: normalizedCustomers,
+        prospectMatches: normalizedProspects
+      };
     } catch (err) {
       console.warn("Search mobile error:", err.message);
       setError(err.message);
@@ -1380,39 +1386,56 @@ export function CustomerProvider({ children }) {
 
   const selectCustomer = (idx) => {
     if (customerList && customerList[idx]) {
-      setSelectedIndex(idx);
-      const searchParams = new URLSearchParams(window.location.search);
-      const isSales = Boolean(searchParams.get('Sales') || searchParams.get('sales'));
-      const prefix = isSales ? 'sales_' : 'complaint_';
-      localStorage.setItem(prefix + 'selected_index', String(idx));
-      
-      const target = customerList[idx];
-      const g = target.keyloopGroup || customer?.keyloopGroup || '';
-      const c = target.customerNumber;
-      if (c) setCurrentCustomerNumber(String(c));
-      const mob = target.mobile || target.mobileRaw || target.phone || '';
-      if (mob) setCurrentMobile(mob);
+      selectAccount(customerList[idx]);
+    }
+  };
 
-      if (target.isProspect) {
-        setCustomer(target);
-        syncCustomerToUrl(target, g);
-        if (target.customerType === 'CONVERTED_PROSPECT' && target.customerNumber && /^\d+$/.test(target.customerNumber)) {
-          fetchProfileByCustomerNumber(g, target.customerNumber, prefix, {}, target);
-        } else {
-          setVehicles([]);
-          setSelectedVin("");
-          setVehicleDetails(null);
-          setRiskOverview(null);
-          setVerificationStatus(null);
-        }
-      } else if (c) {
-        syncCustomerToUrl(target, g);
-        fetchProfileByCustomerNumber(g, c, prefix, {}, target);
+  const selectAccount = async (record, openEdit = false) => {
+    if (!record) return;
+    const searchParams = new URLSearchParams(window.location.search);
+    const isSales = Boolean(searchParams.get('Sales') || searchParams.get('sales'));
+    const prefix = isSales ? 'sales_' : 'complaint_';
+
+    const idx = customerList.findIndex(item => {
+      if (record.isProspect) {
+        return item.isProspect && (item.prospectNumber === record.prospectNumber || item.leadId === record.leadId);
       } else {
-        syncEnquiriesFromCustomer(target);
-        setCustomer(target);
-        syncCustomerToUrl(target, g);
+        return !item.isProspect && (item.customerNumber === record.customerNumber);
       }
+    });
+    if (idx !== -1) {
+      setSelectedIndex(idx);
+      localStorage.setItem(prefix + 'selected_index', String(idx));
+    }
+
+    const g = record.keyloopGroup || currentGroup || 'BMW';
+    const c = record.customerNumber;
+    const mob = record.mobile || record.mobileRaw || currentMobile || '';
+    if (mob) setCurrentMobile(mob);
+
+    // Set active customer immediately so Edit form and UI load without delay
+    setCustomer(record);
+    setIsAccountResolutionModalOpen(false);
+
+    if (openEdit) {
+      openCustomerForm('edit');
+    }
+
+    if (record.isProspect) {
+      setCurrentCustomerNumber(record.prospectNumber || record.leadId || '');
+      syncCustomerToUrl(record, g, mob);
+      setVehicles([]);
+      setSelectedVin("");
+      setVehicleDetails(null);
+      setRiskOverview(null);
+      setVerificationStatus(null);
+    } else if (c) {
+      setCurrentCustomerNumber(String(c));
+      syncCustomerToUrl(record, g, mob);
+      await fetchProfileByCustomerNumber(g, c, prefix, { searchedMobile: mob }, record);
+    } else {
+      syncEnquiriesFromCustomer(record);
+      syncCustomerToUrl(record, g, mob);
     }
   };
 
@@ -1431,7 +1454,21 @@ export function CustomerProvider({ children }) {
       city: details.city || "Dubai",
       country: details.country || "United Arab Emirates",
       mobile: details.mobile || "",
+      phone1: details.phone1 || "",
+      phone2: details.phone2 || details.homePhone || "",
+      phone3: details.phone3 || details.workPhone || "",
+      phone4: details.phone4 || "",
+      telephoneNumber1: details.phone1 || "",
+      telephoneNumber2: details.phone2 || details.homePhone || "",
+      telephoneNumber3: details.phone3 || details.workPhone || "",
+      telephoneNumber4: details.phone4 || "",
+      homePhone: details.homePhone || details.phone2 || "",
+      workPhone: details.workPhone || details.phone3 || "",
       email: details.email || "",
+      homeEmail: details.homeEmail || "",
+      workEmail: details.workEmail || "",
+      otherEmail1: details.otherEmail1 || "",
+      otherEmail2: details.otherEmail2 || "",
       source: details.source || "CRM Inbound",
       sourceOfInformation: details.sourceOfInformation || "Walk-in",
       personalId: details.personalId || "",
@@ -1496,8 +1533,22 @@ export function CustomerProvider({ children }) {
       mobile: details.mobile || "",
       mobileRaw: (details.mobile || "").replace(/\D/g, ''),
       mobileValid: hasMobile,
+      phone1: details.phone1 || "",
+      phone2: details.phone2 || details.homePhone || "",
+      phone3: details.phone3 || details.workPhone || "",
+      phone4: details.phone4 || "",
+      telephoneNumber1: details.phone1 || "",
+      telephoneNumber2: details.phone2 || details.homePhone || "",
+      telephoneNumber3: details.phone3 || details.workPhone || "",
+      telephoneNumber4: details.phone4 || "",
+      homePhone: details.homePhone || details.phone2 || "",
+      workPhone: details.workPhone || details.phone3 || "",
       email: details.email || "",
       emailValid: hasEmail,
+      homeEmail: details.homeEmail || "",
+      workEmail: details.workEmail || "",
+      otherEmail1: details.otherEmail1 || "",
+      otherEmail2: details.otherEmail2 || "",
       idCardNumber: details.personalId || "",
       personalId: details.personalId || "",
       sourceOfInformation: details.sourceOfInformation || "Walk-in",
@@ -1577,7 +1628,21 @@ export function CustomerProvider({ children }) {
       city: details.city !== undefined ? details.city : (customer.location?.city || "Dubai"),
       country: details.country !== undefined ? details.country : (customer.country || customer.nationality || "United Arab Emirates"),
       mobile: details.mobile !== undefined ? details.mobile : (customer.mobile || ""),
+      phone1: details.phone1 !== undefined ? details.phone1 : (customer.phone1 || customer.telephoneNumber1 || ""),
+      phone2: details.phone2 !== undefined ? details.phone2 : (customer.phone2 || customer.telephoneNumber2 || customer.homePhone || ""),
+      phone3: details.phone3 !== undefined ? details.phone3 : (customer.phone3 || customer.telephoneNumber3 || customer.workPhone || ""),
+      phone4: details.phone4 !== undefined ? details.phone4 : (customer.phone4 || customer.telephoneNumber4 || ""),
+      telephoneNumber1: details.phone1 !== undefined ? details.phone1 : (customer.telephoneNumber1 || customer.phone1 || ""),
+      telephoneNumber2: details.phone2 !== undefined ? details.phone2 : (customer.telephoneNumber2 || customer.phone2 || ""),
+      telephoneNumber3: details.phone3 !== undefined ? details.phone3 : (customer.telephoneNumber3 || customer.phone3 || ""),
+      telephoneNumber4: details.phone4 !== undefined ? details.phone4 : (customer.telephoneNumber4 || customer.phone4 || ""),
+      homePhone: details.homePhone !== undefined ? details.homePhone : (details.phone2 || customer.homePhone || customer.homeTelephone || ""),
+      workPhone: details.workPhone !== undefined ? details.workPhone : (details.phone3 || customer.workPhone || customer.businessPhone || customer.officePhone || ""),
       email: details.email !== undefined ? details.email : (customer.email || ""),
+      homeEmail: details.homeEmail !== undefined ? details.homeEmail : (customer.homeEmail || ""),
+      workEmail: details.workEmail !== undefined ? details.workEmail : (customer.workEmail || customer.businessEmail || customer.officeEmail || ""),
+      otherEmail1: details.otherEmail1 !== undefined ? details.otherEmail1 : (customer.otherEmail1 || ""),
+      otherEmail2: details.otherEmail2 !== undefined ? details.otherEmail2 : (customer.otherEmail2 || ""),
       source: details.source !== undefined ? details.source : (customer.source || customer.leadSource || "CRM Inbound"),
       sourceOfInformation: details.sourceOfInformation !== undefined ? details.sourceOfInformation : (customer.sourceOfInformation || "Walk-in"),
       personalId: details.personalId !== undefined ? details.personalId : (customer.personalId || ""),
@@ -1619,7 +1684,21 @@ export function CustomerProvider({ children }) {
       fullName: `${caseDetails.titleCode ? caseDetails.titleCode + ' ' : ''}${caseDetails.firstName || ''} ${caseDetails.surname || ''}`.trim(),
       mobile: caseDetails.mobile,
       mobileRaw: (caseDetails.mobile || "").replace(/\D/g, ''),
+      phone1: caseDetails.phone1,
+      phone2: caseDetails.phone2,
+      phone3: caseDetails.phone3,
+      phone4: caseDetails.phone4,
+      telephoneNumber1: caseDetails.telephoneNumber1,
+      telephoneNumber2: caseDetails.telephoneNumber2,
+      telephoneNumber3: caseDetails.telephoneNumber3,
+      telephoneNumber4: caseDetails.telephoneNumber4,
+      homePhone: caseDetails.homePhone,
+      workPhone: caseDetails.workPhone,
       email: caseDetails.email,
+      homeEmail: caseDetails.homeEmail,
+      workEmail: caseDetails.workEmail,
+      otherEmail1: caseDetails.otherEmail1,
+      otherEmail2: caseDetails.otherEmail2,
       personalId: caseDetails.personalId || customer.personalId,
       sourceOfInformation: caseDetails.sourceOfInformation,
       nationality: caseDetails.nationality,
@@ -1690,7 +1769,11 @@ export function CustomerProvider({ children }) {
       country: String(details.country !== undefined ? details.country : (customer?.country || customer?.location?.country || "")).trim(),
       postcode: String(details.postcode !== undefined ? details.postcode : (customer?.location?.postcode || "")).trim(),
       mobile: String(details.mobile !== undefined ? details.mobile : (customer?.mobile || "")).trim(),
+      homePhone: String(details.homePhone !== undefined ? details.homePhone : (customer?.homePhone || customer?.homeTelephone || "")).trim(),
+      workPhone: String(details.workPhone !== undefined ? details.workPhone : (customer?.workPhone || customer?.businessPhone || customer?.officePhone || "")).trim(),
       email: String(details.email !== undefined ? details.email : (customer?.email || "")).trim(),
+      homeEmail: String(details.homeEmail !== undefined ? details.homeEmail : (customer?.homeEmail || "")).trim(),
+      workEmail: String(details.workEmail !== undefined ? details.workEmail : (customer?.workEmail || customer?.businessEmail || customer?.officeEmail || "")).trim(),
       preferredPhone: String(details.preferredPhone !== undefined ? details.preferredPhone : (details.mobile || customer?.mobile || "")).trim(),
       preferredEmail: String(details.preferredEmail !== undefined ? details.preferredEmail : (details.email || customer?.email || "")).trim(),
       nationality: String(details.nationality !== undefined ? details.nationality : (customer?.nationality || "")).trim()
@@ -1721,7 +1804,11 @@ export function CustomerProvider({ children }) {
         nationality: caseDetails.nationality || customer.nationality,
         mobile: caseDetails.mobile || customer.mobile,
         mobileRaw: (caseDetails.mobile || customer.mobile || "").replace(/\D/g, ''),
+        homePhone: caseDetails.homePhone !== undefined ? caseDetails.homePhone : (customer.homePhone || ""),
+        workPhone: caseDetails.workPhone !== undefined ? caseDetails.workPhone : (customer.workPhone || ""),
         email: caseDetails.email || customer.email,
+        homeEmail: caseDetails.homeEmail !== undefined ? caseDetails.homeEmail : (customer.homeEmail || ""),
+        workEmail: caseDetails.workEmail !== undefined ? caseDetails.workEmail : (customer.workEmail || ""),
         preferredPhone: caseDetails.preferredPhone,
         preferredEmail: caseDetails.preferredEmail,
         location: {
@@ -1889,10 +1976,25 @@ export function CustomerProvider({ children }) {
       sendSms,
       toastNotification,
       showToast,
-      hideToast
+      hideToast,
+      customerMatches,
+      prospectMatches,
+      isAccountResolutionModalOpen,
+      openAccountResolutionModal,
+      closeAccountResolutionModal,
+      selectAccount
     }}>
       {children}
       <GlobalToast notification={toastNotification} onClose={hideToast} />
+      <AccountResolutionModal 
+        isOpen={isAccountResolutionModalOpen}
+        onClose={closeAccountResolutionModal}
+        mobile={currentMobile}
+        customerMatches={customerMatches}
+        prospectMatches={prospectMatches}
+        activeRecord={customer}
+        onSelectAccount={(item) => selectAccount(item, true)}
+      />
       <CustomerVerificationModal 
         isOpen={isVerificationModalOpen} 
         onClose={closeVerificationModal} 

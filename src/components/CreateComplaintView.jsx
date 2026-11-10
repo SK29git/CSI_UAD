@@ -28,6 +28,8 @@ import {
   FaCheckCircle,
   FaShieldAlt,
   FaMapMarkerAlt,
+  FaCopy,
+  FaCheck,
 } from "react-icons/fa";
 
 export default function CreateComplaintView() {
@@ -145,6 +147,16 @@ export default function CreateComplaintView() {
   const [submitting, setSubmitting] = useState(false);
   const [isSuccessCreated, setIsSuccessCreated] = useState(false);
   const [toast, setToast] = useState(null);
+  const [copiedField, setCopiedField] = useState(null);
+
+  const handleCopy = (text, fieldName) => {
+    if (!text) return;
+    navigator.clipboard.writeText(String(text).trim());
+    setCopiedField(fieldName);
+    setTimeout(() => {
+      setCopiedField(null);
+    }, 2000);
+  };
 
   // Sync state when active customer changes
   useEffect(() => {
@@ -189,16 +201,6 @@ export default function CreateComplaintView() {
       setGroup(contextGroup);
     }
   }, [contextGroup]);
-
-  // Auto-dismiss success toast after 8 seconds
-  useEffect(() => {
-    if (toast && !toast.isError) {
-      const timer = setTimeout(() => {
-        setToast(null);
-      }, 8000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
 
   const brandGroups = ["Geely", "BMW", "MINI", "Rolls-Royce"];
 
@@ -254,12 +256,28 @@ export default function CreateComplaintView() {
           res.referenceId || res.data?.referenceId || details.externalRef;
         const keyloopStatus =
           res.keyloopStatus || res.data?.keyloop?.status || null;
+        const cxTicketId =
+          res.cxTicketId ||
+          res.ticketNumber ||
+          res.data?.ticketNumber ||
+          res.data?.cxTicketId ||
+          res.data?.cxpulse?.ticketNumber ||
+          res.data?.cxpulse?.reference ||
+          res.data?.cxpulse?.ticketId ||
+          (typeof res.cxpulseDetail === "object"
+            ? res.cxpulseDetail?.ticketNumber ||
+              res.cxpulseDetail?.ticketId ||
+              res.cxpulseDetail?.id
+            : null) ||
+          res.data?.cxpulse?.detail?.ticketNumber ||
+          `CX-${returnedRef}`;
 
-        // Show success toast notification with API returned referenceId and status
+        // Show success toast notification with API returned referenceId, CX ticket ID and status
         setToast({
           isError: false,
           message: "Complaint created successfully!",
           reference: returnedRef,
+          cxTicketId,
           keyloopStatus,
         });
         // Clear complaint description and externalRef
@@ -288,7 +306,7 @@ export default function CreateComplaintView() {
 
   return (
     <div className="flex flex-col gap-3 text-xs w-full">
-      {/* TOAST MESSAGE (Success & Error notifications) */}
+      {/* TOAST MESSAGE (Success & Error notifications - kept until next ticket is created) */}
       {toast && (
         <div
           className={`p-4 rounded-xl flex items-center justify-between gap-2.5 shadow-xs border animate-fade-in ${
@@ -307,16 +325,50 @@ export default function CreateComplaintView() {
             </div>
             <div>
               <h4 className="font-bold text-xs">{toast.message}</h4>
-              {!toast.isError && toast.reference && (
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <p className="text-[11px] text-emerald-800 font-medium">
-                    Complaint Reference:{" "}
-                    <span className="font-mono font-bold text-emerald-950 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-300">
-                      {toast.reference}
-                    </span>
-                  </p>
+              {!toast.isError && (toast.reference || toast.cxTicketId) && (
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                  {toast.reference && (
+                    <div className="text-[11px] text-emerald-800 font-medium flex items-center gap-1.5">
+                      <span>Complaint Reference:</span>
+                      <span className="inline-flex items-center gap-1 font-mono font-bold text-emerald-950 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-300">
+                        <span>{toast.reference}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(toast.reference, "reference")}
+                          className="hover:text-emerald-700 text-emerald-600 transition-colors p-0.5 rounded cursor-pointer"
+                          title={copiedField === "reference" ? "Copied!" : "Copy Complaint Reference"}
+                        >
+                          {copiedField === "reference" ? (
+                            <FaCheck className="text-[10px] text-emerald-700" />
+                          ) : (
+                            <FaCopy className="text-[10px]" />
+                          )}
+                        </button>
+                      </span>
+                    </div>
+                  )}
+                  {toast.cxTicketId && (
+                    <div className="text-[11px] text-blue-900 font-medium flex items-center gap-1.5">
+                      <span>CX Ticket ID:</span>
+                      <span className="inline-flex items-center gap-1 font-mono font-bold text-blue-950 bg-blue-100/90 px-1.5 py-0.5 rounded border border-blue-300">
+                        <span>{toast.cxTicketId}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(toast.cxTicketId, "cxTicketId")}
+                          className="hover:text-blue-700 text-blue-600 transition-colors p-0.5 rounded cursor-pointer"
+                          title={copiedField === "cxTicketId" ? "Copied!" : "Copy CX Ticket ID"}
+                        >
+                          {copiedField === "cxTicketId" ? (
+                            <FaCheck className="text-[10px] text-emerald-600" />
+                          ) : (
+                            <FaCopy className="text-[10px]" />
+                          )}
+                        </button>
+                      </span>
+                    </div>
+                  )}
                   {toast.keyloopStatus && (
-                    <span className="text-[10px] font-bold text-blue-800 bg-blue-100/90 px-1.5 py-0.5 rounded border border-blue-200">
+                    <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                       Keyloop: {toast.keyloopStatus}
                     </span>
                   )}
@@ -328,6 +380,7 @@ export default function CreateComplaintView() {
             type="button"
             onClick={() => setToast(null)}
             className="text-gray-400 hover:text-gray-700 font-bold p-1 cursor-pointer shrink-0"
+            title="Dismiss message"
           >
             ✕
           </button>

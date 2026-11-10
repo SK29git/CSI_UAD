@@ -22,7 +22,10 @@ import {
   FaEdit,
   FaSearch,
   FaCheckDouble,
-  FaPaperPlane
+  FaPaperPlane,
+  FaUserCheck,
+  FaStar,
+  FaExternalLinkAlt
 } from 'react-icons/fa';
 import { getFullMobileNumber, getDisplayMobileNumber } from '../utils/phoneUtils';
 
@@ -49,7 +52,11 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     fetchCustomerByPlateOrVin,
     fetchCustomerByEmail,
     fetchCustomerByCustomerNumber,
-    searchCustomer
+    searchCustomer,
+    customerMatches = [],
+    prospectMatches = [],
+    openAccountResolutionModal,
+    selectAccount
   } = useCustomer();
 
   const [searchQuery, setSearchQuery] = useState(() => {
@@ -102,6 +109,58 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
   const branchName = getBranchName ? getBranchName() : '';
   const customerId = customer?.customerNumber || customer?.id || '';
   const dobValue = customer?.dateOfBirth || customer?.dob || customer?.birthDate || customer?.DateOfBirth || customer?.date_of_birth || customer?.birth_date || customer?.individual?.dateOfBirth || customer?.personalDetails?.dateOfBirth;
+
+  // Filter and deduplicate active phone numbers (never show null / empty)
+  const activePhones = (() => {
+    if (!customer) return [];
+    const list = [];
+    const seenDigits = new Set();
+
+    const add = (label, raw) => {
+      if (!raw || raw === 'null' || raw === 'N/A' || raw === '-' || !String(raw).trim()) return;
+      const str = String(raw).trim();
+      const digits = str.replace(/\D/g, '');
+      const key = digits.length >= 7 ? digits.slice(-7) : str;
+      if (!seenDigits.has(key)) {
+        seenDigits.add(key);
+        list.push({ label, value: str });
+      }
+    };
+
+    const primaryDisplay = getDisplayMobileNumber(customer, currentMobile);
+    if (primaryDisplay && primaryDisplay !== '-') {
+      add('Primary', primaryDisplay);
+    }
+    add('Phone 1', customer?.phone1 || customer?.telephoneNumber1);
+    add('Phone 2', customer?.phone2 || customer?.telephoneNumber2 || customer?.homePhone);
+    add('Phone 3', customer?.phone3 || customer?.telephoneNumber3 || customer?.workPhone);
+    add('Phone 4', customer?.phone4 || customer?.telephoneNumber4);
+    return list;
+  })();
+
+  // Filter and deduplicate active email addresses (never show null / empty)
+  const activeEmails = (() => {
+    if (!customer) return [];
+    const list = [];
+    const seenEmails = new Set();
+
+    const add = (label, raw) => {
+      if (!raw || raw === 'null' || raw === 'N/A' || raw === '-' || !String(raw).trim() || !String(raw).includes('@')) return;
+      const str = String(raw).trim();
+      const key = str.toLowerCase();
+      if (!seenEmails.has(key)) {
+        seenEmails.add(key);
+        list.push({ label, value: str });
+      }
+    };
+
+    if (customer?.email) add('Primary', customer.email);
+    if (customer?.homeEmail) add(customer.homeEmailDescription || 'Home', customer.homeEmail);
+    if (customer?.workEmail) add(customer.workEmailDescription || 'Work', customer.workEmail);
+    if (customer?.otherEmail1) add(customer.otherEmail1Description || 'Other 1', customer.otherEmail1);
+    if (customer?.otherEmail2) add(customer.otherEmail2Description || 'Other 2', customer.otherEmail2);
+    return list;
+  })();
 
   const hasRiskData = Boolean(
     riskOverview &&
@@ -288,32 +347,69 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
           </div>
         ) : (
           <div className="flex flex-col gap-2.5 mb-3">
-            {/* Multi-Customer / Prospect Account Selector Dropdown */}
-            {customerList && customerList.length > 1 && (
-              <div className="p-2 bg-blue-50/80 border border-blue-200 rounded-lg text-xs mb-1">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider">
-                    Select Account ({customerList.length} Found)
+            {/* Multi-Customer / Prospect Account Switcher */}
+            {((customerMatches && customerMatches.length > 0 && prospectMatches && prospectMatches.length > 0) || (customerList && customerList.length > 1)) && (
+              <div className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs mb-1 shadow-2xs">
+                <div className="flex items-center justify-between mb-1.5 px-0.5">
+                  <span className="text-[10px] font-extrabold text-gray-700 uppercase tracking-wider flex items-center gap-1">
+                    <span>Accounts Found</span>
+                    <span className="bg-blue-100 text-blue-800 text-[9px] px-1.5 py-0.2 rounded-full font-bold">
+                      {customerList?.length || (customerMatches.length + prospectMatches.length)} Total
+                    </span>
                   </span>
-                  <span className="text-[9px] font-bold bg-blue-600 text-white px-1.5 py-0.2 rounded">
-                    Active: #{customer?.prospectNumber ? `PR-${customer.prospectNumber}` : (customer?.customerNumber || customerId)}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => openAccountResolutionModal && openAccountResolutionModal()}
+                    className="text-[10px] font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer"
+                    title="Open side-by-side account selector modal"
+                  >
+                    <span>View Split</span>
+                    <FaExternalLinkAlt className="text-[8px]" />
+                  </button>
                 </div>
-                <select
-                  value={selectedIndex}
-                  onChange={(e) => selectCustomer(Number(e.target.value))}
-                  className="w-full p-1.5 bg-white border border-blue-300 rounded font-bold text-gray-900 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs text-xs truncate"
-                >
-                  {customerList.map((item, idx) => (
-                    <option key={item?.customerNumber || item?.prospectNumber || item?.leadId || idx} value={idx}>
-                      {item?.fullName || `${item?.firstName || ''} ${item?.surname || ''}`.trim() || 'Record'} 
-                      {item?.isProspect 
-                        ? ` (Prospect: #${item?.prospectNumber || item?.leadId})` 
-                        : ` (Cust ID: ${item?.customerNumber})`}
-                      {item?.leadSource ? ` [${item.leadSource}]` : ''}
-                    </option>
-                  ))}
-                </select>
+
+                {/* Segmented Dual Buttons: Customer vs Prospect */}
+                <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-200/70 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!customer?.isProspect) return;
+                      if (customerMatches.length === 1 && selectAccount) {
+                        selectAccount(customerMatches[0]);
+                      } else if (openAccountResolutionModal) {
+                        openAccountResolutionModal();
+                      }
+                    }}
+                    className={`py-1.5 px-2 rounded-md text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      !customer?.isProspect
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-gray-700 hover:bg-white/80 hover:text-blue-700'
+                    }`}
+                  >
+                    <FaUserCheck className="text-[10px]" />
+                    <span>Customer {customerMatches.length > 0 ? `(${customerMatches.length})` : ''}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (customer?.isProspect && prospectMatches.length <= 1) return;
+                      if (prospectMatches.length === 1 && !customer?.isProspect && selectAccount) {
+                        selectAccount(prospectMatches[0]);
+                      } else if (openAccountResolutionModal) {
+                        openAccountResolutionModal();
+                      }
+                    }}
+                    className={`py-1.5 px-2 rounded-md text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                      customer?.isProspect
+                        ? 'bg-amber-600 text-white shadow-xs'
+                        : 'text-gray-700 hover:bg-white/80 hover:text-amber-700'
+                    }`}
+                  >
+                    <FaStar className="text-[10px]" />
+                    <span>Prospects {prospectMatches.length > 0 ? `(${prospectMatches.length})` : ''}</span>
+                  </button>
+                </div>
               </div>
             )}
 
@@ -376,20 +472,43 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                   )}
                 </div>
                 <div className="mt-1 space-y-1 text-xs text-gray-600">
-                  <div className="flex items-center gap-1.5">
-                    <FaPhoneAlt className="text-gray-400 text-[11px]" />
-                    <span className="font-medium truncate">{getDisplayMobileNumber(customer, currentMobile) || '-'}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <FaEnvelope className="text-gray-400 text-[11px]" />
-                    <span className="truncate max-w-[190px]">{customer?.email || '-'}</span>
-                  </div>
-                  {(customer?.homeEmail || customer?.workEmail) && (
-                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                      <FaEnvelope className="text-gray-400 text-[10px]" />
-                      <span className="truncate max-w-[190px]" title={`Home: ${customer?.homeEmail || '-'} | Work: ${customer?.workEmail || '-'}`}>
-                        {[customer?.homeEmail ? `Home: ${customer.homeEmail}` : null, customer?.workEmail ? `Work: ${customer.workEmail}` : null].filter(Boolean).join(' | ')}
-                      </span>
+                  {/* Phone Numbers - Only show non-null */}
+                  {activePhones.length > 0 ? (
+                    activePhones.map((p, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <FaPhoneAlt className="text-gray-400 text-[11px] shrink-0" />
+                        <span className="font-medium truncate" title={`${p.label}: ${p.value}`}>
+                          {activePhones.length > 1 && idx > 0 && (
+                            <span className="text-[10px] text-gray-400 font-normal mr-1">{p.label}:</span>
+                          )}
+                          {p.value}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <FaPhoneAlt className="text-gray-400 text-[11px]" />
+                      <span className="font-medium truncate">-</span>
+                    </div>
+                  )}
+
+                  {/* Emails - Only show non-null */}
+                  {activeEmails.length > 0 ? (
+                    activeEmails.map((e, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <FaEnvelope className="text-gray-400 text-[11px] shrink-0" />
+                        <span className="truncate max-w-[190px]" title={`${e.label}: ${e.value}`}>
+                          {activeEmails.length > 1 && idx > 0 && (
+                            <span className="text-[10px] text-gray-400 font-normal mr-1">{e.label}:</span>
+                          )}
+                          {e.value}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <FaEnvelope className="text-gray-400 text-[11px]" />
+                      <span className="truncate max-w-[190px]">-</span>
                     </div>
                   )}
                   <div className="flex items-center gap-1.5">
