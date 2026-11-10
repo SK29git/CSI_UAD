@@ -305,11 +305,11 @@ export default function ServiceBookingMainPanel() {
 
   const [geelyLocations, setGeelyLocations] = useState([]);
   const [geelyLocationsLoading, setGeelyLocationsLoading] = useState(false);
-  const [geelyLocationId, setGeelyLocationId] = useState(10);
+  const [geelyLocationId, setGeelyLocationId] = useState(40);
 
   const [geelyServices, setGeelyServices] = useState([]);
   const [geelyServicesLoading, setGeelyServicesLoading] = useState(false);
-  const [geelySelectedProductId, setGeelySelectedProductId] = useState('6dc62a95-a90c-49a8-a967-49be58de3e86');
+  const [geelySelectedProductId, setGeelySelectedProductId] = useState('07143ffd-184e-43b5-a8de-f68d63199baa');
 
   const [geelyAvailableDates, setGeelyAvailableDates] = useState([]);
   const [geelyDatesLoading, setGeelyDatesLoading] = useState(false);
@@ -362,9 +362,6 @@ export default function ServiceBookingMainPanel() {
             const locList = locRes.value.data?.data || locRes.value.data?.result || locRes.value.data || [];
             if (Array.isArray(locList) && locList.length > 0) {
               setGeelyLocations(locList);
-              if (!locList.some(l => l.id === 40)) {
-                setGeelyLocationId(locList[0].id);
-              }
             }
           }
 
@@ -372,9 +369,6 @@ export default function ServiceBookingMainPanel() {
             const srvList = srvRes.value.data?.result || srvRes.value.data?.data || srvRes.value.data || [];
             if (Array.isArray(srvList) && srvList.length > 0) {
               setGeelyServices(srvList);
-              if (!srvList.some(s => s.serviceProductId === '07143ffd-184e-43b5-a8de-f68d63199baa')) {
-                setGeelySelectedProductId(srvList[0].serviceProductId);
-              }
             }
           }
         }
@@ -452,10 +446,15 @@ export default function ServiceBookingMainPanel() {
             if (rawSlots[0]?.advisorId) {
               setGeelyAdvisorId(String(rawSlots[0].advisorId));
             }
+          } else {
+            setGeelyTimeSlots([]);
+            setGeelySelectedTimeSlot('');
           }
         }
       } catch (err) {
         console.warn("Failed to fetch timeslots:", err);
+        setGeelyTimeSlots([]);
+        setGeelySelectedTimeSlot('');
       } finally {
         if (isMounted) setGeelyTimesLoading(false);
       }
@@ -1170,8 +1169,8 @@ export default function ServiceBookingMainPanel() {
 
                 <form onSubmit={handleSubmitGeelyBooking} className="p-3.5 sm:p-4 space-y-3 text-xs bg-slate-50/40">
                   
-                  {/* STEP 1: Customer Phone & License Plate */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  {/* ROW 1: Customer Phone, Vehicle License Plate No, Dealership ID (1 row, 3 column grid) */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                     
                     {/* Customer Phone */}
                     <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
@@ -1229,71 +1228,94 @@ export default function ServiceBookingMainPanel() {
                       )}
                     </div>
 
-                  </div>
-
-                  {/* STEP 2: Dealership Workshop Location & Recommended Service */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                    
-                    {/* Dealership Workshop Location (GET /api/service-locations?type=workshop) */}
+                    {/* Dealership ID (40 or 240) */}
                     <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
                       <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaMapMarkerAlt className="text-blue-600 text-xs" /> Dealership Workshop Location <span className="text-rose-500 font-bold">*</span>
+                        <FaMapMarkerAlt className="text-blue-600 text-xs" /> Dealership ID <span className="text-rose-500 font-bold">*</span>
                       </label>
                       <select
                         value={geelyLocationId}
                         onChange={(e) => setGeelyLocationId(Number(e.target.value))}
                         disabled={geelyLocationsLoading}
-                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs cursor-pointer"
                       >
-                        {geelyLocations.length > 0 ? (
-                          geelyLocations.map(loc => (
-                            <option key={loc.id} value={loc.id}>
-                              {loc.id} - {loc.name} {loc.city ? `(${loc.city})` : ''}
-                            </option>
-                          ))
-                        ) : (
-                          <>
-                            <option value="40">40 - AGMC Service Center - Deira</option>
-                            <option value="10">10 - AGMC Service Center - Sheikh Zayed Rd</option>
-                            <option value="20">20 - AGMC Service Center - Sharjah</option>
-                            <option value="30">30 - AGMC Service Center - Ras Al Khaimah</option>
-                            <option value="50">50 - AGMC Service Center - Fujairah</option>
-                            <option value="80">80 - AGMC Service Center - Abu Dhabi</option>
-                          </>
-                        )}
-                      </select>
-                    </div>
-
-                    {/* Recommended Service Package (GET /api/service/recommended-services?type=workshop) */}
-                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaWrench className="text-blue-600 text-xs" /> Recommended Service Package <span className="text-rose-500 font-bold">*</span>
-                      </label>
-                      <select
-                        value={geelySelectedProductId}
-                        onChange={(e) => setGeelySelectedProductId(e.target.value)}
-                        disabled={geelyServicesLoading}
-                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
-                      >
-                        {geelyServices.length > 0 ? (
-                          geelyServices.map(srv => (
-                            <option key={srv.serviceProductId} value={srv.serviceProductId}>
-                              {srv.serviceCategory?.description || 'Service'}: {srv.description} {srv.price ? `• AED ${srv.price}` : ''}
-                            </option>
-                          ))
-                        ) : (
-                          <>
-                            <option value="07143ffd-184e-43b5-a8de-f68d63199baa">Periodic Maintenance: 5,000 KM</option>
-                            <option value="6dc62a95-a90c-49a8-a967-49be58de3e86">Periodic Maintenance: 12,000 KM</option>
-                            <option value="8c202060-c231-4d55-be89-3771fad1acfb">Periodic Maintenance: 20,000 KM</option>
-                          </>
-                        )}
+                        <option value="40">40</option>
+                        <option value="240">240</option>
                       </select>
                     </div>
 
                   </div>
 
-                  {/* STEP 3: Real-Time Appointment Date & Timeslots */}
+                  {/* Commented Recommended Service Package as requested (product ID 07143ffd-184e-43b5-a8de-f68d63199baa passed directly to API) */}
+                  {/*
+                  <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                    <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                      <FaWrench className="text-blue-600 text-xs" /> Recommended Service Package <span className="text-rose-500 font-bold">*</span>
+                    </label>
+                    <select
+                      value={geelySelectedProductId}
+                      onChange={(e) => setGeelySelectedProductId(e.target.value)}
+                      disabled={geelyServicesLoading}
+                      className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                    >
+                      <option value="07143ffd-184e-43b5-a8de-f68d63199baa">Periodic Maintenance: 5,000 KM</option>
+                      <option value="6dc62a95-a90c-49a8-a967-49be58de3e86">Periodic Maintenance: 12,000 KM</option>
+                      <option value="8c202060-c231-4d55-be89-3771fad1acfb">Periodic Maintenance: 20,000 KM</option>
+                    </select>
+                  </div>
+                  */}
+
+                  {/* ROW 2: Mileage, Service Advisor, Customer Notes (Taken above date and time) */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                    
+                    {/* Mileage */}
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                        <FaClock className="text-gray-400 text-xs" /> Current Mileage (KM) <span className="text-rose-500 font-bold">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1000"
+                        value={geelyMileage}
+                        onChange={(e) => setGeelyMileage(e.target.value)}
+                        placeholder="e.g. 5000"
+                        required
+                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                      />
+                    </div>
+
+                    {/* Service Advisor (GET /api/service/advisors) */}
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                        <FaUser className="text-gray-400 text-xs" /> Service Advisor (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={geelyAdvisorId}
+                        onChange={(e) => setGeelyAdvisorId(e.target.value)}
+                        placeholder="e.g. 4031 (or auto)"
+                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                      />
+                    </div>
+
+                    {/* Customer Notes */}
+                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                        <FaClipboardList className="text-gray-400 text-xs" /> Customer Notes (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={geelyCustomerNotes}
+                        onChange={(e) => setGeelyCustomerNotes(e.target.value)}
+                        placeholder="e.g. Regular 5,000 KM service"
+                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                      />
+                    </div>
+
+                  </div>
+
+                  {/* ROW 3: Real-Time Appointment Date & Timeslots */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     
                     {/* Appointment Date (POST /api/service/appointment-dates) */}
@@ -1419,56 +1441,6 @@ export default function ServiceBookingMainPanel() {
                           </span>
                         </div>
                       )}
-                    </div>
-
-                  </div>
-
-                  {/* STEP 4: Mileage, Advisor, Notes */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                    
-                    {/* Mileage */}
-                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaClock className="text-gray-400 text-xs" /> Current Mileage (KM) <span className="text-rose-500 font-bold">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1000"
-                        value={geelyMileage}
-                        onChange={(e) => setGeelyMileage(e.target.value)}
-                        placeholder="e.g. 5000"
-                        required
-                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
-                      />
-                    </div>
-
-                    {/* Service Advisor (GET /api/service/advisors) */}
-                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaUser className="text-gray-400 text-xs" /> Service Advisor (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={geelyAdvisorId}
-                        onChange={(e) => setGeelyAdvisorId(e.target.value)}
-                        placeholder="e.g. 4031 (or auto)"
-                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
-                      />
-                    </div>
-
-                    {/* Customer Notes */}
-                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaClipboardList className="text-gray-400 text-xs" /> Customer Notes (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={geelyCustomerNotes}
-                        onChange={(e) => setGeelyCustomerNotes(e.target.value)}
-                        placeholder="e.g. Regular 5,000 KM service"
-                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
-                      />
                     </div>
 
                   </div>

@@ -8,7 +8,7 @@ import ServiceOpenBookingsView from '../components/ServiceOpenBookingsView';
 import ServiceHistoryView from '../components/ServiceHistoryView';
 import ServiceWarrantyClaimsView from '../components/ServiceWarrantyClaimsView';
 import ServiceFeedbackView from '../components/ServiceFeedbackView';
-import ServiceActivityRightSidebar from '../components/ServiceActivityRightSidebar';
+// import ServiceActivityRightSidebar from '../components/ServiceActivityRightSidebar';
 import CustomerFormView from '../components/CustomerFormView';
 import { useCustomer } from '../context/CustomerContext';
 
@@ -22,7 +22,7 @@ export default function ServiceBookingPage() {
     }
     return false;
   });
-  const [isRightCollapsed, setIsRightCollapsed] = useState(false);
+  // const [isRightCollapsed, setIsRightCollapsed] = useState(false);
 
   React.useEffect(() => {
     const handleResize = () => {
@@ -115,8 +115,8 @@ export default function ServiceBookingPage() {
             setActiveSubTab={setActiveSubTab} 
             isLeftCollapsed={isLeftCollapsed}
             onToggleLeft={() => setIsLeftCollapsed(!isLeftCollapsed)}
-            isRightCollapsed={isRightCollapsed}
-            onToggleRight={() => setIsRightCollapsed(!isRightCollapsed)}
+            /* isRightCollapsed={isRightCollapsed} */
+            /* onToggleRight={() => setIsRightCollapsed(!isRightCollapsed)} */
           />
 
           <div className="transition-all duration-200">
@@ -124,13 +124,15 @@ export default function ServiceBookingPage() {
           </div>
         </main>
 
-        {/* RIGHT COLUMN: Activity Log Timeline */}
+        {/* RIGHT COLUMN: Activity Log Timeline (Commented out - nothing shown in right side) */}
+        {/*
         <aside className="hidden xl:block w-auto flex-shrink-0 sticky top-5 z-10 transition-all duration-300">
           <ServiceActivityRightSidebar 
             isCollapsed={isRightCollapsed}
             onToggleCollapse={() => setIsRightCollapsed(!isRightCollapsed)}
           />
         </aside>
+        */}
 
       </div>
     </div>

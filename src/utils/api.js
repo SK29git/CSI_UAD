@@ -968,8 +968,8 @@ export const OTOLINK_AUTH_TOKEN = "778c2f355c8687a75d0d16955ca2bd72";
  * Caches token in localStorage for 1 hour
  */
 export async function getOtolinkToken(forceRefresh = false) {
-  const CACHE_KEY = "otolink_auth_token";
-  const EXPIRY_KEY = "otolink_auth_token_expiry";
+  const CACHE_KEY = "otolink_auth_token_v2";
+  const EXPIRY_KEY = "otolink_auth_token_expiry_v2";
 
   if (!forceRefresh) {
     try {
@@ -983,8 +983,14 @@ export async function getOtolinkToken(forceRefresh = false) {
     }
   }
 
-  const tenants = [OTOLINK_TOKEN_TENANT_ID, SERVICE_ENGINE_TENANT_ID];
+  // Priority to Geely Service Engine tenant ID (OTagmcgeel713061)
+  const tenants = [SERVICE_ENGINE_TENANT_ID, OTOLINK_TOKEN_TENANT_ID];
+  const basicAuth = typeof btoa !== "undefined"
+    ? btoa(`${OTOLINK_API_KEY}:${OTOLINK_API_SECRET}`)
+    : (typeof Buffer !== "undefined" ? Buffer.from(`${OTOLINK_API_KEY}:${OTOLINK_API_SECRET}`).toString("base64") : "");
+
   const headers = {
+    Authorization: `Basic ${basicAuth}`,
     "x-api-key": OTOLINK_API_KEY,
     "x-api-secret": OTOLINK_API_SECRET,
     "Content-Type": "application/json",
@@ -1125,11 +1131,18 @@ export async function otolinkServiceFetch(path, options = {}) {
 
   let token = await getOtolinkToken();
 
-  const getHeaders = (authToken) => ({
-    Authorization: authToken,
-    "Content-Type": "application/json",
-    ...(options.headers || {}),
-  });
+  const getHeaders = (authToken) => {
+    const formattedAuth = !authToken
+      ? ""
+      : authToken.startsWith("Bearer ")
+        ? authToken
+        : `Bearer ${authToken}`;
+    return {
+      Authorization: formattedAuth,
+      "Content-Type": "application/json",
+      ...(options.headers || {}),
+    };
+  };
 
   // 1. Try direct relative proxy (/api/service/...)
   try {
@@ -1193,19 +1206,19 @@ export async function otolinkServiceFetch(path, options = {}) {
  * Supports dynamic make: 'BMW', 'MINI', 'Geely', 'Rolls-Royce', etc.
  */
 export async function getAppointmentDates({
-  dealershipLocationId = 10,
-  make = "BMW",
-  serviceProductIds = ["6dc62a95-a90c-49a8-a967-49be58de3e86"],
+  dealershipLocationId = 40,
+  make = "Geely",
+  serviceProductIds = ["07143ffd-184e-43b5-a8de-f68d63199baa"],
 }) {
   const pIds = Array.isArray(serviceProductIds) && serviceProductIds.length > 0
     ? serviceProductIds
-    : ["6dc62a95-a90c-49a8-a967-49be58de3e86"];
+    : ["07143ffd-184e-43b5-a8de-f68d63199baa"];
 
   return await otolinkServiceFetch("/api/service/appointment-dates", {
     method: "POST",
     body: JSON.stringify({
-      dealershipLocationId: Number(dealershipLocationId) || 10,
-      make: make || "BMW",
+      dealershipLocationId: Number(dealershipLocationId) || 40,
+      make: make || "Geely",
       serviceProductIds: pIds,
     }),
   });
@@ -1217,18 +1230,18 @@ export const getGeelyAppointmentDates = getAppointmentDates;
  */
 export async function getAppointmentTimes({
   selectedDate,
-  dealershipLocationId = 10,
-  serviceProductIds = ["6dc62a95-a90c-49a8-a967-49be58de3e86"],
+  dealershipLocationId = 40,
+  serviceProductIds = ["07143ffd-184e-43b5-a8de-f68d63199baa"],
 }) {
   const pIds = Array.isArray(serviceProductIds) && serviceProductIds.length > 0
     ? serviceProductIds
-    : ["6dc62a95-a90c-49a8-a967-49be58de3e86"];
+    : ["07143ffd-184e-43b5-a8de-f68d63199baa"];
 
   return await otolinkServiceFetch("/api/service/appointment-time", {
     method: "POST",
     body: JSON.stringify({
       selectedDate: selectedDate || new Date().toISOString().split("T")[0],
-      dealershipLocationId: Number(dealershipLocationId) || 10,
+      dealershipLocationId: Number(dealershipLocationId) || 40,
       serviceProductIds: pIds,
     }),
   });
