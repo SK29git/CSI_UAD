@@ -25,7 +25,8 @@ import {
   FaPaperPlane,
   FaUserCheck,
   FaStar,
-  FaExternalLinkAlt
+  FaExternalLinkAlt,
+  FaTimes
 } from 'react-icons/fa';
 import { getFullMobileNumber, getDisplayMobileNumber } from '../utils/phoneUtils';
 
@@ -81,6 +82,9 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
 
     setIsSearching(false);
     if (res && res.ok) {
+      if (!res.customerMatches || res.customerMatches.length <= 1) {
+        openCustomerForm('edit');
+      }
       const typeLabel = res.isProspect 
         ? 'Prospect' 
         : 'Customer';
@@ -116,25 +120,43 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     const list = [];
     const seenDigits = new Set();
 
-    const add = (label, raw) => {
-      if (!raw || raw === 'null' || raw === 'N/A' || raw === '-' || !String(raw).trim()) return;
+    const cleanCandidate = (currentMobile || '').replace(/\D/g, '');
+
+    const resolveSlotValue = (raw) => {
+      if (!raw || raw === 'null' || raw === 'N/A' || raw === '-' || !String(raw).trim()) return '';
       const str = String(raw).trim();
+      const rawDigits = str.replace(/\D/g, '');
+      if (str.includes('*') && cleanCandidate && rawDigits.length >= 2 && cleanCandidate.endsWith(rawDigits)) {
+        return cleanCandidate;
+      }
+      return str;
+    };
+
+    const add = (label, raw) => {
+      const str = resolveSlotValue(raw);
+      if (!str) return;
       const digits = str.replace(/\D/g, '');
-      const key = digits.length >= 7 ? digits.slice(-7) : str;
-      if (!seenDigits.has(key)) {
+      const key = digits.length >= 7 ? digits.slice(-7) : (str.includes('*') ? digits : str);
+      if (key && !seenDigits.has(key)) {
         seenDigits.add(key);
         list.push({ label, value: str });
       }
     };
 
-    const primaryDisplay = getDisplayMobileNumber(customer, currentMobile);
-    if (primaryDisplay && primaryDisplay !== '-') {
-      add('Primary', primaryDisplay);
+    const p1 = resolveSlotValue(customer?.phone1 || customer?.telephoneNumber1 || customer?.mobile);
+    const p2 = resolveSlotValue(customer?.phone2 || customer?.telephoneNumber2 || customer?.homePhone);
+    const p3 = resolveSlotValue(customer?.phone3 || customer?.telephoneNumber3 || customer?.workPhone);
+    const p4 = resolveSlotValue(customer?.phone4 || customer?.telephoneNumber4);
+
+    const matchingSearched = [p1, p2, p3, p4].find(p => p === cleanCandidate);
+    const primary = matchingSearched || p1 || customer?.mobile || customer?.mobileRaw;
+    if (primary) {
+      add('Primary', primary);
     }
-    add('Phone 1', customer?.phone1 || customer?.telephoneNumber1);
-    add('Phone 2', customer?.phone2 || customer?.telephoneNumber2 || customer?.homePhone);
-    add('Phone 3', customer?.phone3 || customer?.telephoneNumber3 || customer?.workPhone);
-    add('Phone 4', customer?.phone4 || customer?.telephoneNumber4);
+    if (p1) add('Phone 1', p1);
+    if (p2) add('Phone 2', p2);
+    if (p3) add('Phone 3', p3);
+    if (p4) add('Phone 4', p4);
     return list;
   })();
 
@@ -347,69 +369,68 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
           </div>
         ) : (
           <div className="flex flex-col gap-2.5 mb-3">
-            {/* Multi-Customer / Prospect Account Switcher */}
-            {((customerMatches && customerMatches.length > 0 && prospectMatches && prospectMatches.length > 0) || (customerList && customerList.length > 1)) && (
-              <div className="p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs mb-1 shadow-2xs">
+            {/* Return to Customer Switcher (ONLY shown when currently viewing a prospect) */}
+            {customer?.isProspect && customerMatches && customerMatches.length > 0 && (
+              <div className="p-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs mb-1 shadow-2xs animate-in fade-in duration-150">
+                <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-200/80 rounded-lg">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (customerMatches.length > 0 && selectAccount) {
+                        selectAccount(customerMatches[0], true);
+                      }
+                    }}
+                    className="py-1 px-2 rounded-md text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer text-gray-700 hover:bg-white hover:text-blue-700 hover:shadow-2xs"
+                    title="Go back to Verified Customer Profile"
+                  >
+                    <FaUserCheck className="text-[10px] text-blue-600" />
+                    <span>Customer {customerMatches.length > 1 ? `(${customerMatches.length})` : ''}</span>
+                  </button>
+
+                  <div
+                    className="py-1 px-2 rounded-md text-[11px] font-bold flex items-center justify-center gap-1.5 bg-amber-600 text-white shadow-xs"
+                    title="Currently viewing prospect"
+                  >
+                    <FaStar className="text-[10px]" />
+                    <span>Prospects ({prospectMatches.length})</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Multi-Customer Account Switcher (only shown if viewing customer AND multiple customer accounts exist) */}
+            {!customer?.isProspect && customerMatches && customerMatches.length > 1 && (
+              <div className="p-2 bg-blue-50/70 border border-blue-200 rounded-xl text-xs mb-1 shadow-2xs">
                 <div className="flex items-center justify-between mb-1.5 px-0.5">
-                  <span className="text-[10px] font-extrabold text-gray-700 uppercase tracking-wider flex items-center gap-1">
-                    <span>Accounts Found</span>
-                    <span className="bg-blue-100 text-blue-800 text-[9px] px-1.5 py-0.2 rounded-full font-bold">
-                      {customerList?.length || (customerMatches.length + prospectMatches.length)} Total
-                    </span>
+                  <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider flex items-center gap-1">
+                    <FaUserCheck className="text-blue-600" />
+                    <span>Customer Accounts ({customerMatches.length})</span>
                   </span>
                   <button
                     type="button"
                     onClick={() => openAccountResolutionModal && openAccountResolutionModal()}
                     className="text-[10px] font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 cursor-pointer"
-                    title="Open side-by-side account selector modal"
+                    title="Open customer selection modal"
                   >
-                    <span>View Split</span>
+                    <span>Switch</span>
                     <FaExternalLinkAlt className="text-[8px]" />
                   </button>
                 </div>
 
-                {/* Segmented Dual Buttons: Customer vs Prospect */}
-                <div className="grid grid-cols-2 gap-1 p-0.5 bg-slate-200/70 rounded-lg">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!customer?.isProspect) return;
-                      if (customerMatches.length === 1 && selectAccount) {
-                        selectAccount(customerMatches[0]);
-                      } else if (openAccountResolutionModal) {
-                        openAccountResolutionModal();
-                      }
-                    }}
-                    className={`py-1.5 px-2 rounded-md text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      !customer?.isProspect
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'text-gray-700 hover:bg-white/80 hover:text-blue-700'
-                    }`}
-                  >
-                    <FaUserCheck className="text-[10px]" />
-                    <span>Customer {customerMatches.length > 0 ? `(${customerMatches.length})` : ''}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (customer?.isProspect && prospectMatches.length <= 1) return;
-                      if (prospectMatches.length === 1 && !customer?.isProspect && selectAccount) {
-                        selectAccount(prospectMatches[0]);
-                      } else if (openAccountResolutionModal) {
-                        openAccountResolutionModal();
-                      }
-                    }}
-                    className={`py-1.5 px-2 rounded-md text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                      customer?.isProspect
-                        ? 'bg-amber-600 text-white shadow-xs'
-                        : 'text-gray-700 hover:bg-white/80 hover:text-amber-700'
-                    }`}
-                  >
-                    <FaStar className="text-[10px]" />
-                    <span>Prospects {prospectMatches.length > 0 ? `(${prospectMatches.length})` : ''}</span>
-                  </button>
-                </div>
+                <select
+                  value={customer?.customerNumber || customer?.id || ''}
+                  onChange={(e) => {
+                    const found = customerMatches.find(c => String(c.customerNumber || c.id) === String(e.target.value));
+                    if (found && selectAccount) selectAccount(found, true);
+                  }}
+                  className="w-full bg-white border border-blue-300 rounded-lg px-2 py-1 text-xs font-semibold text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
+                >
+                  {customerMatches.map((c, idx) => (
+                    <option key={c.customerNumber || idx} value={c.customerNumber || c.id}>
+                      {c.fullName || `${c.firstName || ''} ${c.surname || ''}`.trim() || 'Customer'} (#{c.customerNumber || c.id})
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
 
@@ -525,6 +546,63 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
           </div>
         )}
       </div>
+
+      {/* 1.1 Sales Prospects Section (Buttons + Details) */}
+      {prospectMatches && prospectMatches.length > 0 && (
+        <div className="bg-white rounded-xl p-3 shadow-xs border border-amber-200/90 text-xs">
+          <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-amber-100">
+            <div className="flex items-center gap-1.5 text-amber-900 font-extrabold text-[11px] uppercase tracking-wider">
+              <FaStar className="text-amber-500 text-xs" />
+              <span>Sales Prospects ({prospectMatches.length})</span>
+            </div>
+          </div>
+
+          {/* Prospect Buttons 2-Column Grid */}
+          <div className="grid grid-cols-2 gap-1.5">
+            {prospectMatches.map((pros, idx) => {
+              const rawNo = pros.prospectNumber || pros.leadId || '';
+              const pNo = (rawNo && rawNo !== 'PROSPECT' && rawNo !== 'E00MI-LEAD' && !String(rawNo).startsWith('PR-')) ? String(rawNo) : '';
+              
+              // Only highlight this button if the active view is specifically this prospect
+              const isSelected = Boolean(
+                customer?.isProspect && (
+                  (pros.leadId && String(customer.leadId) === String(pros.leadId)) ||
+                  (pros.prospectNumber && String(customer.prospectNumber) === String(pros.prospectNumber)) ||
+                  (pNo && (String(customer.prospectNumber) === pNo || String(customer.leadId) === pNo))
+                )
+              );
+
+              return (
+                <button
+                  key={pros.prospectNumber || pros.leadId || idx}
+                  type="button"
+                  onClick={() => {
+                    if (selectAccount) {
+                      selectAccount(pros, true);
+                    }
+                  }}
+                  className={`py-1.5 px-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-between gap-1 shadow-2xs ${
+                    isSelected
+                      ? 'bg-amber-600 text-white shadow-xs ring-2 ring-amber-400/40'
+                      : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200/80 hover:border-amber-300'
+                  }`}
+                  title={`Open Prospect ${idx + 1} in Edit Profile`}
+                >
+                  <div className="flex items-center gap-1 truncate">
+                    <FaStar className={`text-[9px] shrink-0 ${isSelected ? 'text-amber-200' : 'text-amber-500'}`} />
+                    <span className="truncate">Prospect {idx + 1}</span>
+                  </div>
+                  {pNo && (
+                    <span className={`text-[9px] font-mono shrink-0 ${isSelected ? 'text-amber-100' : 'text-amber-700'}`}>
+                      #{pNo}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 2. Customer Key Meta Data Table */}
       {customer && (

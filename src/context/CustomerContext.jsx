@@ -88,12 +88,14 @@ export const normalizeE00MIRecord = (e, fallbackGroup = 'BMW', fallbackMobile = 
   const phone = e.mobile || fallbackMobile || '';
   const emailVal = e.email || '';
   const isCustLink = e.linkType === 'CU';
-  const idVal = e.customerNumber || e.prospectNumber || e.eventKey || 'E00MI-LEAD';
+  const realProsNo = e.prospectNumber || e.leadId || '';
+  const idVal = realProsNo || e.customerNumber || (e.eventKey && e.eventKey !== 'E00MI-LEAD' ? e.eventKey : '') || (isCustLink ? e.customerNumber || '' : 'E00MI-LEAD');
 
   return {
     keyloopGroup: g,
-    customerNumber: idVal,
-    prospectNumber: e.prospectNumber || (isCustLink ? '' : idVal),
+    customerNumber: e.customerNumber || idVal,
+    prospectNumber: realProsNo,
+    leadId: e.leadId || '',
     eventKey: e.eventKey || '',
     linkType: e.linkType || 'PR',
     campaign: e.campaign || '',
@@ -378,16 +380,28 @@ export function CustomerProvider({ children }) {
 
     if (activeMobile) {
       setCurrentMobile(activeMobile);
-      fetchCustomerByMobile(activeMobile, groupParam, prefix);
+      fetchCustomerByMobile(activeMobile, groupParam, prefix).then(res => {
+        if (res && res.ok && (!res.customerMatches || res.customerMatches.length <= 1)) {
+          openCustomerForm('edit');
+        }
+      });
     } else if (emailParam) {
-      fetchCustomerByEmail(emailParam, groupParam, prefix);
+      fetchCustomerByEmail(emailParam, groupParam, prefix).then(res => {
+        if (res && res.ok) openCustomerForm('edit');
+      });
     } else if (prospectNoParam) {
-      fetchCustomerByProspectNumber(prospectNoParam, groupParam, prefix);
+      fetchCustomerByProspectNumber(prospectNoParam, groupParam, prefix).then(res => {
+        if (res && res.ok) openCustomerForm('edit');
+      });
     } else if (plateParam || vinParam) {
-      fetchCustomerByPlateOrVin(plateParam || vinParam, groupParam, prefix);
+      fetchCustomerByPlateOrVin(plateParam || vinParam, groupParam, prefix).then(res => {
+        if (res && res.ok) openCustomerForm('edit');
+      });
     } else if (customerNoParam) {
       setCurrentCustomerNumber(customerNoParam);
-      fetchCustomerByCustomerNumber(groupParam, customerNoParam, prefix);
+      fetchCustomerByCustomerNumber(groupParam, customerNoParam, prefix).then(res => {
+        if (res && res.ok) openCustomerForm('edit');
+      });
     } else {
       // Check if localStorage has cached profile data
       const cachedProfileStr = localStorage.getItem(prefix + 'customer_profile_data');
@@ -752,7 +766,7 @@ export function CustomerProvider({ children }) {
       let allResults = [];
       const activeGroup = group || currentGroup || '';
 
-      // 1. Concurrently query Customers, Prospects, and E00MI APIs in parallel
+      // 1. Concurrently query Customers and Prospects APIs in parallel
       const customerPromise = (async () => {
         try {
           if (activeGroup && activeGroup.trim() !== '') {
@@ -793,44 +807,46 @@ export function CustomerProvider({ children }) {
         }
       })();
 
-      const e00miPromise = (async () => {
-        try {
-          if (activeGroup && activeGroup.trim() !== '') {
-            const res = await apiFetch(`/api/v1/e00mi?group=${encodeURIComponent(activeGroup.trim())}&mobile=${cleanedMobile}`);
-            return (res && res.ok && Array.isArray(res.data)) ? res.data : [];
-          } else {
-            const groupPromises = KNOWN_GROUPS.map(g =>
-              apiFetch(`/api/v1/e00mi?group=${g}&mobile=${cleanedMobile}`)
-                .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
-                .catch(() => [])
-            );
-            const results = await Promise.all(groupPromises);
-            return results.flat();
-          }
-        } catch (e) {
-          console.warn("E00MI mobile query error:", e);
-          return [];
-        }
-      })();
-
-      const [rawCustomers, rawProspects, rawE00mi] = await Promise.all([
+      const [rawCustomers, rawProspects] = await Promise.all([
         customerPromise,
-        prospectPromise,
-        e00miPromise
+        prospectPromise
       ]);
 
+      // Deduplicate customers by customerNumber
+      const seenCustIds = new Set();
+      const uniqueCustomers = [];
+      for (const c of rawCustomers) {
+        const id = String(c.customerNumber || c.id || '').trim();
+        if (id) {
+          if (seenCustIds.has(id)) continue;
+          seenCustIds.add(id);
+        }
+        uniqueCustomers.push(c);
+      }
+
+      // Deduplicate prospects by leadId / prospectNumber to prevent cross-group duplicate records
+      const seenProspectIds = new Set();
+      const uniqueProspects = [];
+      for (const p of rawProspects) {
+        const id = String(p.leadId || p.prospectNumber || p.id || '').trim();
+        if (id) {
+          if (seenProspectIds.has(id)) continue;
+          seenProspectIds.add(id);
+        }
+        uniqueProspects.push(p);
+      }
+
       // Normalize Customers
-      const normalizedCustomers = rawCustomers.map(c => ({
+      const normalizedCustomers = uniqueCustomers.map(c => ({
         ...c,
         isProspect: false,
         customerType: c.customerType || 'CUSTOMER'
       }));
 
-      // Normalize Prospects
-      const normalizedProspects = [
-        ...rawProspects.map(p => normalizeProspectRecord(p, p.keyloopGroup || activeGroup, cleanedMobile)),
-        ...rawE00mi.map(e => normalizeE00MIRecord(e, e.brand || activeGroup, cleanedMobile))
-      ];
+      // Normalize Prospects strictly from /api/v1/prospects response
+      const normalizedProspects = uniqueProspects.map(p => 
+        normalizeProspectRecord(p, p.keyloopGroup || activeGroup, cleanedMobile)
+      );
 
       setCustomerMatches(normalizedCustomers);
       setProspectMatches(normalizedProspects);
@@ -848,9 +864,8 @@ export function CustomerProvider({ children }) {
         return { ok: false, message: `No prospect or customer found for mobile "${mobileNum}"` };
       }
 
-      // Check whether both categories or multiple accounts exist:
-      const hasBothCategories = normalizedCustomers.length > 0 && normalizedProspects.length > 0;
-      const hasMultipleAccounts = hasBothCategories || totalMatches > 1;
+      // Check whether multiple customer accounts exist:
+      const hasMultipleCustomers = normalizedCustomers.length > 1;
 
       // Select initial active record: prefer verified customer if available, else first prospect
       let activeItem = normalizedCustomers.length > 0 ? normalizedCustomers[0] : normalizedProspects[0];
@@ -883,11 +898,13 @@ export function CustomerProvider({ children }) {
         }
       }
 
-      // If multiple accounts found (Customer + Prospect or Multiple), pop up the Dual-Pane Account Selection Modal!
-      if (hasMultipleAccounts) {
+      // If multiple CUSTOMER profiles found, pop up the Customer Account Selection Modal!
+      // (Prospects are shown separately in sidebar buttons after the customer profile)
+      if (hasMultipleCustomers) {
         setIsAccountResolutionModalOpen(true);
       } else {
         setIsAccountResolutionModalOpen(false);
+        openCustomerForm('edit');
       }
 
       return {
@@ -1330,58 +1347,48 @@ export function CustomerProvider({ children }) {
     if (!q) return { ok: false, message: 'Please enter a search query' };
 
     const activeGroup = group || currentGroup || customer?.keyloopGroup || '';
+    let res = null;
 
     // 1. Email check
     if (q.includes('@')) {
-      return await fetchCustomerByEmail(q, activeGroup, prefix);
+      res = await fetchCustomerByEmail(q, activeGroup, prefix);
+    } else {
+      // 2. Mobile / Phone number check
+      const digitsOnly = q.replace(/\D/g, '');
+      const isPhoneLike = /^(?:\+?971|00971|05)\d{7,10}$/.test(q.replace(/[\s-]/g, '')) || 
+                          (digitsOnly.length >= 9 && digitsOnly.length <= 13 && /^(?:971|05|5)\d+/.test(digitsOnly));
+
+      if (isPhoneLike) {
+        res = await fetchCustomerByMobile(q, activeGroup, prefix);
+      } else if (/^(?:pr|lead)[-_\s]?\d+/i.test(q)) {
+        res = await fetchCustomerByProspectNumber(digitsOnly, activeGroup, prefix);
+      } else if (/^\d{4,8}$/.test(q)) {
+        res = await fetchCustomerByProspectNumber(q, activeGroup, prefix);
+        if (!res || !res.ok) {
+          res = await fetchCustomerByCustomerNumber(activeGroup, q, prefix);
+        }
+        if (!res || !res.ok) {
+          res = await fetchCustomerByMobile(q, activeGroup, prefix);
+        }
+        if (!res || !res.ok) {
+          res = await fetchCustomerByPlateOrVin(q, activeGroup, prefix);
+        }
+      } else {
+        res = await fetchCustomerByPlateOrVin(q, activeGroup, prefix);
+        if ((!res || !res.ok) && digitsOnly) {
+          res = await fetchCustomerByProspectNumber(digitsOnly, activeGroup, prefix);
+        }
+      }
     }
 
-    // 2. Mobile / Phone number check
-    // Matches UAE formats (050..., +971..., 971..., 00971...) or 9-14 digits
-    const digitsOnly = q.replace(/\D/g, '');
-    const isPhoneLike = /^(?:\+?971|00971|05)\d{7,10}$/.test(q.replace(/[\s-]/g, '')) || 
-                        (digitsOnly.length >= 9 && digitsOnly.length <= 13 && /^(?:971|05|5)\d+/.test(digitsOnly));
-
-    if (isPhoneLike) {
-      return await fetchCustomerByMobile(q, activeGroup, prefix);
+    if (res && res.ok) {
+      if (!res.customerMatches || res.customerMatches.length <= 1) {
+        openCustomerForm('edit');
+      }
+      return res;
     }
 
-    // 3. Prospect prefix check (PR-1234 or PR1234 or LEAD1234)
-    if (/^(?:pr|lead)[-_\s]?\d+/i.test(q)) {
-      const cleanProspect = digitsOnly;
-      const resP = await fetchCustomerByProspectNumber(cleanProspect, activeGroup, prefix);
-      if (resP && resP.ok) return resP;
-    }
-
-    // 4. Pure numeric query (4-8 digits): First search in prospect APIs, then customer API
-    if (/^\d{4,8}$/.test(q)) {
-      // Step 4a: Try prospect number FIRST
-      const resPros = await fetchCustomerByProspectNumber(q, activeGroup, prefix);
-      if (resPros && resPros.ok) return resPros;
-
-      // Step 4b: Try customer number if not found in prospects
-      const resCust = await fetchCustomerByCustomerNumber(activeGroup, q, prefix);
-      if (resCust && resCust.ok) return resCust;
-
-      // Step 4c: Try mobile in case it was a short phone search
-      const resMob = await fetchCustomerByMobile(q, activeGroup, prefix);
-      if (resMob && resMob.ok) return resMob;
-
-      // Step 4d: Fallback to VIN / Plate
-      return await fetchCustomerByPlateOrVin(q, activeGroup, prefix);
-    }
-
-    // 5. Default alphanumeric: Plate or VIN search
-    const resPlateVin = await fetchCustomerByPlateOrVin(q, activeGroup, prefix);
-    if (resPlateVin && resPlateVin.ok) return resPlateVin;
-
-    // 6. If plate/VIN fails, check prospect by query string
-    if (digitsOnly) {
-      const resProsFallback = await fetchCustomerByProspectNumber(digitsOnly, activeGroup, prefix);
-      if (resProsFallback && resProsFallback.ok) return resProsFallback;
-    }
-
-    return resPlateVin || { ok: false, message: `No customer, prospect, or lead found matching "${q}"` };
+    return res || { ok: false, message: `No customer, prospect, or lead found matching "${q}"` };
   };
 
   const selectCustomer = (idx) => {

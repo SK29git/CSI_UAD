@@ -48,12 +48,27 @@ export function getFullMobileNumber(customer, contextMobile) {
       }
     }
 
-    // 2. Determine unmasked suffix for customer if phone is masked
-    const maskedStr = customer 
-      ? [customer.mobile, customer.mobileRaw, customer.phone, customer.telephone].filter(Boolean).join(' ') 
-      : '';
-    const suffixMatch = maskedStr.match(/(\d{2,6})(?:\D*)$/);
-    const suffix = suffixMatch ? suffixMatch[1] : '';
+    // 2. Collect all unmasked suffixes across all phone slots of this customer
+    const customerPhoneFields = customer ? [
+      customer.mobile,
+      customer.mobileRaw,
+      customer.mobilePhone,
+      customer.phone,
+      customer.telephone,
+      customer.phone1,
+      customer.phone2,
+      customer.phone3,
+      customer.phone4,
+      customer.telephoneNumber1,
+      customer.telephoneNumber2,
+      customer.telephoneNumber3,
+      customer.telephoneNumber4
+    ].filter(Boolean) : [];
+
+    const validSuffixes = customerPhoneFields.map(f => {
+      const d = String(f).replace(/\D/g, '');
+      return d.length >= 2 ? d : '';
+    }).filter(Boolean);
 
     // 3. Check external candidate sources (context, URL, cache)
     const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
@@ -84,9 +99,9 @@ export function getFullMobileNumber(customer, contextMobile) {
     for (const c of externalCandidates) {
       if (isFullMobileNumber(c)) {
         const cleanDigits = String(c).replace(/[^0-9]/g, '');
-        // If customer has a masked phone suffix, candidate MUST end with that suffix to be valid for this customer!
-        if (suffix) {
-          if (cleanDigits.endsWith(suffix)) {
+        // If customer has phone slot suffixes, candidate MUST match one of the customer's phone slots!
+        if (validSuffixes.length > 0) {
+          if (validSuffixes.some(sfx => cleanDigits.endsWith(sfx))) {
             return cleanDigits;
           }
         } else {

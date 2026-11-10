@@ -296,16 +296,22 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
 
       // Match resolvedMobile against the 4 phone slots
       const cleanDigits = (resolvedMobile || '').replace(/\D/g, '');
-      const lastDigits = cleanDigits.slice(-4);
 
-      if (cleanDigits) {
-        if (p4 && lastDigits && String(p4).replace(/\D/g, '').endsWith(lastDigits)) {
+      if (cleanDigits && cleanDigits.length >= 7) {
+        const getSlotDigits = (val) => String(val || '').replace(/\D/g, '');
+        const s1 = getSlotDigits(p1);
+        const s2 = getSlotDigits(p2);
+        const s3 = getSlotDigits(p3);
+        const s4 = getSlotDigits(p4);
+
+        // Check which slot's unmasked suffix actually matches the end of resolvedMobile!
+        if (s4 && s4.length >= 2 && cleanDigits.endsWith(s4)) {
           p4 = resolvedMobile;
-        } else if (p3 && lastDigits && String(p3).replace(/\D/g, '').endsWith(lastDigits)) {
+        } else if (s3 && s3.length >= 2 && cleanDigits.endsWith(s3)) {
           p3 = resolvedMobile;
-        } else if (p2 && lastDigits && String(p2).replace(/\D/g, '').endsWith(lastDigits)) {
+        } else if (s2 && s2.length >= 2 && cleanDigits.endsWith(s2)) {
           p2 = resolvedMobile;
-        } else if (p1 && lastDigits && String(p1).replace(/\D/g, '').endsWith(lastDigits)) {
+        } else if (s1 && s1.length >= 2 && cleanDigits.endsWith(s1)) {
           p1 = resolvedMobile;
         } else if (customer.preferredPhoneSlot === '4' || customer.preferredPhoneCode === 'PHONE4') {
           p4 = resolvedMobile;
@@ -313,9 +319,11 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
           p2 = resolvedMobile;
         } else if (customer.preferredPhoneSlot === '3' || customer.preferredPhoneCode === 'PHONE3') {
           p3 = resolvedMobile;
+        } else if (customer.preferredPhoneSlot === '1' || customer.preferredPhoneCode === 'PHONE1') {
+          p1 = resolvedMobile;
         } else if (!p1 && !p2 && !p3 && !p4) {
           p1 = resolvedMobile;
-        } else if (p1) {
+        } else if (!p1) {
           p1 = resolvedMobile;
         }
       }
