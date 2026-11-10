@@ -93,43 +93,31 @@ export default function CreateComplaintView() {
   const [complaint, setComplaint] = useState(
     "Car not ready on the promised date",
   );
-  // Helper: Generate Complaint reference: Date(Day,Month,Year) + 4 digits from the last customer's name / customer id
-  const generateComplaintReference = (name, custId) => {
+  // Helper: Generate Complaint reference strictly from Date(Day,Month,Year) + last 4 letters of customer's last name (e.g. 10112026INGH)
+  const generateComplaintReference = (name) => {
     const now = new Date();
     const day = String(now.getDate()).padStart(2, "0");
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const year = String(now.getFullYear());
     const datePart = `${day}${month}${year}`;
 
-    const nameStr = String(name || "").trim();
-    const digitsFromName = nameStr.replace(/\D/g, "");
-    let suffix = "";
+    const words = String(name || "").trim().split(/\s+/).filter(Boolean);
+    const lastWord = words.length > 0 ? words[words.length - 1].replace(/[^a-zA-Z0-9]/g, "").toUpperCase() : "";
+    const cleanFullName = String(name || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 
-    if (digitsFromName.length >= 4) {
-      suffix = digitsFromName.slice(-4);
-    } else {
-      const idDigits = String(custId || "").replace(/\D/g, "");
-      const combined = digitsFromName + idDigits;
-      if (combined.length >= 4) {
-        suffix = combined.slice(-4);
-      } else {
-        // Fallback: character codes from last name / name
-        const words = nameStr.split(/\s+/).filter(Boolean);
-        const lastWord = words.length > 0 ? words[words.length - 1] : "CUST";
-        let hash = 0;
-        for (let i = 0; i < lastWord.length; i++) {
-          hash = (hash * 31 + lastWord.charCodeAt(i)) % 10000;
-        }
-        suffix = String(hash).padStart(4, "0");
-      }
+    let suffix = "CUST";
+    if (lastWord.length >= 4) {
+      suffix = lastWord.slice(-4);
+    } else if (cleanFullName.length >= 4) {
+      suffix = cleanFullName.slice(-4);
+    } else if (cleanFullName.length > 0) {
+      suffix = cleanFullName.padStart(4, "X");
     }
 
     return `${datePart}${suffix}`;
   };
 
-  const [externalRef, setExternalRef] = useState(() =>
-    generateComplaintReference(initialCustomerName, initialCustomerNo),
-  );
+  const [externalRef, setExternalRef] = useState("");
 
   // Cascading change handlers
   const handleDepartmentChange = (newDept) => {
@@ -193,10 +181,6 @@ export default function CreateComplaintView() {
         );
         if (matchingBranch) setBranch(matchingBranch);
       }
-      // Set external complaint reference for active customer
-      setExternalRef(
-        generateComplaintReference(cName || customerName, cId || customerId),
-      );
     }
   }, [customer, currentMobile]);
 
@@ -243,6 +227,8 @@ export default function CreateComplaintView() {
     setSubmitting(true);
     setToast(null);
 
+    const generatedRef = generateComplaintReference(customerName);
+
     const details = {
       company: group || "Geely",
       customerId: String(customerId || "").trim(),
@@ -256,9 +242,7 @@ export default function CreateComplaintView() {
       department: department || "Service",
       source: source || "Customer Call",
       complaintGroup: complaintGroup || availableGroups[0] || "Process",
-      externalRef:
-        String(externalRef || "").trim() ||
-        generateComplaintReference(customerName, customerId),
+      externalRef: String(externalRef || "").trim() || generatedRef,
     };
 
     try {
@@ -266,8 +250,21 @@ export default function CreateComplaintView() {
 
       if (res && res.ok) {
         setIsSuccessCreated(true);
-        // Clear complaint description
+        const returnedRef =
+          res.referenceId || res.data?.referenceId || details.externalRef;
+        const keyloopStatus =
+          res.keyloopStatus || res.data?.keyloop?.status || null;
+
+        // Show success toast notification with API returned referenceId and status
+        setToast({
+          isError: false,
+          message: "Complaint created successfully!",
+          reference: returnedRef,
+          keyloopStatus,
+        });
+        // Clear complaint description and externalRef
         setComplaint("");
+        setExternalRef("");
         // Keep "Created" state with check tick for 5 seconds
         setTimeout(() => {
           setIsSuccessCreated(false);
@@ -291,14 +288,41 @@ export default function CreateComplaintView() {
 
   return (
     <div className="flex flex-col gap-3 text-xs w-full">
-      {/* ERROR TOAST MESSAGE (Only on failure) */}
-      {toast && toast.isError && (
-        <div className="p-4 rounded-xl flex items-center justify-between gap-2.5 shadow-xs border bg-rose-50 border-rose-200 text-rose-900 animate-fade-in">
+      {/* TOAST MESSAGE (Success & Error notifications) */}
+      {toast && (
+        <div
+          className={`p-4 rounded-xl flex items-center justify-between gap-2.5 shadow-xs border animate-fade-in ${
+            toast.isError
+              ? "bg-rose-50 border-rose-200 text-rose-900"
+              : "bg-emerald-50 border-emerald-200 text-emerald-900"
+          }`}
+        >
           <div className="flex items-center gap-2.5">
-            <div className="w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] text-white shadow-2xs bg-rose-500 shrink-0">
-              ✕
+            <div
+              className={`w-5 h-5 rounded-full flex items-center justify-center font-bold text-[10px] text-white shadow-2xs shrink-0 ${
+                toast.isError ? "bg-rose-500" : "bg-emerald-600"
+              }`}
+            >
+              {toast.isError ? "✕" : "✓"}
             </div>
-            <h4 className="font-bold text-xs">{toast.message}</h4>
+            <div>
+              <h4 className="font-bold text-xs">{toast.message}</h4>
+              {!toast.isError && toast.reference && (
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <p className="text-[11px] text-emerald-800 font-medium">
+                    Complaint Reference:{" "}
+                    <span className="font-mono font-bold text-emerald-950 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-300">
+                      {toast.reference}
+                    </span>
+                  </p>
+                  {toast.keyloopStatus && (
+                    <span className="text-[10px] font-bold text-blue-800 bg-blue-100/90 px-1.5 py-0.5 rounded border border-blue-200">
+                      Keyloop: {toast.keyloopStatus}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <button
             type="button"
@@ -598,22 +622,21 @@ export default function CreateComplaintView() {
               </div>
             </div>
 
-            {/* 12. External Reference */}
+            {/* 12. External Reference (Editable by Agent) */}
             <div>
               <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                 External Reference
               </label>
-              <div className="w-full h-8 px-2 bg-slate-50 border border-slate-200/90 rounded-lg shadow-2xs flex items-center transition-all">
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
                 <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
                   <FaTag />
                 </div>
                 <input
                   type="text"
                   value={externalRef}
-                  readOnly
-                  disabled
-                  placeholder="Auto-generated Reference"
-                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-700 text-xs font-mono cursor-not-allowed select-none"
+                  onChange={(e) => setExternalRef(e.target.value)}
+                  placeholder="Enter external reference (optional)"
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs font-mono placeholder:text-gray-400 placeholder:font-sans"
                 />
               </div>
             </div>

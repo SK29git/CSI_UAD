@@ -241,8 +241,6 @@ export default function CenterNavTabs({
 
   const eventSubTabs = [
     { id: "Customer Event", label: "Customer Event" },
-    { id: "One Event", label: "Inspect One Event" },
-    { id: "Sales Executives", label: "Sales Executives" },
   ];
 
   let currentSubTabs = complaintSubTabs;

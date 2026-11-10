@@ -40,7 +40,8 @@ import {
   FaChevronRight,
   FaSun,
   FaCloudSun,
-  FaMoon
+  FaMoon,
+  FaLock
 } from 'react-icons/fa';
 
 /**
@@ -227,6 +228,12 @@ export default function ServiceBookingMainPanel() {
   const [createdBy, setCreatedBy] = useState(initialCreatedBy);
   const [wipNumber, setWipNumber] = useState("");
 
+  // Determine active brand/group and whether it is BMW
+  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const urlGroup = urlParams ? urlParams.get('group') : null;
+  const activeGroup = (urlGroup || keyloopGroup || contextGroup || customer?.keyloopGroup || customer?.brand || 'BMW').trim().toUpperCase();
+  const isBMW = activeGroup === 'BMW';
+
   const [submitting, setSubmitting] = useState(false);
   const [apiResponse, setApiResponse] = useState(null);
 
@@ -248,6 +255,12 @@ export default function ServiceBookingMainPanel() {
       if (customer?.customerNumber || customer?.id) setCustomerNumber(customer?.customerNumber || customer?.id);
     }
   }, [customer]);
+
+  useEffect(() => {
+    if (contextGroup) {
+      setKeyloopGroup(contextGroup);
+    }
+  }, [contextGroup]);
 
   useEffect(() => {
     if (selectedVin) {
@@ -277,7 +290,7 @@ export default function ServiceBookingMainPanel() {
     return b;
   };
 
-  const detectedMake = vehicles?.[0]?.brand || customer?.brand || contextGroup || customer?.keyloopGroup || 'BMW';
+  const detectedMake = vehicles?.[0]?.brand || customer?.brand || contextGroup || customer?.keyloopGroup || 'Geely';
   const [serviceMake, setServiceMake] = useState(() => normalizeBrand(detectedMake));
 
   const [geelyPhone, setGeelyPhone] = useState(customer?.mobileRaw || customer?.mobile || '0543408597');
@@ -331,8 +344,9 @@ export default function ServiceBookingMainPanel() {
     }
   }, [customer, vehicles, contextGroup]);
 
-  // Load Service Locations & Recommended Services on mount or mode switch
+  // Load Service Locations & Recommended Services on mount or mode switch (Geely only)
   useEffect(() => {
+    if (isBMW) return;
     let isMounted = true;
     const fetchInitialServiceMeta = async () => {
       setGeelyLocationsLoading(true);
@@ -376,10 +390,11 @@ export default function ServiceBookingMainPanel() {
 
     fetchInitialServiceMeta();
     return () => { isMounted = false; };
-  }, []);
+  }, [isBMW]);
 
   // Fetch available dates dynamically based on selected brand (BMW, MINI, Rolls-Royce, Geely)
   useEffect(() => {
+    if (isBMW) return;
     if (!geelyLocationId || !geelySelectedProductId) return;
     let isMounted = true;
     const fetchDates = async () => {
@@ -387,7 +402,7 @@ export default function ServiceBookingMainPanel() {
       try {
         const res = await getAppointmentDates({
           dealershipLocationId: geelyLocationId,
-          make: serviceMake || 'BMW',
+          make: serviceMake || 'Geely',
           serviceProductIds: [geelySelectedProductId]
         });
         if (isMounted && res && res.ok && res.data) {
@@ -413,10 +428,11 @@ export default function ServiceBookingMainPanel() {
 
     fetchDates();
     return () => { isMounted = false; };
-  }, [geelyLocationId, geelySelectedProductId, serviceMake]);
+  }, [geelyLocationId, geelySelectedProductId, serviceMake, isBMW]);
 
   // Fetch available timeslots when date changes
   useEffect(() => {
+    if (isBMW) return;
     if (!geelyLocationId || !geelySelectedProductId || !geelySelectedDate) return;
     let isMounted = true;
     const fetchTimes = async () => {
@@ -447,10 +463,11 @@ export default function ServiceBookingMainPanel() {
 
     fetchTimes();
     return () => { isMounted = false; };
-  }, [geelyLocationId, geelySelectedProductId, geelySelectedDate]);
+  }, [geelyLocationId, geelySelectedProductId, geelySelectedDate, isBMW]);
 
   // Fetch Advisors for selected location
   useEffect(() => {
+    if (isBMW) return;
     if (!geelyLocationId) return;
     getServiceAdvisors(geelyLocationId).then(res => {
       if (res && res.ok && res.data) {
@@ -458,7 +475,7 @@ export default function ServiceBookingMainPanel() {
         if (Array.isArray(advList)) setGeelyAdvisors(advList);
       }
     }).catch(e => console.warn("Advisors fetch failed:", e));
-  }, [geelyLocationId]);
+  }, [geelyLocationId, isBMW]);
 
   // Find Customer by phone
   const handleFindGeelyCustomer = async () => {
@@ -996,9 +1013,25 @@ export default function ServiceBookingMainPanel() {
         </button>
       </div>
 
-      {/* 1. CREATE SERVICE BOOKING FORM */}
+      {/* 1. CREATE SERVICE BOOKING FORM (Only tab disabled for BMW) */}
       {activeToolTab === 'CreateBooking' && (
-        <div className="flex flex-col gap-4">
+        <div className="relative w-full flex flex-col gap-4">
+          {/* Notice for BMW */}
+          {isBMW && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-900 px-3.5 py-2 rounded-lg flex items-center gap-2 text-xs font-medium">
+              <FaLock className="text-amber-600 text-xs shrink-0" />
+              <span>Service booking is not available for group BMW.</span>
+            </div>
+          )}
+
+          {isBMW && (
+            <div
+              className="absolute inset-0 z-50 cursor-not-allowed select-none bg-transparent"
+              title="Service booking is not available for group BMW"
+            />
+          )}
+
+          <div className={`flex flex-col gap-4 ${isBMW ? 'pointer-events-none select-none' : ''}`}>
 
           {/* Integration Mode Switcher Bar */}
           <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1050,7 +1083,7 @@ export default function ServiceBookingMainPanel() {
                 <div className="bg-white rounded-xl border border-emerald-300 shadow-sm overflow-hidden text-xs animate-fade-in">
                   <div className="px-4 py-2.5 bg-emerald-600 text-white flex items-center justify-between font-bold">
                     <span className="flex items-center gap-2 text-sm">
-                      <FaCheckCircle /> Service Booking Confirmed ({serviceMake})!
+                      <FaCheckCircle /> Service Booking Confirmed!
                     </span>
                     <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase font-mono font-extrabold">
                       APPOINTMENT #{geelyBookingResult.data?.appointmentId || 'CONFIRMED'}
@@ -1127,9 +1160,6 @@ export default function ServiceBookingMainPanel() {
                     <div>
                       <div className="flex items-center gap-2">
                         <h2 className="font-extrabold text-gray-900 text-sm leading-tight">AGMC Universal Service Booking</h2>
-                        <span className="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
-                          Multi-Brand DMS Engine: {serviceMake}
-                        </span>
                       </div>
                       <p className="text-[11px] font-semibold text-gray-500 mt-0.5">
                         Direct Workshop Management System • Automated Appointment Scheduling
@@ -1140,44 +1170,6 @@ export default function ServiceBookingMainPanel() {
 
                 <form onSubmit={handleSubmitGeelyBooking} className="p-3.5 sm:p-4 space-y-3 text-xs bg-slate-50/40">
                   
-                  {/* STEP 0: Vehicle Brand / Make Selector Strip */}
-                  <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaCar className="text-blue-600 text-xs" /> Target Brand / Make <span className="text-rose-500 font-bold">*</span>
-                      </label>
-                      <span className="text-[10px] text-gray-500 font-medium">
-                        Selected: <span className="font-bold text-blue-700">{serviceMake}</span> (Used for DMS availability & routing)
-                      </span>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {['BMW', 'MINI', 'Rolls-Royce'].map((br) => (
-                        <button
-                          key={br}
-                          type="button"
-                          onClick={() => setServiceMake(br)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer border ${
-                            serviceMake.toUpperCase() === br.toUpperCase()
-                              ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                              : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'
-                          }`}
-                        >
-                          {br}
-                        </button>
-                      ))}
-                      <div className="flex items-center gap-1 ml-auto">
-                        <span className="text-[10px] text-gray-500 font-semibold">Other:</span>
-                        <input
-                          type="text"
-                          value={serviceMake}
-                          onChange={(e) => setServiceMake(e.target.value)}
-                          placeholder="Brand name"
-                          className="p-1 px-2.5 bg-gray-50 border border-gray-300 rounded-md text-xs font-bold w-28 text-gray-800 focus:bg-white focus:outline-none focus:border-blue-600"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
                   {/* STEP 1: Customer Phone & License Plate */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                     
@@ -1496,7 +1488,7 @@ export default function ServiceBookingMainPanel() {
                       ) : (
                         <>
                           <FaPaperPlane className="text-sm" />
-                          <span>Confirm & Create Service Booking ({serviceMake})</span>
+                          <span>Confirm & Create Service Booking</span>
                         </>
                       )}
                     </button>
@@ -1643,6 +1635,7 @@ export default function ServiceBookingMainPanel() {
             </div>
           )}
 
+          </div>
         </div>
       )}
 
