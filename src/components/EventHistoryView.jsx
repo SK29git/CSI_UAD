@@ -891,18 +891,18 @@ export default function EventHistoryView({
               <div className="overflow-x-auto">
                 <table className="w-full text-[11px]">
                   <thead>
-                    <tr className="bg-slate-700 text-white text-left">
-                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Due On</th>
-                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">At</th>
-                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">By</th>
-                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Type</th>
-                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Reference</th>
-                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Reg No</th>
-                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Strength</th>
-                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Closed On</th>
-                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">At</th>
-                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Closed By</th>
-                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap w-0"></th>
+                    <tr className="bg-slate-700 text-white text-center">
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap text-center">Due On</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap text-center">At</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap text-center">By</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap text-center">Type</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap text-center">Reference</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap text-center">Reg No</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap text-center">Strength</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap text-center">Closed On</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap text-center">At</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap text-center">Closed By</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap text-center">Content</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -974,35 +974,35 @@ export default function EventHistoryView({
                       }`}
                     >
                       {/* Due On */}
-                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-700 font-semibold">
+                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-700 font-semibold text-center">
                         {formattedDueDate}
                       </td>
                       {/* At */}
-                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-500">
+                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-500 text-center">
                         {formattedDueTime}
                       </td>
                       {/* By */}
-                      <td className="px-2 py-1.5 whitespace-nowrap text-[11px] text-slate-700 font-medium max-w-[120px] truncate" title={ev.creatorName || ev.followupUsername || ""}>
+                      <td className="px-2 py-1.5 whitespace-nowrap text-[11px] text-slate-700 font-medium max-w-[120px] truncate text-center" title={ev.creatorName || ev.followupUsername || ""}>
                         {ev.creatorName || ev.followupUsername || "—"}
                       </td>
                       {/* Type */}
-                      <td className="px-2 py-1.5 whitespace-nowrap">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold border ${getEventTypeColor(ev.eventType)}`}>
+                      <td className="px-2 py-1.5 whitespace-nowrap text-center">
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-extrabold border ${getEventTypeColor(ev.eventType)}`}>
                           {ev.eventType || "—"}
                         </span>
                       </td>
                       {/* Reference */}
-                      <td className="px-2 py-1.5 text-[11px] text-slate-700 font-semibold max-w-[180px] truncate" title={ev.reference || ev.description || ""}>
+                      <td className="px-2 py-1.5 text-[11px] text-slate-700 font-semibold max-w-[180px] truncate text-center" title={ev.reference || ev.description || ""}>
                         {ev.reference || ev.description || "—"}
                       </td>
                       {/* Reg No */}
-                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-600">
+                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-600 text-center">
                         {ev.vehicleNumber || ev.registrationNumber || "—"}
                       </td>
                       {/* Strength */}
-                      <td className="px-2 py-1.5 whitespace-nowrap">
+                      <td className="px-2 py-1.5 whitespace-nowrap text-center">
                         {hasStrength && strengthVal > 0 ? (
-                          <div className="flex gap-0.5" title={`Strength: ${strengthVal}/4`}>
+                          <div className="flex justify-center gap-0.5" title={`Strength: ${strengthVal}/4`}>
                             {strengthDots.map((filled, si) => (
                               <span
                                 key={si}
@@ -1019,43 +1019,45 @@ export default function EventHistoryView({
                         )}
                       </td>
                       {/* Closed On */}
-                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-500">
+                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-500 text-center">
                         {formattedClosedDate}
                       </td>
                       {/* Closed At */}
-                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-500">
+                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-500 text-center">
                         {formattedClosedTime}
                       </td>
                       {/* Closed By */}
-                      <td className="px-2 py-1.5 whitespace-nowrap text-[11px] text-slate-600 max-w-[100px] truncate" title={ev.closedByUser || ev.lastUpdateUser || ""}>
+                      <td className="px-2 py-1.5 whitespace-nowrap text-[11px] text-slate-600 max-w-[100px] truncate text-center" title={ev.closedByUser || ev.lastUpdateUser || ""}>
                         {ev.closedByUser || ev.lastUpdateUser || "—"}
                       </td>
-                      {/* View Button */}
-                      <td className="px-2 py-1.5 whitespace-nowrap text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isExpanded) {
-                              setExpandedOneEventId(null);
-                            } else {
-                              fetchOneEvent(eventNum);
-                            }
-                          }}
-                          className={`text-[10px] font-extrabold px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer border ${
-                            isExpanded
-                              ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                              : "bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
-                          }`}
-                        >
-                          {isOneEventLoading ? (
-                            <FaSpinner className="animate-spin text-[9px]" />
-                          ) : isExpanded ? (
-                            <FaChevronUp className="text-[9px]" />
-                          ) : (
-                            <FaChevronDown className="text-[9px]" />
-                          )}
-                          <span>{isExpanded ? "Hide" : "View"}</span>
-                        </button>
+                      {/* Content (View Button) */}
+                      <td className="px-2 py-1.5 whitespace-nowrap text-center">
+                        <div className="flex justify-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isExpanded) {
+                                setExpandedOneEventId(null);
+                              } else {
+                                fetchOneEvent(eventNum);
+                              }
+                            }}
+                            className={`text-[10px] font-extrabold px-2.5 py-1 rounded-md transition-all flex items-center justify-center gap-1 cursor-pointer border ${
+                              isExpanded
+                                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                                : "bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
+                            }`}
+                          >
+                            {isOneEventLoading ? (
+                              <FaSpinner className="animate-spin text-[9px]" />
+                            ) : isExpanded ? (
+                              <FaChevronUp className="text-[9px]" />
+                            ) : (
+                              <FaChevronDown className="text-[9px]" />
+                            )}
+                            <span>{isExpanded ? "Hide" : "View"}</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
 
