@@ -48,7 +48,7 @@ import {
  * AvailableDatesCalendar - Interactive calendar enforcing that ONLY dates
  * returned in `availableDates` from /api/service/appointment-dates are selectable.
  */
-function AvailableDatesCalendar({
+export function AvailableDatesCalendar({
   availableDates = [],
   selectedDate,
   onSelectDate,

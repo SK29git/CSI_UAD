@@ -1,7 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useCustomer } from '../context/CustomerContext';
-import { apiFetch, getServiceAppointments, deleteServiceAppointment, createSalesFollowUpCase } from '../utils/api';
+import { 
+  apiFetch, 
+  getServiceAppointments, 
+  deleteServiceAppointment, 
+  createSalesFollowUpCase,
+  createServiceBooking,
+  getServiceLocations,
+  getServiceRecommendedServices,
+  getAppointmentDates,
+  getAppointmentTimes,
+  getServiceVehicleDetails
+} from '../utils/api';
+import { AvailableDatesCalendar } from './ServiceBookingMainPanel';
 import { 
   FaCalendarCheck, 
   FaCar, 
@@ -24,7 +36,15 @@ import {
   FaCommentDots,
   FaCalendarPlus,
   FaPaperPlane,
-  FaClipboardList
+  FaClipboardList,
+  FaEdit,
+  FaSun,
+  FaCloudSun,
+  FaMoon,
+  FaTimes,
+  FaChevronLeft,
+  FaChevronRight,
+  FaMapMarkerAlt
 } from 'react-icons/fa';
 
 const formatDate = (dateStr) => {
@@ -80,6 +100,33 @@ export default function ServiceOpenBookingsView() {
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelToast, setCancelToast] = useState(null);
+
+  // Modify Modal State
+  const [modifyModalOpen, setModifyModalOpen] = useState(false);
+  const [bookingToModify, setBookingToModify] = useState(null);
+  const [modifying, setModifying] = useState(false);
+  const [modifiedSuccess, setModifiedSuccess] = useState(false);
+  const [modifiedBookingId, setModifiedBookingId] = useState(null);
+  const [modifyError, setModifyError] = useState(null);
+
+  const [modifyPlate, setModifyPlate] = useState('');
+  const [modifyVehicleId, setModifyVehicleId] = useState(15);
+  const [modifyLocationId, setModifyLocationId] = useState(40);
+  const [modifyServiceProductId, setModifyServiceProductId] = useState('07143ffd-184e-43b5-a8de-f68d63199baa');
+  const [modifySelectedDate, setModifySelectedDate] = useState('');
+  const [modifySelectedTimeSlot, setModifySelectedTimeSlot] = useState('');
+  const [modifyAdvisorId, setModifyAdvisorId] = useState('');
+  const [modifyMileage, setModifyMileage] = useState(5000);
+  const [modifyMileageUnit, setModifyMileageUnit] = useState('KM');
+  const [modifyCustomerNotes, setModifyCustomerNotes] = useState('');
+
+  const [modifyLocations, setModifyLocations] = useState([]);
+  const [modifyServices, setModifyServices] = useState([]);
+  const [modifyAvailableDates, setModifyAvailableDates] = useState([]);
+  const [modifyDatesLoading, setModifyDatesLoading] = useState(false);
+  const [modifyTimeSlots, setModifyTimeSlots] = useState([]);
+  const [modifyTimesLoading, setModifyTimesLoading] = useState(false);
+  const [modifyActivePeriodTab, setModifyActivePeriodTab] = useState('Morning');
 
   // KEYLOOP Flow State
   const [openBookings, setOpenBookings] = useState([]);
@@ -250,6 +297,253 @@ export default function ServiceOpenBookingsView() {
       });
     } finally {
       setCancelling(false);
+    }
+  };
+
+  // =========================================================================
+  // MODIFY APPOINTMENT FLOW (Direct DMS / Omnichannel)
+  // =========================================================================
+
+  const handleOpenModifyModal = async (apt) => {
+    setBookingToModify(apt);
+    setModifyModalOpen(true);
+    setModifying(false);
+    setModifiedSuccess(false);
+    setModifyError(null);
+
+    const plate = apt.vehicle?.licensePlate || apt.licensePlateNo || geelyPlate || '240153';
+    setModifyPlate(plate);
+
+    // Initial vehicle ID fallback
+    let vId = apt.vehicle?.vehicleId || 15;
+    if (typeof vId !== 'number' || isNaN(vId)) vId = 15;
+    setModifyVehicleId(vId);
+
+    const locId = apt.details?.dealershipLocationId || apt.dealershipLocationId || 40;
+    setModifyLocationId(Number(locId) || 40);
+
+    const mileageVal = apt.details?.checkInMileage?.value || 5000;
+    setModifyMileage(mileageVal);
+    setModifyMileageUnit(apt.details?.checkInMileage?.unit || 'KM');
+
+    const notesVal = apt.details?.notes || apt.workshopComments || apt.comments || '';
+    setModifyCustomerNotes(notesVal && notesVal !== 'No workshop comments recorded.' ? notesVal : '');
+
+    const existingDate = apt.appointment?.dueInDateTime ? apt.appointment.dueInDateTime.split('T')[0] : (apt.startDate || '2026-11-02');
+    const existingSlot = apt.appointment?.dropOffTime || apt.appointment?.time || '10:15-10:30';
+    setModifySelectedDate(existingDate);
+    setModifySelectedTimeSlot(existingSlot);
+
+    const advId = apt.resources?.assignedAdvisor?.serviceAdvisorId || apt.advisorId || '';
+    setModifyAdvisorId(advId);
+
+    // Look up numeric sabVehicleId from vehicle details API
+    try {
+      const vRes = await getServiceVehicleDetails(plate);
+      if (vRes && vRes.ok && vRes.data?.data?.sabVehicleId) {
+        setModifyVehicleId(Number(vRes.data.data.sabVehicleId));
+      }
+    } catch (e) {
+      console.warn("Could not look up vehicle ID:", e);
+    }
+
+    // Load locations if empty
+    if (modifyLocations.length === 0) {
+      try {
+        const locRes = await getServiceLocations('workshop');
+        if (locRes && locRes.ok) {
+          const lList = locRes.data?.data || locRes.data?.result || locRes.data || [];
+          if (Array.isArray(lList) && lList.length > 0) setModifyLocations(lList);
+        }
+      } catch (e) {}
+    }
+
+    // Load recommended services if empty
+    if (modifyServices.length === 0) {
+      try {
+        const srvRes = await getServiceRecommendedServices('workshop');
+        if (srvRes && srvRes.ok) {
+          const sList = srvRes.data?.result || srvRes.data?.data || srvRes.data || [];
+          if (Array.isArray(sList) && sList.length > 0) setModifyServices(sList);
+        }
+      } catch (e) {}
+    }
+  };
+
+  // Fetch available dates when modify modal is open or location changes
+  useEffect(() => {
+    if (!modifyModalOpen) return;
+    let isMounted = true;
+    const fetchDates = async () => {
+      setModifyDatesLoading(true);
+      try {
+        const res = await getAppointmentDates({
+          dealershipLocationId: Number(modifyLocationId) || 40,
+          make: 'Geely',
+          serviceProductIds: [modifyServiceProductId || "07143ffd-184e-43b5-a8de-f68d63199baa"]
+        });
+        if (isMounted && res && res.ok && res.data) {
+          const dates = res.data.result?.availableDates || res.data.data?.availableDates || [];
+          setModifyAvailableDates(dates);
+          if (dates.length > 0 && !dates.includes(modifySelectedDate)) {
+            setModifySelectedDate(dates[0]);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load available dates:", err);
+      } finally {
+        if (isMounted) setModifyDatesLoading(false);
+      }
+    };
+    fetchDates();
+    return () => { isMounted = false; };
+  }, [modifyModalOpen, modifyLocationId, modifyServiceProductId]);
+
+  // Fetch available times when date changes in modify modal
+  useEffect(() => {
+    if (!modifyModalOpen || !modifySelectedDate) return;
+    let isMounted = true;
+    const fetchTimes = async () => {
+      setModifyTimesLoading(true);
+      try {
+        const res = await getAppointmentTimes({
+          selectedDate: modifySelectedDate,
+          dealershipLocationId: Number(modifyLocationId) || 40,
+          serviceProductIds: [modifyServiceProductId || "07143ffd-184e-43b5-a8de-f68d63199baa"]
+        });
+        if (isMounted && res && res.ok && res.data) {
+          const slots = res.data.result?.timeSlots || res.data.data?.timeSlots || [];
+          setModifyTimeSlots(slots);
+          if (slots.length > 0) {
+            const exists = slots.find(s => s.timeSlot === modifySelectedTimeSlot);
+            const chosen = exists || slots[0];
+            setModifySelectedTimeSlot(chosen.timeSlot);
+            if (chosen.advisorId) setModifyAdvisorId(String(chosen.advisorId));
+
+            const match = chosen.timeSlot.match(/^(\d{1,2}):/);
+            const firstHour = match ? parseInt(match[1], 10) : 9;
+            if (firstHour >= 16) setModifyActivePeriodTab('Evening');
+            else if (firstHour >= 12) setModifyActivePeriodTab('Afternoon');
+            else setModifyActivePeriodTab('Morning');
+          } else {
+            setModifyTimeSlots([]);
+            setModifySelectedTimeSlot('');
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load timeslots:", err);
+      } finally {
+        if (isMounted) setModifyTimesLoading(false);
+      }
+    };
+    fetchTimes();
+    return () => { isMounted = false; };
+  }, [modifyModalOpen, modifySelectedDate, modifyLocationId, modifyServiceProductId]);
+
+  // Categorize slots for Modify modal (Morning / Afternoon / Evening)
+  const categorizedModifySlots = useMemo(() => {
+    const categories = {
+      Morning: { label: 'Morning', icon: FaSun, color: 'text-amber-500', hours: {} },
+      Afternoon: { label: 'Afternoon', icon: FaCloudSun, color: 'text-orange-500', hours: {} },
+      Evening: { label: 'Evening', icon: FaMoon, color: 'text-indigo-500', hours: {} },
+    };
+
+    (modifyTimeSlots || []).forEach((slot) => {
+      const timeStr = slot.timeSlot || '';
+      const match = timeStr.match(/^(\d{1,2}):(\d{2})/);
+      const hour = match ? parseInt(match[1], 10) : 9;
+
+      let catKey = 'Morning';
+      if (hour >= 16) catKey = 'Evening';
+      else if (hour >= 12) catKey = 'Afternoon';
+
+      const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+      const ampm = hour < 12 ? 'AM' : 'PM';
+      const hourLabel = `${hour12} ${ampm}`;
+
+      if (!categories[catKey].hours[hour]) {
+        categories[catKey].hours[hour] = {
+          hourLabel,
+          hour24: hour,
+          slots: []
+        };
+      }
+      categories[catKey].hours[hour].slots.push(slot);
+    });
+
+    return categories;
+  }, [modifyTimeSlots]);
+
+  // Execute Modify: Delete old booking, then create replacement booking
+  const handleConfirmModifyAppointment = async (e) => {
+    if (e) e.preventDefault();
+    if (!bookingToModify) return;
+
+    const oldAptId = bookingToModify.repairOrderId || bookingToModify.appointmentId || bookingToModify.id;
+    if (!oldAptId) {
+      setModifyError("Unable to locate current booking reference.");
+      return;
+    }
+
+    if (!modifySelectedDate || !modifySelectedTimeSlot) {
+      setModifyError("Please select a date and an available time slot.");
+      return;
+    }
+
+    setModifying(true);
+    setModifyError(null);
+
+    try {
+      // 1. Delete the existing booking
+      const delRes = await deleteServiceAppointment(oldAptId);
+      if (!delRes || !delRes.ok) {
+        setModifyError("Could not update the current booking. Please try again.");
+        setModifying(false);
+        return;
+      }
+
+      // 2. Build startDateTime
+      const timeStart = modifySelectedTimeSlot.split('-')[0].trim();
+      const startDateTime = `${modifySelectedDate}T${timeStart}:00+04:00`;
+
+      // 3. Create the replacement service booking
+      const payload = {
+        advisorId: String(modifyAdvisorId || ""),
+        customerNotes: String(modifyCustomerNotes || ""),
+        dealershipLocationId: Number(modifyLocationId) || 40,
+        dropOffTime: modifySelectedTimeSlot,
+        licensePlateNo: String(modifyPlate || "").trim(),
+        mileage: Number(modifyMileage) || 0,
+        mileageUnit: modifyMileageUnit || "KM",
+        serviceProductIds: [modifyServiceProductId || "07143ffd-184e-43b5-a8de-f68d63199baa"],
+        startDate: modifySelectedDate,
+        vehicleId: Number(modifyVehicleId) || 15,
+        startDateTime: startDateTime
+      };
+
+      const createRes = await createServiceBooking(payload);
+
+      if (createRes && createRes.ok && createRes.data) {
+        // Success: Button says "Modified"
+        setModifiedSuccess(true);
+        setModifiedBookingId(oldAptId);
+
+        setTimeout(async () => {
+          setModifyModalOpen(false);
+          setBookingToModify(null);
+          setModifying(false);
+          setModifiedSuccess(false);
+          await fetchGeelyAppointments();
+        }, 1200);
+      } else {
+        const msg = createRes?.data?.msg || createRes?.statusText || "Failed to create replacement booking. Please select another slot.";
+        setModifyError(msg);
+        setModifying(false);
+      }
+    } catch (err) {
+      console.error("Modify booking error:", err);
+      setModifyError("An unexpected error occurred while modifying the booking.");
+      setModifying(false);
     }
   };
 
@@ -529,6 +823,30 @@ export default function ServiceOpenBookingsView() {
                         >
                           <FaCalendarPlus className="text-[11px]" />
                           <span>Follow-Up with Advisor</span>
+                        </button>
+
+                        {/* Modify Booking Button */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenModifyModal(apt)}
+                          className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer active:scale-95 ${
+                            modifiedBookingId === roId
+                              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                              : 'bg-amber-500 hover:bg-amber-600 text-white'
+                          }`}
+                          title="Modify Appointment"
+                        >
+                          {modifiedBookingId === roId ? (
+                            <>
+                              <FaCheck className="text-[11px]" />
+                              <span>Modified</span>
+                            </>
+                          ) : (
+                            <>
+                              <FaEdit className="text-[11px]" />
+                              <span>Modify</span>
+                            </>
+                          )}
                         </button>
 
                         <button
@@ -1375,6 +1693,314 @@ export default function ServiceOpenBookingsView() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* ================================================================ */}
+      {/* 4. MODIFY SERVICE BOOKING MODAL (Direct DMS)                     */}
+      {/* ================================================================ */}
+      {modifyModalOpen && bookingToModify && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !modifying && !modifiedSuccess) {
+              setModifyModalOpen(false);
+            }
+          }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl shadow-2xl border border-gray-200/90 max-w-2xl w-full overflow-hidden flex flex-col my-auto max-h-[92vh] animate-in fade-in zoom-in-95 duration-200"
+          >
+            {/* Modal Header */}
+            <div className="bg-slate-50/90 border-b border-gray-100 p-4 sm:p-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center font-bold shadow-2xs shrink-0">
+                  <FaEdit className="text-base" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm leading-tight">
+                    Modify Service Booking
+                  </h3>
+                  <p className="text-[11px] text-gray-500 mt-0.5">
+                    Repair Order #{bookingToModify.repairOrderId || bookingToModify.appointmentId || bookingToModify.id} • Plate: {modifyPlate}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModifyModalOpen(false)}
+                disabled={modifying || modifiedSuccess}
+                className="w-8 h-8 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-500 hover:text-gray-800 flex items-center justify-center transition-colors cursor-pointer text-xs"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs">
+              {/* Error Message Alert */}
+              {modifyError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 flex items-center gap-2 text-xs font-semibold">
+                  <FaExclamationTriangle className="text-rose-600 shrink-0" />
+                  <span>{modifyError}</span>
+                </div>
+              )}
+
+              {/* Vehicle & Workshop Settings */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-gray-50/80 p-3 rounded-xl border border-gray-200">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                    Vehicle & Plate
+                  </label>
+                  <div className="font-bold text-gray-900 flex items-center gap-1.5">
+                    <FaCar className="text-blue-600 text-xs shrink-0" />
+                    <span className="truncate">{bookingToModify.vehicle?.description || modifyPlate}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-gray-500 block mt-0.5">
+                    Plate: {modifyPlate}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                    Workshop Location
+                  </label>
+                  <select
+                    value={modifyLocationId}
+                    onChange={(e) => setModifyLocationId(Number(e.target.value))}
+                    disabled={modifying || modifiedSuccess}
+                    className="w-full bg-white border border-gray-200 rounded-lg p-1.5 font-bold text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  >
+                    {modifyLocations.length > 0 ? (
+                      modifyLocations.map(loc => (
+                        <option key={loc.dealershipLocationId || loc.id} value={loc.dealershipLocationId || loc.id}>
+                          {loc.name || loc.description || `Location #${loc.dealershipLocationId || loc.id}`}
+                        </option>
+                      ))
+                    ) : (
+                      <option value={40}>Location #40 (AGMC Workshop)</option>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                    Current Mileage ({modifyMileageUnit})
+                  </label>
+                  <input
+                    type="number"
+                    value={modifyMileage}
+                    onChange={(e) => setModifyMileage(e.target.value)}
+                    disabled={modifying || modifiedSuccess}
+                    className="w-full bg-white border border-gray-200 rounded-lg p-1.5 font-mono font-bold text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Service Package Selection */}
+              <div>
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                  Service Package
+                </label>
+                <select
+                  value={modifyServiceProductId}
+                  onChange={(e) => setModifyServiceProductId(e.target.value)}
+                  disabled={modifying || modifiedSuccess}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-lg p-2 font-bold text-xs text-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  {modifyServices.length > 0 ? (
+                    modifyServices.map(srv => (
+                      <option key={srv.serviceProductId || srv.id} value={srv.serviceProductId || srv.id}>
+                        {srv.description || srv.name || srv.serviceCategory?.description || 'Periodic Maintenance'}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="07143ffd-184e-43b5-a8de-f68d63199baa">Periodic Maintenance / Inspection</option>
+                  )}
+                </select>
+              </div>
+
+              {/* Date & Time Slot Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Available Dates Calendar */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                      Appointment Date
+                    </span>
+                    {modifyDatesLoading && (
+                      <span className="text-[10px] text-blue-600 flex items-center gap-1 font-semibold">
+                        <FaSpinner className="animate-spin text-[9px]" /> Loading dates...
+                      </span>
+                    )}
+                  </div>
+                  <AvailableDatesCalendar
+                    availableDates={modifyAvailableDates}
+                    selectedDate={modifySelectedDate}
+                    onSelectDate={(d) => setModifySelectedDate(d)}
+                    loading={modifyDatesLoading}
+                  />
+                </div>
+
+                {/* Drop-Off Time Slots */}
+                <div className="flex flex-col">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                      Drop-Off Time
+                    </span>
+                    {modifyTimesLoading && (
+                      <span className="text-[10px] text-blue-600 flex items-center gap-1 font-semibold">
+                        <FaSpinner className="animate-spin text-[9px]" /> Loading times...
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Period Tabs */}
+                  <div className="flex gap-1 bg-gray-100 p-1 rounded-lg mb-2">
+                    {Object.entries(categorizedModifySlots).map(([catName, catData]) => {
+                      const hourEntries = Object.values(catData.hours);
+                      const totalSlots = hourEntries.reduce((acc, h) => acc + h.slots.length, 0);
+                      const TabIcon = catData.icon;
+                      const isActive = modifyActivePeriodTab === catName;
+                      return (
+                        <button
+                          key={catName}
+                          type="button"
+                          onClick={() => setModifyActivePeriodTab(catName)}
+                          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                            isActive
+                              ? 'bg-white shadow-2xs text-gray-800 border border-gray-200'
+                              : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                        >
+                          <TabIcon className={`text-xs ${isActive ? catData.color : 'text-gray-400'}`} />
+                          <span>{catData.label}</span>
+                          <span className={`text-[9px] font-extrabold px-1 py-0.2 rounded ${
+                            isActive ? `${catData.color} bg-gray-50` : 'text-gray-400 bg-gray-200'
+                          }`}>
+                            {totalSlots}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Active Period Slot Grid */}
+                  <div className="flex-1 bg-slate-50/70 p-2.5 rounded-lg border border-slate-200 max-h-[220px] overflow-y-auto space-y-1.5">
+                    {(() => {
+                      const catData = categorizedModifySlots[modifyActivePeriodTab];
+                      const hourEntries = catData ? Object.values(catData.hours).sort((a, b) => a.hour24 - b.hour24) : [];
+                      if (hourEntries.length === 0) {
+                        return (
+                          <div className="py-8 text-center text-gray-400 text-xs">
+                            No {modifyActivePeriodTab.toLowerCase()} slots available for this date.
+                          </div>
+                        );
+                      }
+                      return hourEntries.map((hourGroup) => (
+                        <div key={hourGroup.hourLabel} className="flex items-center gap-1.5 bg-white p-1 rounded-md border border-slate-200/80">
+                          <span className="w-14 shrink-0 text-center font-extrabold text-[10px] text-slate-600 bg-slate-100 py-1 rounded">
+                            {hourGroup.hourLabel}
+                          </span>
+                          <div className="flex-1 flex flex-wrap gap-1">
+                            {hourGroup.slots.map(s => {
+                              const isSel = modifySelectedTimeSlot === s.timeSlot;
+                              return (
+                                <button
+                                  key={s.timeSlot}
+                                  type="button"
+                                  onClick={() => {
+                                    setModifySelectedTimeSlot(s.timeSlot);
+                                    if (s.advisorId) setModifyAdvisorId(String(s.advisorId));
+                                  }}
+                                  className={`px-2 py-1 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                                    isSel
+                                      ? 'bg-blue-600 text-white shadow-2xs ring-1 ring-blue-300'
+                                      : 'bg-slate-50 hover:bg-blue-50 text-slate-700 border border-slate-200'
+                                  }`}
+                                >
+                                  {s.timeSlot}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Customer Notes */}
+              <div>
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                  Customer Notes & Instructions
+                </label>
+                <textarea
+                  rows={2}
+                  value={modifyCustomerNotes}
+                  onChange={(e) => setModifyCustomerNotes(e.target.value)}
+                  disabled={modifying || modifiedSuccess}
+                  placeholder="Optional service notes or customer requests..."
+                  className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium text-gray-800 focus:outline-none focus:border-blue-500 resize-none leading-relaxed"
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 bg-slate-50 border-t border-gray-100 flex items-center justify-between gap-3">
+              <div className="text-[11px] text-gray-500 font-medium">
+                {modifySelectedDate && modifySelectedTimeSlot ? (
+                  <span>Selected: <strong className="text-gray-900 font-mono">{modifySelectedDate}</strong> at <strong className="text-gray-900 font-mono">{modifySelectedTimeSlot}</strong></span>
+                ) : (
+                  <span>Please choose a date and time slot</span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setModifyModalOpen(false)}
+                  disabled={modifying || modifiedSuccess}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-700 rounded-lg font-bold text-xs cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleConfirmModifyAppointment}
+                  disabled={modifying || modifiedSuccess}
+                  className={`px-4 py-2 rounded-lg font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs ${
+                    modifiedSuccess
+                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      : modifying
+                      ? 'bg-blue-500 text-white cursor-wait opacity-90'
+                      : 'bg-blue-600 hover:bg-blue-700 text-white active:scale-95'
+                  }`}
+                >
+                  {modifiedSuccess ? (
+                    <>
+                      <FaCheck className="text-xs" />
+                      <span>Modified</span>
+                    </>
+                  ) : modifying ? (
+                    <>
+                      <FaSpinner className="animate-spin text-xs" />
+                      <span>Modifying...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaEdit className="text-xs" />
+                      <span>Confirm Modification</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>,
         document.body
