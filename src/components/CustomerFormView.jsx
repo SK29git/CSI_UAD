@@ -16,6 +16,7 @@ import {
   FaExclamationTriangle, 
   FaSpinner, 
   FaArrowLeft,
+  FaArrowRight,
   FaSave,
   FaCopy,
   FaTimes,
@@ -161,46 +162,54 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     return '';
   };
 
-  const [formData, setFormData] = useState({
-    group: 'BMW',
-    branch: '10 - Sheikh Zayed Rd',
-    titleCode: 'Mr.',
-    firstName: '',
-    surname: '',
-    source: 'CRM Inbound',
-    sourceOfInformation: 'Walk-in',
-    personalId: '',
-    nationality: '',
-    dob: '',
-    area: 'Deira',
-    city: 'Dubai',
-    country: 'United Arab Emirates',
-    mobile: '',
-    phone1: '',
-    phone2: '',
-    phone3: '',
-    phone4: '',
-    homePhone: '',
-    workPhone: '',
-    email: '',
-    homeEmail: '',
-    workEmail: '',
-    otherEmail1: '',
-    otherEmail2: '',
-    consents: {
-      phone: true,
-      email: false,
-      sms: true,
-      whatsapp: true
-    }
-  });
+  const getBlankFormData = () => {
+    return {
+      group: '',
+      branch: '',
+      titleCode: 'Mr.',
+      firstName: '',
+      surname: '',
+      source: '',
+      sourceOfInformation: '',
+      personalId: '',
+      nationality: '',
+      dob: '',
+      area: '',
+      city: '',
+      country: '',
+      mobile: '',
+      phone1: '',
+      phone2: '',
+      phone3: '',
+      phone4: '',
+      homePhone: '',
+      workPhone: '',
+      email: '',
+      homeEmail: '',
+      workEmail: '',
+      otherEmail1: '',
+      otherEmail2: '',
+      linkType: '',
+      prospectNumber: '',
+      campaign: '',
+      marketingCampaignCode: '',
+      channel: '',
+      consents: {
+        phone: true,
+        email: false,
+        sms: true,
+        whatsapp: true
+      }
+    };
+  };
 
+  const [formData, setFormData] = useState(() => getBlankFormData());
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
   const handleGroupChange = (newGroup) => {
-    const branches = getBranchesForGroup(newGroup);
-    const defBranch = branches[0] ? `${branches[0].code} - ${branches[0].name}` : '10 - Sheikh Zayed Rd';
+    const branches = newGroup ? getBranchesForGroup(newGroup) : [];
+    const defBranch = branches[0] ? `${branches[0].code} - ${branches[0].name}` : '';
     setFormData(prev => ({ ...prev, group: newGroup, branch: defBranch }));
   };
 
@@ -212,11 +221,18 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     }));
   };
 
-  const currentBranches = getBranchesForGroup(formData.group);
+  const currentBranches = formData.group ? getBranchesForGroup(formData.group) : [];
 
   useEffect(() => {
     // If submission is in progress or success feedback is already shown, do NOT reset
     if (isSubmitting || feedback?.type === 'success') {
+      return;
+    }
+
+    // When opening Create Customer, always keep ALL details completely blank
+    if (mode === 'create') {
+      setFormData(getBlankFormData());
+      setFeedback(null);
       return;
     }
 
@@ -362,6 +378,11 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         workEmail: workEmailVal,
         otherEmail1: otherEmail1Val,
         otherEmail2: otherEmail2Val,
+        linkType: customer.linkType || '',
+        prospectNumber: customer.prospectNumber || '',
+        campaign: customer.campaign || '',
+        marketingCampaignCode: customer.marketingCampaignCode || '',
+        channel: customer.channel || '',
         consents: customer.consents || {
           phone: true,
           email: Boolean(primaryEmailVal && primaryEmailVal.includes('@')),
@@ -370,45 +391,6 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         }
       });
       setFeedback(null);
-    } else if (mode === 'create') {
-      const initialGrp = currentGroup || 'BMW';
-      const branches = getBranchesForGroup(initialGrp);
-      const defBranch = branches[0] ? `${branches[0].code} - ${branches[0].name}` : '10 - Sheikh Zayed Rd';
-      const initialSource = customer?.leadSource || customer?.source || 'CRM Inbound';
-
-      setFormData(prev => ({
-        group: initialGrp,
-        branch: defBranch,
-        titleCode: prev.titleCode || 'Mr.',
-        firstName: prev.firstName || (customer?.isProspect ? customer?.firstName || '' : ''),
-        surname: prev.surname || (customer?.isProspect ? customer?.surname || '' : ''),
-        source: prev.source || initialSource,
-        sourceOfInformation: mapSourceToSourceOfInfo(prev.source || initialSource),
-        personalId: prev.personalId || customer?.personalId || '',
-        nationality: prev.nationality || customer?.nationality || '',
-        dob: prev.dob || formatDobForInput(customer?.dateOfBirth || customer?.dob || ''),
-        area: prev.area || customer?.location?.area || 'Deira',
-        city: prev.city || customer?.location?.city || 'Dubai',
-        country: prev.country || customer?.country || 'United Arab Emirates',
-        phone1: prev.phone1 || resolvedMobile || '',
-        phone2: prev.phone2 || '',
-        phone3: prev.phone3 || '',
-        phone4: prev.phone4 || '',
-        mobile: prev.phone1 || prev.phone4 || prev.phone2 || prev.phone3 || prev.mobile || resolvedMobile || '',
-        homePhone: prev.phone2 || '',
-        workPhone: prev.phone3 || '',
-        email: prev.homeEmail || prev.email || '',
-        homeEmail: prev.homeEmail || '',
-        workEmail: prev.workEmail || '',
-        otherEmail1: prev.otherEmail1 || '',
-        otherEmail2: prev.otherEmail2 || '',
-        consents: prev.consents || {
-          phone: true,
-          email: false,
-          sms: true,
-          whatsapp: true
-        }
-      }));
     }
   }, [mode, customer, currentGroup, currentMobile]);
 
@@ -427,14 +409,6 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
       setFeedback({ type: 'error', message: 'At least one contact phone number is required.' });
       return;
     }
-    if (!formData.area.trim()) {
-      setFeedback({ type: 'error', message: 'Area is required.' });
-      return;
-    }
-    if (!formData.city.trim()) {
-      setFeedback({ type: 'error', message: 'City is required.' });
-      return;
-    }
 
     setIsSubmitting(true);
     setFeedback(null);
@@ -442,6 +416,12 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
     const activeEmail = formData.homeEmail || formData.workEmail || formData.otherEmail1 || formData.otherEmail2 || formData.email;
     const submissionPayload = {
       ...formData,
+      area: formData.area?.trim() || 'Deira',
+      city: formData.city?.trim() || 'Dubai',
+      country: formData.country?.trim() || 'United Arab Emirates',
+      group: formData.group || currentGroup || 'BMW',
+      branch: formData.branch || (formData.group?.toUpperCase().includes('GEELY') ? '10 - Geely Group - SZR' : '10 - Sheikh Zayed Rd'),
+      source: formData.source || 'CRM Inbound',
       mobile: activeMobile,
       email: activeEmail,
       homePhone: formData.phone2 || formData.homePhone,
@@ -450,7 +430,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
       telephoneNumber2: formData.phone2,
       telephoneNumber3: formData.phone3,
       telephoneNumber4: formData.phone4,
-      sourceOfInformation: mapSourceToSourceOfInfo(formData.source)
+      sourceOfInformation: mapSourceToSourceOfInfo(formData.source || 'CRM Inbound')
     };
 
     try {
@@ -653,137 +633,162 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
               </div>
             </div>
 
-            {/* Phone Numbers Subsection (4 Slots from Keyloop API) */}
+            {/* Contact Information Table: Phone Numbers & Email Addresses (2 Columns, 4 Rows, Middle Divider) */}
             <div className="pt-2.5 border-t border-gray-100">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   <FaPhoneAlt className="text-blue-600 text-[10px]" />
-                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">Phone Numbers (4 Slots)</span>
+                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">
+                    Contact Information (4 Phones & 4 Emails)
+                  </span>
                 </div>
                 <span className="text-[10px] text-gray-400">At least 1 contact number required</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* Phone 1 */}
-                <div>
-                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                    <FaPhoneAlt className="text-gray-400 text-[10px]" /> Phone 1 (Mobile)
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone1}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone1: e.target.value, mobile: e.target.value || prev.mobile }))}
-                    placeholder="e.g. 0561277913"
-                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
-                  />
+
+              <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-2xs">
+                {/* Table Header Row */}
+                <div className="grid grid-cols-2 bg-slate-50 border-b border-gray-200 text-xs font-bold text-gray-700 divide-x divide-gray-200">
+                  <div className="px-3.5 py-2 flex items-center gap-1.5">
+                    <FaPhoneAlt className="text-blue-600 text-[11px]" />
+                    <span>Phone Numbers</span>
+                  </div>
+                  <div className="px-3.5 py-2 flex items-center gap-1.5">
+                    <FaEnvelope className="text-blue-600 text-[11px]" />
+                    <span>Email Addresses</span>
+                  </div>
                 </div>
 
-                {/* Phone 2 */}
-                <div>
-                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                    <FaPhoneAlt className="text-gray-400 text-[10px]" /> Phone 2
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone2}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone2: e.target.value, homePhone: e.target.value }))}
-                    placeholder="e.g. 041234567"
-                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
-                  />
-                </div>
+                {/* Table 4 Rows with Middle Divider '|' */}
+                <div className="divide-y divide-gray-100 text-xs">
+                  {/* Row 1: Phone 1 (Mobile) | Email 1 (Home Email) */}
+                  <div className="grid grid-cols-2 divide-x divide-gray-200">
+                    <div className="p-2.5 sm:px-3.5 sm:py-2.5">
+                      <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <FaPhoneAlt className="text-gray-400 text-[10px]" />
+                          <span>Phone 1 (Mobile)</span>
+                        </span>
+                        <span className="text-[9px] font-extrabold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                          Primary
+                        </span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.phone1}
+                        onChange={(e) => setFormData(prev => ({ ...prev, phone1: e.target.value, mobile: e.target.value || prev.mobile }))}
+                        placeholder="e.g. 0561277913"
+                        className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                      />
+                    </div>
+                    <div className="p-2.5 sm:px-3.5 sm:py-2.5">
+                      <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center justify-between">
+                        <span className="flex items-center gap-1">
+                          <FaEnvelope className="text-gray-400 text-[10px]" />
+                          <span>Email 1 (Home Email)</span>
+                        </span>
+                        <span className="text-[9px] font-extrabold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                          Primary
+                        </span>
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.homeEmail}
+                        onChange={(e) => setFormData(prev => ({ ...prev, homeEmail: e.target.value, email: e.target.value || prev.email }))}
+                        placeholder="e.g. customer@example.com"
+                        className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+                  </div>
 
-                {/* Phone 3 */}
-                <div>
-                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                    <FaPhoneAlt className="text-gray-400 text-[10px]" /> Phone 3
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone3}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone3: e.target.value, workPhone: e.target.value }))}
-                    placeholder="e.g. 049876543"
-                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
-                  />
-                </div>
+                  {/* Row 2: Phone 2 | Email 2 (Work Email) */}
+                  <div className="grid grid-cols-2 divide-x divide-gray-200">
+                    <div className="p-2.5 sm:px-3.5 sm:py-2.5">
+                      <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                        <FaPhoneAlt className="text-gray-400 text-[10px]" />
+                        <span>Phone 2</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.phone2}
+                        onChange={(e) => setFormData(prev => ({ ...prev, phone2: e.target.value, homePhone: e.target.value }))}
+                        placeholder="e.g. 041234567"
+                        className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                      />
+                    </div>
+                    <div className="p-2.5 sm:px-3.5 sm:py-2.5">
+                      <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                        <FaEnvelope className="text-gray-400 text-[10px]" />
+                        <span>Email 2 (Work Email)</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.workEmail}
+                        onChange={(e) => setFormData(prev => ({ ...prev, workEmail: e.target.value }))}
+                        placeholder="e.g. work@agmc.ae"
+                        className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+                  </div>
 
-                {/* Phone 4 */}
-                <div>
-                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                    <FaPhoneAlt className="text-gray-400 text-[10px]" /> Phone 4
-                  </label>
-                  <input
-                    type="tel"
-                    value={formData.phone4}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone4: e.target.value }))}
-                    placeholder="e.g. 0501234567"
-                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
-                  />
-                </div>
-              </div>
-            </div>
+                  {/* Row 3: Phone 3 | Email 3 (Other Email 1) */}
+                  <div className="grid grid-cols-2 divide-x divide-gray-200">
+                    <div className="p-2.5 sm:px-3.5 sm:py-2.5">
+                      <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                        <FaPhoneAlt className="text-gray-400 text-[10px]" />
+                        <span>Phone 3</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.phone3}
+                        onChange={(e) => setFormData(prev => ({ ...prev, phone3: e.target.value, workPhone: e.target.value }))}
+                        placeholder="e.g. 049876543"
+                        className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                      />
+                    </div>
+                    <div className="p-2.5 sm:px-3.5 sm:py-2.5">
+                      <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                        <FaEnvelope className="text-gray-400 text-[10px]" />
+                        <span>Email 3 (Other Email 1)</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.otherEmail1}
+                        onChange={(e) => setFormData(prev => ({ ...prev, otherEmail1: e.target.value }))}
+                        placeholder="e.g. other1@example.com"
+                        className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+                  </div>
 
-            {/* Email Addresses Subsection (4 Slots from Keyloop API) */}
-            <div className="pt-2.5 border-t border-gray-100">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-1.5">
-                  <FaEnvelope className="text-blue-600 text-[10px]" />
-                  <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider">Email Addresses (4 Slots)</span>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* Home Email */}
-                <div>
-                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                    <FaEnvelope className="text-gray-400 text-[10px]" /> Home Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.homeEmail}
-                    onChange={(e) => setFormData(prev => ({ ...prev, homeEmail: e.target.value, email: e.target.value || prev.email }))}
-                    placeholder="e.g. customer@example.com"
-                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
-                  />
-                </div>
-
-                {/* Work Email */}
-                <div>
-                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                    <FaEnvelope className="text-gray-400 text-[10px]" /> Work Email
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.workEmail}
-                    onChange={(e) => setFormData(prev => ({ ...prev, workEmail: e.target.value }))}
-                    placeholder="e.g. work@agmc.ae"
-                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
-                  />
-                </div>
-
-                {/* Other Email 1 */}
-                <div>
-                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                    <FaEnvelope className="text-gray-400 text-[10px]" /> Other Email 1
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.otherEmail1}
-                    onChange={(e) => setFormData(prev => ({ ...prev, otherEmail1: e.target.value }))}
-                    placeholder="e.g. other1@example.com"
-                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
-                  />
-                </div>
-
-                {/* Other Email 2 */}
-                <div>
-                  <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
-                    <FaEnvelope className="text-gray-400 text-[10px]" /> Other Email 2
-                  </label>
-                  <input
-                    type="email"
-                    value={formData.otherEmail2}
-                    onChange={(e) => setFormData(prev => ({ ...prev, otherEmail2: e.target.value }))}
-                    placeholder="e.g. other2@example.com"
-                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
-                  />
+                  {/* Row 4: Phone 4 | Email 4 (Other Email 2) */}
+                  <div className="grid grid-cols-2 divide-x divide-gray-200">
+                    <div className="p-2.5 sm:px-3.5 sm:py-2.5">
+                      <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                        <FaPhoneAlt className="text-gray-400 text-[10px]" />
+                        <span>Phone 4</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.phone4}
+                        onChange={(e) => setFormData(prev => ({ ...prev, phone4: e.target.value }))}
+                        placeholder="e.g. 0501234567"
+                        className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                      />
+                    </div>
+                    <div className="p-2.5 sm:px-3.5 sm:py-2.5">
+                      <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
+                        <FaEnvelope className="text-gray-400 text-[10px]" />
+                        <span>Email 4 (Other Email 2)</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={formData.otherEmail2}
+                        onChange={(e) => setFormData(prev => ({ ...prev, otherEmail2: e.target.value }))}
+                        placeholder="e.g. other2@example.com"
+                        className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -803,13 +808,16 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   <FaLayerGroup className="text-gray-400 text-[10px]" /> Keyloop Group
                 </label>
-                <input
-                  type="text"
+                <select
                   value={formData.group}
-                  readOnly
-                  disabled
-                  className="w-full px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
-                />
+                  onChange={(e) => handleGroupChange(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors"
+                >
+                  <option value="">Select Group</option>
+                  {GROUP_OPTIONS.map(g => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Preferred Branch Location */}
@@ -817,14 +825,28 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   <FaBuilding className="text-gray-400 text-[10px]" /> Preferred Branch
                 </label>
-                <input
-                  type="text"
-                  value={formData.branch}
-                  readOnly
-                  disabled
-                  title={formData.branch}
-                  className="w-full px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md font-semibold text-gray-700 text-xs cursor-not-allowed select-none truncate"
-                />
+                {currentBranches && currentBranches.length > 0 ? (
+                  <select
+                    value={formData.branch}
+                    onChange={(e) => setFormData(prev => ({ ...prev, branch: e.target.value }))}
+                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 cursor-pointer transition-colors truncate"
+                  >
+                    <option value="">Select Branch</option>
+                    {currentBranches.map(b => (
+                      <option key={b.code} value={`${b.code} - ${b.name}`}>
+                        {b.code} - {b.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={formData.branch}
+                    onChange={(e) => setFormData(prev => ({ ...prev, branch: e.target.value }))}
+                    placeholder="e.g. 10 - Sheikh Zayed Rd"
+                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                )}
               </div>
 
               {/* City */}
@@ -835,9 +857,9 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <input
                   type="text"
                   value={formData.city}
-                  readOnly
-                  disabled
-                  className="w-full px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
+                  onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                  placeholder="e.g. Dubai"
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
 
@@ -849,9 +871,9 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <input
                   type="text"
                   value={formData.area}
-                  readOnly
-                  disabled
-                  className="w-full px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
+                  onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
+                  placeholder="e.g. Deira"
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
 
@@ -863,15 +885,15 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <input
                   type="text"
                   value={formData.country}
-                  readOnly
-                  disabled
-                  className="w-full px-2.5 py-1.5 bg-gray-100 border border-gray-200 rounded-md font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
+                  onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
+                  placeholder="e.g. United Arab Emirates"
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
             </div>
           </div>
 
-          {/* SECTION 3: Campaign & Channel Details (From Prospects / E00MI API) */}
+          {/* SECTION 3: Campaign & Channel Details */}
           <div className="pt-2 border-t border-gray-100">
             <div className="flex items-center justify-between pb-1.5 mb-2.5 border-b border-gray-100">
               <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
@@ -885,9 +907,13 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   Link Type
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-700">
-                  {customer?.linkType || '-'}
-                </div>
+                <input
+                  type="text"
+                  value={formData.linkType || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, linkType: e.target.value }))}
+                  placeholder="e.g. Lead / Customer"
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                />
               </div>
 
               {/* Prospect Number */}
@@ -895,9 +921,13 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   Prospect Number
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-700 font-mono">
-                  {customer?.prospectNumber || '-'}
-                </div>
+                <input
+                  type="text"
+                  value={formData.prospectNumber || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, prospectNumber: e.target.value }))}
+                  placeholder="e.g. 102938"
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                />
               </div>
 
               {/* Campaign */}
@@ -905,9 +935,13 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   Campaign
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-700">
-                  {customer?.campaign || '-'}
-                </div>
+                <input
+                  type="text"
+                  value={formData.campaign || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, campaign: e.target.value }))}
+                  placeholder="e.g. Ramadan Offer"
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                />
               </div>
 
               {/* Marketing Campaign Code */}
@@ -915,9 +949,13 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   Marketing Campaign Code
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-700 font-mono">
-                  {customer?.marketingCampaignCode || '-'}
-                </div>
+                <input
+                  type="text"
+                  value={formData.marketingCampaignCode || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, marketingCampaignCode: e.target.value }))}
+                  placeholder="e.g. MC-2026-01"
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors font-mono"
+                />
               </div>
 
               {/* Source */}
@@ -925,9 +963,16 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   Source
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-700">
-                  {customer?.source || customer?.leadSource || formData.source || '-'}
-                </div>
+                <select
+                  value={formData.source || ''}
+                  onChange={(e) => handleSourceChange(e.target.value)}
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                >
+                  <option value="">Select Source</option>
+                  {CUSTOMER_SOURCE_OPTIONS.map(src => (
+                    <option key={src} value={src}>{src}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Channel */}
@@ -935,45 +980,77 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   Channel
                 </label>
-                <div className="px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md text-xs font-semibold text-gray-700">
-                  {customer?.channel || '-'}
-                </div>
+                <input
+                  type="text"
+                  value={formData.channel || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, channel: e.target.value }))}
+                  placeholder="e.g. Showroom Walk-in"
+                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                />
               </div>
             </div>
           </div>
 
           {/* Form Actions */}
           <div className="pt-3 border-t border-gray-200 flex items-center justify-end gap-2.5">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSubmitting}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-            >
-              next
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-            >
-                {isSubmitting ? (
-                  <>
-                    <FaSpinner className="animate-spin text-xs" />
-                    <span>Processing...</span>
-                  </>
-                ) : mode === 'create' ? (
-                  <>
-                    <FaUserPlus className="text-xs" />
-                    <span>Create Customer</span>
-                  </>
-                ) : (
-                  <>
-                    <FaSave className="text-xs" />
-                    <span>Save Changes</span>
-                  </>
-                )}
-              </button>
+            {mode === 'create' ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <FaSpinner className="animate-spin text-xs" />
+                      <span>Creating Customer...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaUserPlus className="text-xs" />
+                      <span>Create Customer</span>
+                    </>
+                  )}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 active:scale-[0.98] text-white font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <FaSpinner className="animate-spin text-xs" />
+                      <span>Saving Changes...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaSave className="text-xs" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  disabled={isSubmitting}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <span>Next</span>
+                  <FaArrowRight className="text-[10px]" />
+                </button>
+              </>
+            )}
           </div>
         </form>
       </div>
