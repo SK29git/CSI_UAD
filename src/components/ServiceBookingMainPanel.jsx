@@ -318,6 +318,7 @@ export default function ServiceBookingMainPanel() {
   const [geelyTimeSlots, setGeelyTimeSlots] = useState([]);
   const [geelyTimesLoading, setGeelyTimesLoading] = useState(false);
   const [geelySelectedTimeSlot, setGeelySelectedTimeSlot] = useState('10:15-10:30');
+  const [activePeriodTab, setActivePeriodTab] = useState('Morning');
 
   const [geelyAdvisors, setGeelyAdvisors] = useState([]);
   const [geelyAdvisorId, setGeelyAdvisorId] = useState('');
@@ -443,6 +444,12 @@ export default function ServiceBookingMainPanel() {
             setGeelyTimeSlots(rawSlots);
             const firstSlot = rawSlots[0]?.timeSlot || '10:15-10:30';
             setGeelySelectedTimeSlot(firstSlot);
+            // Auto-select period tab based on first slot's hour
+            const match = firstSlot.match(/^(\d{1,2}):/);
+            const firstHour = match ? parseInt(match[1], 10) : 9;
+            if (firstHour >= 16) setActivePeriodTab('Evening');
+            else if (firstHour >= 12) setActivePeriodTab('Afternoon');
+            else setActivePeriodTab('Morning');
             if (rawSlots[0]?.advisorId) {
               setGeelyAdvisorId(String(rawSlots[0].advisorId));
             }
@@ -1368,63 +1375,86 @@ export default function ServiceBookingMainPanel() {
                             <span className="text-xs font-medium text-slate-600">Fetching available slots for {geelySelectedDate}...</span>
                           </div>
                         ) : geelyTimeSlots.length > 0 ? (
-                          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                            {Object.entries(categorizedSlots).map(([catName, catData]) => {
-                              const hourEntries = Object.values(catData.hours);
-                              if (hourEntries.length === 0) return null;
-                              const CatIcon = catData.icon;
+                          <div className="space-y-2">
+                            {/* Period Tabs: Morning / Afternoon / Evening */}
+                            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                              {Object.entries(categorizedSlots).map(([catName, catData]) => {
+                                const hourEntries = Object.values(catData.hours);
+                                const totalSlots = hourEntries.reduce((acc, h) => acc + h.slots.length, 0);
+                                if (totalSlots === 0) return null;
+                                const TabIcon = catData.icon;
+                                const isActive = activePeriodTab === catName;
+                                return (
+                                  <button
+                                    key={catName}
+                                    type="button"
+                                    onClick={() => setActivePeriodTab(catName)}
+                                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                                      isActive
+                                        ? 'bg-white shadow-sm text-slate-800 border border-slate-200'
+                                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                                    }`}
+                                  >
+                                    <TabIcon className={`text-xs ${isActive ? catData.color : 'text-slate-400'}`} />
+                                    <span>{catData.label}</span>
+                                    <span className={`text-[9px] font-extrabold px-1 py-0.5 rounded ${
+                                      isActive ? `${catData.color} bg-slate-50` : 'text-slate-400 bg-slate-200'
+                                    }`}>{totalSlots}</span>
+                                  </button>
+                                );
+                              })}
+                            </div>
 
+                            {/* Active Period Slot Grid */}
+                            {(() => {
+                              const catData = categorizedSlots[activePeriodTab];
+                              const hourEntries = catData ? Object.values(catData.hours).sort((a, b) => a.hour24 - b.hour24) : [];
+                              if (hourEntries.length === 0) {
+                                return (
+                                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-500 text-xs">
+                                    No {activePeriodTab.toLowerCase()} slots available for this date.
+                                  </div>
+                                );
+                              }
                               return (
-                                <div key={catName} className="border border-slate-200 rounded-lg p-2 bg-slate-50/40 space-y-1.5">
-                                  {/* Category Header: Morning / Afternoon / Evening */}
-                                  <div className="flex items-center gap-1.5 pb-1 border-b border-slate-200/60">
-                                    <CatIcon className={`text-xs ${catData.color}`} />
-                                    <span className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider">{catData.label}</span>
-                                    <span className="text-[9px] font-bold text-slate-400 ml-auto">
-                                      {hourEntries.reduce((acc, h) => acc + h.slots.length, 0)} slots
-                                    </span>
-                                  </div>
-
-                                  {/* Hour-by-Hour Rows (e.g., 8 AM, 9 AM, 10 AM, 1 PM...) */}
-                                  <div className="space-y-1">
-                                    {hourEntries.map((hourGroup) => (
-                                      <div key={hourGroup.hourLabel} className="flex items-center gap-1.5 bg-white p-1 rounded-md border border-slate-200/80">
-                                        <div className="w-14 shrink-0 text-center font-extrabold text-[10px] text-slate-600 bg-slate-100 py-1 rounded">
-                                          {hourGroup.hourLabel}
-                                        </div>
-                                        <div className="flex-1 flex flex-wrap gap-1">
-                                          {hourGroup.slots.map((slot, sIdx) => {
-                                            const isSelected = geelySelectedTimeSlot === slot.timeSlot;
-                                            return (
-                                              <button
-                                                key={slot.timeSlot || sIdx}
-                                                type="button"
-                                                onClick={() => {
-                                                  setGeelySelectedTimeSlot(slot.timeSlot);
-                                                  if (slot.advisorId) setGeelyAdvisorId(String(slot.advisorId));
-                                                }}
-                                                className={`px-2 py-1 rounded text-[11px] font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
-                                                  isSelected
-                                                    ? 'bg-blue-600 text-white border-blue-600 shadow-2xs ring-1 ring-blue-300'
-                                                    : 'bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border-slate-200'
-                                                }`}
-                                              >
-                                                <span>{slot.timeSlot}</span>
-                                                {slot.advisorId && (
-                                                  <span className={`text-[8px] font-normal ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
-                                                    #{slot.advisorId}
-                                                  </span>
-                                                )}
-                                              </button>
-                                            );
-                                          })}
-                                        </div>
+                                <div className="space-y-1 max-h-[220px] overflow-y-auto pr-0.5">
+                                  {hourEntries.map((hourGroup) => (
+                                    <div key={hourGroup.hourLabel} className="flex items-center gap-1.5 bg-white p-1 rounded-md border border-slate-200/80">
+                                      <div className="w-14 shrink-0 text-center font-extrabold text-[10px] text-slate-600 bg-slate-100 py-1 rounded">
+                                        {hourGroup.hourLabel}
                                       </div>
-                                    ))}
-                                  </div>
+                                      <div className="flex-1 flex flex-wrap gap-1">
+                                        {hourGroup.slots.map((slot, sIdx) => {
+                                          const isSelected = geelySelectedTimeSlot === slot.timeSlot;
+                                          return (
+                                            <button
+                                              key={slot.timeSlot || sIdx}
+                                              type="button"
+                                              onClick={() => {
+                                                setGeelySelectedTimeSlot(slot.timeSlot);
+                                                if (slot.advisorId) setGeelyAdvisorId(String(slot.advisorId));
+                                              }}
+                                              className={`px-2 py-1 rounded text-[11px] font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                                                isSelected
+                                                  ? 'bg-blue-600 text-white border-blue-600 shadow-2xs ring-1 ring-blue-300'
+                                                  : 'bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border-slate-200'
+                                              }`}
+                                            >
+                                              <span>{slot.timeSlot}</span>
+                                              {slot.advisorId && (
+                                                <span className={`text-[8px] font-normal ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                                  #{slot.advisorId}
+                                                </span>
+                                              )}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
                               );
-                            })}
+                            })()}
                           </div>
                         ) : (
                           <div className="p-6 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-500 text-xs">
