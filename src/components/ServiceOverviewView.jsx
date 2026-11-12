@@ -528,34 +528,6 @@ export default function ServiceOverviewView() {
           </div>
 
           <div className="flex items-center gap-2">
-            {allVehicles.length > 1 && (
-              <div className="flex items-center gap-2 bg-blue-50/60 p-1.5 rounded-lg border border-blue-100">
-                <span className="text-[11px] font-bold text-blue-900 uppercase">
-                  Select Vehicle:
-                </span>
-                <select
-                  value={vin}
-                  onChange={(e) => selectVehicleByVin(e.target.value)}
-                  className="bg-white text-xs font-bold text-gray-900 border border-blue-300 rounded px-2.5 py-1 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs"
-                >
-                  {allVehicles.map((v) => {
-                    const vVin = v.vin || v.chassisNumber;
-                    const vPlate =
-                      v.registrationNumber || v.plateNumber || v.plate;
-                    const vDesc =
-                      v.description ||
-                      `${v.brand || ""} ${v.model || ""}`.trim() ||
-                      "Vehicle";
-                    return (
-                      <option key={vVin} value={vVin}>
-                        {vDesc} {vPlate ? `(${vPlate})` : `(${vVin})`}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            )}
-
             <button
               type="button"
               onClick={() => setIsTransferModalOpen(true)}
@@ -601,51 +573,88 @@ export default function ServiceOverviewView() {
           </div>
         </div>
 
-        {/* Multi-Vehicle Garage Strip (Rendered when customer owns multiple cars) */}
+        {/* Multi-Vehicle Tabs (Glossy Modern Tabs with Primary Vehicle First - Replaces Dropdown) */}
         {allVehicles.length > 1 && (
-          <div className="flex items-center gap-2.5 overflow-x-auto pb-1 pt-0.5 no-scrollbar border-b border-gray-100 pb-3">
-            <span className="text-[10px] font-extrabold uppercase text-gray-400 shrink-0">
-              Garage ({allVehicles.length}):
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-gray-100 no-scrollbar">
+            <span className="text-[10px] font-extrabold uppercase text-gray-400 shrink-0 flex items-center gap-1 mr-1">
+              <FaCar className="text-blue-600 text-xs" />
+              <span>Vehicles ({allVehicles.length}):</span>
             </span>
-            {allVehicles.map((v) => {
-              const vVin = v.vin || v.chassisNumber;
-              const isSelected = vVin === vin;
-              const vPlate = v.registrationNumber || v.plateNumber || v.plate;
-              const vTitle =
-                v.description ||
-                `${v.brand || ""} ${v.model || ""}`.trim() ||
-                "Vehicle";
-              const vOdo = v.mileageKm !== undefined ? v.mileageKm : v.mileage;
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200/90 flex-wrap sm:flex-nowrap">
+              {allVehicles.map((v, idx) => {
+                const vVin = v.vin || v.chassisNumber;
+                const isSelected = vVin === vin;
+                const vPlate = v.registrationNumber || v.plateNumber || v.plate;
+                const vTitle =
+                  v.description ||
+                  `${v.brand || ""} ${v.model || ""}`.trim() ||
+                  "Vehicle";
+                const vOdo = v.mileageKm !== undefined ? v.mileageKm : v.mileage;
+                const isPrimary = idx === 0;
 
-              return (
-                <button
-                  key={vVin}
-                  type="button"
-                  onClick={() => selectVehicleByVin(vVin)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-left transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                    isSelected
-                      ? "bg-blue-600 text-white border-blue-600 shadow-2xs font-bold"
-                      : "bg-slate-50 hover:bg-slate-100 text-gray-700 border-gray-200 hover:border-gray-300"
-                  }`}
-                >
-                  <FaCar
-                    className={`text-xs ${isSelected ? "text-white" : "text-blue-600"}`}
-                  />
-                  <div>
-                    <span className="font-bold text-xs block leading-tight">
-                      {vTitle}
-                    </span>
-                    <span
-                      className={`text-[10px] font-mono block ${isSelected ? "text-blue-100" : "text-gray-400"}`}
-                    >
-                      {vPlate ? `Plate: ${vPlate}` : ""}{" "}
-                      {vVin ? `• VIN: ${vVin.slice(-6)}` : ""}{" "}
-                      {vOdo ? `• ${Number(vOdo).toLocaleString()} KM` : ""}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={vVin || idx}
+                    type="button"
+                    onClick={() => selectVehicleByVin(vVin)}
+                    className={`relative px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap overflow-hidden select-none active:scale-[0.98] ${
+                      isSelected
+                        ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-400/50 border border-white/30 before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/25 before:to-transparent before:pointer-events-none"
+                        : "bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200/90 hover:border-slate-300 shadow-2xs"
+                    }`}
+                    title={`Select ${isPrimary ? 'Primary Vehicle' : `Vehicle ${idx + 1}`}: ${vTitle}`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <FaCar
+                        className={`text-xs shrink-0 ${isSelected ? "text-blue-100" : "text-blue-600"}`}
+                      />
+                      {isPrimary ? (
+                        <span
+                          className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ${
+                            isSelected
+                              ? "bg-white/25 text-white"
+                              : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                          }`}
+                        >
+                          ★ Primary
+                        </span>
+                      ) : (
+                        <span
+                          className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ${
+                            isSelected
+                              ? "bg-white/20 text-blue-100"
+                              : "bg-slate-100 text-slate-600 border border-slate-200"
+                          }`}
+                        >
+                          Vehicle {idx + 1}
+                        </span>
+                      )}
+                      <span className="font-bold truncate max-w-[150px] sm:max-w-none">{vTitle}</span>
+                      {vPlate && (
+                        <span
+                          className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold shrink-0 ${
+                            isSelected
+                              ? "bg-blue-950/40 text-blue-100 border border-white/20"
+                              : "bg-slate-100 text-slate-700 border border-slate-200"
+                          }`}
+                        >
+                          {vPlate}
+                        </span>
+                      )}
+                      {vOdo && (
+                        <span
+                          className={`text-[9px] font-mono shrink-0 hidden md:inline ${
+                            isSelected ? "text-blue-200" : "text-gray-400"
+                          }`}
+                        >
+                          • {Number(vOdo).toLocaleString()} KM
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 

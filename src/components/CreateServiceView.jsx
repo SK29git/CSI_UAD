@@ -109,25 +109,24 @@ export default function CreateServiceView({ mode = "other_request" }) {
     setIsProcessing(true);
 
     try {
-      // Submit service request notes for each selected reference
-      const results = await Promise.all(
-        selectedReferences.map((refType) =>
-          createServiceRequestNotes({
-            group: String(group || "BMW").trim(),
-            customerId: String(customerId || "").trim(),
-            customerName: String(customerName || "").trim(),
-            eventType: refType,
-            eventTypes: selectedReferences,
-            branchCode: String(branchCode || "10").trim(),
-            salesExecutiveId: advisorId ? String(advisorId).trim() : null,
-            notes: notes.trim(),
-          }),
-        ),
-      );
+      // Send a single request with primary eventType and additional eventTypes array
+      const primaryEventType = selectedReferences[0];
+      const additionalEventTypes = selectedReferences.slice(1);
 
-      const hasError = results.some((r) => r && r.ok === false);
+      const result = await createServiceRequestNotes({
+        group: String(group || "BMW").trim(),
+        customerId: String(customerId || "").trim(),
+        customerName: String(customerName || "").trim(),
+        eventType: primaryEventType,
+        eventTypes: additionalEventTypes,
+        branchCode: String(branchCode || "10").trim(),
+        salesExecutiveId: advisorId ? String(advisorId).trim() : null,
+        notes: notes.trim(),
+      });
 
-      if (!hasError) {
+      const isError = result && result.ok === false;
+
+      if (!isError) {
         // Show processing state without showing any success popups or alerts
         setTimeout(() => {
           setIsSubmitting(false);
@@ -140,10 +139,9 @@ export default function CreateServiceView({ mode = "other_request" }) {
       } else {
         setIsSubmitting(false);
         setIsProcessing(false);
-        const errObj = results.find((r) => r && r.ok === false);
         setErrorMsg(
-          errObj?.error ||
-            errObj?.errorMessage ||
+          result?.error ||
+            result?.errorMessage ||
             "Failed to submit service request notes.",
         );
       }

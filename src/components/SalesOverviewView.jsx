@@ -132,7 +132,7 @@ export default function SalesOverviewView() {
       
       {/* 1. Vehicle Details Card */}
       <div className="bg-white rounded-xl p-4 shadow-xs border border-gray-100">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100 mb-3">
           <div className="flex items-center gap-2">
             <h2 className="font-bold text-gray-900 text-base">Vehicle Details</h2>
             {vehicles.length > 0 && (
@@ -143,41 +143,6 @@ export default function SalesOverviewView() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Vehicle Selector Dropdown */}
-            {vehicles.length > 1 && (
-              <div className="flex items-center gap-1.5 bg-blue-50/70 border border-blue-200 px-2 py-1 rounded-lg">
-                <FaCar className="text-blue-600 text-xs shrink-0" />
-                <label htmlFor="vehicle-select" className="text-[11px] font-bold text-blue-950 shrink-0">
-                  Select Vehicle:
-                </label>
-                <select
-                  id="vehicle-select"
-                  value={selectedIndex}
-                  onChange={(e) => setSelectedIndex(Number(e.target.value))}
-                  className="bg-white text-xs font-bold text-gray-800 border border-blue-300 rounded-md px-2.5 py-1 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs max-w-[280px] truncate"
-                >
-                  {vehicles.map((v, idx) => {
-                    const brand = v.brand || 'Vehicle';
-                    const model = v.model || v.variant || '';
-                    const desc = v.description || `${brand} ${model}`.trim();
-                    const reg = v.registrationNumber || v.plateNumber || '';
-                    const vinShort = v.vin ? `(..${v.vin.slice(-6)})` : '';
-                    const label = [
-                      `${idx === 0 ? 'Primary: ' : ''}${desc || brand}`,
-                      reg ? `[${reg}]` : '',
-                      vinShort
-                    ].filter(Boolean).join(' ');
-
-                    return (
-                      <option key={v.vin || idx} value={idx}>
-                        {label || `Vehicle ${idx + 1}`}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            )}
-
             <button 
               onClick={fetchSalesData} 
               className="text-gray-400 hover:text-gray-600 cursor-pointer p-1"
@@ -188,11 +153,84 @@ export default function SalesOverviewView() {
 
             {activeVehicle?.vin && (
               <span className="text-emerald-600 font-bold text-xs flex items-center gap-1">
-                <FaCheckCircle className="text-xs" /> VIN Verified
+                <FaCheckCircle className="text-xs" /> Verified VIN
               </span>
             )}
           </div>
         </div>
+
+        {/* Multi-Vehicle Tabs (Glossy Modern Tabs with Primary Vehicle First - Replaces Dropdown) */}
+        {vehicles.length > 1 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-gray-100 mb-4 no-scrollbar">
+            <span className="text-[10px] font-extrabold uppercase text-gray-400 shrink-0 flex items-center gap-1 mr-1">
+              <FaCar className="text-blue-600 text-xs" />
+              <span>Vehicles ({vehicles.length}):</span>
+            </span>
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100/90 rounded-xl border border-slate-200/90 flex-wrap sm:flex-nowrap">
+              {vehicles.map((v, idx) => {
+                const isSelected = selectedIndex === idx;
+                const brand = v.brand || 'Vehicle';
+                const model = v.model || v.variant || '';
+                const desc = v.description || `${brand} ${model}`.trim();
+                const reg = v.registrationNumber || v.plateNumber || '';
+                const isPrimary = idx === 0;
+
+                return (
+                  <button
+                    key={v.vin || idx}
+                    type="button"
+                    onClick={() => setSelectedIndex(idx)}
+                    className={`relative px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap overflow-hidden select-none active:scale-[0.98] ${
+                      isSelected
+                        ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-400/50 border border-white/30 before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/25 before:to-transparent before:pointer-events-none"
+                        : "bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200/90 hover:border-slate-300 shadow-2xs"
+                    }`}
+                    title={`Select ${isPrimary ? 'Primary Vehicle' : `Vehicle ${idx + 1}`}: ${desc}`}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <FaCar
+                        className={`text-xs shrink-0 ${isSelected ? "text-blue-100" : "text-blue-600"}`}
+                      />
+                      {isPrimary ? (
+                        <span
+                          className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ${
+                            isSelected
+                              ? "bg-white/25 text-white"
+                              : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                          }`}
+                        >
+                          ★ Primary
+                        </span>
+                      ) : (
+                        <span
+                          className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ${
+                            isSelected
+                              ? "bg-white/20 text-blue-100"
+                              : "bg-slate-100 text-slate-600 border border-slate-200"
+                          }`}
+                        >
+                          Vehicle {idx + 1}
+                        </span>
+                      )}
+                      <span className="font-bold truncate max-w-[150px] sm:max-w-none">{desc || brand}</span>
+                      {reg && (
+                        <span
+                          className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold shrink-0 ${
+                            isSelected
+                              ? "bg-blue-950/40 text-blue-100 border border-white/20"
+                              : "bg-slate-100 text-slate-700 border border-slate-200"
+                          }`}
+                        >
+                          {reg}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <div className="py-10 flex flex-col items-center justify-center text-gray-400 gap-2">

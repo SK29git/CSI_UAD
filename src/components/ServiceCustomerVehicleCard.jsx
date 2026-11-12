@@ -307,17 +307,27 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
                 <span>Transfer</span>
               </button>
               {vehicles && vehicles.length > 1 && (
-                <select
-                  value={selectedVin || currentVehicle.vin}
-                  onChange={(e) => selectVehicleByVin(e.target.value)}
-                  className="bg-blue-600 text-white text-[10px] font-extrabold rounded px-2 py-1 focus:outline-none cursor-pointer shadow-2xs"
-                >
-                  {vehicles.map((v) => (
-                    <option key={v.vin} value={v.vin}>
-                      {v.description || `${v.brand || ''} ${v.model || ''}`}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg">
+                  {vehicles.map((v, idx) => {
+                    const isSel = (selectedVin || currentVehicle.vin) === v.vin;
+                    const isPrimary = idx === 0;
+                    return (
+                      <button
+                        key={v.vin || idx}
+                        type="button"
+                        onClick={() => selectVehicleByVin(v.vin)}
+                        className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold transition-all cursor-pointer ${
+                          isSel
+                            ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs ring-1 ring-blue-400/50"
+                            : "text-slate-600 hover:text-slate-900 hover:bg-white"
+                        }`}
+                        title={v.description || `${v.brand || ''} ${v.model || ''}`}
+                      >
+                        {isPrimary ? '★ Primary' : `Veh ${idx + 1}`}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>
