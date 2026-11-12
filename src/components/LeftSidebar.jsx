@@ -532,9 +532,14 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                       <span className="truncate max-w-[190px]">-</span>
                     </div>
                   )}
-                  <div className="flex items-center gap-1.5">
-                    <FaMapMarkerAlt className="text-gray-400 text-[11px]" />
-                    <span className="truncate max-w-[190px]">{locationStr || '-'}</span>
+                  <div className="flex items-start gap-1.5">
+                    <FaMapMarkerAlt className="text-gray-400 text-[11px] shrink-0 mt-0.5" />
+                    <span 
+                      className="text-xs text-gray-600 line-clamp-2 break-words leading-tight flex-1"
+                      title={locationStr && locationStr !== 'N/A' ? locationStr.replace(/[\uFFFD\u0000-\u001F\u007F-\u009F]/g, '').trim() : ''}
+                    >
+                      {locationStr && locationStr !== 'N/A' ? locationStr.replace(/[\uFFFD\u0000-\u001F\u007F-\u009F]/g, '').trim() : '-'}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <FaGlobe className="text-gray-400 text-[11px]" />

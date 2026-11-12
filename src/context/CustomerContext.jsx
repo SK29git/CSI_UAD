@@ -1871,16 +1871,21 @@ export function CustomerProvider({ children }) {
   const getFormattedLocation = () => {
     if (!customer) return 'N/A';
     const loc = customer?.location || {};
+    const sanitize = (val) => {
+      if (!val || val === 'N/A' || val === 'EMPTY') return null;
+      const cleaned = String(val).replace(/[\uFFFD\u0000-\u001F\u007F-\u009F]/g, '').trim();
+      return cleaned || null;
+    };
     const parts = [
-      loc.flatBuilding && loc.flatBuilding !== 'N/A' && loc.flatBuilding !== 'EMPTY' ? loc.flatBuilding : null,
-      loc.street && loc.street !== 'N/A' && loc.street !== 'EMPTY' ? loc.street : null,
-      loc.area && loc.area !== 'EMPTY' ? loc.area : null,
-      loc.city && loc.city !== 'EMPTY' ? loc.city : null,
-      loc.poBox && loc.poBox !== 'N/A' && loc.poBox !== 'EMPTY' ? `P.O. ${loc.poBox}` : null
+      sanitize(loc.flatBuilding),
+      sanitize(loc.street),
+      sanitize(loc.area),
+      sanitize(loc.city),
+      loc.poBox && loc.poBox !== 'N/A' && loc.poBox !== 'EMPTY' ? `P.O. ${sanitize(loc.poBox)}` : null
     ].filter(Boolean);
 
     if (parts.length > 0) return parts.join(', ');
-    if (customer?.nationality) return customer.nationality;
+    if (customer?.nationality) return sanitize(customer.nationality) || 'N/A';
     return 'N/A';
   };
 
