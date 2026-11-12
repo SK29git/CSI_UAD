@@ -1349,19 +1349,7 @@ export default function EventHistoryView({
                   </div>
                 </div>
 
-                {/* 2. Event Task Notes Box */}
-                {(activeEvent.eventTaskNotes || activeEvent.eventTaskNotes2) && (
-                  <div className="bg-gradient-to-r from-blue-50/60 to-indigo-50/40 p-3.5 rounded-xl border border-blue-200/80 flex flex-col gap-1 shadow-2xs">
-                    <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
-                      <FaFileAlt className="text-blue-600 text-[10px]" /> Event Task Notes
-                    </span>
-                    <p className="text-xs text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">
-                      {activeEvent.eventTaskNotes || activeEvent.eventTaskNotes2}
-                    </p>
-                  </div>
-                )}
-
-                {/* 3. Deep Event API Detailed Attributes Grid (3 Detailed Cards) */}
+                {/* 2. Deep Event API Detailed Attributes Grid (3 Detailed Cards: Sales Exec & Desk, Campaign, Escalation) */}
                 {modalOneEventResult && modalOneEventResult.error ? (
                   <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs">
                     {modalOneEventResult.error}
@@ -1563,15 +1551,14 @@ export default function EventHistoryView({
                   </div>
                 )}
 
-                {/* 4. Additional Task Notes from API if different or additional */}
-                {(d.eventTaskNotes || d.eventTaskNotes2) &&
-                 (d.eventTaskNotes !== activeEvent.eventTaskNotes || d.eventTaskNotes2 !== activeEvent.eventTaskNotes2) && (
-                  <div className="bg-gradient-to-r from-blue-50/60 to-indigo-50/40 p-3.5 rounded-xl border border-blue-200/80 text-xs text-slate-800 space-y-1 shadow-2xs">
-                    <span className="font-bold text-blue-900 block text-[10px] uppercase tracking-wider flex items-center gap-1.5">
-                      <FaFileAlt className="text-blue-600 text-[10px]" /> Detailed Task Notes
+                {/* 3. Event Task Notes Box - Positioned after Sales Executive & Desk, Campaign & Escalation cards */}
+                {(activeEvent.eventTaskNotes || activeEvent.eventTaskNotes2 || d.eventTaskNotes || d.eventTaskNotes2) && (
+                  <div className="bg-gradient-to-r from-blue-50/70 via-indigo-50/30 to-blue-50/50 p-4 rounded-xl border border-blue-200/90 flex flex-col gap-1.5 shadow-xs">
+                    <span className="text-[11px] font-extrabold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <FaFileAlt className="text-blue-600 text-xs" /> Event Task Notes
                     </span>
-                    <p className="leading-relaxed whitespace-pre-wrap font-medium text-slate-800">
-                      {d.eventTaskNotes || d.eventTaskNotes2}
+                    <p className="text-xs text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">
+                      {activeEvent.eventTaskNotes || activeEvent.eventTaskNotes2 || d.eventTaskNotes || d.eventTaskNotes2}
                     </p>
                   </div>
                 )}
