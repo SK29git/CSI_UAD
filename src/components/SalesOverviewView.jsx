@@ -180,51 +180,17 @@ export default function SalesOverviewView() {
                     key={v.vin || idx}
                     type="button"
                     onClick={() => setSelectedIndex(idx)}
-                    className={`relative px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap overflow-hidden select-none active:scale-[0.98] ${
+                    className={`relative px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap overflow-hidden select-none active:scale-[0.98] ${
                       isSelected
                         ? "bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-400/50 border border-white/30 before:absolute before:inset-0 before:bg-gradient-to-b before:from-white/25 before:to-transparent before:pointer-events-none"
                         : "bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-200/90 hover:border-slate-300 shadow-2xs"
                     }`}
-                    title={`Select ${isPrimary ? 'Primary Vehicle' : `Vehicle ${idx + 1}`}: ${desc}`}
+                    title={`Select Vehicle ${idx + 1}${isPrimary ? ' (Primary)' : ''}: ${desc}`}
                   >
-                    <div className="flex items-center gap-1.5">
-                      <FaCar
-                        className={`text-xs shrink-0 ${isSelected ? "text-blue-100" : "text-blue-600"}`}
-                      />
-                      {isPrimary ? (
-                        <span
-                          className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ${
-                            isSelected
-                              ? "bg-white/25 text-white"
-                              : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                          }`}
-                        >
-                          ★ Primary
-                        </span>
-                      ) : (
-                        <span
-                          className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider shrink-0 ${
-                            isSelected
-                              ? "bg-white/20 text-blue-100"
-                              : "bg-slate-100 text-slate-600 border border-slate-200"
-                          }`}
-                        >
-                          Vehicle {idx + 1}
-                        </span>
-                      )}
-                      <span className="font-bold truncate max-w-[150px] sm:max-w-none">{desc || brand}</span>
-                      {reg && (
-                        <span
-                          className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold shrink-0 ${
-                            isSelected
-                              ? "bg-blue-950/40 text-blue-100 border border-white/20"
-                              : "bg-slate-100 text-slate-700 border border-slate-200"
-                          }`}
-                        >
-                          {reg}
-                        </span>
-                      )}
-                    </div>
+                    <FaCar
+                      className={`text-xs shrink-0 ${isSelected ? "text-blue-100" : "text-blue-600"}`}
+                    />
+                    <span>Vehicle {idx + 1}</span>
                   </button>
                 );
               })}

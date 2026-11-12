@@ -323,7 +323,7 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
                         }`}
                         title={v.description || `${v.brand || ''} ${v.model || ''}`}
                       >
-                        {isPrimary ? '★ Primary' : `Veh ${idx + 1}`}
+                        Vehicle {idx + 1}
                       </button>
                     );
                   })}
