@@ -886,7 +886,26 @@ export default function EventHistoryView({
               </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+              {/* Table Header */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-[11px]">
+                  <thead>
+                    <tr className="bg-slate-700 text-white text-left">
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Due On</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">At</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">By</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Type</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Reference</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Reg No</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Strength</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Closed On</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">At</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap">Closed By</th>
+                      <th className="px-2 py-2 font-extrabold uppercase tracking-wider whitespace-nowrap w-0"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
               {filteredEvents.map((ev, idx) => {
                 const eventNum =
                   ev.eventNumber || ev.callNumber || String(idx + 1);
@@ -924,93 +943,95 @@ export default function EventHistoryView({
                   customer?.customerName ||
                   "Ahmed Moursy Altantawi";
 
+                // Date logic: prioritized check for Keyloop CRM due date
+                const rawDueDate = ev.dateRequiredTo || ev.dueDate || ev.dueOn || ev.eventTaskDate || ev.createdDate;
+                const rawDueTime = ev.dateRequiredToTime || ev.dueTime || ev.dueOnTime || ev.eventTaskTime || ev.createdTime;
+                const formattedDueDate = rawDueDate || "—";
+                const formattedDueTime = rawDueTime ? String(rawDueTime).substring(0, 5) : "—";
+
+                const formattedClosedDate = ev.closedDate || "—";
+                const formattedClosedTime = ev.closedTime ? String(ev.closedTime).substring(0, 5) : "—";
+
+                // Strength dots (only show if strength data is valid and > 0, else show dash)
+                const hasStrength = Boolean(
+                  ev.strengthOfEventTask &&
+                  String(ev.strengthOfEventTask).trim() !== "" &&
+                  String(ev.strengthOfEventTask).trim() !== "0"
+                );
+                const strengthVal = hasStrength ? parseInt(ev.strengthOfEventTask, 10) : 0;
+                const strengthDots = Array.from({ length: 4 }, (_, i) => i < strengthVal);
+
                 return (
-                  <div
-                    key={evId}
-                    className={`rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 ${
-                      isExpanded
-                        ? "bg-blue-50/20 border-2 border-blue-500 shadow-md ring-4 ring-blue-100/70"
-                        : "bg-white border border-slate-200 shadow-2xs hover:border-blue-300"
-                    }`}
-                  >
-                    {/* Event Card Header */}
-                    <div
-                      className={`flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b transition-colors ${
-                        isExpanded ? "border-blue-200" : "border-slate-100"
+                  <React.Fragment key={evId}>
+                    {/* TABLE ROW */}
+                    <tr
+                      className={`transition-colors cursor-pointer ${
+                        isExpanded
+                          ? "bg-blue-50 border-l-2 border-l-blue-500"
+                          : idx % 2 === 0
+                          ? "bg-white hover:bg-blue-50/40"
+                          : "bg-slate-50/60 hover:bg-blue-50/40"
                       }`}
                     >
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {/* Event Type Badge */}
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getEventTypeColor(ev.eventType)}`}
-                        >
-                          {ev.eventType || "EVENT"}
+                      {/* Due On */}
+                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-700 font-semibold">
+                        {formattedDueDate}
+                      </td>
+                      {/* At */}
+                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-500">
+                        {formattedDueTime}
+                      </td>
+                      {/* By */}
+                      <td className="px-2 py-1.5 whitespace-nowrap text-[11px] text-slate-700 font-medium max-w-[120px] truncate" title={ev.creatorName || ev.followupUsername || ""}>
+                        {ev.creatorName || ev.followupUsername || "—"}
+                      </td>
+                      {/* Type */}
+                      <td className="px-2 py-1.5 whitespace-nowrap">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-extrabold border ${getEventTypeColor(ev.eventType)}`}>
+                          {ev.eventType || "—"}
                         </span>
-
-                        {/* Event Number Badge */}
-                        <span
-                          onClick={() => {
-                            if (isExpanded) {
-                              setExpandedOneEventId(null);
-                            } else {
-                              fetchOneEvent(eventNum);
-                            }
-                          }}
-                          className={`font-mono font-bold text-xs px-2.5 py-0.5 rounded-md cursor-pointer transition-colors flex items-center gap-1.5 ${
-                            isExpanded
-                              ? "bg-blue-600 text-white shadow-xs"
-                              : "bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100"
-                          }`}
-                          title={`Click to view details for Event #${eventNum}`}
-                        >
-                          <span>Event #{eventNum}</span>
-                          {isExpanded && (
-                            <span className="bg-white text-blue-700 text-[9px] font-extrabold px-1.5 py-0.2 rounded-xs uppercase">
-                              Active
-                            </span>
-                          )}
-                        </span>
-
-                        {/* Reference Title */}
-                        <span className="font-bold text-slate-800 text-xs">
-                          {ev.reference ||
-                            ev.description ||
-                            "Customer Interaction"}
-                        </span>
-
-                        {/* Status Badge */}
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
-                            isClosed
-                              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                              : "bg-amber-50 text-amber-800 border border-amber-200"
-                          }`}
-                        >
-                          {isClosed ? (
-                            <>
-                              <FaCheckCircle className="text-emerald-600 text-[9px]" />{" "}
-                              Closed
-                            </>
-                          ) : (
-                            <>
-                              <FaClock className="text-amber-600 text-[9px]" />{" "}
-                              In Progress
-                            </>
-                          )}
-                        </span>
-
-                        {/* Created Date Time */}
-                        {ev.createdDate && (
-                          <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                            <FaCalendarAlt className="text-slate-400 text-[9px]" />
-                            {ev.createdDate} {ev.createdTime || ""}
-                          </span>
+                      </td>
+                      {/* Reference */}
+                      <td className="px-2 py-1.5 text-[11px] text-slate-700 font-semibold max-w-[180px] truncate" title={ev.reference || ev.description || ""}>
+                        {ev.reference || ev.description || "—"}
+                      </td>
+                      {/* Reg No */}
+                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-600">
+                        {ev.vehicleNumber || ev.registrationNumber || "—"}
+                      </td>
+                      {/* Strength */}
+                      <td className="px-2 py-1.5 whitespace-nowrap">
+                        {hasStrength && strengthVal > 0 ? (
+                          <div className="flex gap-0.5" title={`Strength: ${strengthVal}/4`}>
+                            {strengthDots.map((filled, si) => (
+                              <span
+                                key={si}
+                                className={`inline-block w-2.5 h-3 rounded-sm border ${
+                                  filled
+                                    ? "bg-red-500 border-red-600"
+                                    : "bg-slate-200 border-slate-300"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 font-mono">—</span>
                         )}
-                      </div>
-
-                      {/* Top Right Controls */}
-                      <div className="flex items-center gap-2">
-                        {/* Event Details button: fetch details for this event */}
+                      </td>
+                      {/* Closed On */}
+                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-500">
+                        {formattedClosedDate}
+                      </td>
+                      {/* Closed At */}
+                      <td className="px-2 py-1.5 whitespace-nowrap font-mono text-[11px] text-slate-500">
+                        {formattedClosedTime}
+                      </td>
+                      {/* Closed By */}
+                      <td className="px-2 py-1.5 whitespace-nowrap text-[11px] text-slate-600 max-w-[100px] truncate" title={ev.closedByUser || ev.lastUpdateUser || ""}>
+                        {ev.closedByUser || ev.lastUpdateUser || "—"}
+                      </td>
+                      {/* View Button */}
+                      <td className="px-2 py-1.5 whitespace-nowrap text-right">
                         <button
                           type="button"
                           onClick={() => {
@@ -1020,487 +1041,495 @@ export default function EventHistoryView({
                               fetchOneEvent(eventNum);
                             }
                           }}
-                          className={`text-[11px] font-extrabold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-xs ${
+                          className={`text-[10px] font-extrabold px-2.5 py-1 rounded-md transition-all flex items-center gap-1 cursor-pointer border ${
                             isExpanded
-                              ? "bg-blue-600 text-white ring-2 ring-blue-300 shadow-sm"
-                              : "bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200"
+                              ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                              : "bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200"
                           }`}
                         >
                           {isOneEventLoading ? (
-                            <FaSpinner className="animate-spin text-xs" />
-                          ) : (
-                            <FaInfoCircle className="text-xs" />
-                          )}
-                          <span>
-                            {isExpanded
-                              ? "Hide Details"
-                              : `Event Details (#${eventNum})`}
-                          </span>
-                          {isExpanded ? (
+                            <FaSpinner className="animate-spin text-[9px]" />
+                          ) : isExpanded ? (
                             <FaChevronUp className="text-[9px]" />
                           ) : (
                             <FaChevronDown className="text-[9px]" />
                           )}
+                          <span>{isExpanded ? "Hide" : "View"}</span>
                         </button>
-                      </div>
-                    </div>
+                      </td>
+                    </tr>
 
-                    {/* Primary Data Grid: Customer & Assignment Focus */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-[11px]">
-                      {/* 1. Customer Profile & Vehicle Details (FIRST) */}
-                      <div className="bg-blue-50/70 p-2.5 rounded-lg border border-blue-200/90 flex flex-col justify-between">
-                        <div>
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider flex items-center gap-1">
-                              <FaUser className="text-blue-600" /> Customer & Vehicle
-                            </span>
-                            <span
-                              className="text-[9px] font-bold text-blue-800 bg-blue-100/90 px-1.5 py-0.2 rounded font-mono"
-                              title={`Customer Number: ${d.customerNumber || customerNumber || "76876"}`}
-                            >
-                              #{d.customerNumber || customerNumber || "76876"}
-                            </span>
-                          </div>
-                          {/* Full Customer Name with NO truncation so surname is completely visible */}
-                          <strong
-                            className="text-slate-900 text-xs block font-bold leading-tight"
-                            title={customerFullName}
-                          >
-                            {customerFullName}
-                          </strong>
-                        </div>
-                        <div className="flex flex-col gap-1 mt-1 text-[10px]">
-                          {/* Customer Contact Details: Mobile & Email */}
-                          <div className="flex items-center justify-between gap-1 text-slate-600 font-mono flex-wrap">
-                            <span className="font-semibold text-slate-800">
-                              {d.mobileNumber || "*******840"}
-                            </span>
-                            {d.email && (
-                              <a
-                                href={`mailto:${d.email}`}
-                                className="text-blue-600 hover:underline font-sans text-[10px] break-all"
-                                title={d.email}
-                              >
-                                {d.email}
-                              </a>
-                            )}
-                          </div>
-                          {/* Vehicle Model & Code Info */}
-                          <div className="pt-1 border-t border-blue-200/70 flex items-center justify-between gap-1 flex-wrap">
-                            <strong className="text-slate-900 font-bold flex items-center gap-1">
-                              <FaCar className="text-blue-600 text-[10px] shrink-0" />
-                              <span>
-                                {d.makeFromNotes || d.eventMake || d.keyloopGroup || group || "BMW"}{" "}
-                                {d.modelFromNotes || d.eventModel || "x5"}
-                              </span>
-                            </strong>
-                            <div className="flex items-center gap-1 text-[9px] font-mono text-slate-500">
-                              {d.eventModel && (
-                                <span className="bg-blue-100 text-blue-900 px-1 rounded font-bold">
-                                  Code: {d.eventModel}
-                                </span>
-                              )}
-                              {d.vehicleNumber && (
-                                <span className="text-slate-600 font-semibold">
-                                  Veh #{d.vehicleNumber}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* 2. Assigned Sales Executive / Follow-up */}
-                      <div className="bg-purple-50/70 p-2.5 rounded-lg border border-purple-200/80 flex flex-col justify-between">
-                        <div>
-                          <div className="flex items-center justify-between mb-0.5">
-                            <span className="text-[10px] font-extrabold text-purple-900 uppercase tracking-wider flex items-center gap-1">
-                              <FaUserTie className="text-purple-600" /> Sales Executive
-                            </span>
-                            {salesExecData?.branchName && (
-                              <span
-                                className="text-[9px] font-bold text-purple-700 bg-purple-100/90 px-1.5 py-0.2 rounded truncate max-w-[110px]"
-                                title={salesExecData.branchName}
-                              >
-                                {salesExecData.branchName}
-                              </span>
-                            )}
-                          </div>
-                          <strong
-                            className="text-slate-900 text-xs block truncate"
-                            title={followupSalesExecutive || salesExecData?.name}
-                          >
-                            {followupSalesExecutive || salesExecData?.name || "Unassigned"}
-                          </strong>
-                        </div>
-                        <div className="flex flex-col gap-1 mt-1 text-[10px]">
-                          <div className="flex items-center gap-1.5 text-slate-500 font-mono flex-wrap">
-                            {ev.followupUserLocation && (
-                              <span className="bg-purple-100 text-purple-800 px-1 rounded text-[9px] font-bold">
-                                Desk: {ev.followupUserLocation}
-                              </span>
-                            )}
-                            {salesExecUserId && (
-                              <span className="truncate">
-                                User: {salesExecUserId}
-                              </span>
-                            )}
-                          </div>
-                          {/* Sales Executive Contact Details Directly In Card */}
-                          {salesExecData && (salesExecData.email || salesExecData.mobile) && (
-                            <div className="flex flex-col gap-0.5 pt-1 border-t border-purple-200/60 font-sans">
-                              {salesExecData.email && (
-                                <a
-                                  href={`mailto:${salesExecData.email}`}
-                                  className="text-blue-600 hover:underline flex items-center gap-1 truncate font-medium text-[10px]"
-                                  title={salesExecData.email}
-                                >
-                                  <FaEnvelope className="text-purple-400 text-[9px] shrink-0" />
-                                  <span className="truncate">{salesExecData.email}</span>
-                                </a>
-                              )}
-                              {salesExecData.mobile && (
-                                <a
-                                  href={`tel:${salesExecData.mobile}`}
-                                  className="text-slate-700 hover:underline flex items-center gap-1 font-medium text-[10px]"
-                                >
-                                  <FaPhoneAlt className="text-purple-400 text-[9px] shrink-0" />
-                                  <span>{salesExecData.mobile}</span>
-                                </a>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 3. Creator / Originating Staff */}
-                      <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex flex-col justify-between">
-                        <div>
-                          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5 flex items-center gap-1">
-                            <FaIdBadge className="text-slate-400" /> Created By
-                          </span>
-                          <strong
-                            className="text-slate-900 text-xs block truncate"
-                            title={creatorSalesExecutive}
-                          >
-                            {creatorSalesExecutive}
-                          </strong>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-slate-500 text-[10px] mt-1 font-mono">
-                          {ev.createdByUser && (
-                            <span>User: {ev.createdByUser}</span>
-                          )}
-                          {ev.closedByUser && (
-                            <span>| Closed: {ev.closedByUser}</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 4. Channel & Branch Location */}
-                      <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex flex-col justify-between">
-                        <div>
-                          <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5 flex items-center gap-1">
-                            <FaBuilding className="text-slate-400" /> Branch &
-                            Channel
-                          </span>
-                          <strong
-                            className="text-slate-900 text-xs block truncate"
-                            title={ev.branchName}
-                          >
-                            {ev.branchName ||
-                              (ev.branchCode
-                                ? `Branch ${ev.branchCode}`
-                                : "Sheikh Zayed Rd")}
-                          </strong>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-slate-500 text-[10px] mt-1">
-                          <span className="bg-blue-50 text-blue-700 px-1 rounded text-[9px] font-bold border border-blue-200">
-                            {ev.source1 || ev.contactMethod || "CRM Outbound"}
-                          </span>
-                          {ev.source2 && (
-                            <span className="truncate">({ev.source2})</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Event Task Notes Box */}
-                    {(ev.eventTaskNotes || ev.eventTaskNotes2) && (
-                      <div className="bg-blue-50/40 p-2.5 rounded-lg border border-blue-100 flex flex-col gap-1">
-                        <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider flex items-center gap-1">
-                          <FaFileAlt className="text-blue-500 text-[10px]" />{" "}
-                          Event Task Notes
-                        </span>
-                        <p className="text-xs text-slate-800 font-medium leading-relaxed">
-                          {ev.eventTaskNotes || ev.eventTaskNotes2}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* ONE EVENT DETAILS CONTAINER (Fetched via GET /api/v1/events?group=...&eventNumber=...) */}
+                    {/* EXPANDED DETAILS ROW */}
                     {isExpanded && (
-                      <div className="mt-1 bg-gradient-to-br from-blue-50/70 via-white to-slate-50 border-2 border-blue-400 rounded-xl p-3.5 shadow-sm flex flex-col gap-3 animate-fade-in ring-2 ring-blue-100">
-                        <div className="flex items-center justify-between pb-2 border-b border-blue-200">
-                          <div className="flex items-center gap-2">
-                            <span className="w-6 h-6 rounded-md bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                              <FaFileAlt className="text-xs" />
-                            </span>
-                            <div>
-                              <strong className="text-blue-950 text-xs font-bold flex items-center gap-2">
-                                <span>
-                                  Active Event Details — Event #{eventNum}
+                      <tr>
+                        <td colSpan={11} className="p-0 border-b border-blue-200">
+                          <div className="bg-gradient-to-br from-blue-50/40 via-white to-slate-50 border-t-2 border-blue-400 p-4 flex flex-col gap-3.5 animate-fade-in shadow-inner">
+                            {/* Detail Header Bar */}
+                            <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-blue-200">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {/* Event Type Badge */}
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${getEventTypeColor(ev.eventType)}`}>
+                                  {ev.eventType || "EVENT"}
                                 </span>
-                                <span className="bg-blue-600 text-white text-[9px] font-extrabold px-1.5 py-0.5 rounded-xs uppercase tracking-wide">
-                                  Currently Open
+
+                                {/* Event Number Badge */}
+                                <span className="font-mono font-bold text-xs px-2.5 py-0.5 rounded-md bg-blue-600 text-white shadow-xs flex items-center gap-1.5">
+                                  <span>Event #{eventNum}</span>
+                                  <span className="bg-white text-blue-700 text-[9px] font-extrabold px-1.5 py-0.2 rounded-xs uppercase">
+                                    Active
+                                  </span>
                                 </span>
-                              </strong>
-                            </div>
-                          </div>
-                          {isOneEventLoading && (
-                            <span className="text-xs text-blue-600 font-bold flex items-center gap-1">
-                              <FaSpinner className="animate-spin text-xs" />{" "}
-                              Loading details...
-                            </span>
-                          )}
-                        </div>
 
-                        {oneEventResult && oneEventResult.error ? (
-                          <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs">
-                            {oneEventResult.error}
-                          </div>
-                        ) : (
-                          (() => {
-                            const d = {
-                              ...ev,
-                              ...(oneEventResult && typeof oneEventResult === "object" && !oneEventResult.error
-                                ? oneEventResult
-                                : {}),
-                            };
-                            const customerFullName =
-                              `${d.title || ""} ${d.firstName || ""} ${d.surname || ""}`.trim() ||
-                              d.customer ||
-                              "Customer";
+                                {/* Reference Title */}
+                                <span className="font-bold text-slate-800 text-xs">
+                                  {ev.reference || ev.description || "Customer Interaction"}
+                                </span>
 
-                            return (
-                              <div className="flex flex-col gap-3 text-[11px]">
-                                {/* 3-Column Detailed Attributes Grid (Customer Profile shifted above) */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                  
-                                  {/* CARD 1: Sales Executive & Staff Assignment */}
-                                  <div className="bg-purple-50/60 p-3 rounded-xl border border-purple-200/90 shadow-2xs space-y-1.5">
-                                    <span className="text-[10px] font-extrabold text-purple-900 uppercase tracking-wider block pb-1 border-b border-purple-200/70 flex items-center justify-between">
-                                      <span className="flex items-center gap-1.5">
-                                        <FaUserTie className="text-purple-600 text-[10px]" /> Sales Executive & Desk
-                                      </span>
-                                      {salesExecUserId && (
-                                        <span className="font-mono text-[9px] text-purple-800 bg-purple-100 px-1.5 py-0.2 rounded font-bold">
-                                          ID: {salesExecUserId}
-                                        </span>
-                                      )}
-                                    </span>
-                                    <div className="space-y-1.5">
-                                      <div className="flex justify-between items-start gap-2">
-                                        <span className="text-slate-600 text-[10px] shrink-0">Assigned Staff:</span>
-                                        <strong className="text-slate-900 font-bold text-right" title={salesExecData?.name || followupSalesExecutive}>
-                                          {salesExecData?.name || followupSalesExecutive || "Unassigned"}
-                                        </strong>
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-600 text-[10px] shrink-0">Follow-up Desk:</span>
-                                        <span className="font-mono text-purple-900 font-bold bg-purple-100/90 px-1.5 py-0.2 rounded border border-purple-200">
-                                          {d.followupUserLocation || "A01"}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-start gap-2">
-                                        <span className="text-slate-600 text-[10px] shrink-0">Branch:</span>
-                                        <span className="text-slate-800 font-semibold text-right" title={d.branchName || "Sheikh Zayed Rd"}>
-                                          {d.branchName || "Sheikh Zayed Rd"} (Branch {d.notesFromBranch || d.branchCode || "10"})
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-600 text-[10px] shrink-0">Department Type:</span>
-                                        <span className="font-mono text-purple-950 font-bold bg-purple-100/80 px-1.5 py-0.2 rounded border border-purple-200">
-                                          {d.departmentType || "Z"}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-start gap-2">
-                                        <span className="text-slate-600 text-[10px] shrink-0">Corporate Email:</span>
-                                        {salesExecData?.email ? (
-                                          <a
-                                            href={`mailto:${salesExecData.email}`}
-                                            className="text-blue-600 hover:underline font-medium text-right break-all"
-                                            title={salesExecData.email}
-                                          >
-                                            {salesExecData.email}
-                                          </a>
-                                        ) : (
-                                          <span className="text-slate-400 font-mono">-</span>
-                                        )}
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-600 text-[10px] shrink-0">Direct Mobile:</span>
-                                        {salesExecData?.mobile ? (
-                                          <a
-                                            href={`tel:${salesExecData.mobile}`}
-                                            className="text-slate-800 hover:underline font-mono font-medium"
-                                          >
-                                            {salesExecData.mobile}
-                                          </a>
-                                        ) : (
-                                          <span className="text-slate-400 font-mono">-</span>
-                                        )}
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-600 text-[10px] shrink-0">Created By:</span>
-                                        <span className="font-mono text-slate-700 font-semibold">
-                                          {d.creatorName || d.createdByUser || "System"}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
+                                {/* Status Badge */}
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold ${
+                                    isClosed
+                                      ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                                      : "bg-amber-50 text-amber-800 border border-amber-200"
+                                  }`}
+                                >
+                                  {isClosed ? (
+                                    <>
+                                      <FaCheckCircle className="text-emerald-600 text-[9px]" /> Closed
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FaClock className="text-amber-600 text-[9px]" /> In Progress
+                                    </>
+                                  )}
+                                </span>
 
-                                  {/* CARD 2: Marketing Campaign & Enquiry Routing */}
-                                  <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-1.5">
-                                    <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider block pb-1 border-b border-slate-100 flex items-center gap-1.5">
-                                      <FaTag className="text-blue-600 text-[10px]" /> Campaign & Enquiry Source
-                                    </span>
-                                    <div className="space-y-1.5">
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Primary Source:</span>
-                                        <span className="font-bold text-slate-800 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
-                                          {d.source1 || "CRM Outbound"}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Secondary Source:</span>
-                                        <span className="text-slate-700 font-medium">
-                                          {d.source2 || "Contact Centre"}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-start gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Campaign Code:</span>
-                                        <span className="font-mono text-[10px] text-slate-800 font-semibold text-right break-all" title={d.marketingCampaignCode}>
-                                          {d.marketingCampaignCode || "-"}
-                                        </span>
-                                      </div>
-                                      {Boolean(d.campaignNameFromNotes) && (
-                                        <div className="flex justify-between items-start gap-2">
-                                          <span className="text-slate-500 text-[10px] shrink-0">Campaign Note:</span>
-                                          <span className="text-slate-700 text-right" title={d.campaignNameFromNotes}>
-                                            {d.campaignNameFromNotes}
-                                          </span>
-                                        </div>
-                                      )}
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Enquiry Number:</span>
-                                        <span className="font-mono text-slate-800 font-semibold">
-                                          {d.enquiryNumber || "-"}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Enquiry Status:</span>
-                                        <span className="text-slate-700">
-                                          {d.statusOfEnquiry || "-"}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-start gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Vehicle Model:</span>
-                                        <strong className="text-slate-900 text-right">
-                                          {d.makeFromNotes || d.keyloopGroup || group} {d.modelFromNotes || d.eventModel || "-"}
-                                        </strong>
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Call / Chain #:</span>
-                                        <span className="font-mono text-slate-800 font-semibold">
-                                          #{d.callNumber || "-"} / #{d.chainNumber || "-"}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* CARD 3: Escalation, Closure & Action Timings */}
-                                  <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-1.5">
-                                    <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider block pb-1 border-b border-slate-100 flex items-center gap-1.5">
-                                      <FaClock className="text-blue-600 text-[10px]" /> Escalation & Closure
-                                    </span>
-                                    <div className="space-y-1.5">
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Closed By:</span>
-                                        <span className="font-mono text-slate-900 font-bold bg-slate-100 px-1.5 py-0.2 rounded">
-                                          {d.closedByUser || "hamdan"}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Closed Date/Time:</span>
-                                        <span className="font-mono text-slate-700 font-medium text-right">
-                                          {d.closedDate2 || d.closedDate || "-"} {d.closedTime2 || d.closedTime || ""}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Closed Flag:</span>
-                                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
-                                          d.closedFlag2 === "1" || d.closedFlag === "1"
-                                            ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                                            : "bg-amber-100 text-amber-800 border border-amber-200"
-                                        }`}>
-                                          Flag {d.closedFlag2 || d.closedFlag || "1"} ({d.closedFlag2 === "1" || d.closedFlag === "1" ? "Closed" : "Open"})
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Escalate User:</span>
-                                        <span className="font-mono text-purple-700 font-bold bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
-                                          {d.escalateActionId || "pattepu"}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Escalate Entity:</span>
-                                        <span className="font-mono text-slate-700 font-medium">
-                                          Type {d.escalateEntityType || "6"}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Escalation Time:</span>
-                                        <span className="font-mono text-slate-700 font-medium text-right">
-                                          {d.escalateEventDate ? `${d.escalateEventDate} ${d.escalateEventTime || ""}` : "-"}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Task Timing:</span>
-                                        <span className="font-mono text-slate-700 font-medium text-right">
-                                          {d.eventTaskDate || d.createdDate} {d.eventTaskTime || d.createdTime || ""}
-                                        </span>
-                                      </div>
-                                      <div className="flex justify-between items-center gap-2">
-                                        <span className="text-slate-500 text-[10px] shrink-0">Prompted By:</span>
-                                        <span className="font-mono text-slate-700 font-semibold bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
-                                          {d.whoPromptedEventTask || "CALLCENT"}
-                                        </span>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                </div>
-
-                                {/* FULL EVENT TASK NOTES */}
-                                {(d.eventTaskNotes || d.eventTaskNotes2) && (
-                                  <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-200 text-xs text-slate-800 space-y-1">
-                                    <span className="font-bold text-blue-900 block text-[10px] uppercase tracking-wider flex items-center gap-1.5">
-                                      <FaFileAlt className="text-blue-600 text-[10px]" /> Event Task Notes
-                                    </span>
-                                    <p className="leading-relaxed whitespace-pre-wrap font-medium text-slate-800">
-                                      {d.eventTaskNotes || d.eventTaskNotes2}
-                                    </p>
-                                  </div>
+                                {/* Created Date Time */}
+                                {ev.createdDate && (
+                                  <span className="text-[10px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                                    <FaCalendarAlt className="text-slate-400 text-[9px]" />
+                                    {ev.createdDate} {ev.createdTime || ""}
+                                  </span>
                                 )}
                               </div>
-                            );
-                          })()
-                        )}
-                      </div>
+
+                              <div className="flex items-center gap-2">
+                                {isOneEventLoading && (
+                                  <span className="text-xs text-blue-600 font-bold flex items-center gap-1">
+                                    <FaSpinner className="animate-spin text-xs" /> Loading API details...
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedOneEventId(null)}
+                                  className="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all flex items-center gap-1 cursor-pointer border border-slate-200"
+                                >
+                                  <FaChevronUp className="text-[9px]" />
+                                  <span>Close</span>
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* 1. Primary Data Grid (4 Overview Cards from earlier) */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-[11px]">
+                              {/* Card 1: Customer Profile & Vehicle Details */}
+                              <div className="bg-blue-50/70 p-2.5 rounded-lg border border-blue-200/90 flex flex-col justify-between">
+                                <div>
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider flex items-center gap-1">
+                                      <FaUser className="text-blue-600" /> Customer & Vehicle
+                                    </span>
+                                    <span
+                                      className="text-[9px] font-bold text-blue-800 bg-blue-100/90 px-1.5 py-0.2 rounded font-mono"
+                                      title={`Customer Number: ${d.customerNumber || customerNumber || "76876"}`}
+                                    >
+                                      #{d.customerNumber || customerNumber || "76876"}
+                                    </span>
+                                  </div>
+                                  <strong
+                                    className="text-slate-900 text-xs block font-bold leading-tight"
+                                    title={customerFullName}
+                                  >
+                                    {customerFullName}
+                                  </strong>
+                                </div>
+                                <div className="flex flex-col gap-1 mt-1 text-[10px]">
+                                  <div className="flex items-center justify-between gap-1 text-slate-600 font-mono flex-wrap">
+                                    <span className="font-semibold text-slate-800">
+                                      {d.mobileNumber || "*******840"}
+                                    </span>
+                                    {d.email && (
+                                      <a
+                                        href={`mailto:${d.email}`}
+                                        className="text-blue-600 hover:underline font-sans text-[10px] break-all"
+                                        title={d.email}
+                                      >
+                                        {d.email}
+                                      </a>
+                                    )}
+                                  </div>
+                                  <div className="pt-1 border-t border-blue-200/70 flex items-center justify-between gap-1 flex-wrap">
+                                    <strong className="text-slate-900 font-bold flex items-center gap-1">
+                                      <FaCar className="text-blue-600 text-[10px] shrink-0" />
+                                      <span>
+                                        {d.makeFromNotes || d.eventMake || d.keyloopGroup || group || "BMW"}{" "}
+                                        {d.modelFromNotes || d.eventModel || "x5"}
+                                      </span>
+                                    </strong>
+                                    <div className="flex items-center gap-1 text-[9px] font-mono text-slate-500">
+                                      {d.eventModel && (
+                                        <span className="bg-blue-100 text-blue-900 px-1 rounded font-bold">
+                                          Code: {d.eventModel}
+                                        </span>
+                                      )}
+                                      {d.vehicleNumber && (
+                                        <span className="text-slate-600 font-semibold">
+                                          Veh #{d.vehicleNumber}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Card 2: Assigned Sales Executive / Follow-up */}
+                              <div className="bg-purple-50/70 p-2.5 rounded-lg border border-purple-200/80 flex flex-col justify-between">
+                                <div>
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <span className="text-[10px] font-extrabold text-purple-900 uppercase tracking-wider flex items-center gap-1">
+                                      <FaUserTie className="text-purple-600" /> Sales Executive
+                                    </span>
+                                    {salesExecData?.branchName && (
+                                      <span
+                                        className="text-[9px] font-bold text-purple-700 bg-purple-100/90 px-1.5 py-0.2 rounded truncate max-w-[110px]"
+                                        title={salesExecData.branchName}
+                                      >
+                                        {salesExecData.branchName}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <strong
+                                    className="text-slate-900 text-xs block truncate"
+                                    title={followupSalesExecutive || salesExecData?.name}
+                                  >
+                                    {followupSalesExecutive || salesExecData?.name || "Unassigned"}
+                                  </strong>
+                                </div>
+                                <div className="flex flex-col gap-1 mt-1 text-[10px]">
+                                  <div className="flex items-center gap-1.5 text-slate-500 font-mono flex-wrap">
+                                    {ev.followupUserLocation && (
+                                      <span className="bg-purple-100 text-purple-800 px-1 rounded text-[9px] font-bold">
+                                        Desk: {ev.followupUserLocation}
+                                      </span>
+                                    )}
+                                    {salesExecUserId && (
+                                      <span className="truncate">User: {salesExecUserId}</span>
+                                    )}
+                                  </div>
+                                  {salesExecData && (salesExecData.email || salesExecData.mobile) && (
+                                    <div className="flex flex-col gap-0.5 pt-1 border-t border-purple-200/60 font-sans">
+                                      {salesExecData.email && (
+                                        <a
+                                          href={`mailto:${salesExecData.email}`}
+                                          className="text-blue-600 hover:underline flex items-center gap-1 truncate font-medium text-[10px]"
+                                          title={salesExecData.email}
+                                        >
+                                          <FaEnvelope className="text-purple-400 text-[9px] shrink-0" />
+                                          <span className="truncate">{salesExecData.email}</span>
+                                        </a>
+                                      )}
+                                      {salesExecData.mobile && (
+                                        <a
+                                          href={`tel:${salesExecData.mobile}`}
+                                          className="text-slate-700 hover:underline flex items-center gap-1 font-medium text-[10px]"
+                                        >
+                                          <FaPhoneAlt className="text-purple-400 text-[9px] shrink-0" />
+                                          <span>{salesExecData.mobile}</span>
+                                        </a>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Card 3: Creator / Originating Staff */}
+                              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex flex-col justify-between">
+                                <div>
+                                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5 flex items-center gap-1">
+                                    <FaIdBadge className="text-slate-400" /> Created By
+                                  </span>
+                                  <strong
+                                    className="text-slate-900 text-xs block truncate"
+                                    title={creatorSalesExecutive}
+                                  >
+                                    {creatorSalesExecutive}
+                                  </strong>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-slate-500 text-[10px] mt-1 font-mono">
+                                  {ev.createdByUser && <span>User: {ev.createdByUser}</span>}
+                                  {ev.closedByUser && <span>| Closed: {ev.closedByUser}</span>}
+                                </div>
+                              </div>
+
+                              {/* Card 4: Channel & Branch Location */}
+                              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 flex flex-col justify-between">
+                                <div>
+                                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5 flex items-center gap-1">
+                                    <FaBuilding className="text-slate-400" /> Branch & Channel
+                                  </span>
+                                  <strong
+                                    className="text-slate-900 text-xs block truncate"
+                                    title={ev.branchName}
+                                  >
+                                    {ev.branchName ||
+                                      (ev.branchCode ? `Branch ${ev.branchCode}` : "Sheikh Zayed Rd")}
+                                  </strong>
+                                </div>
+                                <div className="flex items-center gap-1.5 text-slate-500 text-[10px] mt-1">
+                                  <span className="bg-blue-50 text-blue-700 px-1 rounded text-[9px] font-bold border border-blue-200">
+                                    {ev.source1 || ev.contactMethod || "CRM Outbound"}
+                                  </span>
+                                  {ev.source2 && <span className="truncate">({ev.source2})</span>}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* 2. Event Task Notes Box */}
+                            {(ev.eventTaskNotes || ev.eventTaskNotes2) && (
+                              <div className="bg-blue-50/40 p-2.5 rounded-lg border border-blue-100 flex flex-col gap-1">
+                                <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider flex items-center gap-1">
+                                  <FaFileAlt className="text-blue-500 text-[10px]" /> Event Task Notes
+                                </span>
+                                <p className="text-xs text-slate-800 font-medium leading-relaxed">
+                                  {ev.eventTaskNotes || ev.eventTaskNotes2}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* 3. Deep Event API Detailed Attributes Grid (3 Detailed Cards) */}
+                            {oneEventResult && oneEventResult.error ? (
+                              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-800 text-xs">
+                                {oneEventResult.error}
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px] pt-1 border-t border-slate-200">
+                                {/* Detailed Card 1: Sales Executive & Desk */}
+                                <div className="bg-purple-50/60 p-3 rounded-xl border border-purple-200/90 shadow-2xs space-y-1.5">
+                                  <span className="text-[10px] font-extrabold text-purple-900 uppercase tracking-wider block pb-1 border-b border-purple-200/70 flex items-center justify-between">
+                                    <span className="flex items-center gap-1.5">
+                                      <FaUserTie className="text-purple-600 text-[10px]" /> Sales Executive & Desk
+                                    </span>
+                                    {salesExecUserId && (
+                                      <span className="font-mono text-[9px] text-purple-800 bg-purple-100 px-1.5 py-0.2 rounded font-bold">
+                                        ID: {salesExecUserId}
+                                      </span>
+                                    )}
+                                  </span>
+                                  <div className="space-y-1.5">
+                                    <div className="flex justify-between items-start gap-2">
+                                      <span className="text-slate-600 text-[10px] shrink-0">Assigned Staff:</span>
+                                      <strong className="text-slate-900 font-bold text-right" title={salesExecData?.name || followupSalesExecutive}>
+                                        {salesExecData?.name || followupSalesExecutive || "Unassigned"}
+                                      </strong>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-600 text-[10px] shrink-0">Follow-up Desk:</span>
+                                      <span className="font-mono text-purple-900 font-bold bg-purple-100/90 px-1.5 py-0.2 rounded border border-purple-200">
+                                        {d.followupUserLocation || "A01"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-start gap-2">
+                                      <span className="text-slate-600 text-[10px] shrink-0">Branch:</span>
+                                      <span className="text-slate-800 font-semibold text-right" title={d.branchName || "Sheikh Zayed Rd"}>
+                                        {d.branchName || "Sheikh Zayed Rd"} (Branch {d.notesFromBranch || d.branchCode || "10"})
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-600 text-[10px] shrink-0">Department Type:</span>
+                                      <span className="font-mono text-purple-950 font-bold bg-purple-100/80 px-1.5 py-0.2 rounded border border-purple-200">
+                                        {d.departmentType || "Z"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-start gap-2">
+                                      <span className="text-slate-600 text-[10px] shrink-0">Corporate Email:</span>
+                                      {salesExecData?.email ? (
+                                        <a
+                                          href={`mailto:${salesExecData.email}`}
+                                          className="text-blue-600 hover:underline font-medium text-right break-all"
+                                          title={salesExecData.email}
+                                        >
+                                          {salesExecData.email}
+                                        </a>
+                                      ) : (
+                                        <span className="text-slate-400 font-mono">-</span>
+                                      )}
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-600 text-[10px] shrink-0">Direct Mobile:</span>
+                                      {salesExecData?.mobile ? (
+                                        <a
+                                          href={`tel:${salesExecData.mobile}`}
+                                          className="text-slate-800 hover:underline font-mono font-medium"
+                                        >
+                                          {salesExecData.mobile}
+                                        </a>
+                                      ) : (
+                                        <span className="text-slate-400 font-mono">-</span>
+                                      )}
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-600 text-[10px] shrink-0">Created By:</span>
+                                      <span className="font-mono text-slate-700 font-semibold">
+                                        {d.creatorName || d.createdByUser || "System"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Detailed Card 2: Marketing Campaign & Enquiry Routing */}
+                                <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-1.5">
+                                  <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider block pb-1 border-b border-slate-100 flex items-center gap-1.5">
+                                    <FaTag className="text-blue-600 text-[10px]" /> Campaign & Enquiry Source
+                                  </span>
+                                  <div className="space-y-1.5">
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Primary Source:</span>
+                                      <span className="font-bold text-slate-800 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                                        {d.source1 || "CRM Outbound"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Secondary Source:</span>
+                                      <span className="text-slate-700 font-medium">
+                                        {d.source2 || "Contact Centre"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-start gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Campaign Code:</span>
+                                      <span className="font-mono text-[10px] text-slate-800 font-semibold text-right break-all" title={d.marketingCampaignCode}>
+                                        {d.marketingCampaignCode || "-"}
+                                      </span>
+                                    </div>
+                                    {Boolean(d.campaignNameFromNotes) && (
+                                      <div className="flex justify-between items-start gap-2">
+                                        <span className="text-slate-500 text-[10px] shrink-0">Campaign Note:</span>
+                                        <span className="text-slate-700 text-right" title={d.campaignNameFromNotes}>
+                                          {d.campaignNameFromNotes}
+                                        </span>
+                                      </div>
+                                    )}
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Enquiry Number:</span>
+                                      <span className="font-mono text-slate-800 font-semibold">
+                                        {d.enquiryNumber || "-"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Enquiry Status:</span>
+                                      <span className="text-slate-700">
+                                        {d.statusOfEnquiry || "-"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-start gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Vehicle Model:</span>
+                                      <strong className="text-slate-900 text-right">
+                                        {d.makeFromNotes || d.keyloopGroup || group} {d.modelFromNotes || d.eventModel || "-"}
+                                      </strong>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Call / Chain #:</span>
+                                      <span className="font-mono text-slate-800 font-semibold">
+                                        #{d.callNumber || "-"} / #{d.chainNumber || "-"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Detailed Card 3: Escalation, Closure & Action Timings */}
+                                <div className="bg-white p-3 rounded-xl border border-slate-200/90 shadow-2xs space-y-1.5">
+                                  <span className="text-[10px] font-extrabold text-blue-900 uppercase tracking-wider block pb-1 border-b border-slate-100 flex items-center gap-1.5">
+                                    <FaClock className="text-blue-600 text-[10px]" /> Escalation & Closure
+                                  </span>
+                                  <div className="space-y-1.5">
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Closed By:</span>
+                                      <span className="font-mono text-slate-900 font-bold bg-slate-100 px-1.5 py-0.2 rounded">
+                                        {d.closedByUser || "hamdan"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Closed Date/Time:</span>
+                                      <span className="font-mono text-slate-700 font-medium text-right">
+                                        {d.closedDate2 || d.closedDate || "-"} {d.closedTime2 || d.closedTime || ""}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Closed Flag:</span>
+                                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold ${
+                                        d.closedFlag2 === "1" || d.closedFlag === "1"
+                                          ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                                          : "bg-amber-100 text-amber-800 border border-amber-200"
+                                      }`}>
+                                        Flag {d.closedFlag2 || d.closedFlag || "1"} ({d.closedFlag2 === "1" || d.closedFlag === "1" ? "Closed" : "Open"})
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Escalate User:</span>
+                                      <span className="font-mono text-purple-700 font-bold bg-purple-50 px-1.5 py-0.2 rounded border border-purple-200">
+                                        {d.escalateActionId || "pattepu"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Escalate Entity:</span>
+                                      <span className="font-mono text-slate-700 font-medium">
+                                        Type {d.escalateEntityType || "6"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Escalation Time:</span>
+                                      <span className="font-mono text-slate-700 font-medium text-right">
+                                        {d.escalateEventDate ? `${d.escalateEventDate} ${d.escalateEventTime || ""}` : "-"}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Task Timing:</span>
+                                      <span className="font-mono text-slate-700 font-medium text-right">
+                                        {d.eventTaskDate || d.createdDate} {d.eventTaskTime || d.createdTime || ""}
+                                      </span>
+                                    </div>
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-slate-500 text-[10px] shrink-0">Prompted By:</span>
+                                      <span className="font-mono text-slate-700 font-semibold bg-slate-50 px-1.5 py-0.2 rounded border border-slate-200">
+                                        {d.whoPromptedEventTask || "CALLCENT"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 4. Additional Task Notes from API if different or additional */}
+                            {(d.eventTaskNotes || d.eventTaskNotes2) &&
+                             (d.eventTaskNotes !== ev.eventTaskNotes || d.eventTaskNotes2 !== ev.eventTaskNotes2) && (
+                              <div className="bg-blue-50/60 p-3 rounded-xl border border-blue-200 text-xs text-slate-800 space-y-1">
+                                <span className="font-bold text-blue-900 block text-[10px] uppercase tracking-wider flex items-center gap-1.5">
+                                  <FaFileAlt className="text-blue-600 text-[10px]" /> Detailed Task Notes
+                                </span>
+                                <p className="leading-relaxed whitespace-pre-wrap font-medium text-slate-800">
+                                  {d.eventTaskNotes || d.eventTaskNotes2}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                  </div>
+                  </React.Fragment>
                 );
               })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>
