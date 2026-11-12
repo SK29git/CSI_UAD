@@ -950,7 +950,7 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
               disabled={isSubmitting}
               className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-xs rounded-lg transition-colors cursor-pointer disabled:opacity-50"
             >
-              Cancel
+              next
             </button>
             <button
               type="submit"
