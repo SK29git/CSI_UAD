@@ -86,7 +86,7 @@ export default function SalesAfterSalesView({ title, mode = "sales" }) {
   const [followUpCustomerName, setFollowUpCustomerName] = useState("");
   const [followUpGroup, setFollowUpGroup] = useState("BMW");
   const [followUpBranchCode, setFollowUpBranchCode] = useState("10");
-  const [followUpAdvisorId, setFollowUpAdvisorId] = useState("kunnath");
+  const [followUpAdvisorId, setFollowUpAdvisorId] = useState("");
   const [followUpAdvisorName, setFollowUpAdvisorName] = useState("");
   const [followUpAdvisorDisplay, setFollowUpAdvisorDisplay] = useState("");
   const [followUpDueDate, setFollowUpDueDate] = useState(() => {
@@ -112,11 +112,11 @@ export default function SalesAfterSalesView({ title, mode = "sales" }) {
   }, [followUpToast]);
 
   const handleOpenFollowUp = (options = {}) => {
-    const custId = options.customerId || customerNumber || "120023";
-    const custName = options.customerName || customerName || "Customer Record";
+    const custId = options.customerId || customerNumber || "";
+    const custName = options.customerName || customerName || "";
     const grp = options.group || group || "BMW";
-    const branchCode = options.branchCode || customer?.branchCode || "10";
-    const rawAdvisorId = String(options.advisorId || "kunnath").trim();
+    const branchCode = options.branchCode || customer?.branchCode || "";
+    const rawAdvisorId = String(options.advisorId || "").trim();
     const rawAdvisorName = String(options.advisorName || "").trim();
 
     // Show name and code both when advisor name is available
@@ -126,7 +126,8 @@ export default function SalesAfterSalesView({ title, mode = "sales" }) {
         displayAdvisor = rawAdvisorName;
       } else if (
         rawAdvisorName === "Assigned Service Advisor" ||
-        rawAdvisorName === "Service Advisor"
+        rawAdvisorName === "Service Advisor" ||
+        rawAdvisorName === "-"
       ) {
         displayAdvisor = rawAdvisorId
           ? `Advisor #${rawAdvisorId}`
@@ -162,7 +163,7 @@ export default function SalesAfterSalesView({ title, mode = "sales" }) {
 
     // Extract advisor ID/code from display string if present
     let resolvedAdvisorId = String(
-      followUpAdvisorDisplay || followUpAdvisorId || "kunnath",
+      followUpAdvisorDisplay || followUpAdvisorId || "",
     ).trim();
     const parensMatch = resolvedAdvisorId.match(/\(([^)]+)\)/);
     if (parensMatch && parensMatch[1]) {
@@ -175,7 +176,7 @@ export default function SalesAfterSalesView({ title, mode = "sales" }) {
       group: followUpGroup || group || "BMW",
       customerId: String(followUpCustomerId || customerNumber || "").trim(),
       customerName: String(followUpCustomerName || customerName || "").trim(),
-      followupId: resolvedAdvisorId || "kunnath",
+      followupId: resolvedAdvisorId || "",
       dueDate: followUpDueDate || new Date().toISOString().split("T")[0],
       dueTime: followUpDueTime || "11:00",
       branchCode: followUpBranchCode || "10",
@@ -1233,7 +1234,7 @@ export default function SalesAfterSalesView({ title, mode = "sales" }) {
                   </label>
                   <input
                     type="text"
-                    value={followUpAdvisorName || "Assigned Service Advisor"}
+                    value={followUpAdvisorName || "-"}
                     readOnly
                     className="w-full h-8 px-2.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 cursor-not-allowed select-none focus:outline-none truncate"
                   />

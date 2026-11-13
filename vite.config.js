@@ -43,6 +43,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/sms-gateway/, '')
+      },
+      '/zofeur-api': {
+        target: 'https://api.zofeur.app',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/zofeur-api/, '')
       }
     }
   }

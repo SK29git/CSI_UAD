@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useCustomer } from "../context/CustomerContext";
-import { createServiceRequestNotes } from "../utils/api";
+import {
+  createServiceRequestNotes,
+  generateZofeurToken,
+  createZofeurVendorBooking
+} from "../utils/api";
 import {
   FaWrench,
   FaFileAlt,
@@ -13,6 +17,11 @@ import {
   FaCodeBranch,
   FaListUl,
   FaCar,
+  FaPhoneAlt,
+  FaMapMarkerAlt,
+  FaHashtag,
+  FaSyncAlt,
+  FaCheckCircle,
 } from "react-icons/fa";
 
 export const SERVICE_REQUEST_REFERENCES = [
@@ -42,6 +51,10 @@ export default function CreateServiceView({ mode = "other_request" }) {
     currentGroup,
     group: contextGroup,
     getFormattedName,
+    selectedVin,
+    vehicleDetails,
+    vehicles,
+    currentMobile,
   } = useCustomer();
 
   // Prefilled customer details
@@ -86,14 +99,68 @@ export default function CreateServiceView({ mode = "other_request" }) {
     );
   };
 
+  // Helper to extract clean mobile without country prefix
+  const getCleanMobile = () => {
+    const raw =
+      currentMobile ||
+      customer?.mobileRaw ||
+      customer?.mobile ||
+      customer?.mobilePhone ||
+      customer?.phone ||
+      new URLSearchParams(window.location.search).get("mobile") ||
+      "";
+    const digits = String(raw).replace(/\D/g, "");
+    if (digits.startsWith("971")) return digits.slice(3);
+    if (digits.startsWith("0")) return digits.slice(1);
+    return digits;
+  };
+
+  // Helper to generate fresh random 6-digit booking ID for Zofeur
+  const generateNewBookingId = () => Math.floor(100000 + Math.random() * 900000);
+
+  // Breakdown fields
+  const [zofeurCountryCode, setZofeurCountryCode] = useState("+971");
+  const [zofeurPhoneNo, setZofeurPhoneNo] = useState(getCleanMobile);
+  const [zofeurChassis, setZofeurChassis] = useState(() => {
+    return selectedVin || vehicleDetails?.vin || vehicles?.[0]?.vin || customer?.vin || "";
+  });
+  const [zofeurPlate, setZofeurPlate] = useState(() => {
+    return vehicleDetails?.registrationNumber || vehicles?.[0]?.registrationNumber || customer?.plateNumber || customer?.licensePlate || "";
+  });
+  const [zofeurBookingId, setZofeurBookingId] = useState(generateNewBookingId);
+
+  // Latitudes and longitudes - kept blank for agent to input
+  const [zofeurPickupLat, setZofeurPickupLat] = useState("");
+  const [zofeurPickupLong, setZofeurPickupLong] = useState("");
+  const [zofeurDropoffLat, setZofeurDropoffLat] = useState("");
+  const [zofeurDropoffLong, setZofeurDropoffLong] = useState("");
+
+  // Keep fields synced when customer/vehicle loads
+  useEffect(() => {
+    const cleanPhone = getCleanMobile();
+    if (cleanPhone) {
+      setZofeurPhoneNo(cleanPhone);
+    }
+    const vin = selectedVin || vehicleDetails?.vin || vehicles?.[0]?.vin || customer?.vin || "";
+    if (vin) {
+      setZofeurChassis(vin);
+    }
+    const plate = vehicleDetails?.registrationNumber || vehicles?.[0]?.registrationNumber || customer?.plateNumber || customer?.licensePlate || "";
+    if (plate) {
+      setZofeurPlate(plate);
+    }
+  }, [customer, currentMobile, selectedVin, vehicleDetails, vehicles]);
+
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [successResult, setSuccessResult] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg("");
+    setSuccessResult(null);
 
     if (selectedReferences.length === 0) {
       setErrorMsg("Please select at least one Reference.");
@@ -105,15 +172,50 @@ export default function CreateServiceView({ mode = "other_request" }) {
       return;
     }
 
+    if (isBreakdown) {
+      if (!String(zofeurPhoneNo).trim()) {
+        setErrorMsg("Phone number is required for breakdown recovery.");
+        return;
+      }
+      if (!String(zofeurChassis).trim()) {
+        setErrorMsg("Chassis number (VIN) is required for breakdown recovery.");
+        return;
+      }
+      if (!String(zofeurPlate).trim()) {
+        setErrorMsg("License plate number is required for breakdown recovery.");
+        return;
+      }
+      if (!String(zofeurPickupLat).trim() || isNaN(parseFloat(zofeurPickupLat))) {
+        setErrorMsg("Please enter a valid Pickup Latitude.");
+        return;
+      }
+      if (!String(zofeurPickupLong).trim() || isNaN(parseFloat(zofeurPickupLong))) {
+        setErrorMsg("Please enter a valid Pickup Longitude.");
+        return;
+      }
+      if (!String(zofeurDropoffLat).trim() || isNaN(parseFloat(zofeurDropoffLat))) {
+        setErrorMsg("Please enter a valid Dropoff Latitude.");
+        return;
+      }
+      if (!String(zofeurDropoffLong).trim() || isNaN(parseFloat(zofeurDropoffLong))) {
+        setErrorMsg("Please enter a valid Dropoff Longitude.");
+        return;
+      }
+      if (!zofeurBookingId) {
+        setErrorMsg("A unique booking ID is required.");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setIsProcessing(true);
 
     try {
-      // Send a single request with primary eventType and additional eventTypes array
+      // 1. Submit Keyloop Service Request Notes
       const primaryEventType = selectedReferences[0];
       const additionalEventTypes = selectedReferences.slice(1);
 
-      const result = await createServiceRequestNotes({
+      const notesPromise = createServiceRequestNotes({
         group: String(group || "BMW").trim(),
         customerId: String(customerId || "").trim(),
         customerName: String(customerName || "").trim(),
@@ -124,29 +226,79 @@ export default function CreateServiceView({ mode = "other_request" }) {
         notes: notes.trim(),
       });
 
-      const isError = result && result.ok === false;
+      // 2. Submit Zofeur Recovery / Ride Dispatch if breakdown
+      let zofeurPromise = Promise.resolve(null);
+      if (isBreakdown) {
+        zofeurPromise = (async () => {
+          // A. Generate Bearer Token via POST https://api.zofeur.app/api/v1/auth/generate-token
+          const tokenRes = await generateZofeurToken();
+          if (!tokenRes || !tokenRes.ok || !tokenRes.token) {
+            throw new Error(tokenRes?.error || "Failed to generate Zofeur auth token");
+          }
 
-      if (!isError) {
-        // Show processing state without showing any success popups or alerts
-        setTimeout(() => {
-          setIsSubmitting(false);
-          setNotes("");
-          setSelectedReferences([]);
-          setTimeout(() => {
-            setIsProcessing(false);
-          }, 3500);
-        }, 1500);
-      } else {
-        setIsSubmitting(false);
-        setIsProcessing(false);
-        setErrorMsg(
-          result?.error ||
-            result?.errorMessage ||
-            "Failed to submit service request notes.",
+          // B. Create Vendor Booking via POST https://api.zofeur.app/api/v1/booking/vendor/AGMC%20Call%20Center/create
+          const payload = {
+            phone_no: String(zofeurPhoneNo).trim(),
+            country_code: String(zofeurCountryCode).trim() || "+971",
+            pickup_lat: parseFloat(zofeurPickupLat),
+            pickup_long: parseFloat(zofeurPickupLong),
+            dropoff_lat: parseFloat(zofeurDropoffLat),
+            dropoff_long: parseFloat(zofeurDropoffLong),
+            booking_id: parseInt(zofeurBookingId, 10),
+            ride_custom_field: {
+              "0": String(zofeurChassis).trim(),
+              "1": String(zofeurPlate).trim(),
+            },
+          };
+
+          const zRes = await createZofeurVendorBooking(payload, tokenRes.token);
+          if (!zRes.ok) {
+            const errDetail =
+              zRes.data?.message ||
+              zRes.data?.msg ||
+              zRes.error ||
+              "Zofeur booking request rejected";
+            throw new Error(`Zofeur Error: ${errDetail}`);
+          }
+          return zRes;
+        })();
+      }
+
+      // Execute both APIs at the same time
+      const [notesResult, zofeurResult] = await Promise.all([
+        notesPromise,
+        zofeurPromise,
+      ]);
+
+      const isNotesError = notesResult && notesResult.ok === false;
+      if (isNotesError) {
+        throw new Error(
+          notesResult?.error ||
+            notesResult?.errorMessage ||
+            "Failed to submit service request notes to Keyloop.",
         );
       }
+
+      // Both succeeded
+      setSuccessResult({
+        bookingId: zofeurBookingId,
+        zofeurData: zofeurResult?.data,
+        message: isBreakdown
+          ? `Breakdown request & Zofeur ride booking #${zofeurBookingId} created successfully!`
+          : "Service request notes submitted successfully!",
+      });
+
+      setNotes("");
+      setSelectedReferences([]);
+      // Immediately regenerate a new unique booking ID for the next submission
+      setZofeurBookingId(generateNewBookingId());
+
+      setTimeout(() => {
+        setIsProcessing(false);
+        setIsSubmitting(false);
+      }, 1500);
     } catch (err) {
-      console.error("Error submitting service request notes:", err);
+      console.error("Error submitting service request:", err);
       setIsSubmitting(false);
       setIsProcessing(false);
       setErrorMsg(
@@ -269,6 +421,183 @@ export default function CreateServiceView({ mode = "other_request" }) {
               />
             </div>
           </div>
+
+          {/* Breakdown specific fields in the same grid */}
+          {isBreakdown && (
+            <>
+              {/* 5. Mobile Number */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Mobile Number <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                    <FaPhoneAlt />
+                  </div>
+                  <span className="text-xs font-semibold text-gray-400 mr-1 select-none">+971</span>
+                  <input
+                    type="text"
+                    value={zofeurPhoneNo}
+                    onChange={(e) => setZofeurPhoneNo(e.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="e.g. 504321353"
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* 6. Chassis Number (VIN) */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Chassis Number (VIN) <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                    <FaCar />
+                  </div>
+                  <input
+                    type="text"
+                    value={zofeurChassis}
+                    onChange={(e) => setZofeurChassis(e.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="Enter chassis / VIN..."
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold font-mono text-gray-800 text-xs uppercase"
+                  />
+                </div>
+              </div>
+
+              {/* 7. Plate Number */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Plate Number <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                    <FaHashtag />
+                  </div>
+                  <input
+                    type="text"
+                    value={zofeurPlate}
+                    onChange={(e) => setZofeurPlate(e.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="Enter plate number..."
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs uppercase"
+                  />
+                </div>
+              </div>
+
+              {/* 8. Booking ID */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    Booking ID <span className="text-rose-500 font-bold">*</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setZofeurBookingId(generateNewBookingId())}
+                    disabled={isSubmitting}
+                    title="Generate new unique booking ID"
+                    className="text-[10px] text-blue-600 hover:text-blue-800 font-medium flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <FaSyncAlt className="text-[9px]" /> New
+                  </button>
+                </label>
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                    <FaHashtag />
+                  </div>
+                  <input
+                    type="number"
+                    value={zofeurBookingId}
+                    onChange={(e) => setZofeurBookingId(e.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="e.g. 170552"
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold font-mono text-gray-800 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* 9. Pickup Latitude */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Pickup Latitude <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-rose-50/80 border border-rose-100 flex items-center justify-center text-rose-500 shrink-0 text-[10px] mr-1.5">
+                    <FaMapMarkerAlt />
+                  </div>
+                  <input
+                    type="text"
+                    value={zofeurPickupLat}
+                    onChange={(e) => setZofeurPickupLat(e.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="Enter pickup latitude..."
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold font-mono text-gray-800 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* 10. Pickup Longitude */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Pickup Longitude <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-rose-50/80 border border-rose-100 flex items-center justify-center text-rose-500 shrink-0 text-[10px] mr-1.5">
+                    <FaMapMarkerAlt />
+                  </div>
+                  <input
+                    type="text"
+                    value={zofeurPickupLong}
+                    onChange={(e) => setZofeurPickupLong(e.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="Enter pickup longitude..."
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold font-mono text-gray-800 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* 11. Dropoff Latitude */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Dropoff Latitude <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-emerald-50/80 border border-emerald-100 flex items-center justify-center text-emerald-500 shrink-0 text-[10px] mr-1.5">
+                    <FaMapMarkerAlt />
+                  </div>
+                  <input
+                    type="text"
+                    value={zofeurDropoffLat}
+                    onChange={(e) => setZofeurDropoffLat(e.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="Enter dropoff latitude..."
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold font-mono text-gray-800 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* 12. Dropoff Longitude */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Dropoff Longitude <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-emerald-50/80 border border-emerald-100 flex items-center justify-center text-emerald-500 shrink-0 text-[10px] mr-1.5">
+                    <FaMapMarkerAlt />
+                  </div>
+                  <input
+                    type="text"
+                    value={zofeurDropoffLong}
+                    onChange={(e) => setZofeurDropoffLong(e.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="Enter dropoff longitude..."
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold font-mono text-gray-800 text-xs"
+                  />
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Reference Selection - Multi-Select Checkboxes */}
@@ -363,6 +692,31 @@ export default function CreateServiceView({ mode = "other_request" }) {
           </div>
         </div>
 
+        {/* Inline Success Message */}
+        {successResult && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-emerald-900 text-xs shadow-2xs animate-fadeIn">
+            <FaCheckCircle className="text-emerald-500 text-base shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <div className="font-bold text-emerald-950">{successResult.message}</div>
+              {successResult.zofeurData && (
+                <div className="text-[11px] text-emerald-700 mt-0.5 flex flex-wrap gap-2">
+                  <span>Status: {successResult.zofeurData.message || "Confirmed"}</span>
+                  {successResult.bookingId && (
+                    <span>• Booking ID: #{successResult.bookingId}</span>
+                  )}
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setSuccessResult(null)}
+              className="text-emerald-600 hover:text-emerald-800 text-xs font-bold px-1 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Inline Error Message */}
         {errorMsg && (
           <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2 text-rose-800 text-xs font-medium">
@@ -375,7 +729,7 @@ export default function CreateServiceView({ mode = "other_request" }) {
         {isProcessing && (
           <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-center gap-2 text-blue-800 text-xs font-semibold animate-pulse">
             <FaSpinner className="animate-spin text-blue-600 text-xs shrink-0" />
-            <span>Processing...</span>
+            <span>Processing breakdown & dispatching ride...</span>
           </div>
         )}
 
@@ -387,9 +741,17 @@ export default function CreateServiceView({ mode = "other_request" }) {
               setNotes("");
               setSelectedReferences([]);
               setErrorMsg("");
+              setSuccessResult(null);
+              if (isBreakdown) {
+                setZofeurPickupLat("");
+                setZofeurPickupLong("");
+                setZofeurDropoffLat("");
+                setZofeurDropoffLong("");
+                setZofeurBookingId(generateNewBookingId());
+              }
             }}
             disabled={
-              isSubmitting || (!notes && selectedReferences.length === 0)
+              isSubmitting || (!notes && selectedReferences.length === 0 && !successResult)
             }
             className="px-4 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >

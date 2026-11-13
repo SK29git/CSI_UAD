@@ -85,7 +85,7 @@ export default function ServiceOpenBookingsView() {
   const [activeFlow, setActiveFlow] = useState('KEYLOOP');
 
   // Universal DMS Flow State
-  const initialPlate = vehicleDetails?.registrationNumber || vehicles?.[0]?.registrationNumber || '240153';
+  const initialPlate = vehicleDetails?.registrationNumber || vehicles?.[0]?.registrationNumber || '';
   const [geelyPlate, setGeelyPlate] = useState(initialPlate);
   const [geelyAppointments, setGeelyAppointments] = useState([]);
   const [geelyLoading, setGeelyLoading] = useState(true);
@@ -140,7 +140,7 @@ export default function ServiceOpenBookingsView() {
   const [followUpCustomerName, setFollowUpCustomerName] = useState("");
   const [followUpGroup, setFollowUpGroup] = useState("BMW");
   const [followUpBranchCode, setFollowUpBranchCode] = useState("10");
-  const [followUpAdvisorId, setFollowUpAdvisorId] = useState("kunnath");
+  const [followUpAdvisorId, setFollowUpAdvisorId] = useState("");
   const [followUpAdvisorName, setFollowUpAdvisorName] = useState("");
   const [followUpAdvisorDisplay, setFollowUpAdvisorDisplay] = useState("");
   const [followUpWipNo, setFollowUpWipNo] = useState("");
@@ -155,11 +155,11 @@ export default function ServiceOpenBookingsView() {
   const [followUpFeedback, setFollowUpFeedback] = useState(null);
 
   const handleOpenFollowUp = (options = {}) => {
-    const custId = options.customerId || customerNumber || "120023";
-    const custName = options.customerName || customer?.fullName || `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() || "Customer Record";
+    const custId = options.customerId || customerNumber || "";
+    const custName = options.customerName || customer?.fullName || `${customer?.firstName || ''} ${customer?.surname || ''}`.trim() || "";
     const grp = options.group || group || "BMW";
-    const branchCode = options.branchCode || customer?.branchCode || "10";
-    const rawAdvisorId = String(options.advisorId || "kunnath").trim();
+    const branchCode = options.branchCode || customer?.branchCode || "";
+    const rawAdvisorId = String(options.advisorId || "").trim();
     const rawAdvisorName = String(options.advisorName || "").trim();
     const wipNo = options.wipNo || options.jobNumber || options.bookingId || "";
 
@@ -168,7 +168,7 @@ export default function ServiceOpenBookingsView() {
     if (rawAdvisorName && rawAdvisorId) {
       if (rawAdvisorName.toLowerCase().includes(rawAdvisorId.toLowerCase())) {
         displayAdvisor = rawAdvisorName;
-      } else if (rawAdvisorName === "Assigned Service Advisor" || rawAdvisorName === "Service Advisor") {
+      } else if (rawAdvisorName === "Assigned Service Advisor" || rawAdvisorName === "Service Advisor" || rawAdvisorName === "-") {
         displayAdvisor = rawAdvisorId ? `Advisor #${rawAdvisorId}` : rawAdvisorName;
       } else {
         displayAdvisor = `${rawAdvisorName} (${rawAdvisorId})`;
@@ -203,7 +203,7 @@ export default function ServiceOpenBookingsView() {
       group: followUpGroup || group || "BMW",
       customerId: String(followUpCustomerId || customerNumber || "").trim(),
       customerName: String(followUpCustomerName || customer?.fullName || "").trim(),
-      followupId: String(followUpAdvisorId || "kunnath").trim(),
+      followupId: String(followUpAdvisorId || "").trim(),
       dueDate: followUpDueDate || new Date().toISOString().split('T')[0],
       dueTime: followUpDueTime || "11:00",
       branchCode: followUpBranchCode || "10",
@@ -244,8 +244,16 @@ export default function ServiceOpenBookingsView() {
     try {
       const res = await getServiceAppointments(geelyPlate.trim());
       if (res && res.ok && res.data) {
-        const list = res.data.result || res.data.data || res.data || [];
-        setGeelyAppointments(Array.isArray(list) ? list : [list]);
+        const rawResult = res.data.result || res.data.data || res.data;
+        let list = [];
+        if (Array.isArray(rawResult?.serviceBookingList)) {
+          list = rawResult.serviceBookingList;
+        } else if (Array.isArray(rawResult)) {
+          list = rawResult;
+        } else if (rawResult && typeof rawResult === 'object' && !rawResult.error && (rawResult.repairOrderId || rawResult.appointmentId || rawResult.id)) {
+          list = [rawResult];
+        }
+        setGeelyAppointments(list);
       } else {
         setGeelyAppointments([]);
       }
@@ -311,26 +319,26 @@ export default function ServiceOpenBookingsView() {
     setModifiedSuccess(false);
     setModifyError(null);
 
-    const plate = apt.vehicle?.licensePlate || apt.licensePlateNo || geelyPlate || '240153';
+    const plate = apt.vehicle?.licensePlate || apt.licensePlateNo || geelyPlate || '';
     setModifyPlate(plate);
 
     // Initial vehicle ID fallback
-    let vId = apt.vehicle?.vehicleId || 15;
-    if (typeof vId !== 'number' || isNaN(vId)) vId = 15;
+    let vId = apt.vehicle?.vehicleId || apt.vehicleId || null;
+    if (typeof vId !== 'number' || isNaN(vId)) vId = null;
     setModifyVehicleId(vId);
 
-    const locId = apt.details?.dealershipLocationId || apt.dealershipLocationId || 40;
-    setModifyLocationId(Number(locId) || 40);
+    const locId = apt.details?.dealershipLocationId || apt.dealershipLocationId || apt.branch?.code || null;
+    setModifyLocationId(locId ? Number(locId) : null);
 
-    const mileageVal = apt.details?.checkInMileage?.value || 5000;
+    const mileageVal = apt.details?.checkInMileage?.value || apt.odometerKm || 0;
     setModifyMileage(mileageVal);
     setModifyMileageUnit(apt.details?.checkInMileage?.unit || 'KM');
 
     const notesVal = apt.details?.notes || apt.workshopComments || apt.comments || '';
     setModifyCustomerNotes(notesVal && notesVal !== 'No workshop comments recorded.' ? notesVal : '');
 
-    const existingDate = apt.appointment?.dueInDateTime ? apt.appointment.dueInDateTime.split('T')[0] : (apt.startDate || '2026-11-02');
-    const existingSlot = apt.appointment?.dropOffTime || apt.appointment?.time || '10:15-10:30';
+    const existingDate = apt.appointment?.dueInDateTime ? apt.appointment.dueInDateTime.split('T')[0] : (apt.startDate || apt.date || '');
+    const existingSlot = apt.appointment?.dropOffTime || apt.appointment?.time || apt.time || '';
     setModifySelectedDate(existingDate);
     setModifySelectedTimeSlot(existingSlot);
 
@@ -760,17 +768,17 @@ export default function ServiceOpenBookingsView() {
           ) : (
             <div className="flex flex-col gap-3">
               {geelyAppointments.map((apt, idx) => {
-                const roId = apt.repairOrderId || apt.appointmentId || apt.id || `RO-${idx + 1}`;
-                const aptDate = apt.appointment?.date || apt.startDate || 'Scheduled';
-                const aptTime = apt.appointment?.dropOffTime || apt.appointment?.time || '10:15-10:30';
+                const roId = apt.repairOrderId || apt.appointmentId || apt.id || (idx !== undefined ? `#${idx + 1}` : '-');
+                const aptDate = apt.appointment?.date || apt.startDate || '-';
+                const aptTime = apt.appointment?.dropOffTime || apt.appointment?.time || '-';
                 const vehicleDesc = apt.vehicle?.description || `${apt.vehicle?.referenceData?.makeCode || apt.vehicle?.make || 'Vehicle'} ${apt.vehicle?.referenceData?.modelCode || ''}`.trim();
-                const plate = apt.vehicle?.licensePlate || apt.licensePlateNo || geelyPlate;
-                const locId = apt.details?.dealershipLocationId || apt.dealershipLocationId || 40;
+                const plate = apt.vehicle?.licensePlate || apt.licensePlateNo || geelyPlate || '-';
+                const locId = apt.details?.dealershipLocationId || apt.dealershipLocationId || (apt.branch?.code || '-');
                 const rawAdv = (typeof apt.advisor === 'object' && apt.advisor !== null) ? apt.advisor : {};
                 const rawSa = (typeof apt.serviceAdvisor === 'object' && apt.serviceAdvisor !== null) ? apt.serviceAdvisor : {};
-                const advisorId = rawAdv.code || rawAdv.id || rawSa.code || rawSa.id || apt.advisorId || apt.advisorCode || (typeof apt.advisor === 'string' && (/^\d+$/.test(apt.advisor.trim()) || apt.advisor.length <= 6) ? apt.advisor : '') || 'kunnath';
+                const advisorId = rawAdv.code || rawAdv.id || rawSa.code || rawSa.id || apt.advisorId || apt.advisorCode || (typeof apt.advisor === 'string' && (/^\d+$/.test(apt.advisor.trim()) || apt.advisor.length <= 6) ? apt.advisor : '') || '';
                 const advisorNameCandidate = rawAdv.name || rawAdv.fullName || rawSa.name || rawSa.fullName || apt.advisorName || apt.serviceAdvisorName || (typeof apt.serviceAdvisor === 'string' && isNaN(apt.serviceAdvisor) ? apt.serviceAdvisor : '') || (typeof apt.advisor === 'string' && isNaN(apt.advisor) ? apt.advisor : '') || '';
-                const advisorName = advisorNameCandidate && advisorNameCandidate !== advisorId ? advisorNameCandidate : (advisorId ? `Advisor #${advisorId}` : 'Assigned Service Advisor');
+                const advisorName = advisorNameCandidate && advisorNameCandidate !== advisorId ? advisorNameCandidate : (advisorId ? `Advisor #${advisorId}` : '-');
                 const workshopStatus = apt.status || 'IN_PROGRESS';
                 const rawComments = apt.comments || apt.notes || apt.workshopComments || apt.instructions;
                 const workshopComments = rawComments && String(rawComments).trim() ? String(rawComments).trim() : 'No workshop comments recorded.';
@@ -809,10 +817,10 @@ export default function ServiceOpenBookingsView() {
                         <button
                           type="button"
                           onClick={() => handleOpenFollowUp({
-                            customerId: customerNumber || "120023",
-                            customerName: customer?.fullName || "Customer Record",
+                            customerId: customerNumber || "",
+                            customerName: customer?.fullName || "",
                             group: group || "GEELY",
-                            branchCode: String(locId),
+                            branchCode: locId !== '-' ? String(locId) : "",
                             advisorId: advisorId,
                             advisorName: advisorName,
                             wipNo: roId,
@@ -1011,7 +1019,7 @@ export default function ServiceOpenBookingsView() {
         >
           {openBookings.map((b, idx) => {
             const bookingId = b.bookingId || b.wipNumber || String(idx);
-            const wipNo = b.wipNumber || b.jobNumber || b.bookingId || `WIP-${idx + 1}`;
+            const wipNo = b.wipNumber || b.jobNumber || b.bookingId || (idx !== undefined ? `#${idx + 1}` : '-');
             const isExpanded = expandedBookingId === bookingId;
 
             // Extract branch display safely
@@ -1025,7 +1033,7 @@ export default function ServiceOpenBookingsView() {
             const advisorNameCandidate = rawAdvObj.name || rawAdvObj.fullName || rawSaObj.name || rawSaObj.fullName || b.advisorName || b.serviceAdvisorName || (typeof b.serviceAdvisor === 'string' && isNaN(b.serviceAdvisor) ? b.serviceAdvisor : '') || (typeof b.advisor === 'string' && isNaN(b.advisor) ? b.advisor : '') || b.bookedBy || '';
             const advisorName = advisorNameCandidate && advisorNameCandidate !== advisorCode 
               ? advisorNameCandidate 
-              : (advisorCode ? `Advisor #${advisorCode}` : (b.bookedBy || 'Assigned Service Advisor'));
+              : (advisorCode ? `Advisor #${advisorCode}` : (b.bookedBy || '-'));
 
             // Extract workshop status and comments (Change 32)
             const workshopStatus = b.workshopStatus || b.status || (b.open ? 'OPEN / IN WORKSHOP' : 'SCHEDULED');
@@ -1069,7 +1077,7 @@ export default function ServiceOpenBookingsView() {
                         customerName: customer?.fullName || b.customerName,
                         group: b.keyloopGroup || group,
                         branchCode: branchCode,
-                        advisorId: advisorCode || "kunnath",
+                        advisorId: advisorCode || "",
                         advisorName: advisorName,
                         wipNo: wipNo,
                         notes: `Follow up with Service Advisor ${advisorName} on WIP #${wipNo} (${b.vehicle || 'Vehicle'})`
@@ -1449,7 +1457,7 @@ export default function ServiceOpenBookingsView() {
                 <div className="flex justify-between items-center">
                   <span className="text-gray-400 text-[11px] font-bold uppercase">Scheduled Slot</span>
                   <span className="font-bold text-gray-800">
-                    {appointmentToCancel.appointment?.date || appointmentToCancel.startDate || 'Scheduled'} @ {appointmentToCancel.appointment?.dropOffTime || appointmentToCancel.appointment?.time || '10:15'}
+                    {appointmentToCancel.appointment?.date || appointmentToCancel.startDate || '-'} @ {appointmentToCancel.appointment?.dropOffTime || appointmentToCancel.appointment?.time || '-'}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
@@ -1575,7 +1583,7 @@ export default function ServiceOpenBookingsView() {
                   </label>
                   <input
                     type="text"
-                    value={followUpAdvisorName || 'Assigned Service Advisor'}
+                    value={followUpAdvisorName || '-'}
                     readOnly
                     className="w-full h-8 px-2.5 bg-gray-100 border border-gray-200 rounded-lg text-xs font-semibold text-gray-700 cursor-not-allowed select-none focus:outline-none truncate"
                   />

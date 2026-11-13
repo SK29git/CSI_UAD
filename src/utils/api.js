@@ -1405,3 +1405,128 @@ export async function getSalesExecutiveDetails({
   return await apiFetch(`/api/v1/sales-executives?${q.toString()}`);
 }
 
+/**
+ * =========================================================================
+ * 19. ZOFEUR RECOVERY & VENDOR RIDE DISPATCH APIS
+ * =========================================================================
+ */
+
+/**
+ * Generate Zofeur Auth Bearer Token (POST https://api.zofeur.app/api/v1/auth/generate-token)
+ */
+export async function generateZofeurToken() {
+  const baseUrl =
+    typeof window !== "undefined" && window.location.hostname === "localhost"
+      ? "/zofeur-api"
+      : "https://api.zofeur.app";
+
+  try {
+    const res = await fetch(`${baseUrl}/api/v1/auth/generate-token`, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: "bmw@agmc.ae",
+        password: "Agmc1234$",
+      }),
+    });
+
+    const data = await res.json();
+    if (res.ok && data && (data.success || data.status_code === 200) && data.data?.token) {
+      return { ok: true, token: data.data.token, data };
+    }
+    return { ok: false, error: data?.message || "Failed to generate Zofeur token", data };
+  } catch (err) {
+    if (baseUrl !== "https://api.zofeur.app") {
+      try {
+        const directRes = await fetch(
+          "https://api.zofeur.app/api/v1/auth/generate-token",
+          {
+            method: "POST",
+            headers: {
+              accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: "bmw@agmc.ae",
+              password: "Agmc1234$",
+            }),
+          },
+        );
+        const directData = await directRes.json();
+        if (
+          directRes.ok &&
+          directData &&
+          (directData.success || directData.status_code === 200) &&
+          directData.data?.token
+        ) {
+          return { ok: true, token: directData.data.token, data: directData };
+        }
+        return {
+          ok: false,
+          error: directData?.message || "Failed to generate Zofeur token",
+          data: directData,
+        };
+      } catch (e) {
+        return { ok: false, error: e.message || "Failed to generate Zofeur token" };
+      }
+    }
+    return { ok: false, error: err.message || "Failed to generate Zofeur token" };
+  }
+}
+
+/**
+ * Create Zofeur Vendor Booking Ride (POST https://api.zofeur.app/api/v1/booking/vendor/AGMC%20Call%20Center/create)
+ */
+export async function createZofeurVendorBooking(payload, token) {
+  const baseUrl =
+    typeof window !== "undefined" && window.location.hostname === "localhost"
+      ? "/zofeur-api"
+      : "https://api.zofeur.app";
+
+  try {
+    const res = await fetch(
+      `${baseUrl}/api/v1/booking/vendor/AGMC%20Call%20Center/create`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+
+    const data = await res.json();
+    const isSuccess = res.ok && (data.success || data.status_code === 200);
+    return { ok: isSuccess, status: res.status, data };
+  } catch (err) {
+    if (baseUrl !== "https://api.zofeur.app") {
+      try {
+        const directRes = await fetch(
+          "https://api.zofeur.app/api/v1/booking/vendor/AGMC%20Call%20Center/create",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+              accept: "application/json",
+            },
+            body: JSON.stringify(payload),
+          },
+        );
+        const directData = await directRes.json();
+        const isSuccess =
+          directRes.ok && (directData.success || directData.status_code === 200);
+        return { ok: isSuccess, status: directRes.status, data: directData };
+      } catch (e) {
+        return { ok: false, error: e.message || "Failed to create Zofeur booking" };
+      }
+    }
+    return { ok: false, error: err.message || "Failed to create Zofeur booking" };
+  }
+}
+

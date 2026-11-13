@@ -338,14 +338,14 @@ export default function ServiceBookingMainPanel() {
   );
 
   const [geelyPhone, setGeelyPhone] = useState(
-    customer?.mobileRaw || customer?.mobile || "0543408597",
+    customer?.mobileRaw || customer?.mobile || "",
   );
   const [geelyCustomerId, setGeelyCustomerId] = useState(customer?.id || "");
   const [geelyCustomerSearching, setGeelyCustomerSearching] = useState(false);
   const [geelyCustomerFound, setGeelyCustomerFound] = useState(null);
 
   const [geelyPlateNo, setGeelyPlateNo] = useState(
-    vehicles?.[0]?.registrationNumber || "240153",
+    vehicles?.[0]?.registrationNumber || "",
   );
   const [geelyVehicleSearching, setGeelyVehicleSearching] = useState(false);
   const [geelyVehicleData, setGeelyVehicleData] = useState(null);
