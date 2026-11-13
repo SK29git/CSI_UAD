@@ -385,13 +385,6 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
             Customer experience metrics for <span className="font-semibold text-gray-800">{customerName || '-'}</span> (Cust #{customerNumber || '-'})
           </p>
         </div>
-
-        <button
-          onClick={() => setShowSubmitModal(true)}
-          className="bg-blue-600 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg hover:bg-blue-700 shadow-xs flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
-        >
-          <FaPlus className="text-[10px]" /> Submit Survey
-        </button>
       </div>
 
       {/* Submit Feedback Modal / Inline Form */}

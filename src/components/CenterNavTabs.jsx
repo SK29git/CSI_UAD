@@ -111,7 +111,9 @@ export default function CenterNavTabs({
 
     const queryString = newParams.toString();
 
-    if (targetModule === "Sales") {
+    if (targetModule === "Home") {
+      navigate(`/home${queryString ? "?" + queryString : ""}`);
+    } else if (targetModule === "Sales") {
       navigate(`/sales${queryString ? "?" + queryString : ""}`);
     } else if (targetModule === "Service") {
       navigate(`/service${queryString ? "?" + queryString : ""}`);
@@ -123,8 +125,10 @@ export default function CenterNavTabs({
       targetModule === "Events"
     ) {
       navigate(`/event-history${queryString ? "?" + queryString : ""}`);
+    } else if (targetModule === "Complaints Manager") {
+      navigate(`/complaints${queryString ? "?" + queryString : ""}`);
     } else {
-      navigate(`/${queryString ? "?" + queryString : ""}`);
+      navigate(`/home${queryString ? "?" + queryString : ""}`);
     }
   };
 
@@ -162,6 +166,10 @@ export default function CenterNavTabs({
       case "Customer Segments":
         return <FaUsers className="text-xs" />;
       case "After-Sales":
+      case "Sales Follow-up":
+      case "Sales Follow":
+      case "Service Follow-up":
+      case "Service Follow Up":
         return <FaHistory className="text-xs" />;
       case "Create Complaint":
         return <FaExclamationTriangle className="text-xs" />;
@@ -213,6 +221,7 @@ export default function CenterNavTabs({
 
   const serviceSubTabs = [
     { id: "Overview", label: "Overview" },
+    { id: "New Enquiry", label: "New Enquiry" },
     { id: "Other Request", label: "Other Request" },
     { id: "Breakdown", label: "Breakdown" },
     { id: "Book Service", label: "Book Service" },
@@ -220,6 +229,7 @@ export default function CenterNavTabs({
     { id: "Service History", label: "Service History" },
     { id: "Warranty Claims", label: "Warranty Claims" },
     { id: "Service Feedback", label: "Customer Survey" },
+    { id: "Service Follow-up", label: "Service Follow Up" },
   ];
 
   const feedbackSubTabs = [
@@ -236,7 +246,7 @@ export default function CenterNavTabs({
     { id: "Test Drive", label: "Test Drive" },
     { id: "Vehicle Orders", label: "Vehicle Orders" },
     { id: "Customer Segments", label: "Customer Segments" },
-    { id: "After-Sales", label: "After-Sales" },
+    { id: "Sales Follow-up", label: "Sales Follow" },
   ];
 
   const eventSubTabs = [
@@ -244,6 +254,7 @@ export default function CenterNavTabs({
   ];
 
   let currentSubTabs = complaintSubTabs;
+  if (activeModule === "Home") currentSubTabs = [];
   if (activeModule === "Service") currentSubTabs = serviceSubTabs;
   if (activeModule === "Feedback" || activeModule === "Survey")
     currentSubTabs = feedbackSubTabs;
@@ -260,6 +271,20 @@ export default function CenterNavTabs({
     <div className="bg-white rounded-xl shadow-xs border border-slate-200/90 px-3.5 py-2 sm:px-5 mb-2.5 flex flex-col gap-1.5 transition-all">
       {/* ROW 1: Module Switcher Tabs */}
       <div className="flex items-center justify-center gap-4 sm:gap-7 lg:gap-8 text-xs border-b border-slate-100 pb-1.5 w-full flex-wrap">
+        <button
+          onClick={() => handleNavigateModule("Home")}
+          className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
+            activeModule === "Home"
+              ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
+              : "text-gray-600 font-semibold hover:text-gray-900"
+          }`}
+        >
+          <FaHome
+            className={`text-xs ${activeModule === "Home" ? "text-blue-600" : "text-gray-400"}`}
+          />
+          <span>Home</span>
+        </button>
+
         <button
           onClick={() => handleNavigateModule("Sales")}
           className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
@@ -342,50 +367,52 @@ export default function CenterNavTabs({
       </div>
 
       {/* ROW 2: Sub-Navigation Workflow Bar with Visual Pill and Icons */}
-      <div className="flex items-center justify-start xl:justify-center gap-1 sm:gap-1.5 overflow-x-auto text-xs font-medium no-scrollbar py-0.5 w-full">
-        {currentSubTabs.map((tab) => {
-          const isLeadOrEnquiryTab =
-            tab.id === "New Enquiry" || tab.id === "New Lead";
-          const isLeadOrEnquiryActive =
-            activeSubTab === "New Enquiry" || activeSubTab === "New Lead";
-          const isActive =
-            activeSubTab === tab.id ||
-            (isLeadOrEnquiryTab && isLeadOrEnquiryActive);
-          const tabIcon = getSubTabIcon(tab.id);
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSubTab && setActiveSubTab(tab.id)}
-              className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg relative flex items-center gap-1 sm:gap-1.5 whitespace-nowrap cursor-pointer transition-all text-[11px] sm:text-xs shrink-0 ${
-                isActive
-                  ? "bg-blue-50 text-blue-600 border border-blue-200 font-bold shadow-2xs"
-                  : "text-gray-600 hover:text-gray-900 font-semibold hover:bg-gray-50/80"
-              }`}
-            >
-              {tabIcon && (
-                <span className={isActive ? "text-blue-600" : "text-gray-400"}>
-                  {tabIcon}
-                </span>
-              )}
-              <span>{tab.label}</span>
-              {tab.count !== undefined && (
-                <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                    isActive
-                      ? "bg-blue-600 text-white shadow-2xs"
-                      : "bg-gray-200 text-gray-600"
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              )}
-              {isActive && (
-                <span className="absolute -bottom-1 left-2 right-2 h-[2px] bg-blue-600 rounded-full" />
-              )}
-            </button>
-          );
-        })}
-      </div>
+      {currentSubTabs && currentSubTabs.length > 0 && (
+        <div className="flex items-center justify-start xl:justify-center gap-1 sm:gap-1.5 overflow-x-auto text-xs font-medium no-scrollbar py-0.5 w-full">
+          {currentSubTabs.map((tab) => {
+            const isLeadOrEnquiryTab =
+              tab.id === "New Enquiry" || tab.id === "New Lead";
+            const isLeadOrEnquiryActive =
+              activeSubTab === "New Enquiry" || activeSubTab === "New Lead";
+            const isActive =
+              activeSubTab === tab.id ||
+              (isLeadOrEnquiryTab && isLeadOrEnquiryActive);
+            const tabIcon = getSubTabIcon(tab.id);
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveSubTab && setActiveSubTab(tab.id)}
+                className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg relative flex items-center gap-1 sm:gap-1.5 whitespace-nowrap cursor-pointer transition-all text-[11px] sm:text-xs shrink-0 ${
+                  isActive
+                    ? "bg-blue-50 text-blue-600 border border-blue-200 font-bold shadow-2xs"
+                    : "text-gray-600 hover:text-gray-900 font-semibold hover:bg-gray-50/80"
+                }`}
+              >
+                {tabIcon && (
+                  <span className={isActive ? "text-blue-600" : "text-gray-400"}>
+                    {tabIcon}
+                  </span>
+                )}
+                <span>{tab.label}</span>
+                {tab.count !== undefined && (
+                  <span
+                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                      isActive
+                        ? "bg-blue-600 text-white shadow-2xs"
+                        : "bg-gray-200 text-gray-600"
+                    }`}
+                  >
+                    {tab.count}
+                  </span>
+                )}
+                {isActive && (
+                  <span className="absolute -bottom-1 left-2 right-2 h-[2px] bg-blue-600 rounded-full" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

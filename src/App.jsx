@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { CustomerProvider } from './context/CustomerContext';
+import HomePage from './pages/HomePage';
 import ComplaintsDashboardPage from './pages/ComplaintsDashboardPage';
 import ServiceBookingPage from './pages/ServiceBookingPage';
 import FeedbackPage from './pages/FeedbackPage';
@@ -13,7 +14,8 @@ export default function App() {
     <CustomerProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<ComplaintsDashboardPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/home" element={<HomePage />} />
           <Route path="/complaints" element={<ComplaintsDashboardPage />} />
           <Route path="/service" element={<ServiceBookingPage />} />
           <Route path="/service-booking" element={<ServiceBookingPage />} />

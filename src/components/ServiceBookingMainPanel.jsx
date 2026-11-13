@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useCustomer } from '../context/CustomerContext';
-import { 
+import React, { useState, useEffect, useMemo } from "react";
+import { useCustomer } from "../context/CustomerContext";
+import {
   apiFetch,
   findServiceCustomer,
   getServiceCustomerDetail,
@@ -11,15 +11,15 @@ import {
   getServiceAdvisors,
   getAppointmentDates,
   getAppointmentTimes,
-  createServiceBooking
-} from '../utils/api';
-import { 
-  FaCar, 
-  FaUser, 
-  FaLayerGroup, 
-  FaPaperPlane, 
-  FaSpinner, 
-  FaCheckCircle, 
+  createServiceBooking,
+} from "../utils/api";
+import {
+  FaCar,
+  FaUser,
+  FaLayerGroup,
+  FaPaperPlane,
+  FaSpinner,
+  FaCheckCircle,
   FaCalendarCheck,
   FaIdBadge,
   FaSearch,
@@ -40,8 +40,8 @@ import {
   FaSun,
   FaCloudSun,
   FaMoon,
-  FaLock
-} from 'react-icons/fa';
+  FaLock,
+} from "react-icons/fa";
 
 /**
  * AvailableDatesCalendar - Interactive calendar enforcing that ONLY dates
@@ -57,20 +57,20 @@ export function AvailableDatesCalendar({
 
   // Determine starting month from selectedDate or first available date
   const [currentYearMonth, setCurrentYearMonth] = useState(() => {
-    const seed = selectedDate || availableDates[0] || '2026-11-02';
-    const [y, m] = seed.split('-').map(Number);
-    return { year: y || 2026, month: (m ? m - 1 : 10) };
+    const seed = selectedDate || availableDates[0] || "2026-11-02";
+    const [y, m] = seed.split("-").map(Number);
+    return { year: y || 2026, month: m ? m - 1 : 10 };
   });
 
   // When selectedDate or availableDates change, keep month in view
   useEffect(() => {
     if (selectedDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedDate)) {
-      const [y, m] = selectedDate.split('-').map(Number);
+      const [y, m] = selectedDate.split("-").map(Number);
       if (y && m) {
         setCurrentYearMonth({ year: y, month: m - 1 });
       }
     } else if (availableDates.length > 0) {
-      const [y, m] = availableDates[0].split('-').map(Number);
+      const [y, m] = availableDates[0].split("-").map(Number);
       if (y && m) {
         setCurrentYearMonth({ year: y, month: m - 1 });
       }
@@ -78,19 +78,29 @@ export function AvailableDatesCalendar({
   }, [selectedDate, availableDates]);
 
   const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   const handlePrevMonth = () => {
-    setCurrentYearMonth(prev => {
+    setCurrentYearMonth((prev) => {
       if (prev.month === 0) return { year: prev.year - 1, month: 11 };
       return { year: prev.year, month: prev.month - 1 };
     });
   };
 
   const handleNextMonth = () => {
-    setCurrentYearMonth(prev => {
+    setCurrentYearMonth((prev) => {
       if (prev.month === 11) return { year: prev.year + 1, month: 0 };
       return { year: prev.year, month: prev.month + 1 };
     });
@@ -106,15 +116,15 @@ export function AvailableDatesCalendar({
       days.push({ day: null, dateStr: null, isCurrentMonth: false });
     }
     for (let d = 1; d <= daysInMonth; d++) {
-      const mm = String(month + 1).padStart(2, '0');
-      const dd = String(d).padStart(2, '0');
+      const mm = String(month + 1).padStart(2, "0");
+      const dd = String(d).padStart(2, "0");
       const dateStr = `${year}-${mm}-${dd}`;
       days.push({
         day: d,
         dateStr,
         isCurrentMonth: true,
         isAvailable: availableSet.has(dateStr),
-        isSelected: dateStr === selectedDate
+        isSelected: dateStr === selectedDate,
       });
     }
     return days;
@@ -147,7 +157,7 @@ export function AvailableDatesCalendar({
 
       {/* Weekday Headers */}
       <div className="grid grid-cols-7 gap-1 text-center mb-1">
-        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(w => (
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((w) => (
           <span key={w} className="text-[10px] font-bold text-slate-400">
             {w}
           </span>
@@ -169,15 +179,15 @@ export function AvailableDatesCalendar({
                 onClick={() => onSelectDate(cell.dateStr)}
                 className={`h-7 rounded-md text-xs font-bold transition-all flex flex-col items-center justify-center relative cursor-pointer ${
                   cell.isSelected
-                    ? 'bg-blue-600 text-white shadow-xs ring-2 ring-blue-300'
-                    : 'bg-white hover:bg-blue-50 text-blue-900 border border-blue-200 hover:border-blue-400'
+                    ? "bg-blue-600 text-white shadow-xs ring-2 ring-blue-300"
+                    : "bg-white hover:bg-blue-50 text-blue-900 border border-blue-200 hover:border-blue-400"
                 }`}
                 title={`Select ${cell.dateStr} (Available)`}
               >
                 <span>{cell.day}</span>
                 <span
                   className={`w-1 h-1 rounded-full absolute bottom-0.5 ${
-                    cell.isSelected ? 'bg-white' : 'bg-emerald-500'
+                    cell.isSelected ? "bg-white" : "bg-emerald-500"
                   }`}
                 />
               </button>
@@ -205,7 +215,7 @@ export function AvailableDatesCalendar({
           <span>Unavailable</span>
         </div>
         <div className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
-          {selectedDate || 'No date selected'}
+          {selectedDate || "No date selected"}
         </div>
       </div>
     </div>
@@ -213,13 +223,28 @@ export function AvailableDatesCalendar({
 }
 
 export default function ServiceBookingMainPanel() {
-  const { customer, agentId, getFormattedName, selectedVin, vehicles, group: contextGroup } = useCustomer();
+  const {
+    customer,
+    agentId,
+    getFormattedName,
+    selectedVin,
+    vehicles,
+    group: contextGroup,
+  } = useCustomer();
 
   const customerName = getFormattedName();
   const initialCustomerNo = customer?.customerNumber || customer?.id || "";
-  const initialGroup = contextGroup || customer?.keyloopGroup || (new URLSearchParams(window.location.search).get('group') || "");
+  const initialGroup =
+    contextGroup ||
+    customer?.keyloopGroup ||
+    new URLSearchParams(window.location.search).get("group") ||
+    "";
   const initialCreatedBy = agentId || "agent.42";
-  const initialVin = selectedVin || customer?.vin || (vehicles && vehicles.length > 0 ? vehicles[0].vin : "") || "";
+  const initialVin =
+    selectedVin ||
+    customer?.vin ||
+    (vehicles && vehicles.length > 0 ? vehicles[0].vin : "") ||
+    "";
 
   const [keyloopGroup, setKeyloopGroup] = useState(initialGroup);
   const [customerNumber, setCustomerNumber] = useState(initialCustomerNo);
@@ -228,16 +253,28 @@ export default function ServiceBookingMainPanel() {
   const [wipNumber, setWipNumber] = useState("");
 
   // Determine active brand/group and whether it is BMW
-  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const urlGroup = urlParams ? urlParams.get('group') : null;
-  const activeGroup = (urlGroup || keyloopGroup || contextGroup || customer?.keyloopGroup || customer?.brand || 'BMW').trim().toUpperCase();
-  const isBMW = activeGroup === 'BMW';
+  const urlParams =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search)
+      : null;
+  const urlGroup = urlParams ? urlParams.get("group") : null;
+  const activeGroup = (
+    urlGroup ||
+    keyloopGroup ||
+    contextGroup ||
+    customer?.keyloopGroup ||
+    customer?.brand ||
+    "BMW"
+  )
+    .trim()
+    .toUpperCase();
+  const isBMW = activeGroup === "BMW";
 
   const [submitting, setSubmitting] = useState(false);
   const [apiResponse, setApiResponse] = useState(null);
 
   // Tools state for other Service Booking screen features
-  const [activeToolTab, setActiveToolTab] = useState('CreateBooking');
+  const [activeToolTab, setActiveToolTab] = useState("CreateBooking");
   const [lookupResult, setLookupResult] = useState(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [requestText, setRequestText] = useState("");
@@ -251,7 +288,8 @@ export default function ServiceBookingMainPanel() {
   useEffect(() => {
     if (customer) {
       if (customer?.keyloopGroup) setKeyloopGroup(customer?.keyloopGroup);
-      if (customer?.customerNumber || customer?.id) setCustomerNumber(customer?.customerNumber || customer?.id);
+      if (customer?.customerNumber || customer?.id)
+        setCustomerNumber(customer?.customerNumber || customer?.id);
     }
   }, [customer]);
 
@@ -277,27 +315,38 @@ export default function ServiceBookingMainPanel() {
   // UNIVERSAL SERVICE BOOKING FLOW STATE & HANDLERS (Multi-Brand DMS REST APIs)
   // Supports: BMW, MINI, Rolls-Royce, Geely, Lotus, etc.
   // =========================================================================
-  const [bookingMode, setBookingMode] = useState('SERVICE_ENGINE'); // 'SERVICE_ENGINE' (AGMC Universal Flow) or 'KEYLOOP' (Legacy)
+  const [bookingMode, setBookingMode] = useState("SERVICE_ENGINE"); // 'SERVICE_ENGINE' (AGMC Universal Flow) or 'KEYLOOP' (Legacy)
 
   const normalizeBrand = (b) => {
-    if (!b) return 'BMW';
+    if (!b) return "BMW";
     const upper = String(b).toUpperCase();
-    if (upper.includes('GEELY')) return 'Geely';
-    if (upper.includes('MINI')) return 'MINI';
-    if (upper.includes('ROLLS')) return 'Rolls-Royce';
-    if (upper.includes('BMW')) return 'BMW';
+    if (upper.includes("GEELY")) return "Geely";
+    if (upper.includes("MINI")) return "MINI";
+    if (upper.includes("ROLLS")) return "Rolls-Royce";
+    if (upper.includes("BMW")) return "BMW";
     return b;
   };
 
-  const detectedMake = vehicles?.[0]?.brand || customer?.brand || contextGroup || customer?.keyloopGroup || 'Geely';
-  const [serviceMake, setServiceMake] = useState(() => normalizeBrand(detectedMake));
+  const detectedMake =
+    vehicles?.[0]?.brand ||
+    customer?.brand ||
+    contextGroup ||
+    customer?.keyloopGroup ||
+    "Geely";
+  const [serviceMake, setServiceMake] = useState(() =>
+    normalizeBrand(detectedMake),
+  );
 
-  const [geelyPhone, setGeelyPhone] = useState(customer?.mobileRaw || customer?.mobile || '0543408597');
-  const [geelyCustomerId, setGeelyCustomerId] = useState(customer?.id || '');
+  const [geelyPhone, setGeelyPhone] = useState(
+    customer?.mobileRaw || customer?.mobile || "0543408597",
+  );
+  const [geelyCustomerId, setGeelyCustomerId] = useState(customer?.id || "");
   const [geelyCustomerSearching, setGeelyCustomerSearching] = useState(false);
   const [geelyCustomerFound, setGeelyCustomerFound] = useState(null);
 
-  const [geelyPlateNo, setGeelyPlateNo] = useState(vehicles?.[0]?.registrationNumber || '240153');
+  const [geelyPlateNo, setGeelyPlateNo] = useState(
+    vehicles?.[0]?.registrationNumber || "240153",
+  );
   const [geelyVehicleSearching, setGeelyVehicleSearching] = useState(false);
   const [geelyVehicleData, setGeelyVehicleData] = useState(null);
   const [geelyVehicleId, setGeelyVehicleId] = useState(15);
@@ -308,23 +357,26 @@ export default function ServiceBookingMainPanel() {
 
   const [geelyServices, setGeelyServices] = useState([]);
   const [geelyServicesLoading, setGeelyServicesLoading] = useState(false);
-  const [geelySelectedProductId, setGeelySelectedProductId] = useState('07143ffd-184e-43b5-a8de-f68d63199baa');
+  const [geelySelectedProductId, setGeelySelectedProductId] = useState(
+    "07143ffd-184e-43b5-a8de-f68d63199baa",
+  );
 
   const [geelyAvailableDates, setGeelyAvailableDates] = useState([]);
   const [geelyDatesLoading, setGeelyDatesLoading] = useState(false);
-  const [geelySelectedDate, setGeelySelectedDate] = useState('2026-11-02');
+  const [geelySelectedDate, setGeelySelectedDate] = useState("2026-11-02");
 
   const [geelyTimeSlots, setGeelyTimeSlots] = useState([]);
   const [geelyTimesLoading, setGeelyTimesLoading] = useState(false);
-  const [geelySelectedTimeSlot, setGeelySelectedTimeSlot] = useState('10:15-10:30');
-  const [activePeriodTab, setActivePeriodTab] = useState('Morning');
+  const [geelySelectedTimeSlot, setGeelySelectedTimeSlot] =
+    useState("10:15-10:30");
+  const [activePeriodTab, setActivePeriodTab] = useState("Morning");
 
   const [geelyAdvisors, setGeelyAdvisors] = useState([]);
-  const [geelyAdvisorId, setGeelyAdvisorId] = useState('');
+  const [geelyAdvisorId, setGeelyAdvisorId] = useState("");
 
   const [geelyMileage, setGeelyMileage] = useState(5000);
-  const [geelyMileageUnit, setGeelyMileageUnit] = useState('KM');
-  const [geelyCustomerNotes, setGeelyCustomerNotes] = useState('');
+  const [geelyMileageUnit, setGeelyMileageUnit] = useState("KM");
+  const [geelyCustomerNotes, setGeelyCustomerNotes] = useState("");
 
   const [geelySubmitting, setGeelySubmitting] = useState(false);
   const [geelyBookingResult, setGeelyBookingResult] = useState(null);
@@ -338,7 +390,11 @@ export default function ServiceBookingMainPanel() {
     if (vehicles && vehicles.length > 0 && vehicles[0].registrationNumber) {
       setGeelyPlateNo(vehicles[0].registrationNumber);
     }
-    const make = vehicles?.[0]?.brand || customer?.brand || contextGroup || customer?.keyloopGroup;
+    const make =
+      vehicles?.[0]?.brand ||
+      customer?.brand ||
+      contextGroup ||
+      customer?.keyloopGroup;
     if (make) {
       setServiceMake(normalizeBrand(make));
     }
@@ -353,20 +409,28 @@ export default function ServiceBookingMainPanel() {
       setGeelyServicesLoading(true);
       try {
         const [locRes, srvRes] = await Promise.allSettled([
-          getServiceLocations('workshop'),
-          getServiceRecommendedServices('workshop')
+          getServiceLocations("workshop"),
+          getServiceRecommendedServices("workshop"),
         ]);
 
         if (isMounted) {
-          if (locRes.status === 'fulfilled' && locRes.value?.ok) {
-            const locList = locRes.value.data?.data || locRes.value.data?.result || locRes.value.data || [];
+          if (locRes.status === "fulfilled" && locRes.value?.ok) {
+            const locList =
+              locRes.value.data?.data ||
+              locRes.value.data?.result ||
+              locRes.value.data ||
+              [];
             if (Array.isArray(locList) && locList.length > 0) {
               setGeelyLocations(locList);
             }
           }
 
-          if (srvRes.status === 'fulfilled' && srvRes.value?.ok) {
-            const srvList = srvRes.value.data?.result || srvRes.value.data?.data || srvRes.value.data || [];
+          if (srvRes.status === "fulfilled" && srvRes.value?.ok) {
+            const srvList =
+              srvRes.value.data?.result ||
+              srvRes.value.data?.data ||
+              srvRes.value.data ||
+              [];
             if (Array.isArray(srvList) && srvList.length > 0) {
               setGeelyServices(srvList);
             }
@@ -383,7 +447,9 @@ export default function ServiceBookingMainPanel() {
     };
 
     fetchInitialServiceMeta();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [isBMW]);
 
   // Fetch available dates dynamically based on selected brand (BMW, MINI, Rolls-Royce, Geely)
@@ -396,15 +462,23 @@ export default function ServiceBookingMainPanel() {
       try {
         const res = await getAppointmentDates({
           dealershipLocationId: geelyLocationId,
-          make: serviceMake || 'Geely',
-          serviceProductIds: [geelySelectedProductId]
+          make: serviceMake || "Geely",
+          serviceProductIds: [geelySelectedProductId],
         });
         if (isMounted && res && res.ok && res.data) {
           const rawDates = Array.isArray(res.data.result)
             ? res.data.result
-            : (res.data.result?.availableDates || res.data.result?.dates || res.data.availableDates || res.data.dates || []);
+            : res.data.result?.availableDates ||
+              res.data.result?.dates ||
+              res.data.availableDates ||
+              res.data.dates ||
+              [];
           const normalizedDates = rawDates
-            .map(item => (typeof item === 'string' ? item : item?.date || item?.appointmentDate))
+            .map((item) =>
+              typeof item === "string"
+                ? item
+                : item?.date || item?.appointmentDate,
+            )
             .filter(Boolean);
           if (Array.isArray(normalizedDates) && normalizedDates.length > 0) {
             setGeelyAvailableDates(normalizedDates);
@@ -421,13 +495,16 @@ export default function ServiceBookingMainPanel() {
     };
 
     fetchDates();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [geelyLocationId, geelySelectedProductId, serviceMake, isBMW]);
 
   // Fetch available timeslots when date changes
   useEffect(() => {
     if (isBMW) return;
-    if (!geelyLocationId || !geelySelectedProductId || !geelySelectedDate) return;
+    if (!geelyLocationId || !geelySelectedProductId || !geelySelectedDate)
+      return;
     let isMounted = true;
     const fetchTimes = async () => {
       setGeelyTimesLoading(true);
@@ -435,51 +512,56 @@ export default function ServiceBookingMainPanel() {
         const res = await getAppointmentTimes({
           selectedDate: geelySelectedDate,
           dealershipLocationId: geelyLocationId,
-          serviceProductIds: [geelySelectedProductId]
+          serviceProductIds: [geelySelectedProductId],
         });
         if (isMounted && res && res.ok && res.data) {
-          const rawSlots = res.data.result?.timeSlots || res.data.timeSlots || [];
+          const rawSlots =
+            res.data.result?.timeSlots || res.data.timeSlots || [];
           if (Array.isArray(rawSlots) && rawSlots.length > 0) {
             setGeelyTimeSlots(rawSlots);
-            const firstSlot = rawSlots[0]?.timeSlot || '10:15-10:30';
+            const firstSlot = rawSlots[0]?.timeSlot || "10:15-10:30";
             setGeelySelectedTimeSlot(firstSlot);
             // Auto-select period tab based on first slot's hour
             const match = firstSlot.match(/^(\d{1,2}):/);
             const firstHour = match ? parseInt(match[1], 10) : 9;
-            if (firstHour >= 16) setActivePeriodTab('Evening');
-            else if (firstHour >= 12) setActivePeriodTab('Afternoon');
-            else setActivePeriodTab('Morning');
+            if (firstHour >= 16) setActivePeriodTab("Evening");
+            else if (firstHour >= 12) setActivePeriodTab("Afternoon");
+            else setActivePeriodTab("Morning");
             if (rawSlots[0]?.advisorId) {
               setGeelyAdvisorId(String(rawSlots[0].advisorId));
             }
           } else {
             setGeelyTimeSlots([]);
-            setGeelySelectedTimeSlot('');
+            setGeelySelectedTimeSlot("");
           }
         }
       } catch (err) {
         console.warn("Failed to fetch timeslots:", err);
         setGeelyTimeSlots([]);
-        setGeelySelectedTimeSlot('');
+        setGeelySelectedTimeSlot("");
       } finally {
         if (isMounted) setGeelyTimesLoading(false);
       }
     };
 
     fetchTimes();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [geelyLocationId, geelySelectedProductId, geelySelectedDate, isBMW]);
 
   // Fetch Advisors for selected location
   useEffect(() => {
     if (isBMW) return;
     if (!geelyLocationId) return;
-    getServiceAdvisors(geelyLocationId).then(res => {
-      if (res && res.ok && res.data) {
-        const advList = res.data.result || res.data.data || res.data || [];
-        if (Array.isArray(advList)) setGeelyAdvisors(advList);
-      }
-    }).catch(e => console.warn("Advisors fetch failed:", e));
+    getServiceAdvisors(geelyLocationId)
+      .then((res) => {
+        if (res && res.ok && res.data) {
+          const advList = res.data.result || res.data.data || res.data || [];
+          if (Array.isArray(advList)) setGeelyAdvisors(advList);
+        }
+      })
+      .catch((e) => console.warn("Advisors fetch failed:", e));
   }, [geelyLocationId, isBMW]);
 
   // Find Customer by phone
@@ -490,23 +572,33 @@ export default function ServiceBookingMainPanel() {
     try {
       const res = await findServiceCustomer(geelyPhone.trim());
       if (res && res.ok && res.data?.result) {
-        const firstCust = Array.isArray(res.data.result) ? res.data.result[0] : res.data.result;
+        const firstCust = Array.isArray(res.data.result)
+          ? res.data.result[0]
+          : res.data.result;
         if (firstCust) {
           setGeelyCustomerFound(firstCust);
           if (firstCust.customerId) {
             setGeelyCustomerId(firstCust.customerId);
             // Also fetch customer vehicles
-            getServiceCustomerVehicles(firstCust.customerId).then(vRes => {
-              if (vRes && vRes.ok && vRes.data?.result) {
-                const vList = Array.isArray(vRes.data.result) ? vRes.data.result : [vRes.data.result];
-                if (vList.length > 0) {
-                  const firstV = vList[0].vehicle || vList[0];
-                  if (firstV.licensePlate) setGeelyPlateNo(firstV.licensePlate);
-                  if (firstV.vehicleId) setGeelyVehicleId(firstV.vehicleId);
-                  if (firstV.make || firstV.brand) setServiceMake(normalizeBrand(firstV.make || firstV.brand));
+            getServiceCustomerVehicles(firstCust.customerId)
+              .then((vRes) => {
+                if (vRes && vRes.ok && vRes.data?.result) {
+                  const vList = Array.isArray(vRes.data.result)
+                    ? vRes.data.result
+                    : [vRes.data.result];
+                  if (vList.length > 0) {
+                    const firstV = vList[0].vehicle || vList[0];
+                    if (firstV.licensePlate)
+                      setGeelyPlateNo(firstV.licensePlate);
+                    if (firstV.vehicleId) setGeelyVehicleId(firstV.vehicleId);
+                    if (firstV.make || firstV.brand)
+                      setServiceMake(
+                        normalizeBrand(firstV.make || firstV.brand),
+                      );
+                  }
                 }
-              }
-            }).catch(() => {});
+              })
+              .catch(() => {});
           }
         }
       }
@@ -543,22 +635,37 @@ export default function ServiceBookingMainPanel() {
   // Organize time slots into Morning / Afternoon / Evening and group by hour row
   const categorizedSlots = useMemo(() => {
     const categories = {
-      Morning: { label: 'Morning', icon: FaSun, color: 'text-amber-500', hours: {} },
-      Afternoon: { label: 'Afternoon', icon: FaCloudSun, color: 'text-orange-500', hours: {} },
-      Evening: { label: 'Evening', icon: FaMoon, color: 'text-indigo-500', hours: {} },
+      Morning: {
+        label: "Morning",
+        icon: FaSun,
+        color: "text-amber-500",
+        hours: {},
+      },
+      Afternoon: {
+        label: "Afternoon",
+        icon: FaCloudSun,
+        color: "text-orange-500",
+        hours: {},
+      },
+      Evening: {
+        label: "Evening",
+        icon: FaMoon,
+        color: "text-indigo-500",
+        hours: {},
+      },
     };
 
     (geelyTimeSlots || []).forEach((slot) => {
-      const timeStr = slot.timeSlot || '';
+      const timeStr = slot.timeSlot || "";
       const match = timeStr.match(/^(\d{1,2}):(\d{2})/);
       const hour = match ? parseInt(match[1], 10) : 9;
 
-      let catKey = 'Morning';
-      if (hour >= 12 && hour < 16) catKey = 'Afternoon';
-      else if (hour >= 16) catKey = 'Evening';
+      let catKey = "Morning";
+      if (hour >= 12 && hour < 16) catKey = "Afternoon";
+      else if (hour >= 16) catKey = "Evening";
 
       const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-      const ampm = hour < 12 ? 'AM' : 'PM';
+      const ampm = hour < 12 ? "AM" : "PM";
       const hourKey = `${hour12} ${ampm}`;
 
       if (!categories[catKey].hours[hourKey]) {
@@ -593,7 +700,7 @@ export default function ServiceBookingMainPanel() {
       mileageUnit: geelyMileageUnit || "KM",
       serviceProductIds: [geelySelectedProductId],
       startDate: geelySelectedDate,
-      vehicleId: Number(geelyVehicleId) || 15
+      vehicleId: Number(geelyVehicleId) || 15,
     };
 
     try {
@@ -602,10 +709,14 @@ export default function ServiceBookingMainPanel() {
         setGeelyBookingResult({
           success: true,
           data: res.data.result?.data || res.data.result || res.data,
-          submittedPayload: payload
+          submittedPayload: payload,
         });
       } else {
-        setGeelyBookingError(res?.statusText || res?.data?.msg || "Failed to create service booking");
+        setGeelyBookingError(
+          res?.statusText ||
+            res?.data?.msg ||
+            "Failed to create service booking",
+        );
       }
     } catch (err) {
       console.error("Universal service booking error:", err);
@@ -615,13 +726,14 @@ export default function ServiceBookingMainPanel() {
     }
   };
 
-
   // Fetch list of customer complaints and requests (GET /api/v1/customers/{group}/{customerNumber}/requests)
   const fetchCustomerRequests = async () => {
     if (!customerNumber) return;
     setRequestsLoading(true);
     try {
-      const res = await apiFetch(`/api/v1/customers/${keyloopGroup}/${customerNumber}/requests`);
+      const res = await apiFetch(
+        `/api/v1/customers/${keyloopGroup}/${customerNumber}/requests`,
+      );
       if (res && res.ok && Array.isArray(res.data)) {
         setCustomerRequests(res.data);
       } else {
@@ -636,7 +748,7 @@ export default function ServiceBookingMainPanel() {
   };
 
   useEffect(() => {
-    if (activeToolTab === 'Requests' && customerNumber) {
+    if (activeToolTab === "Requests" && customerNumber) {
       fetchCustomerRequests();
     }
   }, [activeToolTab, keyloopGroup, customerNumber]);
@@ -652,24 +764,30 @@ export default function ServiceBookingMainPanel() {
       keyloopGroup,
       customerNumber,
       vin,
-      createdBy: createdBy || "agent.42"
+      createdBy: createdBy || "agent.42",
     };
 
     try {
-      const res = await apiFetch('/api/v1/service-bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      const res = await apiFetch("/api/v1/service-bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (res && res.ok && res.data) {
         setApiResponse({ ok: true, data: res.data });
       } else {
-        setApiResponse({ ok: false, error: res?.statusText || "Unable to save service booking request" });
+        setApiResponse({
+          ok: false,
+          error: res?.statusText || "Unable to save service booking request",
+        });
       }
     } catch (err) {
       console.warn("Service booking submission error:", err);
-      setApiResponse({ ok: false, error: err.message || "Service booking submission failed" });
+      setApiResponse({
+        ok: false,
+        error: err.message || "Service booking submission failed",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -681,14 +799,24 @@ export default function ServiceBookingMainPanel() {
     setLookupLoading(true);
     setLookupResult(null);
     try {
-      const res = await apiFetch(`/api/v1/vehicles/${keyloopGroup}/${vin}/service-eligibility`);
+      const res = await apiFetch(
+        `/api/v1/vehicles/${keyloopGroup}/${vin}/service-eligibility`,
+      );
       if (res && res.ok && res.data) {
-        setLookupResult({ type: 'eligibility', ok: true, data: res.data });
+        setLookupResult({ type: "eligibility", ok: true, data: res.data });
       } else {
-        setLookupResult({ type: 'eligibility', ok: false, error: res?.statusText || "No eligibility data returned for this VIN" });
+        setLookupResult({
+          type: "eligibility",
+          ok: false,
+          error: res?.statusText || "No eligibility data returned for this VIN",
+        });
       }
     } catch (err) {
-      setLookupResult({ type: 'eligibility', ok: false, error: err.message || "Failed to fetch eligibility" });
+      setLookupResult({
+        type: "eligibility",
+        ok: false,
+        error: err.message || "Failed to fetch eligibility",
+      });
     } finally {
       setLookupLoading(false);
     }
@@ -700,14 +828,24 @@ export default function ServiceBookingMainPanel() {
     setLookupLoading(true);
     setLookupResult(null);
     try {
-      const res = await apiFetch(`/api/v1/service-bookings/${keyloopGroup}/${wipNumber.trim()}`);
+      const res = await apiFetch(
+        `/api/v1/service-bookings/${keyloopGroup}/${wipNumber.trim()}`,
+      );
       if (res && res.ok && res.data) {
-        setLookupResult({ type: 'wip', ok: true, data: res.data });
+        setLookupResult({ type: "wip", ok: true, data: res.data });
       } else {
-        setLookupResult({ type: 'wip', ok: false, error: res?.statusText || `No booking found for WIP #${wipNumber}` });
+        setLookupResult({
+          type: "wip",
+          ok: false,
+          error: res?.statusText || `No booking found for WIP #${wipNumber}`,
+        });
       }
     } catch (err) {
-      setLookupResult({ type: 'wip', ok: false, error: err.message || "Failed to fetch WIP booking" });
+      setLookupResult({
+        type: "wip",
+        ok: false,
+        error: err.message || "Failed to fetch WIP booking",
+      });
     } finally {
       setLookupLoading(false);
     }
@@ -724,22 +862,33 @@ export default function ServiceBookingMainPanel() {
         kind: requestKind,
         text: requestText.trim(),
         vin: vin,
-        createdBy: createdBy || "agent.42"
+        createdBy: createdBy || "agent.42",
       };
-      const res = await apiFetch(`/api/v1/customers/${keyloopGroup}/${customerNumber}/requests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const res = await apiFetch(
+        `/api/v1/customers/${keyloopGroup}/${customerNumber}/requests`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
       if (res && res.ok && res.data) {
-        setLookupResult({ type: 'request', ok: true, data: res.data });
+        setLookupResult({ type: "request", ok: true, data: res.data });
         setRequestText("");
         fetchCustomerRequests();
       } else {
-        setLookupResult({ type: 'request', ok: false, error: res?.statusText || "Failed to save request" });
+        setLookupResult({
+          type: "request",
+          ok: false,
+          error: res?.statusText || "Failed to save request",
+        });
       }
     } catch (err) {
-      setLookupResult({ type: 'request', ok: false, error: err.message || "Failed to save request" });
+      setLookupResult({
+        type: "request",
+        ok: false,
+        error: err.message || "Failed to save request",
+      });
     } finally {
       setLookupLoading(false);
     }
@@ -751,14 +900,25 @@ export default function ServiceBookingMainPanel() {
     setLookupLoading(true);
     setLookupResult(null);
     try {
-      const res = await apiFetch(`/api/v1/service-bookings/${keyloopGroup}/${wipNumber.trim()}/confirmation`);
+      const res = await apiFetch(
+        `/api/v1/service-bookings/${keyloopGroup}/${wipNumber.trim()}/confirmation`,
+      );
       if (res && res.ok && res.data) {
-        setLookupResult({ type: 'confirmation', ok: true, data: res.data });
+        setLookupResult({ type: "confirmation", ok: true, data: res.data });
       } else {
-        setLookupResult({ type: 'confirmation', ok: false, error: res?.statusText || `No confirmation details for WIP #${wipNumber}` });
+        setLookupResult({
+          type: "confirmation",
+          ok: false,
+          error:
+            res?.statusText || `No confirmation details for WIP #${wipNumber}`,
+        });
       }
     } catch (err) {
-      setLookupResult({ type: 'confirmation', ok: false, error: err.message || "Failed to check confirmation" });
+      setLookupResult({
+        type: "confirmation",
+        ok: false,
+        error: err.message || "Failed to check confirmation",
+      });
     } finally {
       setLookupLoading(false);
     }
@@ -770,14 +930,24 @@ export default function ServiceBookingMainPanel() {
     setLookupLoading(true);
     setLookupResult(null);
     try {
-      const res = await apiFetch(`/api/v1/service-bookings/${keyloopGroup}/${wipNumber.trim()}/reminder`);
+      const res = await apiFetch(
+        `/api/v1/service-bookings/${keyloopGroup}/${wipNumber.trim()}/reminder`,
+      );
       if (res && res.ok && res.data) {
-        setLookupResult({ type: 'reminder', ok: true, data: res.data });
+        setLookupResult({ type: "reminder", ok: true, data: res.data });
       } else {
-        setLookupResult({ type: 'reminder', ok: false, error: res?.statusText || `No reminder details for WIP #${wipNumber}` });
+        setLookupResult({
+          type: "reminder",
+          ok: false,
+          error: res?.statusText || `No reminder details for WIP #${wipNumber}`,
+        });
       }
     } catch (err) {
-      setLookupResult({ type: 'reminder', ok: false, error: err.message || "Failed to check reminder" });
+      setLookupResult({
+        type: "reminder",
+        ok: false,
+        error: err.message || "Failed to check reminder",
+      });
     } finally {
       setLookupLoading(false);
     }
@@ -785,129 +955,195 @@ export default function ServiceBookingMainPanel() {
 
   // Helper component to render rich booking fields grid dynamically from API response object
   const renderBookingFieldsGrid = (data) => {
-    if (!data || typeof data !== 'object') return null;
+    if (!data || typeof data !== "object") return null;
 
-    const bookingRef = data.bookingId || data.wipNumber || data.jobNumber || data.reference;
-    const branchName = typeof data.branch === 'object' ? (data.branch.name || data.branch.code) : (data.branch || '');
-    const vehicleDesc = data.vehicle ? `${data.brand || ''} ${data.vehicle}`.trim() : (data.brand || '');
-    const dateTimeStr = [data.date, data.time ? `@ ${data.time}` : null].filter(Boolean).join(' ');
+    const bookingRef =
+      data.bookingId || data.wipNumber || data.jobNumber || data.reference;
+    const branchName =
+      typeof data.branch === "object"
+        ? data.branch.name || data.branch.code
+        : data.branch || "";
+    const vehicleDesc = data.vehicle
+      ? `${data.brand || ""} ${data.vehicle}`.trim()
+      : data.brand || "";
+    const dateTimeStr = [data.date, data.time ? `@ ${data.time}` : null]
+      .filter(Boolean)
+      .join(" ");
 
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
         {bookingRef && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Booking ID / WIP</span>
-            <span className="font-mono font-extrabold text-blue-700 text-xs">{bookingRef}</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Booking ID / WIP
+            </span>
+            <span className="font-mono font-extrabold text-blue-700 text-xs">
+              {bookingRef}
+            </span>
           </div>
         )}
 
         {data.status && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Booking Status</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Booking Status
+            </span>
             <span className="font-extrabold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-300 inline-block text-xs">
-              {data.status} {data.statusCode ? `(${data.statusCode})` : ''}
+              {data.status} {data.statusCode ? `(${data.statusCode})` : ""}
             </span>
           </div>
         )}
 
         {vehicleDesc && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Vehicle</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Vehicle
+            </span>
             <span className="font-bold text-gray-900">{vehicleDesc}</span>
           </div>
         )}
 
         {data.vin && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Vehicle VIN</span>
-            <span className="font-mono font-bold text-gray-900 uppercase">{data.vin}</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Vehicle VIN
+            </span>
+            <span className="font-mono font-bold text-gray-900 uppercase">
+              {data.vin}
+            </span>
           </div>
         )}
 
-        {(data.batteryId || data.batteryID || data.battery_id || data.battery || data.vehicle?.batteryId || data.vehicle?.batteryID) && (
+        {(data.batteryId ||
+          data.batteryID ||
+          data.battery_id ||
+          data.battery ||
+          data.vehicle?.batteryId ||
+          data.vehicle?.batteryID) && (
           <div className="bg-white p-3 rounded-lg border border-blue-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-blue-700 uppercase block">Battery ID</span>
+            <span className="text-[10px] font-extrabold text-blue-700 uppercase block">
+              Battery ID
+            </span>
             <span className="font-mono font-extrabold text-blue-900 text-xs">
-              {data.batteryId || data.batteryID || data.battery_id || data.battery || data.vehicle?.batteryId || data.vehicle?.batteryID}
+              {data.batteryId ||
+                data.batteryID ||
+                data.battery_id ||
+                data.battery ||
+                data.vehicle?.batteryId ||
+                data.vehicle?.batteryID}
             </span>
           </div>
         )}
 
         {dateTimeStr && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Booking Date & Time</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Booking Date & Time
+            </span>
             <span className="font-bold text-gray-900">{dateTimeStr}</span>
           </div>
         )}
 
         {data.dueOutDate && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Due Out Date</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Due Out Date
+            </span>
             <span className="font-bold text-gray-900">{data.dueOutDate}</span>
           </div>
         )}
 
         {branchName && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Branch Location</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Branch Location
+            </span>
             <span className="font-bold text-blue-700">{branchName}</span>
           </div>
         )}
 
         {data.bookedBy && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Booked By (Staff ID)</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Booked By (Staff ID)
+            </span>
             <span className="font-bold text-gray-900">{data.bookedBy}</span>
           </div>
         )}
 
         {data.odometerKm !== undefined && data.odometerKm !== null && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Odometer Reading</span>
-            <span className="font-extrabold text-gray-900">{Number(data.odometerKm).toLocaleString()} KM</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Odometer Reading
+            </span>
+            <span className="font-extrabold text-gray-900">
+              {Number(data.odometerKm).toLocaleString()} KM
+            </span>
           </div>
         )}
 
         {data.nextServiceDate && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Next Service Date</span>
-            <span className="font-bold text-gray-900">{data.nextServiceDate}</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Next Service Date
+            </span>
+            <span className="font-bold text-gray-900">
+              {data.nextServiceDate}
+            </span>
           </div>
         )}
 
         {data.createdDate && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Created Date</span>
-            <span className="font-semibold text-gray-700">{data.createdDate}</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Created Date
+            </span>
+            <span className="font-semibold text-gray-700">
+              {data.createdDate}
+            </span>
           </div>
         )}
 
         {data.lastUpdatedDate && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Last Updated</span>
-            <span className="font-semibold text-gray-700">{data.lastUpdatedDate}</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Last Updated
+            </span>
+            <span className="font-semibold text-gray-700">
+              {data.lastUpdatedDate}
+            </span>
           </div>
         )}
 
         {data.keyloopGroup && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Keyloop Group</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Keyloop Group
+            </span>
             <span className="font-bold text-gray-900">{data.keyloopGroup}</span>
           </div>
         )}
 
         {data.customerNumber && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Customer Number</span>
-            <span className="font-bold text-gray-900">{data.customerNumber}</span>
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Customer Number
+            </span>
+            <span className="font-bold text-gray-900">
+              {data.customerNumber}
+            </span>
           </div>
         )}
 
         {data.open !== undefined && (
           <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-2xs space-y-1">
-            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Workshop Status</span>
-            <span className={`font-extrabold px-2 py-0.5 rounded text-[11px] inline-block ${data.open ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>
-              {data.open ? 'Open Job' : 'Closed Job'}
+            <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+              Workshop Status
+            </span>
+            <span
+              className={`font-extrabold px-2 py-0.5 rounded text-[11px] inline-block ${data.open ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}
+            >
+              {data.open ? "Open Job" : "Closed Job"}
             </span>
           </div>
         )}
@@ -917,75 +1153,8 @@ export default function ServiceBookingMainPanel() {
 
   return (
     <div className="w-full flex flex-col gap-5 text-xs">
-      
-      {/* Tool Navigation Selector Bar */}
-      <div className="bg-gray-100/90 rounded-xl p-2 shadow-2xs border border-gray-200 flex items-center justify-between overflow-x-auto gap-2 text-[11px] font-semibold no-scrollbar">
-        <button
-          onClick={() => { setActiveToolTab('CreateBooking'); setLookupResult(null); }}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap cursor-pointer transition-all ${
-            activeToolTab === 'CreateBooking' 
-              ? 'bg-blue-600 text-white font-extrabold shadow-sm' 
-              : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 font-semibold'
-          }`}
-        >
-          <FaPaperPlane className="text-xs" />
-          <span>1. Book Service</span>
-        </button>
-
-        <button
-          onClick={() => { setActiveToolTab('Eligibility'); setLookupResult(null); }}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap cursor-pointer transition-all ${
-            activeToolTab === 'Eligibility' 
-              ? 'bg-blue-600 text-white font-extrabold shadow-sm' 
-              : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 font-semibold'
-          }`}
-        >
-          <FaFileContract className="text-xs" />
-          <span>2. Service Eligibility</span>
-        </button>
-
-        {/* 3. Lookup WIP Booking (Hidden / Commented out as requested) */}
-        {/*
-        <button
-          onClick={() => { setActiveToolTab('ModifyWip'); setLookupResult(null); }}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap cursor-pointer transition-all ${
-            activeToolTab === 'ModifyWip' 
-              ? 'bg-blue-600 text-white font-extrabold shadow-sm' 
-              : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 font-semibold'
-          }`}
-        >
-          <FaSearch className="text-xs" />
-          <span>3. Lookup WIP Booking</span>
-        </button>
-        */}
-
-        <button
-          onClick={() => { setActiveToolTab('Requests'); setLookupResult(null); }}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap cursor-pointer transition-all ${
-            activeToolTab === 'Requests' 
-              ? 'bg-blue-600 text-white font-extrabold shadow-sm' 
-              : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 font-semibold'
-          }`}
-        >
-          <FaClipboardList className="text-xs" />
-          <span>3. Customer Notes</span>
-        </button>
-
-        <button
-          onClick={() => { setActiveToolTab('Confirmation'); setLookupResult(null); }}
-          className={`px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap cursor-pointer transition-all ${
-            activeToolTab === 'Confirmation' 
-              ? 'bg-blue-600 text-white font-extrabold shadow-sm' 
-              : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:text-gray-900 font-semibold'
-          }`}
-        >
-          <FaCheckCircle className="text-xs" />
-          <span>4. Confirmation & Reminder</span>
-        </button>
-      </div>
-
       {/* 1. CREATE SERVICE BOOKING FORM (Only tab disabled for BMW) */}
-      {activeToolTab === 'CreateBooking' && (
+      {activeToolTab === "CreateBooking" && (
         <div className="relative w-full flex flex-col gap-4">
           {/* Notice for BMW */}
           {isBMW && (
@@ -1002,9 +1171,11 @@ export default function ServiceBookingMainPanel() {
             />
           )}
 
-          <div className={`flex flex-col gap-4 ${isBMW ? 'pointer-events-none select-none' : ''}`}>
-
-          {/* Integration Mode Switcher Bar */}
+          <div
+            className={`flex flex-col gap-4 ${isBMW ? "pointer-events-none select-none" : ""}`}
+          >
+            {/* Integration Mode Switcher Bar (Hidden / Commented out as requested) */}
+            {/*
           <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center font-bold">
@@ -1042,184 +1213,230 @@ export default function ServiceBookingMainPanel() {
               </button>
             </div>
           </div>
+          */}
 
-          {/* ================================================================ */}
-          {/* UNIVERSAL SERVICE BOOKING FORM (DIRECT DMS REST APIS)            */}
-          {/* ================================================================ */}
-          {(bookingMode === 'SERVICE_ENGINE' || bookingMode === 'GEELY') && (
-            <div className="flex flex-col gap-4">
-
-              {/* Service Success Result Card */}
-              {geelyBookingResult && (
-                <div className="bg-white rounded-xl border border-emerald-300 shadow-sm overflow-hidden text-xs animate-fade-in">
-                  <div className="px-4 py-2.5 bg-emerald-600 text-white flex items-center justify-between font-bold">
-                    <span className="flex items-center gap-2 text-sm">
-                      <FaCheckCircle /> Service Booking Confirmed!
-                    </span>
-                    <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase font-mono font-extrabold">
-                      APPOINTMENT #{geelyBookingResult.data?.appointmentId || 'CONFIRMED'}
-                    </span>
-                  </div>
-
-                  <div className="p-4 bg-emerald-50/40 space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                      <div className="bg-white p-3 rounded-lg border border-emerald-200 shadow-2xs space-y-1">
-                        <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Appointment ID</span>
-                        <span className="font-mono font-extrabold text-emerald-800 text-xs">
-                          {geelyBookingResult.data?.appointmentId || 'Success'}
-                        </span>
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-emerald-200 shadow-2xs space-y-1">
-                        <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Scheduled Date & Time</span>
-                        <span className="font-bold text-gray-900 text-xs">
-                          {geelyBookingResult.submittedPayload?.startDate} @ {geelyBookingResult.submittedPayload?.dropOffTime}
-                        </span>
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-emerald-200 shadow-2xs space-y-1">
-                        <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Vehicle Plate</span>
-                        <span className="font-mono font-bold text-blue-700 text-xs">
-                          {geelyBookingResult.submittedPayload?.licensePlateNo}
-                        </span>
-                      </div>
-                      <div className="bg-white p-3 rounded-lg border border-emerald-200 shadow-2xs space-y-1">
-                        <span className="text-[10px] font-extrabold text-gray-500 uppercase block">Dealership Location</span>
-                        <span className="font-bold text-gray-800 text-xs">
-                          Location ID #{geelyBookingResult.submittedPayload?.dealershipLocationId}
-                        </span>
-                      </div>
+            {/* ================================================================ */}
+            {/* UNIVERSAL SERVICE BOOKING FORM (DIRECT DMS REST APIS)            */}
+            {/* ================================================================ */}
+            {(bookingMode === "SERVICE_ENGINE" || bookingMode === "GEELY") && (
+              <div className="flex flex-col gap-4">
+                {/* Service Success Result Card */}
+                {geelyBookingResult && (
+                  <div className="bg-white rounded-xl border border-emerald-300 shadow-sm overflow-hidden text-xs animate-fade-in">
+                    <div className="px-4 py-2.5 bg-emerald-600 text-white flex items-center justify-between font-bold">
+                      <span className="flex items-center gap-2 text-sm">
+                        <FaCheckCircle /> Service Booking Confirmed!
+                      </span>
+                      <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase font-mono font-extrabold">
+                        APPOINTMENT #
+                        {geelyBookingResult.data?.appointmentId || "CONFIRMED"}
+                      </span>
                     </div>
 
-                    <div className="flex justify-end pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setActiveToolTab('OpenBookings')}
-                        className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
-                      >
-                        <span>View in Open Bookings</span>
-                        <FaArrowRight className="text-xs" />
-                      </button>
+                    <div className="p-4 bg-emerald-50/40 space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="bg-white p-3 rounded-lg border border-emerald-200 shadow-2xs space-y-1">
+                          <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+                            Appointment ID
+                          </span>
+                          <span className="font-mono font-extrabold text-emerald-800 text-xs">
+                            {geelyBookingResult.data?.appointmentId ||
+                              "Success"}
+                          </span>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg border border-emerald-200 shadow-2xs space-y-1">
+                          <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+                            Scheduled Date & Time
+                          </span>
+                          <span className="font-bold text-gray-900 text-xs">
+                            {geelyBookingResult.submittedPayload?.startDate} @{" "}
+                            {geelyBookingResult.submittedPayload?.dropOffTime}
+                          </span>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg border border-emerald-200 shadow-2xs space-y-1">
+                          <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+                            Vehicle Plate
+                          </span>
+                          <span className="font-mono font-bold text-blue-700 text-xs">
+                            {
+                              geelyBookingResult.submittedPayload
+                                ?.licensePlateNo
+                            }
+                          </span>
+                        </div>
+                        <div className="bg-white p-3 rounded-lg border border-emerald-200 shadow-2xs space-y-1">
+                          <span className="text-[10px] font-extrabold text-gray-500 uppercase block">
+                            Dealership Location
+                          </span>
+                          <span className="font-bold text-gray-800 text-xs">
+                            Location ID #
+                            {
+                              geelyBookingResult.submittedPayload
+                                ?.dealershipLocationId
+                            }
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setActiveToolTab("OpenBookings")}
+                          className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
+                        >
+                          <span>View in Open Bookings</span>
+                          <FaArrowRight className="text-xs" />
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* Service Error Banner */}
-              {geelyBookingError && (
-                <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-3 text-xs text-rose-900">
-                  <FaExclamationCircle className="text-rose-600 text-base shrink-0" />
-                  <div className="flex-1">
-                    <span className="font-bold block">Failed to Create Service Booking</span>
-                    <span className="text-[11px] text-rose-700">{geelyBookingError}</span>
+                {/* Service Error Banner */}
+                {geelyBookingError && (
+                  <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-center gap-3 text-xs text-rose-900">
+                    <FaExclamationCircle className="text-rose-600 text-base shrink-0" />
+                    <div className="flex-1">
+                      <span className="font-bold block">
+                        Failed to Create Service Booking
+                      </span>
+                      <span className="text-[11px] text-rose-700">
+                        {geelyBookingError}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setGeelyBookingError(null)}
+                      className="text-rose-400 hover:text-rose-700 font-bold p-1"
+                    >
+                      ✕
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setGeelyBookingError(null)}
-                    className="text-rose-400 hover:text-rose-700 font-bold p-1"
+                )}
+
+                {/* Universal Service Booking Form Card */}
+                <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
+                  <div className="bg-slate-100/80 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-blue-600 text-white shadow-xs flex items-center justify-center font-bold">
+                        <FaCalendarCheck className="text-lg" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h2 className="font-extrabold text-gray-900 text-sm leading-tight">
+                            AGMC Service Booking
+                          </h2>
+                        </div>
+                        <p className="text-[11px] font-semibold text-gray-500 mt-0.5">
+                          Direct Workshop Management System • Automated
+                          Appointment Scheduling
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form
+                    onSubmit={handleSubmitGeelyBooking}
+                    className="p-3.5 sm:p-4 space-y-3 text-xs bg-slate-50/40"
                   >
-                    ✕
-                  </button>
-                </div>
-              )}
-
-              {/* Universal Service Booking Form Card */}
-              <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
-                <div className="bg-slate-100/80 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-blue-600 text-white shadow-xs flex items-center justify-center font-bold">
-                      <FaCalendarCheck className="text-lg" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h2 className="font-extrabold text-gray-900 text-sm leading-tight">AGMC Universal Service Booking</h2>
-                      </div>
-                      <p className="text-[11px] font-semibold text-gray-500 mt-0.5">
-                        Direct Workshop Management System • Automated Appointment Scheduling
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <form onSubmit={handleSubmitGeelyBooking} className="p-3.5 sm:p-4 space-y-3 text-xs bg-slate-50/40">
-                  
-                  {/* ROW 1: Customer Phone, Vehicle License Plate No, Dealership ID (1 row, 3 column grid) */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                    
-                    {/* Customer Phone */}
-                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <FaUser className="text-blue-600 text-xs" /> Customer Phone Number <span className="text-rose-500 font-bold">*</span>
-                        </span>
+                    {/* ROW 1: Customer Phone, Vehicle License Plate No, Dealership ID (1 row, 3 column grid) */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                      {/* Customer Phone */}
+                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                        <label className="text-[11px] font-extrabold text-gray-800 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <FaUser className="text-blue-600 text-xs" />{" "}
+                            Customer Phone Number{" "}
+                            <span className="text-rose-500 font-bold">*</span>
+                          </span>
+                          {geelyCustomerFound && (
+                            <span className="text-emerald-700 font-bold text-[10px] flex items-center gap-1">
+                              <FaCheck className="text-[9px]" /> Verified
+                              Customer
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          type="text"
+                          value={geelyPhone}
+                          onChange={(e) => setGeelyPhone(e.target.value)}
+                          placeholder="e.g. 0543408597"
+                          required
+                          className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                        />
                         {geelyCustomerFound && (
-                          <span className="text-emerald-700 font-bold text-[10px] flex items-center gap-1">
-                            <FaCheck className="text-[9px]" /> Verified Customer
-                          </span>
+                          <div className="text-[10px] text-gray-500 font-medium pt-1 border-t border-gray-100 flex items-center justify-between">
+                            <span>
+                              {geelyCustomerFound.name || "Found"} (
+                              {geelyCustomerFound.reference || "Ref"})
+                            </span>
+                            <span className="font-mono text-purple-700 font-bold">
+                              {geelyCustomerId.slice(0, 8)}...
+                            </span>
+                          </div>
                         )}
-                      </label>
-                      <input
-                        type="text"
-                        value={geelyPhone}
-                        onChange={(e) => setGeelyPhone(e.target.value)}
-                        placeholder="e.g. 0543408597"
-                        required
-                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
-                      />
-                      {geelyCustomerFound && (
-                        <div className="text-[10px] text-gray-500 font-medium pt-1 border-t border-gray-100 flex items-center justify-between">
-                          <span>{geelyCustomerFound.name || 'Found'} ({geelyCustomerFound.reference || 'Ref'})</span>
-                          <span className="font-mono text-purple-700 font-bold">{geelyCustomerId.slice(0, 8)}...</span>
-                        </div>
-                      )}
-                    </div>
+                      </div>
 
-                    {/* License Plate */}
-                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5">
-                          <FaCar className="text-blue-600 text-xs" /> Vehicle License Plate No <span className="text-rose-500 font-bold">*</span>
-                        </span>
+                      {/* License Plate */}
+                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                        <label className="text-[11px] font-extrabold text-gray-800 flex items-center justify-between">
+                          <span className="flex items-center gap-1.5">
+                            <FaCar className="text-blue-600 text-xs" /> Vehicle
+                            License Plate No{" "}
+                            <span className="text-rose-500 font-bold">*</span>
+                          </span>
+                          {geelyVehicleData && (
+                            <span className="text-emerald-700 font-bold text-[10px] flex items-center gap-1">
+                              <FaCheck className="text-[9px]" /> Vehicle
+                              Identified
+                            </span>
+                          )}
+                        </label>
+                        <input
+                          type="text"
+                          value={geelyPlateNo}
+                          onChange={(e) => setGeelyPlateNo(e.target.value)}
+                          placeholder="e.g. 240153"
+                          required
+                          className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-mono font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs uppercase"
+                        />
                         {geelyVehicleData && (
-                          <span className="text-emerald-700 font-bold text-[10px] flex items-center gap-1">
-                            <FaCheck className="text-[9px]" /> Vehicle Identified
-                          </span>
+                          <div className="text-[10px] text-gray-500 font-medium pt-1 border-t border-gray-100 flex items-center justify-between">
+                            <span>
+                              {geelyVehicleData.vehicleMakeCode}{" "}
+                              {geelyVehicleData.vehicleModal} (
+                              {geelyVehicleData.modalYear})
+                            </span>
+                            <span className="font-mono text-blue-700 font-bold">
+                              {geelyVehicleData.chassisNumber || "No VIN"}
+                            </span>
+                          </div>
                         )}
-                      </label>
-                      <input
-                        type="text"
-                        value={geelyPlateNo}
-                        onChange={(e) => setGeelyPlateNo(e.target.value)}
-                        placeholder="e.g. 240153"
-                        required
-                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-mono font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs uppercase"
-                      />
-                      {geelyVehicleData && (
-                        <div className="text-[10px] text-gray-500 font-medium pt-1 border-t border-gray-100 flex items-center justify-between">
-                          <span>{geelyVehicleData.vehicleMakeCode} {geelyVehicleData.vehicleModal} ({geelyVehicleData.modalYear})</span>
-                          <span className="font-mono text-blue-700 font-bold">{geelyVehicleData.chassisNumber || 'No VIN'}</span>
-                        </div>
-                      )}
+                      </div>
+
+                      {/* Dealership ID (40 or 240) */}
+                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                        <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                          <FaMapMarkerAlt className="text-blue-600 text-xs" />{" "}
+                          Dealership ID{" "}
+                          <span className="text-rose-500 font-bold">*</span>
+                        </label>
+                        <select
+                          value={geelyLocationId}
+                          onChange={(e) =>
+                            setGeelyLocationId(Number(e.target.value))
+                          }
+                          disabled={geelyLocationsLoading}
+                          className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs cursor-pointer"
+                        >
+                          <option value="40">40</option>
+                          <option value="240">240</option>
+                        </select>
+                      </div>
                     </div>
 
-                    {/* Dealership ID (40 or 240) */}
-                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaMapMarkerAlt className="text-blue-600 text-xs" /> Dealership ID <span className="text-rose-500 font-bold">*</span>
-                      </label>
-                      <select
-                        value={geelyLocationId}
-                        onChange={(e) => setGeelyLocationId(Number(e.target.value))}
-                        disabled={geelyLocationsLoading}
-                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs cursor-pointer"
-                      >
-                        <option value="40">40</option>
-                        <option value="240">240</option>
-                      </select>
-                    </div>
-
-                  </div>
-
-                  {/* Commented Recommended Service Package as requested (product ID 07143ffd-184e-43b5-a8de-f68d63199baa passed directly to API) */}
-                  {/*
+                    {/* Commented Recommended Service Package as requested (product ID 07143ffd-184e-43b5-a8de-f68d63199baa passed directly to API) */}
+                    {/*
                   <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
                     <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
                       <FaWrench className="text-blue-600 text-xs" /> Recommended Service Package <span className="text-rose-500 font-bold">*</span>
@@ -1237,377 +1454,457 @@ export default function ServiceBookingMainPanel() {
                   </div>
                   */}
 
-                  {/* ROW 2: Mileage, Service Advisor, Customer Notes (Taken above date and time) */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                    
-                    {/* Mileage */}
-                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaClock className="text-gray-400 text-xs" /> Current Mileage (KM) <span className="text-rose-500 font-bold">*</span>
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1000"
-                        value={geelyMileage}
-                        onChange={(e) => setGeelyMileage(e.target.value)}
-                        placeholder="e.g. 5000"
-                        required
-                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
-                      />
-                    </div>
-
-                    {/* Service Advisor (GET /api/service/advisors) */}
-                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaUser className="text-gray-400 text-xs" /> Service Advisor (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={geelyAdvisorId}
-                        onChange={(e) => setGeelyAdvisorId(e.target.value)}
-                        placeholder="e.g. 4031 (or auto)"
-                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
-                      />
-                    </div>
-
-                    {/* Customer Notes */}
-                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaClipboardList className="text-gray-400 text-xs" /> Customer Notes (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        value={geelyCustomerNotes}
-                        onChange={(e) => setGeelyCustomerNotes(e.target.value)}
-                        placeholder="e.g. Regular 5,000 KM service"
-                        className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
-                      />
-                    </div>
-
-                  </div>
-
-                  {/* ROW 3: Real-Time Appointment Date & Timeslots */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                    
-                    {/* Appointment Date (POST /api/service/appointment-dates) */}
-                    <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1.5">
-                      <div className="flex items-center justify-between">
+                    {/* ROW 2: Mileage, Service Advisor, Customer Notes (Taken above date and time) */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                      {/* Mileage */}
+                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
                         <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                          <FaCalendarAlt className="text-blue-600 text-xs" /> Appointment Date <span className="text-rose-500 font-bold">*</span>
+                          <FaClock className="text-gray-400 text-xs" /> Current
+                          Mileage (KM){" "}
+                          <span className="text-rose-500 font-bold">*</span>
                         </label>
-                        {geelyDatesLoading ? (
-                          <span className="text-blue-600 font-medium text-[10px] flex items-center gap-1">
-                            <FaSpinner className="animate-spin text-[10px]" /> Loading dates...
-                          </span>
-                        ) : (
-                          <span className="text-emerald-700 font-mono font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                            {geelyAvailableDates.length} selective dates
-                          </span>
-                        )}
+                        <input
+                          type="number"
+                          min="0"
+                          step="1000"
+                          value={geelyMileage}
+                          onChange={(e) => setGeelyMileage(e.target.value)}
+                          placeholder="e.g. 5000"
+                          required
+                          className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                        />
                       </div>
 
-                      {/* Interactive Calendar - Enforces only availableDates are selective */}
-                      <AvailableDatesCalendar
-                        availableDates={geelyAvailableDates}
-                        selectedDate={geelySelectedDate}
-                        onSelectDate={(dt) => setGeelySelectedDate(dt)}
-                        loading={geelyDatesLoading}
-                      />
+                      {/* Service Advisor (GET /api/service/advisors) */}
+                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                        <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                          <FaUser className="text-gray-400 text-xs" /> Service
+                          Advisor (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={geelyAdvisorId}
+                          onChange={(e) => setGeelyAdvisorId(e.target.value)}
+                          placeholder="e.g. 4031 (or auto)"
+                          className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                        />
+                      </div>
+
+                      {/* Customer Notes */}
+                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                        <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                          <FaClipboardList className="text-gray-400 text-xs" />{" "}
+                          Customer Notes (Optional)
+                        </label>
+                        <input
+                          type="text"
+                          value={geelyCustomerNotes}
+                          onChange={(e) =>
+                            setGeelyCustomerNotes(e.target.value)
+                          }
+                          placeholder="e.g. Regular 5,000 KM service"
+                          className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                        />
+                      </div>
                     </div>
 
-                    {/* Appointment Timeslots (POST /api/service/appointment-time) */}
-                    <div className="bg-white p-3 rounded-lg border border-gray-300 shadow-2xs space-y-1.5 flex flex-col justify-between">
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
+                    {/* ROW 3: Real-Time Appointment Date & Timeslots */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {/* Appointment Date (POST /api/service/appointment-dates) */}
+                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1.5">
+                        <div className="flex items-center justify-between">
                           <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                            <FaClock className="text-blue-600 text-xs" /> Drop-off Timeslot <span className="text-rose-500 font-bold">*</span>
+                            <FaCalendarAlt className="text-blue-600 text-xs" />{" "}
+                            Appointment Date{" "}
+                            <span className="text-rose-500 font-bold">*</span>
                           </label>
-                          {geelyTimesLoading ? (
+                          {geelyDatesLoading ? (
                             <span className="text-blue-600 font-medium text-[10px] flex items-center gap-1">
-                              <FaSpinner className="animate-spin text-[10px]" /> Loading slots...
+                              <FaSpinner className="animate-spin text-[10px]" />{" "}
+                              Loading dates...
                             </span>
                           ) : (
-                            <span className="text-slate-500 font-medium text-[10px]">
-                              {geelyTimeSlots.length} available slots
+                            <span className="text-emerald-700 font-mono font-bold text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              {geelyAvailableDates.length} selective dates
                             </span>
                           )}
                         </div>
 
-                        {geelyTimesLoading ? (
-                          <div className="flex flex-col items-center justify-center py-8 text-slate-400 gap-1.5 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
-                            <FaSpinner className="animate-spin text-lg text-blue-600" />
-                            <span className="text-xs font-medium text-slate-600">Fetching available slots for {geelySelectedDate}...</span>
-                          </div>
-                        ) : geelyTimeSlots.length > 0 ? (
-                          <div className="space-y-2">
-                            {/* Period Tabs: Morning / Afternoon / Evening */}
-                            <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
-                              {Object.entries(categorizedSlots).map(([catName, catData]) => {
-                                const hourEntries = Object.values(catData.hours);
-                                const totalSlots = hourEntries.reduce((acc, h) => acc + h.slots.length, 0);
-                                if (totalSlots === 0) return null;
-                                const TabIcon = catData.icon;
-                                const isActive = activePeriodTab === catName;
-                                return (
-                                  <button
-                                    key={catName}
-                                    type="button"
-                                    onClick={() => setActivePeriodTab(catName)}
-                                    className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
-                                      isActive
-                                        ? 'bg-white shadow-sm text-slate-800 border border-slate-200'
-                                        : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-                                    }`}
-                                  >
-                                    <TabIcon className={`text-xs ${isActive ? catData.color : 'text-slate-400'}`} />
-                                    <span>{catData.label}</span>
-                                    <span className={`text-[9px] font-extrabold px-1 py-0.5 rounded ${
-                                      isActive ? `${catData.color} bg-slate-50` : 'text-slate-400 bg-slate-200'
-                                    }`}>{totalSlots}</span>
-                                  </button>
-                                );
-                              })}
-                            </div>
+                        {/* Interactive Calendar - Enforces only availableDates are selective */}
+                        <AvailableDatesCalendar
+                          availableDates={geelyAvailableDates}
+                          selectedDate={geelySelectedDate}
+                          onSelectDate={(dt) => setGeelySelectedDate(dt)}
+                          loading={geelyDatesLoading}
+                        />
+                      </div>
 
-                            {/* Active Period Slot Grid */}
-                            {(() => {
-                              const catData = categorizedSlots[activePeriodTab];
-                              const hourEntries = catData ? Object.values(catData.hours).sort((a, b) => a.hour24 - b.hour24) : [];
-                              if (hourEntries.length === 0) {
+                      {/* Appointment Timeslots (POST /api/service/appointment-time) */}
+                      <div className="bg-white p-3 rounded-lg border border-gray-300 shadow-2xs space-y-1.5 flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                              <FaClock className="text-blue-600 text-xs" />{" "}
+                              Drop-off Timeslot{" "}
+                              <span className="text-rose-500 font-bold">*</span>
+                            </label>
+                            {geelyTimesLoading ? (
+                              <span className="text-blue-600 font-medium text-[10px] flex items-center gap-1">
+                                <FaSpinner className="animate-spin text-[10px]" />{" "}
+                                Loading slots...
+                              </span>
+                            ) : (
+                              <span className="text-slate-500 font-medium text-[10px]">
+                                {geelyTimeSlots.length} available slots
+                              </span>
+                            )}
+                          </div>
+
+                          {geelyTimesLoading ? (
+                            <div className="flex flex-col items-center justify-center py-8 text-slate-400 gap-1.5 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+                              <FaSpinner className="animate-spin text-lg text-blue-600" />
+                              <span className="text-xs font-medium text-slate-600">
+                                Fetching available slots for {geelySelectedDate}
+                                ...
+                              </span>
+                            </div>
+                          ) : geelyTimeSlots.length > 0 ? (
+                            <div className="space-y-2">
+                              {/* Period Tabs: Morning / Afternoon / Evening */}
+                              <div className="flex gap-1 bg-slate-100 p-1 rounded-lg">
+                                {Object.entries(categorizedSlots).map(
+                                  ([catName, catData]) => {
+                                    const hourEntries = Object.values(
+                                      catData.hours,
+                                    );
+                                    const totalSlots = hourEntries.reduce(
+                                      (acc, h) => acc + h.slots.length,
+                                      0,
+                                    );
+                                    if (totalSlots === 0) return null;
+                                    const TabIcon = catData.icon;
+                                    const isActive =
+                                      activePeriodTab === catName;
+                                    return (
+                                      <button
+                                        key={catName}
+                                        type="button"
+                                        onClick={() =>
+                                          setActivePeriodTab(catName)
+                                        }
+                                        className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                                          isActive
+                                            ? "bg-white shadow-sm text-slate-800 border border-slate-200"
+                                            : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
+                                        }`}
+                                      >
+                                        <TabIcon
+                                          className={`text-xs ${isActive ? catData.color : "text-slate-400"}`}
+                                        />
+                                        <span>{catData.label}</span>
+                                        <span
+                                          className={`text-[9px] font-extrabold px-1 py-0.5 rounded ${
+                                            isActive
+                                              ? `${catData.color} bg-slate-50`
+                                              : "text-slate-400 bg-slate-200"
+                                          }`}
+                                        >
+                                          {totalSlots}
+                                        </span>
+                                      </button>
+                                    );
+                                  },
+                                )}
+                              </div>
+
+                              {/* Active Period Slot Grid */}
+                              {(() => {
+                                const catData =
+                                  categorizedSlots[activePeriodTab];
+                                const hourEntries = catData
+                                  ? Object.values(catData.hours).sort(
+                                      (a, b) => a.hour24 - b.hour24,
+                                    )
+                                  : [];
+                                if (hourEntries.length === 0) {
+                                  return (
+                                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-500 text-xs">
+                                      No {activePeriodTab.toLowerCase()} slots
+                                      available for this date.
+                                    </div>
+                                  );
+                                }
                                 return (
-                                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-500 text-xs">
-                                    No {activePeriodTab.toLowerCase()} slots available for this date.
+                                  <div className="space-y-1 max-h-[220px] overflow-y-auto pr-0.5">
+                                    {hourEntries.map((hourGroup) => (
+                                      <div
+                                        key={hourGroup.hourLabel}
+                                        className="flex items-center gap-1.5 bg-white p-1 rounded-md border border-slate-200/80"
+                                      >
+                                        <div className="w-14 shrink-0 text-center font-extrabold text-[10px] text-slate-600 bg-slate-100 py-1 rounded">
+                                          {hourGroup.hourLabel}
+                                        </div>
+                                        <div className="flex-1 flex flex-wrap gap-1">
+                                          {hourGroup.slots.map((slot, sIdx) => {
+                                            const isSelected =
+                                              geelySelectedTimeSlot ===
+                                              slot.timeSlot;
+                                            return (
+                                              <button
+                                                key={slot.timeSlot || sIdx}
+                                                type="button"
+                                                onClick={() => {
+                                                  setGeelySelectedTimeSlot(
+                                                    slot.timeSlot,
+                                                  );
+                                                  if (slot.advisorId)
+                                                    setGeelyAdvisorId(
+                                                      String(slot.advisorId),
+                                                    );
+                                                }}
+                                                className={`px-2 py-1 rounded text-[11px] font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
+                                                  isSelected
+                                                    ? "bg-blue-600 text-white border-blue-600 shadow-2xs ring-1 ring-blue-300"
+                                                    : "bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border-slate-200"
+                                                }`}
+                                              >
+                                                <span>{slot.timeSlot}</span>
+                                                {slot.advisorId && (
+                                                  <span
+                                                    className={`text-[8px] font-normal ${isSelected ? "text-blue-100" : "text-slate-400"}`}
+                                                  >
+                                                    #{slot.advisorId}
+                                                  </span>
+                                                )}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
                                 );
-                              }
-                              return (
-                                <div className="space-y-1 max-h-[220px] overflow-y-auto pr-0.5">
-                                  {hourEntries.map((hourGroup) => (
-                                    <div key={hourGroup.hourLabel} className="flex items-center gap-1.5 bg-white p-1 rounded-md border border-slate-200/80">
-                                      <div className="w-14 shrink-0 text-center font-extrabold text-[10px] text-slate-600 bg-slate-100 py-1 rounded">
-                                        {hourGroup.hourLabel}
-                                      </div>
-                                      <div className="flex-1 flex flex-wrap gap-1">
-                                        {hourGroup.slots.map((slot, sIdx) => {
-                                          const isSelected = geelySelectedTimeSlot === slot.timeSlot;
-                                          return (
-                                            <button
-                                              key={slot.timeSlot || sIdx}
-                                              type="button"
-                                              onClick={() => {
-                                                setGeelySelectedTimeSlot(slot.timeSlot);
-                                                if (slot.advisorId) setGeelyAdvisorId(String(slot.advisorId));
-                                              }}
-                                              className={`px-2 py-1 rounded text-[11px] font-mono font-bold transition-all cursor-pointer border flex items-center gap-1 ${
-                                                isSelected
-                                                  ? 'bg-blue-600 text-white border-blue-600 shadow-2xs ring-1 ring-blue-300'
-                                                  : 'bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border-slate-200'
-                                              }`}
-                                            >
-                                              <span>{slot.timeSlot}</span>
-                                              {slot.advisorId && (
-                                                <span className={`text-[8px] font-normal ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
-                                                  #{slot.advisorId}
-                                                </span>
-                                              )}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              );
-                            })()}
-                          </div>
-                        ) : (
-                          <div className="p-6 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-500 text-xs">
-                            No drop-off timeslots available for <span className="font-bold text-slate-700">{geelySelectedDate}</span>. Please choose another date on the calendar.
+                              })()}
+                            </div>
+                          ) : (
+                            <div className="p-6 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-500 text-xs">
+                              No drop-off timeslots available for{" "}
+                              <span className="font-bold text-slate-700">
+                                {geelySelectedDate}
+                              </span>
+                              . Please choose another date on the calendar.
+                            </div>
+                          )}
+                        </div>
+
+                        {geelySelectedTimeSlot && (
+                          <div className="pt-1.5 border-t border-slate-200 text-[10px] text-slate-600 flex items-center justify-between">
+                            <span>Selected Slot:</span>
+                            <span className="font-bold font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-[11px]">
+                              {geelySelectedTimeSlot}{" "}
+                              {geelyAdvisorId
+                                ? `(Advisor: ${geelyAdvisorId})`
+                                : ""}
+                            </span>
                           </div>
                         )}
                       </div>
-
-                      {geelySelectedTimeSlot && (
-                        <div className="pt-1.5 border-t border-slate-200 text-[10px] text-slate-600 flex items-center justify-between">
-                          <span>Selected Slot:</span>
-                          <span className="font-bold font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-[11px]">
-                            {geelySelectedTimeSlot} {geelyAdvisorId ? `(Advisor: ${geelyAdvisorId})` : ''}
-                          </span>
-                        </div>
-                      )}
                     </div>
 
-                  </div>
-
-                  {/* Submit Button Bar */}
-                  <div className="flex items-center justify-center pt-2 border-t border-gray-200">
-                    <button
-                      type="submit"
-                      disabled={geelySubmitting || !geelySelectedDate || !geelySelectedTimeSlot}
-                      className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 min-w-[220px]"
-                    >
-                      {geelySubmitting ? (
-                        <>
-                          <FaSpinner className="animate-spin text-sm" />
-                          <span>Booking via AGMC Service Engine...</span>
-                        </>
-                      ) : (
-                        <>
-                          <FaPaperPlane className="text-sm" />
-                          <span>Confirm & Create Service Booking</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                </form>
-              </div>
-
-            </div>
-          )}
-
-          {/* ================================================================ */}
-          {/* KEYLOOP (BMW) SERVICE BOOKING FORM                               */}
-          {/* ================================================================ */}
-          {bookingMode === 'KEYLOOP' && (
-            <div className="flex flex-col gap-4">
-              {/* Response Formatted UI Card */}
-              {apiResponse && (
-                <div className="bg-white rounded-xl border border-emerald-300 shadow-sm overflow-hidden text-xs">
-                  <div className={`px-4 py-2.5 text-white flex items-center justify-between font-bold ${apiResponse.ok ? 'bg-emerald-600' : 'bg-rose-600'}`}>
-                    <span className="flex items-center gap-2 text-sm">
-                      {apiResponse.ok ? <FaCheckCircle /> : <FaExclamationCircle />}
-                      {apiResponse.ok ? 'Service Booking Confirmation' : 'Submission Error'}
-                    </span>
-                    <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase font-mono font-extrabold">
-                      {apiResponse.ok ? 'SUCCESS' : 'FAILED'}
-                    </span>
-                  </div>
-
-                  {apiResponse.error ? (
-                    <div className="p-4 bg-rose-50 text-rose-800 font-semibold">{apiResponse.error}</div>
-                  ) : (
-                    <div className="p-4 bg-slate-50/50">
-                      {renderBookingFieldsGrid(apiResponse.data)}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Form Card */}
-              <div className="bg-white rounded-xl shadow-xs border border-gray-300 overflow-hidden">
-                <div className="bg-slate-100/80 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-blue-600 text-white shadow-xs flex items-center justify-center font-bold">
-                      <FaCalendarCheck className="text-lg" />
-                    </div>
-                    <div>
-                      <h2 className="font-extrabold text-gray-900 text-sm leading-tight">Create Service Booking (BMW Keyloop)</h2>
-                      <p className="text-[11px] font-semibold text-gray-500">
-                        Request service booking for <span className="text-blue-700 font-bold">{customerName || `Customer #${customerNumber || 'N/A'}`}</span>
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <form onSubmit={handleSubmitBooking} className="p-6 space-y-6 text-xs bg-slate-50/40">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    
-                    {/* Field 1: Keyloop Group */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaLayerGroup className="text-blue-600 text-xs" /> Keyloop Group <span className="text-rose-500 font-bold">*</span>
-                      </label>
-                      <select 
-                        value={keyloopGroup}
-                        onChange={(e) => setKeyloopGroup(e.target.value)}
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                    {/* Submit Button Bar */}
+                    <div className="flex items-center justify-center pt-2 border-t border-gray-200">
+                      <button
+                        type="submit"
+                        disabled={
+                          geelySubmitting ||
+                          !geelySelectedDate ||
+                          !geelySelectedTimeSlot
+                        }
+                        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 min-w-[220px]"
                       >
-                        <option value="BMW">BMW</option>
-                        <option value="MINI">MINI</option>
-                        <option value="Motorrad">Motorrad</option>
-                        <option value="Rolls-Royce">Rolls-Royce</option>
-                      </select>
+                        {geelySubmitting ? (
+                          <>
+                            <FaSpinner className="animate-spin text-sm" />
+                            <span>Booking via AGMC Service Engine...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaPaperPlane className="text-sm" />
+                            <span>Confirm & Create Service Booking</span>
+                          </>
+                        )}
+                      </button>
                     </div>
-
-                    {/* Field 2: Customer Number */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaUser className="text-blue-600 text-xs" /> Customer Number <span className="text-rose-500 font-bold">*</span>
-                      </label>
-                      <input 
-                        type="text"
-                        value={customerNumber}
-                        onChange={(e) => setCustomerNumber(e.target.value)}
-                        placeholder="Enter Customer Number..."
-                        required
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                      />
-                    </div>
-
-                    {/* Field 3: Vehicle VIN */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaCar className="text-blue-600 text-xs" /> Vehicle VIN <span className="text-rose-500 font-bold">*</span>
-                      </label>
-                      <input 
-                        type="text"
-                        value={vin}
-                        onChange={(e) => setVin(e.target.value)}
-                        placeholder="Enter Vehicle VIN..."
-                        required
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-md font-mono font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all uppercase"
-                      />
-                    </div>
-
-                    {/* Field 4: Created By */}
-                    <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                      <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                        <FaIdBadge className="text-blue-600 text-xs" /> Created By (Agent ID) <span className="text-rose-500 font-bold">*</span>
-                      </label>
-                      <input 
-                        type="text"
-                        value={createdBy}
-                        onChange={(e) => setCreatedBy(e.target.value)}
-                        placeholder="e.g. agent.42"
-                        required
-                        className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all"
-                      />
-                    </div>
-
-                  </div>
-
-                  <div className="flex items-center justify-center pt-4 border-t border-gray-300">
-                    <button 
-                      type="submit" 
-                      disabled={submitting || !customerNumber || !vin}
-                      className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 min-w-[220px]"
-                    >
-                      {submitting ? (
-                        <>
-                          <FaSpinner className="animate-spin text-sm" />
-                          <span>Submitting Booking...</span>
-                        </>
-                      ) : (
-                        <>
-                          <FaPaperPlane className="text-sm" />
-                          <span>Book Service</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
+                  </form>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
+            {/* ================================================================ */}
+            {/* KEYLOOP (BMW) SERVICE BOOKING FORM                               */}
+            {/* ================================================================ */}
+            {bookingMode === "KEYLOOP" && (
+              <div className="flex flex-col gap-4">
+                {/* Response Formatted UI Card */}
+                {apiResponse && (
+                  <div className="bg-white rounded-xl border border-emerald-300 shadow-sm overflow-hidden text-xs">
+                    <div
+                      className={`px-4 py-2.5 text-white flex items-center justify-between font-bold ${apiResponse.ok ? "bg-emerald-600" : "bg-rose-600"}`}
+                    >
+                      <span className="flex items-center gap-2 text-sm">
+                        {apiResponse.ok ? (
+                          <FaCheckCircle />
+                        ) : (
+                          <FaExclamationCircle />
+                        )}
+                        {apiResponse.ok
+                          ? "Service Booking Confirmation"
+                          : "Submission Error"}
+                      </span>
+                      <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] uppercase font-mono font-extrabold">
+                        {apiResponse.ok ? "SUCCESS" : "FAILED"}
+                      </span>
+                    </div>
+
+                    {apiResponse.error ? (
+                      <div className="p-4 bg-rose-50 text-rose-800 font-semibold">
+                        {apiResponse.error}
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-slate-50/50">
+                        {renderBookingFieldsGrid(apiResponse.data)}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Form Card */}
+                <div className="bg-white rounded-xl shadow-xs border border-gray-300 overflow-hidden">
+                  <div className="bg-slate-100/80 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-blue-600 text-white shadow-xs flex items-center justify-center font-bold">
+                        <FaCalendarCheck className="text-lg" />
+                      </div>
+                      <div>
+                        <h2 className="font-extrabold text-gray-900 text-sm leading-tight">
+                          Create Service Booking (BMW Keyloop)
+                        </h2>
+                        <p className="text-[11px] font-semibold text-gray-500">
+                          Request service booking for{" "}
+                          <span className="text-blue-700 font-bold">
+                            {customerName ||
+                              `Customer #${customerNumber || "N/A"}`}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form
+                    onSubmit={handleSubmitBooking}
+                    className="p-6 space-y-6 text-xs bg-slate-50/40"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      {/* Field 1: Keyloop Group */}
+                      <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                        <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                          <FaLayerGroup className="text-blue-600 text-xs" />{" "}
+                          Keyloop Group{" "}
+                          <span className="text-rose-500 font-bold">*</span>
+                        </label>
+                        <select
+                          value={keyloopGroup}
+                          onChange={(e) => setKeyloopGroup(e.target.value)}
+                          className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        >
+                          <option value="BMW">BMW</option>
+                          <option value="MINI">MINI</option>
+                          <option value="Motorrad">Motorrad</option>
+                          <option value="Rolls-Royce">Rolls-Royce</option>
+                        </select>
+                      </div>
+
+                      {/* Field 2: Customer Number */}
+                      <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                        <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                          <FaUser className="text-blue-600 text-xs" /> Customer
+                          Number{" "}
+                          <span className="text-rose-500 font-bold">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={customerNumber}
+                          onChange={(e) => setCustomerNumber(e.target.value)}
+                          placeholder="Enter Customer Number..."
+                          required
+                          className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        />
+                      </div>
+
+                      {/* Field 3: Vehicle VIN */}
+                      <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                        <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                          <FaCar className="text-blue-600 text-xs" /> Vehicle
+                          VIN <span className="text-rose-500 font-bold">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={vin}
+                          onChange={(e) => setVin(e.target.value)}
+                          placeholder="Enter Vehicle VIN..."
+                          required
+                          className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-md font-mono font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all uppercase"
+                        />
+                      </div>
+
+                      {/* Field 4: Created By */}
+                      <div className="bg-white p-3.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                        <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
+                          <FaIdBadge className="text-blue-600 text-xs" />{" "}
+                          Created By (Agent ID){" "}
+                          <span className="text-rose-500 font-bold">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={createdBy}
+                          onChange={(e) => setCreatedBy(e.target.value)}
+                          placeholder="e.g. agent.42"
+                          required
+                          className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-center pt-4 border-t border-gray-300">
+                      <button
+                        type="submit"
+                        disabled={submitting || !customerNumber || !vin}
+                        className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 min-w-[220px]"
+                      >
+                        {submitting ? (
+                          <>
+                            <FaSpinner className="animate-spin text-sm" />
+                            <span>Submitting Booking...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FaPaperPlane className="text-sm" />
+                            <span>Book Service</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* 2. SERVICE ELIGIBILITY CHECK */}
-      {activeToolTab === 'Eligibility' && (
+      {/* 2. SERVICE ELIGIBILITY CHECK (Hidden / Commented out as requested) */}
+      {/*
+      activeToolTab === 'Eligibility' && (
         <div className="bg-white rounded-xl shadow-xs border border-gray-300 overflow-hidden flex flex-col">
           <div className="bg-slate-100/80 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h3 className="font-extrabold text-gray-900 text-sm flex items-center gap-2">
@@ -1638,7 +1935,7 @@ export default function ServiceBookingMainPanel() {
               </div>
             </div>
 
-            {/* Formatted Eligibility UI Card */}
+            // Formatted Eligibility UI Card
             {lookupResult?.type === 'eligibility' && (
               <div className="bg-white rounded-xl border border-blue-300 shadow-sm overflow-hidden text-xs">
                 <div className={`px-4 py-2.5 text-white flex items-center justify-between font-bold ${lookupResult.ok ? 'bg-blue-600' : 'bg-rose-600'}`}>
@@ -1727,7 +2024,8 @@ export default function ServiceBookingMainPanel() {
             )}
           </div>
         </div>
-      )}
+      )
+      */}
 
       {/* 3. LOOKUP WIP BOOKING (Hidden / Commented out as requested) */}
       {/*
@@ -1787,10 +2085,11 @@ export default function ServiceBookingMainPanel() {
       )}
       */}
 
-      {/* 4. SAVE REQUEST / COMPLAINT */}
-      {activeToolTab === 'Requests' && (
+      {/* 4. SAVE REQUEST / COMPLAINT (Hidden / Commented out as requested) */}
+      {/*
+      activeToolTab === 'Requests' && (
         <div className="flex flex-col gap-5">
-          {/* Form Card */}
+          // Form Card
           <div className="bg-white rounded-xl shadow-xs border border-gray-300 overflow-hidden flex flex-col">
             <div className="bg-slate-100/80 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <h3 className="font-extrabold text-gray-900 text-sm flex items-center gap-2">
@@ -1850,7 +2149,7 @@ export default function ServiceBookingMainPanel() {
               </div>
             </form>
 
-            {/* Formatted Request Save UI Card */}
+            // Formatted Request Save UI Card
             {lookupResult?.type === 'request' && (
               <div className="p-6 pt-0">
                 <div className="bg-white rounded-xl border border-emerald-300 shadow-sm overflow-hidden text-xs">
@@ -1895,7 +2194,7 @@ export default function ServiceBookingMainPanel() {
             )}
           </div>
 
-          {/* List of Saved Customer Complaints & Requests (GET /api/v1/customers/{group}/{customerNumber}/requests) */}
+          // List of Saved Customer Complaints & Requests (GET /api/v1/customers/{group}/{customerNumber}/requests)
           <div className="bg-white rounded-xl shadow-xs border border-gray-300 overflow-hidden flex flex-col">
             <div className="bg-slate-100/80 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1975,10 +2274,12 @@ export default function ServiceBookingMainPanel() {
             </div>
           </div>
         </div>
-      )}
+      )
+      */}
 
-      {/* 5. CONFIRMATION & REMINDER */}
-      {activeToolTab === 'Confirmation' && (
+      {/* 5. CONFIRMATION & REMINDER (Hidden / Commented out as requested) */}
+      {/*
+      activeToolTab === 'Confirmation' && (
         <div className="bg-white rounded-xl shadow-xs border border-gray-300 overflow-hidden flex flex-col">
           <div className="bg-slate-100/80 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
             <h3 className="font-extrabold text-gray-900 text-sm flex items-center gap-2">
@@ -2017,7 +2318,7 @@ export default function ServiceBookingMainPanel() {
               </div>
             </div>
 
-            {/* Formatted Confirmation / Reminder UI Card */}
+            // Formatted Confirmation / Reminder UI Card
             {lookupResult && (lookupResult.type === 'confirmation' || lookupResult.type === 'reminder') && (
               <div className="bg-white rounded-xl border border-slate-300 shadow-sm overflow-hidden text-xs">
                 <div className={`px-4 py-2.5 text-white flex items-center justify-between font-bold ${lookupResult.ok ? 'bg-slate-700' : 'bg-rose-600'}`}>
@@ -2041,8 +2342,8 @@ export default function ServiceBookingMainPanel() {
             )}
           </div>
         </div>
-      )}
-
+      )
+      */}
     </div>
   );
 }

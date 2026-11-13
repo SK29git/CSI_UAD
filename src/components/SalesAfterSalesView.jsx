@@ -43,7 +43,7 @@ const BRANCH_OPTIONS = [
   { code: "99", name: "99 - Head Office" },
 ];
 
-export default function SalesAfterSalesView() {
+export default function SalesAfterSalesView({ title, mode = "sales" }) {
   const {
     customer,
     vehicles: contextVehicles = [],
@@ -392,7 +392,7 @@ export default function SalesAfterSalesView() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-base font-bold text-gray-900 leading-tight">
-                After-Sales
+                {title || (mode === "service" ? "Service Follow Up" : "Sales Follow")}
               </h2>
               <span className="bg-teal-50 text-teal-700 font-mono font-bold text-[10px] px-2 py-0.5 rounded border border-teal-200">
                 {group}
@@ -1176,7 +1176,7 @@ export default function SalesAfterSalesView() {
                 </div>
                 <div>
                   <h3 className="font-bold text-sm leading-tight">
-                    Create Sales & Advisor Follow-Up
+                    {mode === "service" ? "Create Service & Advisor Follow-Up" : "Create Sales & Advisor Follow-Up"}
                   </h3>
                   <p className="text-[10px] text-blue-100 font-mono">
                     Keyloop RPA Task:{" "}

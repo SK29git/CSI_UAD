@@ -95,7 +95,9 @@ export default function SalesPage() {
       case 'Customer Segments':
         return <SalesSegmentsView />;
       case 'After-Sales':
-        return <SalesAfterSalesView />;
+      case 'Sales Follow-up':
+      case 'Sales Follow':
+        return <SalesAfterSalesView title="Sales Follow" mode="sales" />;
       default:
         return <SalesNewLeadView onNavigateToEnquiries={() => setActiveSubTab('Enquiries')} />;
     }

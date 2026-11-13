@@ -8,6 +8,8 @@ import ServiceOpenBookingsView from '../components/ServiceOpenBookingsView';
 import ServiceHistoryView from '../components/ServiceHistoryView';
 import ServiceWarrantyClaimsView from '../components/ServiceWarrantyClaimsView';
 import ServiceFeedbackView from '../components/ServiceFeedbackView';
+import SalesAfterSalesView from '../components/SalesAfterSalesView';
+import SalesNewLeadView from '../components/SalesNewLeadView';
 // import ServiceActivityRightSidebar from '../components/ServiceActivityRightSidebar';
 import CustomerFormView from '../components/CustomerFormView';
 import { useCustomer } from '../context/CustomerContext';
@@ -41,6 +43,9 @@ export default function ServiceBookingPage() {
       params.set('group', group);
       window.history.replaceState(null, '', `/service?${params.toString()}`);
     }
+    if (search.toLowerCase().includes('salesnewlead') || search.toLowerCase().includes('newenquiry') || search.toLowerCase().includes('servicenewlead')) {
+      setActiveSubTab('New Enquiry');
+    }
   }, [group]);
 
   const renderServiceContent = () => {
@@ -51,6 +56,9 @@ export default function ServiceBookingPage() {
     switch (activeSubTab) {
       case 'Overview':
         return <ServiceOverviewView />;
+      case 'New Enquiry':
+      case 'New Lead':
+        return <SalesNewLeadView mode="service" onNavigateToEnquiries={() => setActiveSubTab('Overview')} />;
       case 'Other Request':
       case 'Create Service':
         return <CreateServiceView mode="other_request" />;
@@ -67,6 +75,11 @@ export default function ServiceBookingPage() {
       case 'Service Feedback':
       case 'Customer Survey':
         return <ServiceFeedbackView />;
+      case 'Service Follow-up':
+      case 'Service Follow Up':
+      case 'Service Follow':
+      case 'After-Sales':
+        return <SalesAfterSalesView title="Service Follow Up" mode="service" />;
       default:
         return <ServiceOverviewView />;
     }

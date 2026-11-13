@@ -423,8 +423,7 @@ export function CustomerProvider({ children }) {
           console.warn("Cached profile parse error:", e);
         }
       }
-      // Discover customer dynamically across groups without hardcoding BMW
-      fetchCustomerByCustomerNumber(groupParam, '80496', prefix);
+      // No customer parameters provided in URL; keep customer clean on Home tab
     }
 
     return () => {

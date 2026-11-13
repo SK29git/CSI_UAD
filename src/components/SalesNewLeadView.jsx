@@ -233,7 +233,12 @@ const formatMobileForLead = (val) => {
   return `+971${digits}`;
 };
 
-export default function SalesNewLeadView({ onNavigateToEnquiries, initialInnerTab = "enquiry" }) {
+export default function SalesNewLeadView({ 
+  onNavigateToEnquiries, 
+  initialInnerTab = "enquiry",
+  mode = "sales" 
+}) {
+  const isService = mode === "service";
   const { 
     customer, 
     currentMobile, 
@@ -1382,18 +1387,20 @@ export default function SalesNewLeadView({ onNavigateToEnquiries, initialInnerTa
             <span>New Enquiry</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => setInnerTab("salesTask")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              innerTab === "salesTask"
-                ? "bg-blue-600 text-white shadow-xs"
-                : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80"
-            }`}
-          >
-            <FaTasks className="text-xs" />
-            <span>Create Sales Task</span>
-          </button>
+          {!isService && (
+            <button
+              type="button"
+              onClick={() => setInnerTab("salesTask")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                innerTab === "salesTask"
+                  ? "bg-blue-600 text-white shadow-xs"
+                  : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80"
+              }`}
+            >
+              <FaTasks className="text-xs" />
+              <span>Create Sales Task</span>
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">
@@ -1427,14 +1434,16 @@ export default function SalesNewLeadView({ onNavigateToEnquiries, initialInnerTa
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab("complaint")}
-                className="ml-0 sm:ml-1.5 px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center gap-1 border border-slate-200/80 cursor-pointer shadow-2xs transition-all"
-              >
-                <FaExclamationTriangle className="text-slate-500 text-[9px]" />
-                <span>Sales Complaints & Tickets</span>
-              </button>
+              {!isService && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("complaint")}
+                  className="ml-0 sm:ml-1.5 px-2 py-0.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center gap-1 border border-slate-200/80 cursor-pointer shadow-2xs transition-all"
+                >
+                  <FaExclamationTriangle className="text-slate-500 text-[9px]" />
+                  <span>Sales Complaints & Tickets</span>
+                </button>
+              )}
             </>
           ) : (
             <>

@@ -51,7 +51,7 @@ export default function ComplaintsDashboardPage() {
       modified = true;
     }
     if (modified) {
-      window.history.replaceState(null, '', `/?${params.toString()}`);
+      window.history.replaceState(null, '', `/complaints?${params.toString()}`);
     }
   }, [group]);
 
