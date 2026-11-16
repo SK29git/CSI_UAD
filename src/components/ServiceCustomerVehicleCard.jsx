@@ -494,11 +494,15 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
                 </div>
               )}
               {customer?.eventTaskDate && (
-                <div className="col-span-2 pt-1 border-t border-gray-100">
-                  <span className="text-gray-400 block text-[10px]">Scheduled Follow-Up</span>
-                  <span className="font-semibold text-indigo-700">
-                    {customer.eventTaskDate} {customer.eventTaskTime || ''}
-                  </span>
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Event Task Date</span>
+                  <span className="font-semibold text-gray-800">{customer.eventTaskDate}</span>
+                </div>
+              )}
+              {customer?.eventTaskTime && (
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Event Task Time</span>
+                  <span className="font-semibold text-gray-800">{customer.eventTaskTime}</span>
                 </div>
               )}
             </div>

@@ -704,21 +704,19 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                   </span>
                 </div>
 
-                {customer?.dateRequiredTo && (
-                  <div>
-                    <span className="text-gray-400 block text-[11px]">Date Required</span>
-                    <span className="font-semibold text-gray-800">{customer.dateRequiredTo}</span>
-                  </div>
-                )}
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Date Required</span>
+                  <span className="font-semibold text-gray-800">{customer?.dateRequiredTo || '-'}</span>
+                </div>
 
-                {customer?.eventTaskDate && (
-                  <div className="col-span-2 pt-1 border-t border-gray-100">
-                    <span className="text-gray-400 block text-[11px]">Scheduled Follow-Up</span>
-                    <span className="font-semibold text-indigo-700">
-                      {[customer.eventTaskDate, customer.eventTaskTime].filter(Boolean).join(' ')}
-                    </span>
-                  </div>
-                )}
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Event Task Date</span>
+                  <span className="font-semibold text-gray-800">{customer?.eventTaskDate || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Event Task Time</span>
+                  <span className="font-semibold text-gray-800">{customer?.eventTaskTime || '-'}</span>
+                </div>
 
                 <div>
                   <span className="text-gray-400 block text-[11px]">Campaign</span>
