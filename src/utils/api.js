@@ -575,6 +575,8 @@ export async function createComplaintCase(details, options = {}) {
     complaintGroup: details.complaintGroup || "Customer",
     externalRef: uniqueRef,
     ...(details.branch ? { branch: details.branch } : {}),
+    ...(details.assignedTo ? { assignedTo: String(details.assignedTo).trim() } : {}),
+    ...(details.teamAgentId ? { teamAgentId: String(details.teamAgentId).trim() } : {}),
   };
 
   const headers = {
@@ -648,6 +650,23 @@ export async function createComplaintCase(details, options = {}) {
     data?.ticketNumber ||
     null;
   const keyloopRef = data?.keyloop?.reference || null;
+
+  // If assignment details provided and complaint reference/id exists, sync assignment via PUT
+  const targetComplaintId = ticketNumber || data?.complaintId || data?.id || data?.referenceId;
+  if (targetComplaintId && (details.assignedTo || details.teamAgentId)) {
+    try {
+      await fetch(`${API_BASE_URL}/api/v1/complaints/${payload.company}/${targetComplaintId}/assignment`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({
+          teamAgentId: String(details.teamAgentId || "").trim(),
+          assignedTo: String(details.assignedTo || "").trim(),
+        }),
+      });
+    } catch (assignErr) {
+      console.warn("Assignment sync warning:", assignErr);
+    }
+  }
 
   return {
     ok: true,

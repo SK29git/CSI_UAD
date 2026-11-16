@@ -9,6 +9,7 @@ import {
   getGroupsForDepartment,
   getCategoriesForDepartmentAndGroup,
 } from "../data/complaintHierarchy";
+import { getUsersByDepartment } from "../data/departmentUsers";
 import {
   FaPlusCircle,
   FaPaperPlane,
@@ -30,6 +31,7 @@ import {
   FaMapMarkerAlt,
   FaCopy,
   FaCheck,
+  FaUserTie,
 } from "react-icons/fa";
 
 export default function CreateComplaintView() {
@@ -88,6 +90,12 @@ export default function CreateComplaintView() {
     initialCategories[0] || "Service Delay",
   );
 
+  // Assign User state (derived from Excel/CSV by Department)
+  const [assignedUserId, setAssignedUserId] = useState(() => {
+    const initialUsers = getUsersByDepartment(COMPLAINT_DEPARTMENTS[0]);
+    return initialUsers[0]?.id || "";
+  });
+
   const [source, setSource] = useState(COMPLAINT_SOURCES[0]); // "Customer Call"
   const [complaintPriority, setComplaintPriority] = useState(
     COMPLAINT_PRIORITIES[0],
@@ -129,6 +137,10 @@ export default function CreateComplaintView() {
     setComplaintGroup(nextGroup);
     const cats = getCategoriesForDepartmentAndGroup(newDept, nextGroup);
     setCategory(cats[0] || "");
+
+    // Update assigned user dropdown according to the newly selected department
+    const deptUsers = getUsersByDepartment(newDept);
+    setAssignedUserId(deptUsers[0]?.id || "");
   };
 
   const handleGroupChange = (newGroup) => {
@@ -142,6 +154,11 @@ export default function CreateComplaintView() {
     department,
     complaintGroup,
   );
+  const availableUsers = getUsersByDepartment(department);
+  const selectedUser =
+    availableUsers.find((u) => u.id === assignedUserId) ||
+    availableUsers[0] ||
+    null;
 
   // TOAST & SUBMIT STATE
   const [submitting, setSubmitting] = useState(false);
@@ -245,6 +262,8 @@ export default function CreateComplaintView() {
       source: source || "Customer Call",
       complaintGroup: complaintGroup || availableGroups[0] || "Process",
       externalRef: String(externalRef || "").trim() || generatedRef,
+      assignedTo: selectedUser?.name || "",
+      teamAgentId: selectedUser?.id || "",
     };
 
     try {
@@ -279,6 +298,7 @@ export default function CreateComplaintView() {
           reference: returnedRef,
           cxTicketId,
           keyloopStatus,
+          assignedTo: selectedUser?.name || null,
         });
         // Clear complaint description and externalRef
         setComplaint("");
@@ -370,6 +390,11 @@ export default function CreateComplaintView() {
                   {toast.keyloopStatus && (
                     <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200">
                       Keyloop: {toast.keyloopStatus}
+                    </span>
+                  )}
+                  {toast.assignedTo && (
+                    <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200">
+                      Assigned To: {toast.assignedTo}
                     </span>
                   )}
                 </div>
@@ -577,6 +602,34 @@ export default function CreateComplaintView() {
                       {d}
                     </option>
                   ))}
+                </select>
+              </div>
+            </div>
+
+            {/* 8. Assign User (Filtered strictly by selected Department) */}
+            <div>
+              <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                Assign User <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                  <FaUserTie />
+                </div>
+                <select
+                  value={assignedUserId}
+                  onChange={(e) => setAssignedUserId(e.target.value)}
+                  required
+                  className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer truncate"
+                >
+                  {availableUsers.length > 0 ? (
+                    availableUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.roleName || u.role})
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No users for {department}</option>
+                  )}
                 </select>
               </div>
             </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useCustomer } from '../context/CustomerContext';
 import { linkNewVehicleToCustomer } from '../utils/api';
 import { BMW_MODELS, getVariantsForModel } from '../data/bmwModelsVariants';
+import { getModelsForBrand } from '../data/brandModels';
 import {
   FaCar,
   FaPlusCircle,
@@ -16,6 +17,19 @@ import {
   FaBuilding
 } from 'react-icons/fa';
 
+export const BRAND_MANUFACTURERS = [
+  { id: 'BMW', label: 'BMW' },
+  { id: 'Geely', label: 'Geely' },
+  { id: 'MINI', label: 'MINI' },
+  { id: 'Rolls-Royce', label: 'Rolls-Royce' },
+  { id: 'BMW Motorrad', label: 'BMW Motorrad' },
+  { id: 'Lotus', label: 'Lotus' },
+  { id: 'Ineos', label: 'Ineos' },
+  { id: 'Galaxy', label: 'Galaxy' },
+  { id: 'Riddara', label: 'Riddara' },
+  { id: 'Non-Franchise', label: 'Non-Franchise' }
+];
+
 const FUEL_TYPES = ['Petrol', 'Diesel', 'Hybrid', 'Electric', 'Plug-in Hybrid'];
 const ODOMETER_TYPES = ['Kilometres', 'Miles'];
 
@@ -27,7 +41,15 @@ export default function AddNewVehicleModal({
   const { customer, group: contextGroup } = useCustomer();
 
   // Customer Details (Read-only)
-  const group = contextGroup || customer?.keyloopGroup || 'BMW';
+  const defaultBrand = useMemo(() => {
+    const raw = contextGroup || customer?.keyloopGroup || customer?.make || customer?.vehicleMake || 'BMW';
+    const found = BRAND_MANUFACTURERS.find(
+      b => b.id.toUpperCase() === String(raw).toUpperCase() || b.label.toUpperCase() === String(raw).toUpperCase()
+    );
+    return found ? found.id : 'BMW';
+  }, [contextGroup, customer]);
+
+  const [selectedBrand, setSelectedBrand] = useState('BMW');
   const customerId = customer?.customerNumber || '';
   const customerName =
     customer?.fullName ||
@@ -64,6 +86,7 @@ export default function AddNewVehicleModal({
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
+      setSelectedBrand(defaultBrand);
       setSelectedChassis('');
       setSelectedVariantCode('');
       setCustomVariantCode('');
@@ -81,7 +104,17 @@ export default function AddNewVehicleModal({
       setSuccessMessage('');
       setSubmitting(false);
     }
-  }, [isOpen]);
+  }, [isOpen, defaultBrand]);
+
+  const handleBrandChange = (newBrand) => {
+    setSelectedBrand(newBrand);
+    setSelectedChassis('');
+    setSelectedVariantCode('');
+    setCustomVariantCode('');
+    setDescription('');
+    setModelSearch('');
+    setIsModelDropdownOpen(false);
+  };
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -100,35 +133,65 @@ export default function AddNewVehicleModal({
     };
   }, [isModelDropdownOpen]);
 
+  // Models for the selected brand
+  const currentBrandModels = useMemo(() => {
+    const isBMW = String(selectedBrand).toUpperCase() === 'BMW';
+    if (isBMW) {
+      return BMW_MODELS;
+    }
+    const rawList = getModelsForBrand(selectedBrand);
+    if (Array.isArray(rawList) && rawList.length > 0) {
+      return rawList.map(m => ({
+        chassisCode: m,
+        modelName: m,
+        modelAsShown: `${selectedBrand} ${m}`
+      }));
+    }
+    return [
+      {
+        chassisCode: 'Standard',
+        modelName: 'Standard',
+        modelAsShown: `${selectedBrand} Standard`
+      }
+    ];
+  }, [selectedBrand]);
+
   // Filtered models for search inside dropdown
   const filteredModels = useMemo(() => {
-    if (!modelSearch.trim()) return BMW_MODELS;
+    if (!modelSearch.trim()) return currentBrandModels;
     const q = modelSearch.toLowerCase();
-    return BMW_MODELS.filter(
+    return currentBrandModels.filter(
       m =>
         m.modelAsShown.toLowerCase().includes(q) ||
         m.chassisCode.toLowerCase().includes(q) ||
         m.modelName.toLowerCase().includes(q)
     );
-  }, [modelSearch]);
+  }, [currentBrandModels, modelSearch]);
 
   // Current selected model
   const currentModel = useMemo(() => {
-    return BMW_MODELS.find(m => m.chassisCode === selectedChassis);
-  }, [selectedChassis]);
+    return currentBrandModels.find(m => m.chassisCode === selectedChassis);
+  }, [currentBrandModels, selectedChassis]);
 
   // Available variants for selected chassis
   const availableVariants = useMemo(() => {
     if (!selectedChassis) return [];
-    return getVariantsForModel(selectedChassis);
-  }, [selectedChassis]);
+    const isBMW = String(selectedBrand).toUpperCase() === 'BMW';
+    if (isBMW) {
+      return getVariantsForModel(selectedChassis);
+    }
+    return [
+      { variantCode: 'STD', variant: 'Standard' }
+    ];
+  }, [selectedBrand, selectedChassis]);
 
   // Select a model from custom dropdown
   const handleSelectModel = model => {
     setSelectedChassis(model.chassisCode);
-    setSelectedVariantCode('');
+    const isBMW = String(selectedBrand).toUpperCase() === 'BMW';
+    setSelectedVariantCode(isBMW ? '' : 'STD');
     setCustomVariantCode('');
-    setDescription(`BMW ${model.modelName}`);
+    setDescription(`${selectedBrand} ${model.modelName}`);
     setIsModelDropdownOpen(false);
     setModelSearch('');
   };
@@ -140,7 +203,7 @@ export default function AddNewVehicleModal({
     if (code && code !== '__CUSTOM__') {
       const v = availableVariants.find(item => item.variantCode === code);
       if (v && currentModel) {
-        setDescription(`BMW ${currentModel.modelName} ${v.variant}`);
+        setDescription(`${selectedBrand} ${currentModel.modelName} ${v.variant}`);
       }
     }
   };
@@ -159,7 +222,7 @@ export default function AddNewVehicleModal({
     ).trim();
 
     if (!cleanModel) {
-      setErrorMessage('Please select a BMW Model / Chassis.');
+      setErrorMessage(`Please select a ${selectedBrand} Model / Chassis.`);
       return;
     }
     if (!cleanVariant) {
@@ -182,14 +245,16 @@ export default function AddNewVehicleModal({
     setSubmitting(true);
 
     const payloadDetails = {
-      group: group || 'BMW',
+      group: selectedBrand,
+      manufacturer: selectedBrand,
+      brand: selectedBrand,
+      make: selectedBrand,
       customerId: String(customerId).trim(),
       customerName: customerName.trim() || undefined,
       registrationNumber: cleanPlate,
-      manufacturer: 'BMW',
       model: cleanModel,
       variant: cleanVariant,
-      description: description.trim() || `BMW ${currentModel?.modelName || cleanModel}`,
+      description: description.trim() || `${selectedBrand} ${currentModel?.modelName || cleanModel}`,
       odometerType: odometerType || 'Kilometres',
       odometer: odometer.trim() || '0',
       vin: cleanVin,
@@ -272,10 +337,25 @@ export default function AddNewVehicleModal({
 
           <div className="flex items-center gap-1.5 ml-auto">
             <FaBuilding className="text-slate-500 text-xs" />
-            <span className="text-slate-500">Brand:</span>
-            <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-              {group}
-            </span>
+            <label htmlFor="vehicle-brand-select" className="text-slate-600 font-semibold cursor-pointer">
+              Brand:
+            </label>
+            <div className="relative">
+              <select
+                id="vehicle-brand-select"
+                value={selectedBrand}
+                onChange={(e) => handleBrandChange(e.target.value)}
+                disabled={submitting}
+                className="font-bold text-xs text-emerald-800 bg-white border border-emerald-300 hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 px-2.5 py-1 rounded-md cursor-pointer shadow-2xs transition-all pr-6 appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {BRAND_MANUFACTURERS.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.label}
+                  </option>
+                ))}
+              </select>
+              <FaChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-emerald-600 pointer-events-none" />
+            </div>
           </div>
         </div>
 
