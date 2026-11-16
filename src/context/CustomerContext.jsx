@@ -19,6 +19,13 @@ export const DEMO_VERIFICATION = null;
 
 export const KNOWN_GROUPS = ['BMW', 'MINI', 'GEELY', 'ROLLS-ROYCE', 'AUDI'];
 
+export const isConsentTrue = (val) => {
+  if (val === true || val === 1) return true;
+  if (!val || typeof val !== 'string') return false;
+  const s = val.trim().toUpperCase();
+  return s === 'Y' || s === 'YES' || s === 'TRUE' || s === '1' || s === 'AGREE';
+};
+
 export const normalizeProspectRecord = (p, fallbackGroup = 'BMW', fallbackMobile = '') => {
   const g = p.keyloopGroup || fallbackGroup || 'BMW';
   const nameParts = (p.customerName || '').trim().split(/\s+/);
@@ -28,13 +35,16 @@ export const normalizeProspectRecord = (p, fallbackGroup = 'BMW', fallbackMobile
   const phone = p.mobile || fallbackMobile || '';
   const emailVal = p.email || '';
   const isConverted = Boolean(p.converted || (p.status && p.status.toUpperCase() === 'CONVERTED'));
-  const custNo = p.customerNumber || (isConverted ? p.customerNumber : '') || p.prospectNumber || p.leadId || 'PROSPECT';
+  const rawProsNo = p.prospectNumber || (p.customerNumber && p.customerNumber !== 'PROSPECT' ? p.customerNumber : '') || p.leadId || p.id || '';
+  const custNo = p.customerNumber || (isConverted ? p.customerNumber : '') || rawProsNo || 'PROSPECT';
+  const prosNo = p.prospectNumber || (p.customerNumber && p.customerNumber !== 'PROSPECT' ? p.customerNumber : '') || p.leadId || '';
 
   return {
+    ...p,
     keyloopGroup: g,
     customerNumber: custNo,
-    prospectNumber: p.prospectNumber || p.leadId || '',
-    leadId: p.leadId || '',
+    prospectNumber: prosNo,
+    leadId: p.leadId || prosNo || '',
     customerType: 'PROSPECT',
     isProspect: true,
     isWebLead: false,
@@ -66,12 +76,21 @@ export const normalizeProspectRecord = (p, fallbackGroup = 'BMW', fallbackMobile
     nationality: p.nationality || p.nation || '',
     vip: false,
     doNotContact: false,
-    consents: p.consents || {
-      email: Boolean(emailVal),
-      phone: Boolean(phone),
-      sms: true,
-      whatsapp: true
-    },
+    consents: (() => {
+      if (p.consents && typeof p.consents === 'object') {
+        const res = {};
+        for (const [k, v] of Object.entries(p.consents)) {
+          if (isConsentTrue(v)) res[k] = true;
+        }
+        return res;
+      }
+      const res = {};
+      if (isConsentTrue(p.notesFromDealersms) || isConsentTrue(p.notesFromSalessms) || isConsentTrue(p.notesFromServicesms) || isConsentTrue(p.notesFromPartssms)) res.sms = true;
+      if (isConsentTrue(p.notesFromDealeremail) || isConsentTrue(p.notesFromSalesemail) || isConsentTrue(p.notesFromServiceemail) || isConsentTrue(p.notesFromPartsemail)) res.email = true;
+      if (isConsentTrue(p.notesFromDealerphone) || isConsentTrue(p.notesFromSalesphone) || isConsentTrue(p.notesFromServicephone) || isConsentTrue(p.notesFromPartsphone)) res.phone = true;
+      if (isConsentTrue(p.notesFromDealerletter) || isConsentTrue(p.notesFromSalesletter) || isConsentTrue(p.notesFromServiceletter) || isConsentTrue(p.notesFromPartsletter)) res.letter = true;
+      return res;
+    })(),
     leadSource: p.leadSource || p.description || 'Sales Prospect',
     status: p.status || (isConverted ? 'CONVERTED' : 'OPEN'),
     loyaltyTier: 'PROSPECT',
@@ -81,66 +100,197 @@ export const normalizeProspectRecord = (p, fallbackGroup = 'BMW', fallbackMobile
 
 export const normalizeE00MIRecord = (e, fallbackGroup = 'BMW', fallbackMobile = '') => {
   const g = e.keyloopGroup || fallbackGroup || 'BMW';
-  const nameParts = (e.customerName || '').trim().split(/\s+/);
-  const fName = nameParts[0] || 'Prospect';
-  const sName = nameParts.slice(1).join(' ') || '';
-  const combinedName = e.customerName || `${fName} ${sName}`.trim() || 'Prospect / Inquiry';
-  const phone = e.mobile || fallbackMobile || '';
-  const emailVal = e.email || '';
+
+  // Extract and assemble Name
+  const rawCustName = (e.customerName || '').trim();
+  const nameParts = rawCustName.split(/\s+/);
+  const fName = e.firstName || e.firstnameFromNotes || (nameParts[0] !== 'Prospect' && nameParts[0] ? nameParts[0] : '') || 'Prospect';
+  const sName = e.surname || e.surnameFromNotes || (nameParts.slice(1).join(' ') || '');
+  const title = e.title || e.titleFromNotes || '';
+  const combinedName = rawCustName || [title, fName, sName].filter(Boolean).join(' ').trim() || 'Prospect / Inquiry';
+
+  // Extract phone numbers with unmasked fallback
+  const isMasked = (str) => !str || String(str).includes('*');
+  const candidatePhones = [
+    fallbackMobile,
+    !isMasked(e.mobile) ? e.mobile : null,
+    !isMasked(e.mobileRaw) ? e.mobileRaw : null,
+    !isMasked(e.homePhone) ? e.homePhone : null,
+    !isMasked(e.mobileFromNotes) ? e.mobileFromNotes : null,
+    !isMasked(e.phoneFromNotes) ? e.phoneFromNotes : null,
+    !isMasked(e.preferredPhone) ? e.preferredPhone : null,
+    !isMasked(e.preferredPhone2) ? e.preferredPhone2 : null,
+  ].filter(Boolean);
+
+  const phone = candidatePhones[0] || e.mobile || e.mobileRaw || e.homePhone || fallbackMobile || '';
+  const emailVal = e.email || e.emailFromNotes || e.preferredEmail || '';
   const isCustLink = e.linkType === 'CU';
-  const realProsNo = e.prospectNumber || e.leadId || '';
+  const realProsNo = e.prospectNumber || (e.customerNumber && e.customerNumber !== 'PROSPECT' ? e.customerNumber : '') || e.leadId || e.enquiryNo || e.enquiryNumber || '';
   const idVal = realProsNo || e.customerNumber || (e.eventKey && e.eventKey !== 'E00MI-LEAD' ? e.eventKey : '') || (isCustLink ? e.customerNumber || '' : 'E00MI-LEAD');
 
+  // Vehicle of Interest
+  const vMake = e.make || e.vehicleMake || e.eventMake || e.makeFromNotes || '';
+  const vModel = e.model || e.vehicleModel || e.eventModel || e.modelFromNotes || '';
+  const vDesc = e.vehicleDescription || [vMake, vModel].filter(Boolean).join(' ') || '';
+
+  // Trade-In Details
+  const tradeInMake = e.notesFromTradeinMake || '';
+  const tradeInModel = e.notesFromTradeinModel || '';
+  const tradeInYear = e.notesFromYear || '';
+  const tradeInReg = e.notesFromTradeinReg || '';
+  const tradeInMileage = e.notesFromTradeinMileage || '';
+  const tradeInNotes = e.notesFromTradeinNotes || '';
+  const hasTradeIn = Boolean(tradeInMake || tradeInModel || tradeInReg);
+
+  // Department Consents
+  const departmentConsents = {
+    dealer: {
+      sms: e.notesFromDealersms || '',
+      email: e.notesFromDealeremail || '',
+      phone: e.notesFromDealerphone || '',
+      letter: e.notesFromDealerletter || '',
+    },
+    sales: {
+      sms: e.notesFromSalessms || '',
+      email: e.notesFromSalesemail || '',
+      phone: e.notesFromSalesphone || '',
+      letter: e.notesFromSalesletter || '',
+    },
+    service: {
+      sms: e.notesFromServicesms || '',
+      email: e.notesFromServiceemail || '',
+      phone: e.notesFromServicephone || '',
+      letter: e.notesFromServiceletter || '',
+    },
+    parts: {
+      sms: e.notesFromPartssms || '',
+      email: e.notesFromPartsemail || '',
+      phone: e.notesFromPartsphone || '',
+      letter: e.notesFromPartsletter || '',
+    },
+    updateMarketingAgree: e.notesFromUpdatemkagree || '',
+  };
+
+  const branchCd = e.branchCode || e.notesFromBranch || '10';
+  const branchNm = e.branchName || (branchCd ? `Branch ${branchCd}` : '10 - Sheikh Zayed Rd');
+
+  const sourceVal = e.leadSourceFromNotes || e.leadOriginFromNotes || e.source || e.source1 || e.notesFromContactSource || e.leadSource || '';
+  const channelVal = e.channel || e.source2 || '';
+
   return {
+    ...e,
     keyloopGroup: g,
     customerNumber: e.customerNumber || idVal,
     prospectNumber: realProsNo,
-    leadId: e.leadId || '',
+    leadId: e.leadId || realProsNo || '',
     eventKey: e.eventKey || '',
+    eventType: e.eventType || 'E00MI',
     linkType: e.linkType || 'PR',
     campaign: e.campaign || '',
     marketingCampaignCode: e.marketingCampaignCode || '',
-    source: e.source || e.leadSource || '',
-    channel: e.channel || '',
-    make: e.make || '',
-    model: e.model || '',
-    description: e.description || '',
+    source: sourceVal,
+    channel: channelVal,
+    leadSource: sourceVal || e.description || 'Website / Leads Bridge Event',
+
+    // Vehicle of interest
+    make: vMake,
+    model: vModel,
+    vehicleDescription: vDesc,
+    manufacturer: e.manufacturer || '',
+    stockNumber: e.stockNumberFromNotes || '',
+    notesFromRegno: e.notesFromRegno || '',
+    dateRequiredTo: e.dateRequiredTo || '',
+
+    // Enquiry & Advisor details
+    enquiryNumber: e.enquiryNumber || e.enquiryNo || '',
+    enquiryNo: e.enquiryNo || e.enquiryNumber || '',
+    statusOfEnquiry: e.statusOfEnquiry || (e.closedFlag === 'Y' ? 'Closed' : (e.closedDate ? 'Closed' : 'Active')),
+    followupUsername: e.followupUsername || e.allocateFromNotes || '',
+    followupUserLocation: e.followupUserLocation || '',
+    creatorName: e.creatorName || '',
+
+    // Task & Scheduled follow-up
+    eventTaskDate: e.eventTaskDate || '',
+    eventTaskTime: e.eventTaskTime || '',
+    eventTaskNotes: e.eventTaskNotes || '',
+    closedDate: e.closedDate || '',
+    closedTime: e.closedTime || '',
+    closedFlag: e.closedFlag || '',
+
+    // Trade-in details
+    hasTradeIn,
+    tradeIn: {
+      hasTradeIn,
+      make: tradeInMake,
+      model: tradeInModel,
+      year: tradeInYear,
+      reg: tradeInReg,
+      mileage: tradeInMileage,
+      notes: tradeInNotes,
+    },
+    tradeInMake,
+    tradeInModel,
+    tradeInYear,
+    tradeInReg,
+    tradeInMileage,
+    tradeInNotes,
+
+    // Personal / Emirates ID
+    personalId: e.idNumberFromNotes || '',
+    idNumberFromNotes: e.idNumberFromNotes || '',
+
+    // Department Consents
+    departmentConsents,
+
     customerType: isCustLink ? 'CUSTOMER' : 'PROSPECT',
     isProspect: true,
-    isWebLead: false,
-    salutation: '',
+    isWebLead: true,
+    salutation: title,
     firstName: fName,
     middleName: '',
     surname: sName,
     fullName: combinedName,
     mobile: phone,
-    mobileRaw: phone.replace(/\D/g, ''),
-    mobileValid: Boolean(phone && phone.replace(/\D/g, '').length >= 7),
+    mobileRaw: String(phone).replace(/\D/g, ''),
+    mobileValid: Boolean(phone && String(phone).replace(/\D/g, '').length >= 7),
+    homePhone: e.homePhone || '',
+    preferredPhone: e.preferredPhone || '',
+    preferredPhone2: e.preferredPhone2 || '',
+    preferredEmail: e.preferredEmail || '',
     email: emailVal,
     emailValid: Boolean(emailVal && emailVal.includes('@')),
     location: {
       flatBuilding: 'N/A',
-      area: e.branchName || '',
-      city: 'Dubai'
+      area: branchNm,
+      city: 'Dubai',
     },
-    branchCode: e.branchCode || '10',
-    preferredBranch: e.branchName || (e.branchCode ? `Branch ${e.branchCode}` : '10 - Sheikh Zayed Rd'),
+    branchCode: branchCd,
+    preferredBranch: branchNm,
     customerSince: e.createdDate || new Date().toISOString().split('T')[0],
     lastUpdated: e.createdDate || new Date().toISOString().split('T')[0],
     dateOfBirth: e.dateOfBirth || e.dob || e.birthDate || e.DateOfBirth || e.date_of_birth || '',
     nationality: e.nationality || '',
     vip: false,
     doNotContact: false,
-    consents: {
-      email: Boolean(emailVal),
-      phone: Boolean(phone),
-      sms: true,
-      whatsapp: true
-    },
-    leadSource: e.description || 'Website / Leads Bridge Event',
-    status: isCustLink ? 'Customer Event' : 'Prospect',
+    consents: (() => {
+      if (e.consents && typeof e.consents === 'object') {
+        const res = {};
+        for (const [k, v] of Object.entries(e.consents)) {
+          if (isConsentTrue(v)) res[k] = true;
+        }
+        return res;
+      }
+      const res = {};
+      if (isConsentTrue(e.notesFromDealersms) || isConsentTrue(e.notesFromSalessms) || isConsentTrue(e.notesFromServicesms) || isConsentTrue(e.notesFromPartssms)) res.sms = true;
+      if (isConsentTrue(e.notesFromDealeremail) || isConsentTrue(e.notesFromSalesemail) || isConsentTrue(e.notesFromServiceemail) || isConsentTrue(e.notesFromPartsemail)) res.email = true;
+      if (isConsentTrue(e.notesFromDealerphone) || isConsentTrue(e.notesFromSalesphone) || isConsentTrue(e.notesFromServicephone) || isConsentTrue(e.notesFromPartsphone)) res.phone = true;
+      if (isConsentTrue(e.notesFromDealerletter) || isConsentTrue(e.notesFromSalesletter) || isConsentTrue(e.notesFromServiceletter) || isConsentTrue(e.notesFromPartsletter)) res.letter = true;
+      return res;
+    })(),
+    status: isCustLink ? 'Customer Event' : (e.statusOfEnquiry || 'Prospect'),
     loyaltyTier: isCustLink ? 'CUSTOMER' : 'PROSPECT',
-    notes: `Event: ${e.description || 'E00MI Event'} [${e.createdDate || ''} ${e.createdTime || ''}]`
+    description: e.description || '',
+    notes: e.description || e.notes || '',
   };
 };
 
@@ -806,9 +956,30 @@ export function CustomerProvider({ children }) {
         }
       })();
 
-      const [rawCustomers, rawProspects] = await Promise.all([
+      const e00miPromise = (async () => {
+        try {
+          if (activeGroup && activeGroup.trim() !== '') {
+            const res = await apiFetch(`/api/v1/e00mi?group=${encodeURIComponent(activeGroup.trim())}&mobile=${cleanedMobile}`);
+            return (res && res.ok && Array.isArray(res.data)) ? res.data : [];
+          } else {
+            const groupPromises = KNOWN_GROUPS.map(g =>
+              apiFetch(`/api/v1/e00mi?group=${g}&mobile=${cleanedMobile}`)
+                .then(res => (res && res.ok && Array.isArray(res.data)) ? res.data : [])
+                .catch(() => [])
+            );
+            const results = await Promise.all(groupPromises);
+            return results.flat();
+          }
+        } catch (e) {
+          console.warn("E00MI mobile query error:", e);
+          return [];
+        }
+      })();
+
+      const [rawCustomers, rawProspects, rawE00mi] = await Promise.all([
         customerPromise,
-        prospectPromise
+        prospectPromise,
+        e00miPromise
       ]);
 
       // Deduplicate customers by customerNumber
@@ -823,17 +994,35 @@ export function CustomerProvider({ children }) {
         uniqueCustomers.push(c);
       }
 
-      // Deduplicate prospects by leadId / prospectNumber to prevent cross-group duplicate records
-      const seenProspectIds = new Set();
-      const uniqueProspects = [];
-      for (const p of rawProspects) {
+      // Map raw prospects and E00MI records
+      const normPros = (rawProspects || []).map(p =>
+        normalizeProspectRecord(p, p.keyloopGroup || activeGroup, cleanedMobile)
+      );
+      const normE00mi = (rawE00mi || []).map(e =>
+        normalizeE00MIRecord(e, e.keyloopGroup || activeGroup, cleanedMobile)
+      );
+
+      // Merge and deduplicate prospects. Prefer E00MI records when IDs match because they contain richer vehicle interest, advisor, trade-in, and task details!
+      const prospectMap = new Map();
+      for (const p of normPros) {
         const id = String(p.leadId || p.prospectNumber || p.id || '').trim();
-        if (id) {
-          if (seenProspectIds.has(id)) continue;
-          seenProspectIds.add(id);
-        }
-        uniqueProspects.push(p);
+        if (id) prospectMap.set(id, p);
       }
+      for (const e of normE00mi) {
+        const id = String(e.leadId || e.prospectNumber || e.eventKey || '').trim();
+        if (id) {
+          if (prospectMap.has(id)) {
+            const existing = prospectMap.get(id);
+            prospectMap.set(id, { ...existing, ...e });
+          } else {
+            prospectMap.set(id, e);
+          }
+        } else {
+          prospectMap.set(`e00mi-${prospectMap.size + 1}`, e);
+        }
+      }
+
+      const normalizedProspects = Array.from(prospectMap.values());
 
       // Normalize Customers
       const normalizedCustomers = uniqueCustomers.map(c => ({
@@ -841,11 +1030,6 @@ export function CustomerProvider({ children }) {
         isProspect: false,
         customerType: c.customerType || 'CUSTOMER'
       }));
-
-      // Normalize Prospects strictly from /api/v1/prospects response
-      const normalizedProspects = uniqueProspects.map(p => 
-        normalizeProspectRecord(p, p.keyloopGroup || activeGroup, cleanedMobile)
-      );
 
       setCustomerMatches(normalizedCustomers);
       setProspectMatches(normalizedProspects);
@@ -1914,7 +2098,7 @@ export function CustomerProvider({ children }) {
   const getConsentsDisplay = () => {
     if (!customer || !customer?.consents) return 'None';
     const active = Object.entries(customer.consents)
-      .filter(([_, v]) => Boolean(v))
+      .filter(([_, v]) => isConsentTrue(v))
       .map(([k]) => k.toUpperCase());
     return active.length > 0 ? active.join(', ') : 'None';
   };

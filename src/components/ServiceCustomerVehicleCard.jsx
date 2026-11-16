@@ -54,7 +54,15 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
 
   // Dynamic Trade-in data strictly from API response (if present)
   const hasTradeInApi = Array.isArray(tradeInHistory) && tradeInHistory.length > 0;
-  const activeTradeIn = hasTradeInApi ? tradeInHistory[0] : (currentVehicle?.tradeIn || currentVehicle?.tradeInEligibility ? currentVehicle : null);
+  const activeTradeIn = hasTradeInApi 
+    ? tradeInHistory[0] 
+    : (customer?.isProspect && customer?.hasTradeIn 
+        ? {
+            status: 'Appraisal Requested',
+            appraisedValue: [customer.tradeInMake, customer.tradeInModel, customer.tradeInYear].filter(Boolean).join(' '),
+            expiryDate: customer.tradeInReg ? `Plate: ${customer.tradeInReg}` : (customer.tradeInMileage ? `${customer.tradeInMileage} KM` : null),
+          }
+        : (currentVehicle?.tradeIn || currentVehicle?.tradeInEligibility ? currentVehicle : null));
 
   // Dynamic Verification data strictly from API response (if present)
   const hasVerificationApi = Boolean(
@@ -434,6 +442,73 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
                     <FaBoxes className="text-[9px]" />
                     <span>View All</span>
                   </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3b. Prospect Vehicle of Interest Card (Rendered for prospects with vehicle inquiry) */}
+      {!currentVehicle && customer?.isProspect && (customer?.make || customer?.vehicleDescription) && (
+        <div className="bg-white rounded-xl shadow-xs border border-amber-200 overflow-hidden text-xs">
+          <div className="bg-amber-50/80 px-4 py-3 border-b border-amber-200 flex items-center justify-between">
+            <h4 className="font-extrabold text-amber-950 text-xs flex items-center gap-1.5">
+              <FaCar className="text-amber-600" /> Vehicle of Interest
+            </h4>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+              Inquiry
+            </span>
+          </div>
+          <div className="p-4 bg-slate-50/40 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-amber-700 text-white font-extrabold flex items-center justify-center text-xs shadow-xs uppercase">
+                {customer?.make || customer?.keyloopGroup || 'AUTO'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <h5 className="font-extrabold text-gray-900 text-sm leading-tight truncate">
+                  {customer?.vehicleDescription || [customer?.make, customer?.model].filter(Boolean).join(' ')}
+                </h5>
+                {customer?.stockNumber && (
+                  <span className="text-[10px] text-gray-500 font-mono font-bold block truncate">
+                    Stock #: {customer.stockNumber}
+                  </span>
+                )}
+                {customer?.notesFromRegno && (
+                  <span className="text-[10px] text-gray-600 font-semibold block truncate">
+                    Reg / Plate: {customer.notesFromRegno}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-y-2 gap-x-2 pt-2 border-t border-gray-200 text-[11px]">
+              {customer?.enquiryNo && (
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Enquiry #</span>
+                  <span className="font-mono font-bold text-blue-700">{customer.enquiryNo}</span>
+                </div>
+              )}
+              {customer?.statusOfEnquiry && (
+                <div>
+                  <span className="text-gray-400 block text-[10px]">Enquiry Status</span>
+                  <span className="font-semibold text-amber-700">{customer.statusOfEnquiry}</span>
+                </div>
+              )}
+              {customer?.followupUsername && (
+                <div className="col-span-2">
+                  <span className="text-gray-400 block text-[10px]">Assigned Sales Advisor</span>
+                  <span className="font-semibold text-gray-800">
+                    {customer.followupUsername} {customer.followupUserLocation ? `(${customer.followupUserLocation})` : ''}
+                  </span>
+                </div>
+              )}
+              {customer?.eventTaskDate && (
+                <div className="col-span-2 pt-1 border-t border-gray-100">
+                  <span className="text-gray-400 block text-[10px]">Scheduled Follow-Up</span>
+                  <span className="font-semibold text-indigo-700">
+                    {customer.eventTaskDate} {customer.eventTaskTime || ''}
+                  </span>
                 </div>
               )}
             </div>

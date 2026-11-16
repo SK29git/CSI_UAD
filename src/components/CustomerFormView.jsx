@@ -378,8 +378,8 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
         workEmail: workEmailVal,
         otherEmail1: otherEmail1Val,
         otherEmail2: otherEmail2Val,
-        linkType: customer.linkType || '',
-        prospectNumber: customer.prospectNumber || '',
+        linkType: customer.linkType || (customer.isProspect ? 'PR' : ''),
+        prospectNumber: customer.prospectNumber || (customer.isProspect ? (customer.customerNumber !== 'PROSPECT' ? customer.customerNumber : '') || customer.leadId || customer.enquiryNo || '' : ''),
         campaign: customer.campaign || '',
         marketingCampaignCode: customer.marketingCampaignCode || '',
         channel: customer.channel || '',
@@ -963,16 +963,29 @@ export default function CustomerFormView({ mode = 'create', onClose }) {
                 <label className="text-[11px] font-semibold text-gray-700 mb-1 flex items-center gap-1">
                   Source
                 </label>
-                <select
-                  value={formData.source || ''}
-                  onChange={(e) => handleSourceChange(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
-                >
-                  <option value="">Select Source</option>
-                  {CUSTOMER_SOURCE_OPTIONS.map(src => (
-                    <option key={src} value={src}>{src}</option>
-                  ))}
-                </select>
+                {(isProspect || customer?.isProspect) && formData.source ? (
+                  <input
+                    type="text"
+                    value={formData.source || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, source: e.target.value }))}
+                    placeholder="e.g. Website / Leads Bridge Event"
+                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                  />
+                ) : (
+                  <select
+                    value={formData.source || ''}
+                    onChange={(e) => handleSourceChange(e.target.value)}
+                    className="w-full px-2.5 py-1.5 bg-gray-50 border border-gray-200 rounded-md font-medium text-gray-800 text-xs focus:bg-white focus:outline-none focus:border-blue-500 transition-colors cursor-pointer"
+                  >
+                    <option value="">Select Source</option>
+                    {formData.source && !CUSTOMER_SOURCE_OPTIONS.includes(formData.source) && (
+                      <option value={formData.source}>{formData.source}</option>
+                    )}
+                    {CUSTOMER_SOURCE_OPTIONS.map(src => (
+                      <option key={src} value={src}>{src}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               {/* Channel */}

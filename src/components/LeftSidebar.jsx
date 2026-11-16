@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useCustomer } from '../context/CustomerContext';
 import { 
   FaPhoneAlt, 
@@ -20,15 +21,65 @@ import {
   FaSpinner,
   FaUserPlus,
   FaEdit,
-  FaSearch,
   FaCheckDouble,
   FaPaperPlane,
   FaUserCheck,
   FaStar,
   FaExternalLinkAlt,
-  FaTimes
+  FaTimes,
+  FaCar,
+  FaUserTie
 } from 'react-icons/fa';
 import { getFullMobileNumber, getDisplayMobileNumber } from '../utils/phoneUtils';
+
+export const E00MI_NOTE_FIELDS = [
+  { key: 'notesFromBranch', label: 'Branch Notes' },
+  { key: 'eventTaskNotes', label: 'Event Task Notes' },
+  { key: 'leadOriginFromNotes', label: 'Lead Origin (Notes)' },
+  { key: 'leadSourceFromNotes', label: 'Lead Source (Notes)' },
+  { key: 'idNumberFromNotes', label: 'ID Number (Notes)' },
+  { key: 'allocateFromNotes', label: 'Allocate (Notes)' },
+  { key: 'titleFromNotes', label: 'Title (Notes)' },
+  { key: 'firstnameFromNotes', label: 'First Name (Notes)' },
+  { key: 'surnameFromNotes', label: 'Surname (Notes)' },
+  { key: 'emailFromNotes', label: 'Email (Notes)' },
+  { key: 'phoneFromNotes', label: 'Phone (Notes)' },
+  { key: 'mobileFromNotes', label: 'Mobile (Notes)' },
+  { key: 'notesFromContactSource', label: 'Contact Source (Notes)' },
+  { key: 'makeFromNotes', label: 'Make (Notes)' },
+  { key: 'modelFromNotes', label: 'Model (Notes)' },
+  { key: 'stockNumberFromNotes', label: 'Stock Number (Notes)' },
+  { key: 'notesFromRegno', label: 'Reg No (Notes)' },
+  { key: 'notesFromTradeinReg', label: 'Trade-in Reg (Notes)' },
+  { key: 'notesFromTradeinMake', label: 'Trade-in Make (Notes)' },
+  { key: 'notesFromTradeinModel', label: 'Trade-in Model (Notes)' },
+  { key: 'notesFromTradeinMileage', label: 'Trade-in Mileage (Notes)' },
+  { key: 'notesFromYear', label: 'Trade-in Year (Notes)' },
+  { key: 'notesFromTradeinNotes', label: 'Trade-in Condition Notes' },
+  { key: 'notesFromUpdatemkagree', label: 'Marketing Agree (Notes)' },
+  { key: 'notesFromDealersms', label: 'Dealer SMS Consent' },
+  { key: 'notesFromDealeremail', label: 'Dealer Email Consent' },
+  { key: 'notesFromDealerletter', label: 'Dealer Letter Consent' },
+  { key: 'notesFromDealerphone', label: 'Dealer Phone Consent' },
+  { key: 'notesFromPartssms', label: 'Parts SMS Consent' },
+  { key: 'notesFromPartsemail', label: 'Parts Email Consent' },
+  { key: 'notesFromPartsletter', label: 'Parts Letter Consent' },
+  { key: 'notesFromPartsphone', label: 'Parts Phone Consent' },
+  { key: 'notesFromSalessms', label: 'Sales SMS Consent' },
+  { key: 'notesFromSalesemail', label: 'Sales Email Consent' },
+  { key: 'notesFromSalesletter', label: 'Sales Letter Consent' },
+  { key: 'notesFromSalesphone', label: 'Sales Phone Consent' },
+  { key: 'notesFromServicesms', label: 'Service SMS Consent' },
+  { key: 'notesFromServiceemail', label: 'Service Email Consent' },
+  { key: 'notesFromServiceletter', label: 'Service Letter Consent' },
+  { key: 'notesFromServicephone', label: 'Service Phone Consent' },
+];
+
+const cleanNoteText = (txt) => {
+  if (!txt) return '';
+  const s = String(txt).trim();
+  return s.replace(/\[\d{4}[^\]]*\]/g, '').replace(/^Event:\s*/, '').trim();
+};
 
 export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
   const { 
@@ -162,7 +213,45 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
     )
   );
 
-  const hasNotesData = Boolean(customer?.notes && String(customer?.notes).trim() !== "");
+  const hasNotesData = Boolean(
+    customer?.isProspect ||
+    (customer?.notes && String(customer?.notes).trim() !== "") ||
+    E00MI_NOTE_FIELDS.some(f => Boolean(customer?.[f.key] && String(customer[f.key]).trim() !== ""))
+  );
+
+  // Notes Modal State & Computations
+  const [showNotesModal, setShowNotesModal] = useState(false);
+
+  const allModalNotes = (() => {
+    const list = E00MI_NOTE_FIELDS.map(({ key, label }) => {
+      const val = customer?.[key];
+      const hasVal = val !== undefined && val !== null && String(val).trim() !== '';
+      return { key, label, val, hasVal };
+    });
+
+    if (customer?.description && !customer.description.startsWith('Event:') && !customer.description.includes('E00MI')) {
+      list.unshift({
+        key: 'description',
+        label: 'Event Description',
+        val: customer.description,
+        hasVal: true
+      });
+    }
+
+    if (customer?.notes && !customer.isProspect) {
+      const cleaned = cleanNoteText(customer.notes);
+      list.unshift({
+        key: 'generalNotes',
+        label: 'Customer Notes',
+        val: cleaned,
+        hasVal: Boolean(cleaned)
+      });
+    }
+
+    return list;
+  })();
+
+  const displayedModalNotes = allModalNotes;
 
   if (isCollapsed) {
     return (
@@ -428,7 +517,7 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
           {/* Prospect Buttons 2-Column Grid */}
           <div className="grid grid-cols-2 gap-1.5">
             {prospectMatches.map((pros, idx) => {
-              const rawNo = pros.prospectNumber || pros.leadId || '';
+              const rawNo = pros.prospectNumber || (pros.isProspect ? (pros.customerNumber !== 'PROSPECT' ? pros.customerNumber : '') || pros.leadId || pros.enquiryNo : '') || '';
               const pNo = (rawNo && rawNo !== 'PROSPECT' && rawNo !== 'E00MI-LEAD' && !String(rawNo).startsWith('PR-')) ? String(rawNo) : '';
               
               // Only highlight this button if the active view is specifically this prospect
@@ -475,7 +564,8 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
       {/* 2. Customer Key Meta Data Table */}
       {customer && (
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 text-xs">
-          <div className="grid grid-cols-2 gap-y-3 gap-x-2">
+          <div className="max-h-[380px] overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 gap-y-3 gap-x-2">
             <div>
               <span className="text-gray-400 block text-[11px]">
                 {customer?.isProspect ? 'Prospect Since' : 'Customer Since'}
@@ -587,8 +677,56 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                 </div>
                 <div>
                   <span className="text-gray-400 block text-[11px]">Prospect Number</span>
-                  <span className="font-semibold text-gray-800">{customer?.prospectNumber || '-'}</span>
+                  <span className="font-semibold text-gray-800">
+                    {customer?.prospectNumber || (customer?.isProspect ? (customer?.customerNumber !== 'PROSPECT' ? customer?.customerNumber : null) || customer?.leadId || customer?.enquiryNo : null) || '-'}
+                  </span>
                 </div>
+
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Enquiry Number</span>
+                  <span className="font-mono font-semibold text-blue-700">{customer?.enquiryNo || customer?.enquiryNumber || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Enquiry Status</span>
+                  <span className="font-semibold text-amber-700">{customer?.statusOfEnquiry || customer?.status || '-'}</span>
+                </div>
+
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Assigned Advisor</span>
+                  <span className="font-semibold text-gray-800 truncate block" title={customer?.followupUsername ? `${customer.followupUsername} ${customer.followupUserLocation ? `(${customer.followupUserLocation})` : ''}` : '-'}>
+                    {customer?.followupUsername ? `${customer.followupUsername} ${customer.followupUserLocation ? `(${customer.followupUserLocation})` : ''}` : '-'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Vehicle of Interest</span>
+                  <span className="font-semibold text-blue-900 truncate block" title={customer?.vehicleDescription || [customer?.make, customer?.model].filter(Boolean).join(' ') || '-'}>
+                    {customer?.vehicleDescription || [customer?.make, customer?.model].filter(Boolean).join(' ') || '-'}
+                  </span>
+                </div>
+
+                {customer?.dateRequiredTo && (
+                  <div>
+                    <span className="text-gray-400 block text-[11px]">Date Required</span>
+                    <span className="font-semibold text-gray-800">{customer.dateRequiredTo}</span>
+                  </div>
+                )}
+                {(customer?.stockNumber || customer?.notesFromRegno) && (
+                  <div>
+                    <span className="text-gray-400 block text-[11px]">Stock / Reg</span>
+                    <span className="font-semibold text-gray-800 truncate block">
+                      {[customer?.stockNumber ? `Stock #${customer.stockNumber}` : null, customer?.notesFromRegno ? `Reg: ${customer.notesFromRegno}` : null].filter(Boolean).join(' • ')}
+                    </span>
+                  </div>
+                )}
+
+                {customer?.eventTaskDate && (
+                  <div className="col-span-2 pt-1 border-t border-gray-100">
+                    <span className="text-gray-400 block text-[11px]">Scheduled Follow-Up</span>
+                    <span className="font-semibold text-indigo-700">
+                      {customer.eventTaskDate} {customer.eventTaskTime || ''} {customer.eventTaskNotes ? `• ${customer.eventTaskNotes}` : ''}
+                    </span>
+                  </div>
+                )}
 
                 <div>
                   <span className="text-gray-400 block text-[11px]">Campaign</span>
@@ -607,7 +745,114 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                   <span className="text-gray-400 block text-[11px]">Channel</span>
                   <span className="font-semibold text-gray-800 truncate block" title={customer?.channel || '-'}>{customer?.channel || '-'}</span>
                 </div>
+
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Event Key</span>
+                  <span className="font-mono text-gray-800 text-[11px] truncate block" title={customer?.eventKey || '-'}>{customer?.eventKey || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Event Type</span>
+                  <span className="font-semibold text-gray-800">{customer?.eventType || '-'}</span>
+                </div>
+
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Created Date</span>
+                  <span className="font-semibold text-gray-800">{customer?.createdDate ? `${customer.createdDate} ${customer.createdTime || ''}`.trim() : '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Creator Name</span>
+                  <span className="font-semibold text-gray-800 truncate block" title={customer?.creatorName || '-'}>{customer?.creatorName || '-'}</span>
+                </div>
+
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Closed Date</span>
+                  <span className="font-semibold text-gray-800">{customer?.closedDate ? `${customer.closedDate} ${customer.closedTime || ''}`.trim() : '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Closed Flag</span>
+                  <span className="font-semibold text-gray-800">{customer?.closedFlag || '-'}</span>
+                </div>
+
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Manufacturer</span>
+                  <span className="font-semibold text-gray-800 truncate block" title={customer?.manufacturer || '-'}>{customer?.manufacturer || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Vehicle Make / Model</span>
+                  <span className="font-semibold text-gray-800 truncate block" title={[customer?.make, customer?.model].filter(Boolean).join(' ') || '-'}>
+                    {[customer?.make, customer?.model].filter(Boolean).join(' ') || '-'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Preferred Phone</span>
+                  <span className="font-mono font-semibold text-gray-800">{customer?.preferredPhone || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Preferred Phone 2</span>
+                  <span className="font-mono font-semibold text-gray-800">{customer?.preferredPhone2 || '-'}</span>
+                </div>
+
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Preferred Email</span>
+                  <span className="font-semibold text-gray-800 truncate block" title={customer?.preferredEmail || '-'}>{customer?.preferredEmail || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Home Phone</span>
+                  <span className="font-mono font-semibold text-gray-800">{customer?.homePhone || '-'}</span>
+                </div>
+
+                <div>
+                  <span className="text-gray-400 block text-[11px]">KDB Timestamp</span>
+                  <span className="font-mono text-gray-800 text-[10px] truncate block" title={customer?.kdbTimeStamp || '-'}>{customer?.kdbTimeStamp || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-400 block text-[11px]">Advisor Location</span>
+                  <span className="font-semibold text-gray-800 truncate block" title={customer?.followupUserLocation || '-'}>{customer?.followupUserLocation || '-'}</span>
+                </div>
               </>
+            )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 2b. Prospect Trade-In Vehicle Card (if present) */}
+      {customer?.isProspect && customer?.hasTradeIn && (
+        <div className="bg-white rounded-xl p-3.5 shadow-xs border border-amber-200 text-xs">
+          <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-amber-100">
+            <span className="font-bold text-amber-950 flex items-center gap-1.5 text-xs">
+              <FaCar className="text-amber-600 text-xs" />
+              <span>Trade-In Vehicle</span>
+            </span>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+              Appraisal
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-y-2 gap-x-2 text-[11px]">
+            <div className="col-span-2">
+              <span className="text-gray-400 block text-[10px]">Vehicle</span>
+              <span className="font-bold text-gray-800">
+                {[customer.tradeInMake, customer.tradeInModel, customer.tradeInYear].filter(Boolean).join(' ') || 'Trade-in Record'}
+              </span>
+            </div>
+            {customer.tradeInReg && (
+              <div>
+                <span className="text-gray-400 block text-[10px]">Plate / Reg</span>
+                <span className="font-mono font-semibold text-gray-800">{customer.tradeInReg}</span>
+              </div>
+            )}
+            {customer.tradeInMileage && (
+              <div>
+                <span className="text-gray-400 block text-[10px]">Mileage</span>
+                <span className="font-semibold text-gray-800">{customer.tradeInMileage} KM</span>
+              </div>
+            )}
+            {customer.tradeInNotes && (
+              <div className="col-span-2 pt-1 border-t border-gray-100">
+                <span className="text-gray-400 block text-[10px]">Notes</span>
+                <span className="text-gray-700 italic text-[10px]">{customer.tradeInNotes}</span>
+              </div>
             )}
           </div>
         </div>
@@ -741,17 +986,124 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
         </div>
       )}
 
-      {/* 5. Notes Card (Rendered strictly if notes exist in customer profile payload) */}
-      {hasNotesData && (
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 text-xs">
+      {/* 5. Notes Card (Scrollable API Notes with Labels) */}
+      {(hasNotesData || customer?.isProspect) && (
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-300 text-xs">
           <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
             <span className="font-bold text-gray-900 text-sm">Notes</span>
-            <button className="text-blue-600 font-bold text-xs hover:underline">Edit</button>
+            <button
+              type="button"
+              onClick={() => setShowNotesModal(true)}
+              className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-2.5 py-0.5 rounded border border-blue-200 transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+              title="Open Notes Modal"
+            >
+              <span>View</span>
+            </button>
           </div>
-          <div className="space-y-1 text-gray-700 text-[11px] leading-relaxed">
-            <p>{customer?.notes}</p>
+
+          <div className="max-h-60 overflow-y-auto pr-1">
+            {customer?.isProspect ? (
+              <div className="grid grid-cols-2 gap-y-3 gap-x-2 text-[11px]">
+                {E00MI_NOTE_FIELDS.map(({ key, label }) => {
+                  const val = customer?.[key];
+                  const hasVal = val !== undefined && val !== null && String(val).trim() !== '';
+                  return (
+                    <div key={key} className="min-w-0">
+                      <span className="text-gray-400 block text-[11px] leading-tight truncate font-medium" title={label}>
+                        {label}
+                      </span>
+                      <span className={`font-semibold block break-words text-xs ${hasVal ? 'text-gray-800' : 'text-gray-400'}`}>
+                        {hasVal ? String(val).trim() : '-'}
+                      </span>
+                    </div>
+                  );
+                })}
+                {/* General / Description notes from API if present and non-synthetic */}
+                {Boolean(customer?.description && !customer.description.startsWith('Event:') && !customer.description.includes('E00MI')) && (
+                  <div className="col-span-2 pt-1 border-t border-gray-100">
+                    <span className="text-gray-400 block text-[11px]">Description</span>
+                    <span className="font-semibold text-gray-800 text-xs block break-words">{customer.description}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1 text-gray-700 text-[11px] leading-relaxed">
+                <p>{cleanNoteText(customer?.notes) || '-'}</p>
+              </div>
+            )}
           </div>
         </div>
+      )}
+
+      {/* 6. View All Notes Modal */}
+      {showNotesModal && typeof document !== 'undefined' && createPortal(
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowNotesModal(false);
+          }}
+          className="fixed inset-0 bg-black/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in"
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-gray-200 text-xs animate-in fade-in zoom-in-95 duration-200 overflow-hidden"
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-slate-50/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center text-sm shadow-2xs">
+                  <FaStickyNote />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm">
+                    Notes Details
+                  </h3>
+                  <p className="text-[11px] text-gray-500">
+                    {customerName || 'Customer'} (Cust #{customerId || customer?.prospectNumber || '-'})
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setShowNotesModal(false)}
+                className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 flex items-center justify-center transition-colors cursor-pointer text-xs font-bold"
+                title="Close"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body: Scrollable Cards for Notes */}
+            <div className="p-4 overflow-y-auto space-y-2.5 flex-1 bg-slate-50/50">
+              {displayedModalNotes.length > 0 ? (
+                displayedModalNotes.map(({ key, label, val, hasVal }) => (
+                  <div
+                    key={key}
+                    className={`p-3 rounded-xl border transition-all ${
+                      hasVal
+                        ? 'bg-white border-blue-200 shadow-2xs'
+                        : 'bg-white/60 border-gray-200/80'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between pb-1 mb-1.5 border-b border-gray-100">
+                      <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full ${hasVal ? 'bg-blue-600' : 'bg-gray-300'}`} />
+                        <span>{label}</span>
+                      </span>
+                    </div>
+                    <div className="text-xs leading-relaxed text-gray-800 break-words whitespace-pre-wrap font-medium">
+                      {hasVal ? String(val).trim() : '-'}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-12 text-center text-gray-400 text-xs">
+                  No notes available.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

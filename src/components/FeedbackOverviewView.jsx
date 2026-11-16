@@ -29,6 +29,26 @@ import {
   FaTools
 } from 'react-icons/fa';
 
+export const SURVEY_URL_CONFIG = {
+  'Marketing Research': {
+    categoryLabel: 'Market Research',
+    BMWZ5: 'https://survey.in.webengage.com/ws/3apce19?data(Market_Research)=Market_Research_BMWZ5',
+    BMW7Series: 'https://survey.in.webengage.com/ws/cndmnh?data(Market_Research)=Market_Research_BMW7Series',
+  },
+  'Aftersales Survey': {
+    categoryLabel: 'After Sales',
+    BMWZ5: 'https://survey.in.webengage.com/ws/~10l01o9?data(After_Sales)=After_Sales_BMWZ5',
+    BMW7Series: 'https://survey.in.webengage.com/ws/67kgn2?data(After_Sales)=After_Sales_BMW7Series',
+  },
+  'Sales Survey': {
+    categoryLabel: 'Sales',
+    BMWZ5: 'https://survey.in.webengage.com/ws/~10l01j6?data(Sales)=Sales_BMWZ5',
+    BMW7Series: 'https://survey.in.webengage.com/ws/~jqa73e?data(Sales)=Sales_BMW7Series',
+  },
+};
+
+export const WEBENGAGE_SURVEY_URL = SURVEY_URL_CONFIG['Aftersales Survey'].BMWZ5;
+
 // Standard Automotive Customer Survey Categories and Subcategories
 export const SURVEY_STRUCTURE = {
   'Aftersales Survey': {
@@ -104,6 +124,33 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
   const [surveyId, setSurveyId] = useState("CSI-2026-01");
   const [type, setType] = useState("CSI");
   const [comments, setComments] = useState("");
+
+  // WebEngage Live Survey Model Variant & Loading State
+  const [selectedSurveyModel, setSelectedSurveyModel] = useState('BMWZ5');
+  const [iframeLoading, setIframeLoading] = useState(true);
+
+  const resolveSurveyConfig = () => {
+    const tab = String(activeSubTab || '').trim().toLowerCase();
+    if (tab.includes('market') || tab.includes('research')) {
+      return SURVEY_URL_CONFIG['Marketing Research'];
+    }
+    if (tab.includes('sale') && !tab.includes('after')) {
+      return SURVEY_URL_CONFIG['Sales Survey'];
+    }
+    return SURVEY_URL_CONFIG['Aftersales Survey'];
+  };
+
+  const currentSurveyConfig = resolveSurveyConfig();
+
+  const getSurveyUrl = () => {
+    return currentSurveyConfig?.[selectedSurveyModel] || currentSurveyConfig?.BMWZ5 || '';
+  };
+
+  useEffect(() => {
+    if (activeSubTab !== 'Overview') {
+      setIframeLoading(true);
+    }
+  }, [activeSubTab, selectedSurveyModel]);
 
   const fetchFeedbackData = async () => {
     if (!customerNumber) {
@@ -373,19 +420,21 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className={`flex flex-col ${activeSubTab !== 'Overview' ? 'h-full flex-1 min-h-0 overflow-hidden' : 'gap-4'}`}>
       
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-        <div>
-          <h2 className="text-base font-bold text-gray-900">
-            {getSubTabHeading()}
-          </h2>
-          <p className="text-[11px] text-gray-500">
-            Customer experience metrics for <span className="font-semibold text-gray-800">{customerName || '-'}</span> (Cust #{customerNumber || '-'})
-          </p>
+      {/* Header Bar (Overview Only) */}
+      {activeSubTab === 'Overview' && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+          <div>
+            <h2 className="text-base font-bold text-gray-900">
+              {getSubTabHeading()}
+            </h2>
+            <p className="text-[11px] text-gray-500">
+              Customer experience metrics for <span className="font-semibold text-gray-800">{customerName || '-'}</span> (Cust #{customerNumber || '-'})
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Submit Feedback Modal / Inline Form */}
       {showSubmitModal && (
@@ -859,23 +908,75 @@ export default function FeedbackOverviewView({ activeSubTab = 'Overview' }) {
         </div>
       )}
 
-      {/* SURVEY TYPES: Aftersales Survey, Sales Survey, Marketing Research -> UNDER DEVELOPMENT */}
+      {/* SURVEY TABS: Aftersales Survey, Sales Survey, Marketing Research -> FULL CONTAINER FILLING RED BOX */}
       {activeSubTab !== 'Overview' && (
-        <div className="bg-white rounded-xl p-8 sm:p-12 shadow-xs border border-gray-200 flex flex-col items-center justify-center text-center gap-3">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center text-2xl shadow-xs">
-            <FaTools />
+        <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden w-full h-full flex-1 min-h-0 flex flex-col">
+          {/* Survey Header Action Bar with Category Label & Model Variant Selector */}
+          <div className="bg-slate-50 px-4 py-2 border-b border-gray-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>{currentSurveyConfig.categoryLabel} Survey</span>
+              </span>
+              <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-mono">
+                {selectedSurveyModel === 'BMWZ5' ? 'BMW Z5' : 'BMW 7 Series'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-gray-500">Variant:</span>
+              <div className="inline-flex items-center gap-1 bg-gray-200/80 p-0.5 rounded-lg text-xs font-bold">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSurveyModel('BMWZ5');
+                    setIframeLoading(true);
+                  }}
+                  className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                    selectedSurveyModel === 'BMWZ5'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                  }`}
+                >
+                  BMW Z5
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSurveyModel('BMW7Series');
+                    setIframeLoading(true);
+                  }}
+                  className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                    selectedSurveyModel === 'BMW7Series'
+                      ? 'bg-blue-600 text-white shadow-2xs'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-white/60'
+                  }`}
+                >
+                  BMW 7 Series
+                </button>
+              </div>
+            </div>
           </div>
-          <div className="space-y-1">
-            <h3 className="font-extrabold text-gray-900 text-sm sm:text-base">
-              {activeSubTab}
-            </h3>
-            <span className="inline-block bg-amber-100 text-amber-900 font-extrabold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider">
-              Under Development
-            </span>
+
+          {/* Iframe Viewport: Fills 100% width and exactly remaining height */}
+          <div className="relative w-full flex-1 min-h-0 bg-white overflow-hidden">
+            {iframeLoading && (
+              <div className="absolute inset-0 bg-white/85 backdrop-blur-2xs flex flex-col items-center justify-center gap-2 z-10">
+                <FaSpinner className="animate-spin text-2xl text-blue-600" />
+                <span className="text-xs font-semibold text-gray-700">
+                  Loading {currentSurveyConfig.categoryLabel} ({selectedSurveyModel === 'BMWZ5' ? 'BMW Z5' : 'BMW 7 Series'})...
+                </span>
+              </div>
+            )}
+            <iframe
+              key={`${activeSubTab}-${selectedSurveyModel}`}
+              src={getSurveyUrl()}
+              title={`${currentSurveyConfig.categoryLabel} - ${selectedSurveyModel}`}
+              onLoad={() => setIframeLoading(false)}
+              className="w-full h-full border-0 bg-white block"
+              allow="clipboard-write; camera; microphone; geolocation"
+            />
           </div>
-          <p className="text-xs text-gray-500 max-w-md leading-relaxed">
-            The <strong className="text-gray-700">{activeSubTab}</strong> workflow and its subcategories are currently under development. Detailed surveys and analytics will be enabled here soon.
-          </p>
         </div>
       )}
 
