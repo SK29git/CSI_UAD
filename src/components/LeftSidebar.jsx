@@ -710,20 +710,12 @@ export default function LeftSidebar({ isCollapsed = false, onToggleCollapse }) {
                     <span className="font-semibold text-gray-800">{customer.dateRequiredTo}</span>
                   </div>
                 )}
-                {(customer?.stockNumber || customer?.notesFromRegno) && (
-                  <div>
-                    <span className="text-gray-400 block text-[11px]">Stock / Reg</span>
-                    <span className="font-semibold text-gray-800 truncate block">
-                      {[customer?.stockNumber ? `Stock #${customer.stockNumber}` : null, customer?.notesFromRegno ? `Reg: ${customer.notesFromRegno}` : null].filter(Boolean).join(' • ')}
-                    </span>
-                  </div>
-                )}
 
                 {customer?.eventTaskDate && (
                   <div className="col-span-2 pt-1 border-t border-gray-100">
                     <span className="text-gray-400 block text-[11px]">Scheduled Follow-Up</span>
                     <span className="font-semibold text-indigo-700">
-                      {customer.eventTaskDate} {customer.eventTaskTime || ''} {customer.eventTaskNotes ? `• ${customer.eventTaskNotes}` : ''}
+                      {[customer.eventTaskDate, customer.eventTaskTime].filter(Boolean).join(' ')}
                     </span>
                   </div>
                 )}

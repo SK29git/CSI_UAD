@@ -469,16 +469,6 @@ export default function ServiceCustomerVehicleCard({ isCollapsed = false, onTogg
                 <h5 className="font-extrabold text-gray-900 text-sm leading-tight truncate">
                   {customer?.vehicleDescription || [customer?.make, customer?.model].filter(Boolean).join(' ')}
                 </h5>
-                {customer?.stockNumber && (
-                  <span className="text-[10px] text-gray-500 font-mono font-bold block truncate">
-                    Stock #: {customer.stockNumber}
-                  </span>
-                )}
-                {customer?.notesFromRegno && (
-                  <span className="text-[10px] text-gray-600 font-semibold block truncate">
-                    Reg / Plate: {customer.notesFromRegno}
-                  </span>
-                )}
               </div>
             </div>
 
