@@ -1,6 +1,6 @@
 /**
- * Department Users Mock Data
- * Derived from AGMC Employee Directory / Department Mapping
+ * AGMC Department Users List - Managed by Orchestrator Portal
+ * Last Updated: 2026-11-17T08:15:28.657Z by SAdmin
  */
 
 export const DEPARTMENT_USERS = [
@@ -9587,33 +9587,30 @@ export const DEPARTMENT_USERS = [
   }
 ];
 
-/**
- * Filter users strictly by department name
- * Supports exact department matches and fallback for Accounts / Balance Sheet
- */
 export function getUsersByDepartment(deptName) {
-  if (!deptName) return [];
-  const target = String(deptName).trim().toLowerCase();
-
-  // Accounts special mapping (Accountant, Account Manager, Accountant View)
-  if (target === 'accounts') {
-    return DEPARTMENT_USERS.filter(u => 
-      u.role === 'ACCOUNT' || 
-      u.role === 'ACCMGR' || 
-      u.role === 'ASACCOUN' ||
-      (u.roleName && u.roleName.toLowerCase().includes('account'))
-    );
-  }
-
-  // Exact match against user.department or partial match
-  return DEPARTMENT_USERS.filter(u => {
-    const userDept = String(u.department || '').trim().toLowerCase();
-    if (userDept === target) return true;
-    if (target.includes('service') && (userDept.includes('service') || u.departmentType === 'W')) return true;
-    if (target.includes('sales') && !target.includes('after') && (userDept === 'sales' || u.departmentType === 'S')) return true;
-    if (target.includes('parts') && (userDept.includes('parts') || u.departmentType === 'P')) return true;
-    if ((target.includes('business') || target.includes('bdc') || target.includes('centre') || target.includes('center')) && (userDept.includes('business') || u.departmentType === 'Z')) return true;
-    if (target.includes('balance') && (userDept.includes('balance') || u.departmentType === 'B')) return true;
-    return false;
+  if (!deptName) return DEPARTMENT_USERS;
+  const target = String(deptName).toLowerCase().trim();
+  return DEPARTMENT_USERS.filter((u) => {
+    const dType = (u.departmentType || '').toLowerCase();
+    const dDesc = (u.departmentDescription || '').toLowerCase();
+    if (target === 'service') {
+      return dType.includes('serv') || dDesc.includes('serv') || dDesc.includes('workshop');
+    }
+    if (target === 'sales') {
+      return dType.includes('sale') || dDesc.includes('sale') || dDesc.includes('showroom');
+    }
+    if (target === 'parts') {
+      return dType.includes('part') || dDesc.includes('part');
+    }
+    if (target === 'business development centre' || target === 'bdc') {
+      return dType.includes('bdc') || dDesc.includes('bdc') || dDesc.includes('business dev');
+    }
+    if (target === 'accounts' || target === 'finance') {
+      return dType.includes('account') || dDesc.includes('account') || dDesc.includes('finance');
+    }
+    if (target === 'balance sheet') {
+      return dType.includes('balance') || dDesc.includes('balance') || dDesc.includes('sheet');
+    }
+    return dType.includes(target) || dDesc.includes(target);
   });
 }

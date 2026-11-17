@@ -1,6 +1,6 @@
 {
-  "lastUpdated": "2026-11-17T06:01:49.506Z",
-  "lastUpdatedBy": "System",
+  "lastUpdated": "2026-11-17T08:15:28.657Z",
+  "lastUpdatedBy": "SAdmin",
   "version": "1.0.0",
   "theme": {
     "preset": "Slate Default",
@@ -181,13 +181,6 @@
           "visible": true
         }
       ]
-    },
-    {
-      "id": "tracker",
-      "label": "IMEI Tracker",
-      "path": "/tracker",
-      "visible": true,
-      "subTabs": []
     }
   ],
   "brands": [

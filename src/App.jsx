@@ -7,7 +7,6 @@ import ComplaintsDashboardPage from './pages/ComplaintsDashboardPage';
 import ServiceBookingPage from './pages/ServiceBookingPage';
 import FeedbackPage from './pages/FeedbackPage';
 import SalesPage from './pages/SalesPage';
-import IMEITrackerPage from './pages/IMEITrackerPage';
 import EventHistoryPage from './pages/EventHistoryPage';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
@@ -25,7 +24,6 @@ export default function App() {
             <Route path="/service-booking" element={<ServiceBookingPage />} />
             <Route path="/feedback" element={<FeedbackPage />} />
             <Route path="/sales" element={<SalesPage />} />
-            <Route path="/tracker" element={<IMEITrackerPage />} />
             <Route path="/event-history" element={<EventHistoryPage />} />
             <Route path="/events" element={<EventHistoryPage />} />
             

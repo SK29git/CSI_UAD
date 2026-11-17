@@ -52,6 +52,9 @@ export function OrchestratorProvider({ children }) {
       const cached = localStorage.getItem(STORAGE_KEY_CONFIG);
       if (cached) {
         const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.tabs)) {
+          parsed.tabs = parsed.tabs.filter((t) => t.id !== 'tracker' && t.label !== 'IMEI Tracker');
+        }
         return { ...defaultConfig, ...parsed };
       }
     } catch (err) {
@@ -73,12 +76,17 @@ export function OrchestratorProvider({ children }) {
         if (res.ok) {
           const data = await res.json();
           if (isMounted && data && typeof data === 'object') {
-            setConfig(prev => {
+            setConfig((prev) => {
               // Preserve any existing local edits in localStorage
               const cached = localStorage.getItem(STORAGE_KEY_CONFIG);
               if (cached) {
                 try {
                   const parsed = JSON.parse(cached);
+                  if (Array.isArray(parsed.tabs)) {
+                    parsed.tabs = parsed.tabs.filter(
+                      (t) => t.id !== 'tracker' && t.label !== 'IMEI Tracker'
+                    );
+                  }
                   return { ...defaultConfig, ...data, ...parsed };
                 } catch {}
               }
