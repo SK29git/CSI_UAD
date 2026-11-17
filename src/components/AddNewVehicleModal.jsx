@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useCustomer } from '../context/CustomerContext';
+import { useOrchestrator } from '../context/OrchestratorContext';
 import { linkNewVehicleToCustomer } from '../utils/api';
 import { BMW_MODELS, getVariantsForModel } from '../data/bmwModelsVariants';
 import { getModelsForBrand } from '../data/brandModels';
@@ -39,15 +40,23 @@ export default function AddNewVehicleModal({
   onSuccess
 }) {
   const { customer, group: contextGroup } = useCustomer();
+  const orchestrator = useOrchestrator();
+
+  const brandOptions = useMemo(() => {
+    if (orchestrator?.brands && orchestrator.brands.length > 0) {
+      return orchestrator.brands;
+    }
+    return BRAND_MANUFACTURERS;
+  }, [orchestrator?.brands]);
 
   // Customer Details (Read-only)
   const defaultBrand = useMemo(() => {
     const raw = contextGroup || customer?.keyloopGroup || customer?.make || customer?.vehicleMake || 'BMW';
-    const found = BRAND_MANUFACTURERS.find(
+    const found = brandOptions.find(
       b => b.id.toUpperCase() === String(raw).toUpperCase() || b.label.toUpperCase() === String(raw).toUpperCase()
     );
     return found ? found.id : 'BMW';
-  }, [contextGroup, customer]);
+  }, [contextGroup, customer, brandOptions]);
 
   const [selectedBrand, setSelectedBrand] = useState('BMW');
   const customerId = customer?.customerNumber || '';
@@ -139,6 +148,14 @@ export default function AddNewVehicleModal({
     if (isBMW) {
       return BMW_MODELS;
     }
+    const dynamicModels = orchestrator?.getModelsForBrand?.(selectedBrand);
+    if (Array.isArray(dynamicModels) && dynamicModels.length > 0) {
+      return dynamicModels.map(m => ({
+        chassisCode: m,
+        modelName: m,
+        modelAsShown: `${selectedBrand} ${m}`
+      }));
+    }
     const rawList = getModelsForBrand(selectedBrand);
     if (Array.isArray(rawList) && rawList.length > 0) {
       return rawList.map(m => ({
@@ -154,7 +171,7 @@ export default function AddNewVehicleModal({
         modelAsShown: `${selectedBrand} Standard`
       }
     ];
-  }, [selectedBrand]);
+  }, [selectedBrand, orchestrator]);
 
   // Filtered models for search inside dropdown
   const filteredModels = useMemo(() => {
@@ -348,7 +365,7 @@ export default function AddNewVehicleModal({
                 disabled={submitting}
                 className="font-bold text-xs text-emerald-800 bg-white border border-emerald-300 hover:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 px-2.5 py-1 rounded-md cursor-pointer shadow-2xs transition-all pr-6 appearance-none disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {BRAND_MANUFACTURERS.map((b) => (
+                {brandOptions.map((b) => (
                   <option key={b.id} value={b.id}>
                     {b.label}
                   </option>

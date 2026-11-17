@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useCustomer, isExistingCustomer } from "../context/CustomerContext";
+import { useOrchestrator } from "../context/OrchestratorContext";
 import {
   FaThLarge,
   FaCar,
@@ -47,6 +48,21 @@ export default function CenterNavTabs({
     agentId,
     group: contextGroup,
   } = useCustomer();
+
+  const orchestrator = useOrchestrator();
+
+  const isTabVisible = (tabId) => {
+    if (!orchestrator?.tabs || !Array.isArray(orchestrator.tabs)) return true;
+    const found = orchestrator.tabs.find(
+      (t) =>
+        t.id === tabId ||
+        t.label?.toLowerCase() === tabId.toLowerCase() ||
+        (tabId === 'Complaints Manager' && (t.id === 'complaints' || t.label === 'Complaints')) ||
+        (tabId === 'Survey' && (t.id === 'feedback' || t.label === 'Feedback')) ||
+        (tabId === 'Event history & Sales Executive' && (t.id === 'events' || t.label === 'Event History'))
+    );
+    return found ? found.visible !== false : true;
+  };
 
   const handleNavigateModule = (targetModule) => {
     const searchParams = new URLSearchParams(window.location.search);
@@ -271,99 +287,111 @@ export default function CenterNavTabs({
     <div className="bg-white rounded-xl shadow-xs border border-slate-200/90 px-3.5 py-2 sm:px-5 mb-2.5 flex flex-col gap-1.5 transition-all">
       {/* ROW 1: Module Switcher Tabs */}
       <div className="flex items-center justify-center gap-4 sm:gap-7 lg:gap-8 text-xs border-b border-slate-100 pb-1.5 w-full flex-wrap">
-        <button
-          onClick={() => handleNavigateModule("Home")}
-          className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
-            activeModule === "Home"
-              ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
-              : "text-gray-600 font-semibold hover:text-gray-900"
-          }`}
-        >
-          <FaHome
-            className={`text-xs ${activeModule === "Home" ? "text-blue-600" : "text-gray-400"}`}
-          />
-          <span>Home</span>
-        </button>
+        {isTabVisible("Home") && (
+          <button
+            onClick={() => handleNavigateModule("Home")}
+            className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
+              activeModule === "Home"
+                ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
+                : "text-gray-600 font-semibold hover:text-gray-900"
+            }`}
+          >
+            <FaHome
+              className={`text-xs ${activeModule === "Home" ? "text-blue-600" : "text-gray-400"}`}
+            />
+            <span>Home</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => handleNavigateModule("Sales")}
-          className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
-            activeModule === "Sales"
-              ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
-              : "text-gray-600 font-semibold hover:text-gray-900"
-          }`}
-        >
-          <FaThLarge
-            className={`text-xs ${activeModule === "Sales" ? "text-blue-600" : "text-gray-400"}`}
-          />
-          <span>Sales</span>
-        </button>
+        {isTabVisible("Sales") && (
+          <button
+            onClick={() => handleNavigateModule("Sales")}
+            className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
+              activeModule === "Sales"
+                ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
+                : "text-gray-600 font-semibold hover:text-gray-900"
+            }`}
+          >
+            <FaThLarge
+              className={`text-xs ${activeModule === "Sales" ? "text-blue-600" : "text-gray-400"}`}
+            />
+            <span>Sales</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => handleNavigateModule("Service")}
-          className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
-            activeModule === "Service"
-              ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
-              : "text-gray-600 font-semibold hover:text-gray-900"
-          }`}
-        >
-          <FaCar
-            className={`text-xs ${activeModule === "Service" ? "text-blue-600" : "text-gray-400"}`}
-          />
-          <span>Service</span>
-        </button>
+        {isTabVisible("Service") && (
+          <button
+            onClick={() => handleNavigateModule("Service")}
+            className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
+              activeModule === "Service"
+                ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
+                : "text-gray-600 font-semibold hover:text-gray-900"
+            }`}
+          >
+            <FaCar
+              className={`text-xs ${activeModule === "Service" ? "text-blue-600" : "text-gray-400"}`}
+            />
+            <span>Service</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => handleNavigateModule("Feedback")}
-          className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
-            activeModule === "Feedback" || activeModule === "Survey"
-              ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
-              : "text-gray-600 font-semibold hover:text-gray-900"
-          }`}
-        >
-          <FaStar
-            className={`text-xs ${activeModule === "Feedback" || activeModule === "Survey" ? "text-blue-600" : "text-gray-400"}`}
-          />
-          <span>Survey</span>
-        </button>
+        {isTabVisible("Survey") && (
+          <button
+            onClick={() => handleNavigateModule("Feedback")}
+            className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
+              activeModule === "Feedback" || activeModule === "Survey"
+                ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
+                : "text-gray-600 font-semibold hover:text-gray-900"
+            }`}
+          >
+            <FaStar
+              className={`text-xs ${activeModule === "Feedback" || activeModule === "Survey" ? "text-blue-600" : "text-gray-400"}`}
+            />
+            <span>Survey</span>
+          </button>
+        )}
 
-        <button
-          onClick={() => handleNavigateModule("Complaints Manager")}
-          className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
-            activeModule === "Complaints Manager"
-              ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
-              : "text-gray-600 font-semibold hover:text-gray-900"
-          }`}
-        >
-          <FaShieldAlt
-            className={`text-xs ${activeModule === "Complaints Manager" ? "text-blue-600" : "text-gray-400"}`}
-          />
-          <span>Complaints Manager</span>
-        </button>
+        {isTabVisible("Complaints Manager") && (
+          <button
+            onClick={() => handleNavigateModule("Complaints Manager")}
+            className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
+              activeModule === "Complaints Manager"
+                ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
+                : "text-gray-600 font-semibold hover:text-gray-900"
+            }`}
+          >
+            <FaShieldAlt
+              className={`text-xs ${activeModule === "Complaints Manager" ? "text-blue-600" : "text-gray-400"}`}
+            />
+            <span>Complaints Manager</span>
+          </button>
+        )}
 
-        <button
-          onClick={() =>
-            handleNavigateModule("Event history & Sales Executive")
-          }
-          className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
-            activeModule === "Event history & Sales Executive" ||
-            activeModule === "Event History" ||
-            activeModule === "Events"
-              ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
-              : "text-gray-600 font-semibold hover:text-gray-900"
-          }`}
-        >
-          <FaHistory
-            className={`text-xs ${
+        {isTabVisible("Event history & Sales Executive") && (
+          <button
+            onClick={() =>
+              handleNavigateModule("Event history & Sales Executive")
+            }
+            className={`pb-1 flex items-center gap-1.5 sm:gap-2 cursor-pointer transition-all ${
               activeModule === "Event history & Sales Executive" ||
               activeModule === "Event History" ||
               activeModule === "Events"
-                ? "text-blue-600"
-                : "text-gray-400"
+                ? "text-blue-600 font-extrabold border-b-2 border-blue-600"
+                : "text-gray-600 font-semibold hover:text-gray-900"
             }`}
-          />
-          <span>Event History & Sales Executive</span>
-        </button>
+          >
+            <FaHistory
+              className={`text-xs ${
+                activeModule === "Event history & Sales Executive" ||
+                activeModule === "Event History" ||
+                activeModule === "Events"
+                  ? "text-blue-600"
+                  : "text-gray-400"
+              }`}
+            />
+            <span>Event History & Sales Executive</span>
+          </button>
+        )}
       </div>
 
       {/* ROW 2: Sub-Navigation Workflow Bar with Visual Pill and Icons */}

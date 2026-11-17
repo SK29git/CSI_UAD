@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useCustomer } from "../context/CustomerContext";
+import { useOrchestrator } from "../context/OrchestratorContext";
 import { createComplaintCase } from "../utils/api";
 import {
   COMPLAINT_BRANCHES,
@@ -76,14 +77,41 @@ export default function CreateComplaintView() {
   const [customerEmail, setCustomerEmail] = useState(initialEmail);
   const [branch, setBranch] = useState(initialBranch);
 
+  // Orchestrator dynamic metadata
+  const orchestrator = useOrchestrator();
+  const departmentsList = orchestrator?.complaintDepartments?.length
+    ? orchestrator.complaintDepartments
+    : COMPLAINT_DEPARTMENTS;
+  const sourcesList = orchestrator?.complaintSources?.length
+    ? orchestrator.complaintSources
+    : COMPLAINT_SOURCES;
+  const prioritiesList = orchestrator?.complaintPriorities?.length
+    ? orchestrator.complaintPriorities
+    : COMPLAINT_PRIORITIES;
+
+  const getDynamicGroups = (dept) => {
+    const res = orchestrator?.getGroupsForDepartment?.(dept);
+    return res && res.length > 0 ? res : getGroupsForDepartment(dept);
+  };
+
+  const getDynamicCategories = (dept, grp) => {
+    const res = orchestrator?.getCategoriesForDepartmentAndGroup?.(dept, grp);
+    return res && res.length > 0 ? res : getCategoriesForDepartmentAndGroup(dept, grp);
+  };
+
+  const getDynamicUsers = (dept) => {
+    const res = orchestrator?.getUsersByDepartment?.(dept);
+    return res && res.length > 0 ? res : getUsersByDepartment(dept);
+  };
+
   // Cascading classification state
-  const [department, setDepartment] = useState(COMPLAINT_DEPARTMENTS[0]); // "Service"
-  const initialGroups = getGroupsForDepartment(COMPLAINT_DEPARTMENTS[0]);
+  const [department, setDepartment] = useState(departmentsList[0] || "Service");
+  const initialGroups = getDynamicGroups(departmentsList[0] || "Service");
   const [complaintGroup, setComplaintGroup] = useState(
     initialGroups[0] || "Process",
   );
-  const initialCategories = getCategoriesForDepartmentAndGroup(
-    COMPLAINT_DEPARTMENTS[0],
+  const initialCategories = getDynamicCategories(
+    departmentsList[0] || "Service",
     initialGroups[0] || "Process",
   );
   const [category, setCategory] = useState(
@@ -92,14 +120,14 @@ export default function CreateComplaintView() {
 
   // Assign User state (derived from Excel/CSV by Department)
   const [assignedUserId, setAssignedUserId] = useState(() => {
-    const initialUsers = getUsersByDepartment(COMPLAINT_DEPARTMENTS[0]);
+    const initialUsers = getDynamicUsers(departmentsList[0] || "Service");
     return initialUsers[0]?.id || "";
   });
 
-  const [source, setSource] = useState(COMPLAINT_SOURCES[0]); // "Customer Call"
+  const [source, setSource] = useState(sourcesList[0] || "Customer Call");
   const [complaintPriority, setComplaintPriority] = useState(
-    COMPLAINT_PRIORITIES[0],
-  ); // "Urgent"
+    prioritiesList[0] || "Urgent",
+  );
   const [complaint, setComplaint] = useState(
     "Car not ready on the promised date",
   );
@@ -132,29 +160,29 @@ export default function CreateComplaintView() {
   // Cascading change handlers
   const handleDepartmentChange = (newDept) => {
     setDepartment(newDept);
-    const groups = getGroupsForDepartment(newDept);
+    const groups = getDynamicGroups(newDept);
     const nextGroup = groups[0] || "";
     setComplaintGroup(nextGroup);
-    const cats = getCategoriesForDepartmentAndGroup(newDept, nextGroup);
+    const cats = getDynamicCategories(newDept, nextGroup);
     setCategory(cats[0] || "");
 
     // Update assigned user dropdown according to the newly selected department
-    const deptUsers = getUsersByDepartment(newDept);
+    const deptUsers = getDynamicUsers(newDept);
     setAssignedUserId(deptUsers[0]?.id || "");
   };
 
   const handleGroupChange = (newGroup) => {
     setComplaintGroup(newGroup);
-    const cats = getCategoriesForDepartmentAndGroup(department, newGroup);
+    const cats = getDynamicCategories(department, newGroup);
     setCategory(cats[0] || "");
   };
 
-  const availableGroups = getGroupsForDepartment(department);
-  const availableCategories = getCategoriesForDepartmentAndGroup(
+  const availableGroups = getDynamicGroups(department);
+  const availableCategories = getDynamicCategories(
     department,
     complaintGroup,
   );
-  const availableUsers = getUsersByDepartment(department);
+  const availableUsers = getDynamicUsers(department);
   const selectedUser =
     availableUsers.find((u) => u.id === assignedUserId) ||
     availableUsers[0] ||
@@ -574,7 +602,7 @@ export default function CreateComplaintView() {
                   onChange={(e) => setBranch(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer truncate"
                 >
-                  {COMPLAINT_BRANCHES.map((b) => (
+                  {branchesList.map((b) => (
                     <option key={b} value={b}>
                       {b}
                     </option>
@@ -597,7 +625,7 @@ export default function CreateComplaintView() {
                   onChange={(e) => handleDepartmentChange(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
                 >
-                  {COMPLAINT_DEPARTMENTS.map((d) => (
+                  {departmentsList.map((d) => (
                     <option key={d} value={d}>
                       {d}
                     </option>
@@ -696,7 +724,7 @@ export default function CreateComplaintView() {
                   onChange={(e) => setSource(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer truncate"
                 >
-                  {COMPLAINT_SOURCES.map((s) => (
+                  {sourcesList.map((s) => (
                     <option key={s} value={s}>
                       {s}
                     </option>
@@ -719,7 +747,7 @@ export default function CreateComplaintView() {
                   onChange={(e) => setComplaintPriority(e.target.value)}
                   className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs cursor-pointer"
                 >
-                  {COMPLAINT_PRIORITIES.map((p) => (
+                  {prioritiesList.map((p) => (
                     <option key={p} value={p}>
                       {p}
                     </option>

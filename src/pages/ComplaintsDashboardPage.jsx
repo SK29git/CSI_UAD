@@ -79,7 +79,10 @@ export default function ComplaintsDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f3f4f6] text-gray-800 flex flex-col font-sans">
+    <div
+      style={{ backgroundColor: 'var(--app-bg, #f3f4f6)' }}
+      className="min-h-screen text-gray-800 flex flex-col font-sans transition-colors duration-300"
+    >
       {/* Main 3-Column Layout */}
       <div className="max-w-[1600px] w-full mx-auto p-2 sm:p-3 lg:p-5 flex-1 flex flex-row gap-2 sm:gap-3 lg:gap-4 items-start relative">
         

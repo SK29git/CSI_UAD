@@ -108,7 +108,10 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9] text-gray-800 flex flex-col font-sans relative overflow-x-hidden selection:bg-blue-500 selection:text-white">
+    <div
+      style={{ backgroundColor: 'var(--app-bg, #f1f5f9)' }}
+      className="min-h-screen text-gray-800 flex flex-col font-sans relative overflow-x-hidden selection:bg-blue-500 selection:text-white transition-colors duration-300"
+    >
       {/* Background Ambient Atmosphere Glow Orbs for Glassmorphism */}
       <div className="pointer-events-none fixed -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-blue-400/20 to-indigo-400/10 rounded-full blur-3xl" />
       <div className="pointer-events-none fixed top-1/3 -right-32 w-[32rem] h-[32rem] bg-gradient-to-bl from-indigo-400/15 via-sky-300/10 to-transparent rounded-full blur-3xl" />

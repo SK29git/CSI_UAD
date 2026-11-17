@@ -15,6 +15,7 @@ import cors from 'cors';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { getOrchestratorConfig, saveOrchestratorConfig, publishToGit } from '../scripts/orchestratorService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -83,6 +84,33 @@ function timeAgo(timestamp) {
 }
 
 // ─── API Routes ──────────────────────────────────────────────────────────────
+
+// Orchestrator Endpoints
+app.get('/orchestrator-api/config', (req, res) => {
+  const config = getOrchestratorConfig();
+  if (!config) return res.status(404).json({ error: 'Config not found' });
+  res.json(config);
+});
+
+app.post('/orchestrator-api/save', (req, res) => {
+  try {
+    const { config, adminUser } = req.body;
+    const saved = saveOrchestratorConfig(config, adminUser);
+    res.json({ success: true, config: saved });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/orchestrator-api/publish', (req, res) => {
+  try {
+    const { config, commitMessage, adminUser } = req.body;
+    const result = publishToGit({ config, commitMessage, adminUser });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 /**
  * POST /api/devices/register
