@@ -322,7 +322,16 @@ export default function SalesNewLeadView({
   const [origin, setOrigin] = useState(
     group ? `${group} Test Drive - EN` : "Test Drive - EN",
   );
-  const [source, setSource] = useState(LEAD_SOURCES[0]);
+  const [source, setSource] = useState(() => {
+    if (isService) return "CRM Service Booking Lead";
+    return LEAD_SOURCES[0];
+  });
+
+  useEffect(() => {
+    if (isService) {
+      setSource("CRM Service Booking Lead");
+    }
+  }, [isService]);
   const [branch, setBranch] = useState(() => {
     if (
       customer?.branchCode &&
@@ -824,7 +833,7 @@ export default function SalesNewLeadView({
         city: customer?.location?.city || "Dubai",
         country: customer?.nationality || "United Arab Emirates",
         postcode: "",
-        source: source || customer?.leadSource || "Inbound",
+        source: isService ? "CRM Service Booking Lead" : (source || customer?.leadSource || "Inbound"),
         dob: customer?.dateOfBirth || "",
         vehicleType: (newused || "new").toLowerCase(),
         manufacturer: make || "BMW",
@@ -926,7 +935,7 @@ export default function SalesNewLeadView({
       location: computedLocation,
       title: title || "",
       leadOrigin: origin || "",
-      leadSource: source || LEAD_SOURCES[0],
+      leadSource: isService ? "CRM Service Booking Lead" : (source || LEAD_SOURCES[0]),
       branch: branch || "10",
       notes: notes || "",
     };
@@ -1125,7 +1134,7 @@ export default function SalesNewLeadView({
           location: computedLocation,
           title: title || "",
           leadOrigin: origin || "",
-          leadSource: source || LEAD_SOURCES[0],
+          leadSource: isService ? "CRM Service Booking Lead" : (source || LEAD_SOURCES[0]),
           branch: branch || "10",
           notes: `Existing Customer #${custNo}. ${notes || ""}`,
         });
@@ -1547,15 +1556,30 @@ export default function SalesNewLeadView({
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Lead Source <span className="text-rose-500 font-bold">*</span>
                 </label>
-                <CustomSelect
-                  icon={<FaBullhorn className="text-blue-500 text-[10px]" />}
-                  value={source}
-                  onChange={(val) => setSource(val)}
-                  options={LEAD_SOURCES.map((s) => ({ value: s, label: s }))}
-                  placeholder="Select Lead Source"
-                  searchPlaceholder="Search source..."
-                  required
-                />
+                {isService ? (
+                  <div className="w-full h-8 px-2 bg-slate-100 border border-slate-200/90 rounded-lg shadow-2xs flex items-center transition-all cursor-not-allowed select-none">
+                    <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                      <FaBullhorn />
+                    </div>
+                    <input
+                      type="text"
+                      value="CRM Service Booking Lead"
+                      readOnly
+                      disabled
+                      className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
+                    />
+                  </div>
+                ) : (
+                  <CustomSelect
+                    icon={<FaBullhorn className="text-blue-500 text-[10px]" />}
+                    value={source}
+                    onChange={(val) => setSource(val)}
+                    options={LEAD_SOURCES.map((s) => ({ value: s, label: s }))}
+                    placeholder="Select Lead Source"
+                    searchPlaceholder="Search source..."
+                    required
+                  />
+                )}
               </div>
 
               {/* 3. Branch Code */}

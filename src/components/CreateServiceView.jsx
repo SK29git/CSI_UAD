@@ -22,6 +22,8 @@ import {
   FaHashtag,
   FaSyncAlt,
   FaCheckCircle,
+  FaCopy,
+  FaCheck,
 } from "react-icons/fa";
 
 export const SERVICE_REQUEST_REFERENCES = [
@@ -55,6 +57,7 @@ export default function CreateServiceView({ mode = "other_request" }) {
     vehicleDetails,
     vehicles,
     currentMobile,
+    showToast,
   } = useCustomer();
 
   // Prefilled customer details
@@ -129,11 +132,33 @@ export default function CreateServiceView({ mode = "other_request" }) {
   });
   const [zofeurBookingId, setZofeurBookingId] = useState(generateNewBookingId);
 
+  // Address fields for Zofeur
+  const [zofeurPickupAddress, setZofeurPickupAddress] = useState(() => {
+    return customer?.address || customer?.street || "";
+  });
+  const [zofeurDropoffAddress, setZofeurDropoffAddress] = useState("");
+
   // Latitudes and longitudes - kept blank for agent to input
   const [zofeurPickupLat, setZofeurPickupLat] = useState("");
   const [zofeurPickupLong, setZofeurPickupLong] = useState("");
   const [zofeurDropoffLat, setZofeurDropoffLat] = useState("");
   const [zofeurDropoffLong, setZofeurDropoffLong] = useState("");
+
+  // Copy feedback state for toast ride ID
+  const [copiedField, setCopiedField] = useState(null);
+
+  const handleCopy = (text, fieldName) => {
+    if (!text) return;
+    try {
+      navigator.clipboard.writeText(String(text));
+      setCopiedField(fieldName);
+      setTimeout(() => {
+        setCopiedField(null);
+      }, 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
 
   // Keep fields synced when customer/vehicle loads
   useEffect(() => {
@@ -148,6 +173,10 @@ export default function CreateServiceView({ mode = "other_request" }) {
     const plate = vehicleDetails?.registrationNumber || vehicles?.[0]?.registrationNumber || customer?.plateNumber || customer?.licensePlate || "";
     if (plate) {
       setZofeurPlate(plate);
+    }
+    const addr = customer?.address || customer?.street || "";
+    if (addr && !zofeurPickupAddress) {
+      setZofeurPickupAddress(addr);
     }
   }, [customer, currentMobile, selectedVin, vehicleDetails, vehicles]);
 
@@ -183,6 +212,14 @@ export default function CreateServiceView({ mode = "other_request" }) {
       }
       if (!String(zofeurPlate).trim()) {
         setErrorMsg("License plate number is required for breakdown recovery.");
+        return;
+      }
+      if (!String(zofeurPickupAddress).trim()) {
+        setErrorMsg("Pickup address is required for breakdown recovery.");
+        return;
+      }
+      if (!String(zofeurDropoffAddress).trim()) {
+        setErrorMsg("Dropoff address is required for breakdown recovery.");
         return;
       }
       if (!String(zofeurPickupLat).trim() || isNaN(parseFloat(zofeurPickupLat))) {
@@ -240,6 +277,9 @@ export default function CreateServiceView({ mode = "other_request" }) {
           const payload = {
             phone_no: String(zofeurPhoneNo).trim(),
             country_code: String(zofeurCountryCode).trim() || "+971",
+            full_name: String(customerName || customer?.name || customer?.fullName || "Customer").trim(),
+            pickup_address: String(zofeurPickupAddress).trim(),
+            dropoff_address: String(zofeurDropoffAddress).trim(),
             pickup_lat: parseFloat(zofeurPickupLat),
             pickup_long: parseFloat(zofeurPickupLong),
             dropoff_lat: parseFloat(zofeurDropoffLat),
@@ -279,14 +319,38 @@ export default function CreateServiceView({ mode = "other_request" }) {
         );
       }
 
+      // Extract rideid from Zofeur 200 response
+      const rawRideId =
+        zofeurResult?.data?.data?.rideid ??
+        zofeurResult?.data?.rideid ??
+        zofeurResult?.data?.data?.ride_id ??
+        zofeurResult?.data?.ride_id ??
+        zofeurResult?.data?.data?.rideId ??
+        zofeurResult?.data?.rideId ??
+        zofeurResult?.data?.data?.id ??
+        zofeurResult?.data?.id ??
+        null;
+
       // Both succeeded
       setSuccessResult({
         bookingId: zofeurBookingId,
+        rideId: rawRideId,
         zofeurData: zofeurResult?.data,
         message: isBreakdown
-          ? `Breakdown request & Zofeur ride booking #${zofeurBookingId} created successfully!`
+          ? rawRideId
+            ? `Breakdown request & Zofeur ride created successfully!`
+            : `Breakdown request & Zofeur ride booking #${zofeurBookingId} created successfully!`
           : "Service request notes submitted successfully!",
       });
+
+      if (showToast && rawRideId) {
+        showToast({
+          type: "success",
+          title: "Breakdown Request Created",
+          taskId: String(rawRideId),
+          message: `Breakdown ride #${rawRideId} dispatched for booking #${zofeurBookingId}.`,
+        });
+      }
 
       setNotes("");
       setSelectedReferences([]);
@@ -517,7 +581,47 @@ export default function CreateServiceView({ mode = "other_request" }) {
                 </div>
               </div>
 
-              {/* 9. Pickup Latitude */}
+              {/* 9. Pickup Address */}
+              <div className="col-span-1 sm:col-span-2">
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Pickup Address <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-rose-50/80 border border-rose-100 flex items-center justify-center text-rose-500 shrink-0 text-[10px] mr-1.5">
+                    <FaMapMarkerAlt />
+                  </div>
+                  <input
+                    type="text"
+                    value={zofeurPickupAddress}
+                    onChange={(e) => setZofeurPickupAddress(e.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="Enter pickup address / landmark..."
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-medium text-gray-800 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* 10. Dropoff Address */}
+              <div className="col-span-1 sm:col-span-2">
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Dropoff Address <span className="text-rose-500 font-bold">*</span>
+                </label>
+                <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-emerald-50/80 border border-emerald-100 flex items-center justify-center text-emerald-500 shrink-0 text-[10px] mr-1.5">
+                    <FaBuilding />
+                  </div>
+                  <input
+                    type="text"
+                    value={zofeurDropoffAddress}
+                    onChange={(e) => setZofeurDropoffAddress(e.target.value)}
+                    disabled={isSubmitting}
+                    placeholder="Enter dropoff destination / workshop..."
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-medium text-gray-800 text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* 11. Pickup Latitude */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Pickup Latitude <span className="text-rose-500 font-bold">*</span>
@@ -692,25 +796,82 @@ export default function CreateServiceView({ mode = "other_request" }) {
           </div>
         </div>
 
-        {/* Inline Success Message */}
+        {/* Inline Success Message / Toast */}
         {successResult && (
-          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-2.5 text-emerald-900 text-xs shadow-2xs animate-fadeIn">
-            <FaCheckCircle className="text-emerald-500 text-base shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <div className="font-bold text-emerald-950">{successResult.message}</div>
-              {successResult.zofeurData && (
-                <div className="text-[11px] text-emerald-700 mt-0.5 flex flex-wrap gap-2">
-                  <span>Status: {successResult.zofeurData.message || "Confirmed"}</span>
+          <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-2.5 shadow-xs text-emerald-900 animate-fadeIn">
+            <div className="flex items-center gap-2.5">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center font-bold text-xs text-white bg-emerald-600 shadow-2xs shrink-0">
+                ✓
+              </div>
+              <div>
+                <h4 className="font-bold text-xs text-emerald-950 leading-tight">
+                  {successResult.message}
+                </h4>
+                <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                  {/* Ride ID with Copy button */}
+                  {successResult.rideId && (
+                    <div className="text-[11px] text-emerald-800 font-medium flex items-center gap-1.5">
+                      <span>Ride ID:</span>
+                      <span className="inline-flex items-center gap-1 font-mono font-bold text-emerald-950 bg-emerald-100/90 px-1.5 py-0.5 rounded border border-emerald-300">
+                        <span>{successResult.rideId}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(successResult.rideId, "rideId")}
+                          className="hover:text-emerald-700 text-emerald-600 transition-colors p-0.5 rounded cursor-pointer"
+                          title={copiedField === "rideId" ? "Copied!" : "Copy Ride ID"}
+                        >
+                          {copiedField === "rideId" ? (
+                            <FaCheck className="text-[10px] text-emerald-700" />
+                          ) : (
+                            <FaCopy className="text-[10px]" />
+                          )}
+                        </button>
+                      </span>
+                      {copiedField === "rideId" && (
+                        <span className="text-[10px] font-bold text-emerald-700">Copied!</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Booking ID with Copy button */}
                   {successResult.bookingId && (
-                    <span>• Booking ID: #{successResult.bookingId}</span>
+                    <div className="text-[11px] text-blue-900 font-medium flex items-center gap-1.5">
+                      <span>Booking ID:</span>
+                      <span className="inline-flex items-center gap-1 font-mono font-bold text-blue-950 bg-blue-100/90 px-1.5 py-0.5 rounded border border-blue-300">
+                        <span>#{successResult.bookingId}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(successResult.bookingId, "bookingId")}
+                          className="hover:text-blue-700 text-blue-600 transition-colors p-0.5 rounded cursor-pointer"
+                          title={copiedField === "bookingId" ? "Copied!" : "Copy Booking ID"}
+                        >
+                          {copiedField === "bookingId" ? (
+                            <FaCheck className="text-[10px] text-emerald-600" />
+                          ) : (
+                            <FaCopy className="text-[10px]" />
+                          )}
+                        </button>
+                      </span>
+                      {copiedField === "bookingId" && (
+                        <span className="text-[10px] font-bold text-blue-700">Copied!</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Zofeur Status */}
+                  {successResult.zofeurData && (
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100/70 px-1.5 py-0.5 rounded border border-emerald-200">
+                      Status: {successResult.zofeurData.message || "Confirmed"}
+                    </span>
                   )}
                 </div>
-              )}
+              </div>
             </div>
             <button
               type="button"
               onClick={() => setSuccessResult(null)}
-              className="text-emerald-600 hover:text-emerald-800 text-xs font-bold px-1 cursor-pointer"
+              className="text-emerald-600 hover:text-emerald-800 text-xs font-bold px-1.5 py-0.5 rounded cursor-pointer self-start"
+              title="Dismiss"
             >
               ✕
             </button>
@@ -743,6 +904,8 @@ export default function CreateServiceView({ mode = "other_request" }) {
               setErrorMsg("");
               setSuccessResult(null);
               if (isBreakdown) {
+                setZofeurPickupAddress("");
+                setZofeurDropoffAddress("");
                 setZofeurPickupLat("");
                 setZofeurPickupLong("");
                 setZofeurDropoffLat("");
