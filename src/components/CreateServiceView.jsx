@@ -40,8 +40,8 @@ export const SERVICE_REQUEST_REFERENCES = [
 
 export const BREAKDOWN_REFERENCES = [
   { type: "ES5", label: "Send BMW Technician" },
-  { type: "ES3", label: "Recovery 3rd Party" },
-  { type: "ES9", label: "Recovery AGMC" },
+  { type: "ES9", label: "Recovery 3rd Party" },
+  { type: "ES3", label: "Recovery AGMC" },
 ];
 
 export default function CreateServiceView({ mode = "other_request" }) {
