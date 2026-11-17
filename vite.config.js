@@ -72,6 +72,9 @@ export default defineConfig({
   ],
   server: {
     port: 5175,
+    watch: {
+      ignored: ['**/src/data/orchestratorConfig.json', '**/src/data/departmentUsers.js']
+    },
     proxy: {
       '/api/service': {
         target: 'https://mt-otolink-api-stage.otolink.app',

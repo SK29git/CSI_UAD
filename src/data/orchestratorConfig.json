@@ -1,13 +1,13 @@
 {
-  "lastUpdated": "2026-11-17T08:15:28.657Z",
+  "lastUpdated": "2026-11-17T09:44:54.394Z",
   "lastUpdatedBy": "SAdmin",
   "version": "1.0.0",
   "theme": {
-    "preset": "Slate Default",
-    "backgroundColor": "#f1f5f9",
+    "preset": "Soft Rose",
+    "backgroundColor": "#fff1f2",
     "cardColor": "#ffffff",
-    "accentColor": "#2563eb",
-    "textColor": "#1e293b"
+    "accentColor": "#e11d48",
+    "textColor": "#881337"
   },
   "tabs": [
     {

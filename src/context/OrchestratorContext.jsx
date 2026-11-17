@@ -112,32 +112,19 @@ export function OrchestratorProvider({ children }) {
     }
   }, [config?.theme?.backgroundColor]);
 
-  // Update config in local state AND auto-persist to server disk
+  // Update config in local draft state (does NOT write to disk or trigger page reloads)
   const updateConfig = useCallback((updater) => {
-    setConfig(prev => {
+    setConfig((prev) => {
       const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
       try {
         localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(next));
       } catch (e) {
         console.warn('Failed to cache config in localStorage', e);
       }
-
-      // Auto-save to disk in background so changes persist across refreshes
-      fetch('/orchestrator-api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          config: next,
-          adminUser: activeAdmin || 'Admin'
-        })
-      }).catch(err => {
-        console.warn('[Orchestrator] Auto-save error (offline fallback active):', err.message);
-      });
-
       return next;
     });
     setHasUnsavedChanges(true);
-  }, [activeAdmin]);
+  }, []);
 
   // Save config draft locally & to disk
   const saveConfig = useCallback(async () => {
