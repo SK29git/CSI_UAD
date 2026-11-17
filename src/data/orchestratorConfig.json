@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-17T09:44:54.394Z",
+  "lastUpdated": "2026-11-17T10:09:39.381Z",
   "lastUpdatedBy": "SAdmin",
   "version": "1.0.0",
   "theme": {
@@ -15,7 +15,13 @@
       "label": "Home",
       "path": "/home",
       "visible": true,
-      "subTabs": []
+      "subTabs": [
+        {
+          "id": "Settings",
+          "label": "Settings",
+          "visible": true
+        }
+      ]
     },
     {
       "id": "complaints",
