@@ -1123,7 +1123,7 @@ export default function SalesTestDriveView() {
                       const slotDate = row.slot?.startDate || row.date || 'N/A';
                       const slotTime = row.slot?.startAt ? new Date(row.slot.startAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (row.time || '');
                       const branchText = row.branch?.name || row.branch?.code || (typeof row.branch === 'string' && row.branch !== '{}' ? row.branch : '') || 'Showroom';
-                      const advisorText = row.advisor?.name || row.advisor?.code || (typeof row.advisor === 'string' && row.advisor !== '{}' ? row.advisor : '') || 'Assigned Advisor';
+                      const advisorText = row.advisor?.name || row.advisor?.code || (typeof row.advisor === 'string' && row.advisor !== '{}' ? row.advisor : '') || '-';
 
                       return (
                         <tr key={idx} className="hover:bg-blue-50/40 transition-colors">

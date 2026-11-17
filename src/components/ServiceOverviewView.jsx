@@ -646,7 +646,7 @@ export default function ServiceOverviewView() {
                 <span className="text-gray-500 block text-[10px] font-semibold uppercase">Service Advisor</span>
                 <span className="font-bold text-gray-900 flex items-center gap-1 truncate">
                   <FaUserTie className="text-blue-500 text-[10px] shrink-0" />
-                  <span className="truncate">{activeBooking.advisor?.name || activeBooking.advisor || activeBooking.bookedBy || 'Assigned Advisor'}</span>
+                  <span className="truncate">{activeBooking.advisor?.name || activeBooking.advisor || activeBooking.bookedBy || '-'}</span>
                 </span>
               </div>
               <div>
