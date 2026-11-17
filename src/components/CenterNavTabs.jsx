@@ -221,6 +221,9 @@ export default function CenterNavTabs({
         return <FaHeart className="text-xs" />;
       case "Lost Sales Analysis":
         return <FaChartPie className="text-xs" />;
+      case "Settings":
+      case "Setting":
+        return <FaTasks className="text-xs" />;
       default:
         return null;
     }
@@ -269,19 +272,45 @@ export default function CenterNavTabs({
     { id: "Customer Event", label: "Customer Event" },
   ];
 
-  let currentSubTabs = complaintSubTabs;
-  if (activeModule === "Home") currentSubTabs = [];
-  if (activeModule === "Service") currentSubTabs = serviceSubTabs;
-  if (activeModule === "Feedback" || activeModule === "Survey")
-    currentSubTabs = feedbackSubTabs;
-  if (activeModule === "Sales") currentSubTabs = salesSubTabs;
-  if (
-    activeModule === "Event history & Sales Executive" ||
-    activeModule === "Event History" ||
-    activeModule === "Events"
-  ) {
-    currentSubTabs = eventSubTabs;
-  }
+  // Dynamic sub-tabs from orchestrator configuration
+  const dynamicModule = React.useMemo(() => {
+    if (!orchestrator?.tabs || !Array.isArray(orchestrator.tabs)) return null;
+    const target = String(activeModule || '').toLowerCase().trim();
+    return orchestrator.tabs.find((t) => {
+      const tid = String(t.id || '').toLowerCase().trim();
+      const tlabel = String(t.label || '').toLowerCase().trim();
+      if (tid === target || tlabel === target) return true;
+      if ((target === 'home' || target === '') && (tid === 'home' || tlabel === 'home')) return true;
+      if (target === 'sales' && (tid === 'sales' || tlabel === 'sales')) return true;
+      if (target === 'service' && (tid === 'service' || tlabel === 'service')) return true;
+      if ((target === 'feedback' || target === 'survey') && (tid === 'feedback' || tlabel === 'feedback')) return true;
+      if (target.includes('complaint') && (tid === 'complaints' || tlabel === 'complaints')) return true;
+      if (target.includes('event') && (tid === 'events' || tlabel.includes('event'))) return true;
+      return false;
+    });
+  }, [orchestrator?.tabs, activeModule]);
+
+  const currentSubTabs = React.useMemo(() => {
+    // If the orchestrator has configured subTabs for this module (including Home!), use them:
+    if (dynamicModule && Array.isArray(dynamicModule.subTabs)) {
+      return dynamicModule.subTabs.filter((s) => s.visible !== false);
+    }
+
+    // Otherwise fallback to legacy defaults:
+    if (activeModule === "Home") return [];
+    if (activeModule === "Service") return serviceSubTabs;
+    if (activeModule === "Feedback" || activeModule === "Survey")
+      return feedbackSubTabs;
+    if (activeModule === "Sales") return salesSubTabs;
+    if (
+      activeModule === "Event history & Sales Executive" ||
+      activeModule === "Event History" ||
+      activeModule === "Events"
+    ) {
+      return eventSubTabs;
+    }
+    return complaintSubTabs;
+  }, [dynamicModule, activeModule]);
 
   return (
     <div className="bg-white rounded-xl shadow-xs border border-slate-200/90 px-3.5 py-2 sm:px-5 mb-2.5 flex flex-col gap-1.5 transition-all">

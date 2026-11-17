@@ -25,6 +25,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [searchFeedback, setSearchFeedback] = useState(null);
+  const [activeSubTab, setActiveSubTab] = useState('Settings');
 
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -154,6 +155,8 @@ export default function HomePage() {
         <main className="flex-1 w-full min-w-0 flex flex-col transition-all duration-300">
           <CenterNavTabs 
             activeModule="Home" 
+            activeSubTab={activeSubTab}
+            setActiveSubTab={setActiveSubTab}
             isLeftCollapsed={isLeftCollapsed}
             onToggleLeft={() => setIsLeftCollapsed(!isLeftCollapsed)}
           />
