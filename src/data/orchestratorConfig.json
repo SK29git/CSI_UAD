@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-11-17T11:07:09.796Z",
+  "lastUpdated": "2026-11-17T11:09:11.776Z",
   "lastUpdatedBy": "SAdmin",
   "version": "1.0.0",
   "theme": {
@@ -441,33 +441,10 @@
       ]
     },
     {
-      "id": "Galaxy",
-      "label": "Galaxy",
-      "models": [
-        "MONJARO P155-G",
-        "M9",
-        "E8",
-        "EX5"
-      ]
-    },
-    {
       "id": "Riddara",
       "label": "Riddara",
       "models": [
         "RD6"
-      ]
-    },
-    {
-      "id": "Non-Franchise",
-      "label": "Non-Franchise",
-      "models": [
-        "Non Franchise Car",
-        "Non Franchise Commer",
-        "NONFRAN",
-        "Used Non Franchise",
-        "Husqvarna Motor Bikes",
-        "Other Models",
-        "Non Franchise Vehicles"
       ]
     }
   ],
