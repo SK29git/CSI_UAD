@@ -170,6 +170,7 @@ export default function CenterNavTabs({
       case "Sales Follow":
       case "Service Follow-up":
       case "Service Follow Up":
+      case "Retention":
         return <FaHistory className="text-xs" />;
       case "Create Complaint":
         return <FaExclamationTriangle className="text-xs" />;
@@ -182,7 +183,10 @@ export default function CenterNavTabs({
       case "Resolve Complaint":
         return <FaCheckCircle className="text-xs" />;
       case "Book Service":
+      case "Book a service":
         return <FaWrench className="text-xs" />;
+      case "Zofeur":
+        return <FaCarSide className="text-xs" />;
       case "Open Bookings":
         return <FaClipboardList className="text-xs" />;
       case "Service History":
@@ -219,18 +223,41 @@ export default function CenterNavTabs({
     { id: "Resolve Complaint", label: "Resolve Complaint" },
   ];
 
-  const serviceSubTabs = [
-    { id: "Overview", label: "Overview" },
-    { id: "New Enquiry", label: "New Enquiry" },
-    { id: "Other Request", label: "Other Request" },
-    { id: "Breakdown", label: "Breakdown" },
-    { id: "Book Service", label: "Book Service" },
-    { id: "Open Bookings", label: "Open Bookings" },
-    { id: "Service History", label: "Service History" },
-    { id: "Warranty Claims", label: "Warranty Claims" },
-    { id: "Service Feedback", label: "Customer Survey" },
-    { id: "Service Follow-up", label: "Service Follow Up" },
-  ];
+  const currentGroup = (
+    (typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("group") ||
+        new URLSearchParams(window.location.search).get("brand") ||
+        new URLSearchParams(window.location.search).get("keyloopGroup")
+      : "") ||
+    contextGroup ||
+    customer?.keyloopGroup ||
+    customer?.make ||
+    customer?.vehicleMake ||
+    ""
+  ).toLowerCase().trim();
+  const isGeely = currentGroup.includes("geely");
+
+  const serviceSubTabs = React.useMemo(() => {
+    const tabs = [
+      { id: "Overview", label: "Overview" },
+      { id: "Book a service", label: "Book a service" },
+      { id: "Zofeur", label: "Zofeur" },
+      { id: "Other Request", label: "Other Request" },
+      { id: "Breakdown", label: "Breakdown" },
+    ];
+
+    if (isGeely) {
+      tabs.push({ id: "Book Service", label: "Book Service" });
+    }
+
+    tabs.push(
+      { id: "Open Bookings", label: "Open Bookings" },
+      { id: "Service History", label: "Service History" },
+      { id: "Retention", label: "Retention" }
+    );
+
+    return tabs;
+  }, [isGeely]);
 
   const feedbackSubTabs = [
     { id: "Overview", label: "Overview" },

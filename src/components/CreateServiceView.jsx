@@ -17,6 +17,7 @@ import {
   FaCodeBranch,
   FaListUl,
   FaCar,
+  FaCarSide,
   FaPhoneAlt,
   FaMapMarkerAlt,
   FaHashtag,
@@ -24,6 +25,7 @@ import {
   FaCheckCircle,
   FaCopy,
   FaCheck,
+  FaExternalLinkAlt,
 } from "react-icons/fa";
 
 export const SERVICE_REQUEST_REFERENCES = [
@@ -44,10 +46,19 @@ export const BREAKDOWN_REFERENCES = [
   { type: "ES3", label: "Recovery AGMC" },
 ];
 
+export const ZOFEUR_REFERENCES = [
+  { type: "Z0000149", label: "Zofeur Pick Up / Drop Off" },
+];
+
 export default function CreateServiceView({ mode = "other_request" }) {
+  const isZofeur = mode === "zofeur";
   const isBreakdown = mode === "breakdown";
-  const title = isBreakdown ? "Breakdown" : "Other Request";
-  const activeReferences = isBreakdown ? BREAKDOWN_REFERENCES : SERVICE_REQUEST_REFERENCES;
+  const title = isZofeur ? "Zofeur" : isBreakdown ? "Breakdown" : "Other Request";
+  const activeReferences = isZofeur
+    ? ZOFEUR_REFERENCES
+    : isBreakdown
+      ? BREAKDOWN_REFERENCES
+      : SERVICE_REQUEST_REFERENCES;
   const {
     customer,
     currentGroup,
@@ -93,7 +104,10 @@ export default function CreateServiceView({ mode = "other_request" }) {
     null;
 
   // Editable fields state
-  const [selectedReferences, setSelectedReferences] = useState([]);
+  const [selectedReferences, setSelectedReferences] = useState(() => {
+    if (isZofeur) return ["Z0000149"];
+    return [];
+  });
   const [notes, setNotes] = useState("");
 
   const toggleReference = (type) => {
@@ -191,35 +205,35 @@ export default function CreateServiceView({ mode = "other_request" }) {
     setErrorMsg("");
     setSuccessResult(null);
 
-    if (selectedReferences.length === 0) {
+    if (!isZofeur && selectedReferences.length === 0) {
       setErrorMsg("Please select at least one Reference.");
       return;
     }
 
-    if (!notes.trim()) {
+    if (!isZofeur && !notes.trim()) {
       setErrorMsg("Please enter notes for the service request.");
       return;
     }
 
-    if (isBreakdown) {
+    if (isZofeur) {
       if (!String(zofeurPhoneNo).trim()) {
-        setErrorMsg("Phone number is required for breakdown recovery.");
+        setErrorMsg("Phone number is required for Zofeur ride booking.");
         return;
       }
       if (!String(zofeurChassis).trim()) {
-        setErrorMsg("Chassis number (VIN) is required for breakdown recovery.");
+        setErrorMsg("Chassis number (VIN) is required for Zofeur ride booking.");
         return;
       }
       if (!String(zofeurPlate).trim()) {
-        setErrorMsg("License plate number is required for breakdown recovery.");
+        setErrorMsg("License plate number is required for Zofeur ride booking.");
         return;
       }
       if (!String(zofeurPickupAddress).trim()) {
-        setErrorMsg("Pickup address is required for breakdown recovery.");
+        setErrorMsg("Pickup address is required for Zofeur ride booking.");
         return;
       }
       if (!String(zofeurDropoffAddress).trim()) {
-        setErrorMsg("Dropoff address is required for breakdown recovery.");
+        setErrorMsg("Dropoff address is required for Zofeur ride booking.");
         return;
       }
       if (!String(zofeurPickupLat).trim() || isNaN(parseFloat(zofeurPickupLat))) {
@@ -244,28 +258,60 @@ export default function CreateServiceView({ mode = "other_request" }) {
       }
     }
 
+    if (isBreakdown) {
+      if (!String(zofeurPhoneNo).trim()) {
+        setErrorMsg("Phone number is required for breakdown recovery.");
+        return;
+      }
+      if (!String(zofeurChassis).trim()) {
+        setErrorMsg("Chassis number (VIN) is required for breakdown recovery.");
+        return;
+      }
+      if (!String(zofeurPlate).trim()) {
+        setErrorMsg("License plate number is required for breakdown recovery.");
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setIsProcessing(true);
 
     try {
-      // 1. Submit Keyloop Service Request Notes
-      const primaryEventType = selectedReferences[0];
+      // 1. Submit Keyloop Service Request Notes (optional/informational if in zofeur mode)
+      const primaryEventType = selectedReferences[0] || (isZofeur ? "Z0000149" : isBreakdown ? "ES5" : "IPE");
       const additionalEventTypes = selectedReferences.slice(1);
 
-      const notesPromise = createServiceRequestNotes({
-        group: String(group || "BMW").trim(),
-        customerId: String(customerId || "").trim(),
-        customerName: String(customerName || "").trim(),
-        eventType: primaryEventType,
-        eventTypes: additionalEventTypes,
-        branchCode: String(branchCode || "10").trim(),
-        salesExecutiveId: advisorId ? String(advisorId).trim() : null,
-        notes: notes.trim(),
-      });
+      const notesPromise = (async () => {
+        if (isZofeur && !customerId) {
+          return { ok: true };
+        }
+        try {
+          return await createServiceRequestNotes({
+            group: String(group || "BMW").trim(),
+            customerId: String(customerId || "").trim(),
+            customerName: String(customerName || "").trim(),
+            eventType: primaryEventType,
+            eventTypes: additionalEventTypes,
+            branchCode: String(branchCode || "10").trim(),
+            salesExecutiveId: advisorId ? String(advisorId).trim() : null,
+            notes: isZofeur
+              ? `[Zofeur Booking #${zofeurBookingId}] Plate: ${zofeurPlate || "N/A"} | VIN: ${zofeurChassis || "N/A"} | Pickup: ${zofeurPickupAddress} | Dropoff: ${zofeurDropoffAddress}`
+              : isBreakdown 
+                ? `[Breakdown] Plate: ${zofeurPlate || "N/A"} | VIN: ${zofeurChassis || "N/A"} | Mobile: ${zofeurPhoneNo || "N/A"}. ${notes.trim()}`
+                : notes.trim(),
+          });
+        } catch (err) {
+          if (isZofeur) {
+            console.warn("Keyloop service notes submission skipped/failed for Zofeur booking:", err);
+            return { ok: true, optionalError: err };
+          }
+          throw err;
+        }
+      })();
 
-      // 2. Submit Zofeur Recovery / Ride Dispatch if breakdown
+      // 2. Submit Zofeur Recovery / Ride Dispatch ONLY if mode is zofeur
       let zofeurPromise = Promise.resolve(null);
-      if (isBreakdown) {
+      if (isZofeur) {
         zofeurPromise = (async () => {
           // A. Generate Bearer Token via POST https://api.zofeur.app/api/v1/auth/generate-token
           const tokenRes = await generateZofeurToken();
@@ -304,7 +350,7 @@ export default function CreateServiceView({ mode = "other_request" }) {
         })();
       }
 
-      // Execute both APIs at the same time
+      // Execute APIs in parallel
       const [notesResult, zofeurResult] = await Promise.all([
         notesPromise,
         zofeurPromise,
@@ -319,7 +365,7 @@ export default function CreateServiceView({ mode = "other_request" }) {
         );
       }
 
-      // Extract rideid from Zofeur 200 response
+      // Extract rideid from Zofeur 200 response if zofeur mode
       const rawRideId =
         zofeurResult?.data?.data?.rideid ??
         zofeurResult?.data?.rideid ??
@@ -333,27 +379,31 @@ export default function CreateServiceView({ mode = "other_request" }) {
 
       // Both succeeded
       setSuccessResult({
-        bookingId: zofeurBookingId,
+        bookingId: isZofeur ? zofeurBookingId : null,
         rideId: rawRideId,
         zofeurData: zofeurResult?.data,
-        message: isBreakdown
+        message: isZofeur
           ? rawRideId
-            ? `Breakdown request & Zofeur ride created successfully!`
-            : `Breakdown request & Zofeur ride booking #${zofeurBookingId} created successfully!`
-          : "Service request notes submitted successfully!",
+            ? `Zofeur ride created successfully!`
+            : `Zofeur ride booking #${zofeurBookingId} created successfully!`
+          : isBreakdown
+            ? "Breakdown service request submitted successfully!"
+            : "Service request notes submitted successfully!",
       });
 
       if (showToast && rawRideId) {
         showToast({
           type: "success",
-          title: "Breakdown Request Created",
+          title: "Zofeur Ride Dispatched",
           taskId: String(rawRideId),
-          message: `Breakdown ride #${rawRideId} dispatched for booking #${zofeurBookingId}.`,
+          message: `Zofeur ride #${rawRideId} dispatched for booking #${zofeurBookingId}.`,
         });
       }
 
       setNotes("");
-      setSelectedReferences([]);
+      if (!isZofeur) {
+        setSelectedReferences([]);
+      }
       // Immediately regenerate a new unique booking ID for the next submission
       setZofeurBookingId(generateNewBookingId());
 
@@ -377,14 +427,16 @@ export default function CreateServiceView({ mode = "other_request" }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 pb-2 border-b border-gray-100">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs shadow-xs shrink-0">
-            <FaWrench />
+            {isZofeur ? <FaCarSide /> : <FaWrench />}
           </div>
           <div>
             <h2 className="text-xs sm:text-sm font-extrabold text-gray-900 leading-tight">
               {title}
             </h2>
             <p className="text-[10px] text-gray-400 font-medium">
-              Create {title.toLowerCase()} notes for{" "}
+              {isZofeur
+                ? `Dispatch Zofeur driver & ride for `
+                : `Create ${title.toLowerCase()} notes for `}
               <span className="font-semibold text-gray-700">
                 {customerName ||
                   (customerId ? `Customer #${customerId}` : "Customer")}
@@ -393,104 +445,60 @@ export default function CreateServiceView({ mode = "other_request" }) {
           </div>
         </div>
 
-        {/* Right Group / Customer Badge */}
-        <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
-          <span className="text-[10px] text-gray-500 font-medium">
-            Group : <span className="font-bold text-gray-700">{group}</span> |{" "}
-            <span className="font-bold text-gray-700">
-              {customerId ? `Customer #${customerId}` : "Service"}
+        {/* Right Action / Group Badge */}
+        {isZofeur ? (
+          <a
+            href="https://b2b.zofeur.app/admin/signin"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 text-xs font-bold rounded-lg border border-blue-600 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+            title="Open Zofeur Portal in a new tab"
+          >
+            <span>Zofeur</span>
+            <FaExternalLinkAlt className="text-[10px]" />
+          </a>
+        ) : (
+          <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+            <span className="text-[10px] text-gray-500 font-medium">
+              Group : <span className="font-bold text-gray-700">{group}</span> |{" "}
+              <span className="font-bold text-gray-700">
+                {customerId ? `Customer #${customerId}` : "Service"}
+              </span>
             </span>
-          </span>
-          <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-2xs shrink-0">
-            <FaCar className="text-[10px]" />
+            <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-2xs shrink-0">
+              <FaCar className="text-[10px]" />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Main Form: 3x3 Grid Layout */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 text-xs">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-          {/* 1. Customer Name */}
-          <div>
-            <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-              Customer Name
-            </label>
-            <div className="w-full h-8 px-2 bg-slate-50 border border-slate-200/90 rounded-lg shadow-2xs flex items-center transition-all">
-              <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
-                <FaUserCheck />
-              </div>
-              <input
-                type="text"
-                value={customerName}
-                disabled
-                readOnly
-                className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
-              />
-            </div>
-          </div>
-
-          {/* 2. Customer ID */}
-          <div>
-            <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-              Customer ID
-            </label>
-            <div className="w-full h-8 px-2 bg-slate-50 border border-slate-200/90 rounded-lg shadow-2xs flex items-center transition-all">
-              <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
-                <FaIdCard />
-              </div>
-              <input
-                type="text"
-                value={customerId}
-                disabled
-                readOnly
-                className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-700 text-xs font-mono cursor-not-allowed select-none"
-              />
-            </div>
-          </div>
-
-          {/* 3. Group */}
-          <div>
-            <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-              Group
-            </label>
-            <div className="w-full h-8 px-2 bg-slate-50 border border-slate-200/90 rounded-lg shadow-2xs flex items-center transition-all">
-              <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
-                <FaBuilding />
-              </div>
-              <input
-                type="text"
-                value={group}
-                disabled
-                readOnly
-                className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
-              />
-            </div>
-          </div>
-
-          {/* 4. Branch Code */}
-          <div>
-            <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-              Branch Code
-            </label>
-            <div className="w-full h-8 px-2 bg-slate-50 border border-slate-200/90 rounded-lg shadow-2xs flex items-center transition-all">
-              <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
-                <FaCodeBranch />
-              </div>
-              <input
-                type="text"
-                value={branchCode}
-                disabled
-                readOnly
-                className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-700 text-xs font-mono cursor-not-allowed select-none"
-              />
-            </div>
-          </div>
-
-          {/* Breakdown specific fields in the same grid */}
-          {isBreakdown && (
+          {/* For Zofeur: ONLY Customer Name (no Customer ID, Group, or Branch) */}
+          {isZofeur ? (
             <>
-              {/* 5. Mobile Number */}
-              <div>
+              {/* 1. Customer Full Name */}
+              <div className="col-span-1 sm:col-span-2">
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Customer Full Name
+                </label>
+                <div className="w-full h-8 px-2 bg-slate-50 border border-slate-200/90 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                    <FaUserCheck />
+                  </div>
+                  <input
+                    type="text"
+                    value={customerName}
+                    disabled
+                    readOnly
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
+                  />
+                </div>
+              </div>
+
+              {/* 2. Mobile Number */}
+              <div className="col-span-1 sm:col-span-2">
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Mobile Number <span className="text-rose-500 font-bold">*</span>
                 </label>
@@ -510,8 +518,8 @@ export default function CreateServiceView({ mode = "other_request" }) {
                 </div>
               </div>
 
-              {/* 6. Chassis Number (VIN) */}
-              <div>
+              {/* 3. Chassis Number (VIN) */}
+              <div className="col-span-1 sm:col-span-2">
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Chassis Number (VIN) <span className="text-rose-500 font-bold">*</span>
                 </label>
@@ -530,7 +538,7 @@ export default function CreateServiceView({ mode = "other_request" }) {
                 </div>
               </div>
 
-              {/* 7. Plate Number */}
+              {/* 4. Plate Number */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Plate Number <span className="text-rose-500 font-bold">*</span>
@@ -550,7 +558,7 @@ export default function CreateServiceView({ mode = "other_request" }) {
                 </div>
               </div>
 
-              {/* 8. Booking ID */}
+              {/* 5. Booking ID */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center justify-between">
                   <span className="flex items-center gap-1">
@@ -581,7 +589,7 @@ export default function CreateServiceView({ mode = "other_request" }) {
                 </div>
               </div>
 
-              {/* 9. Pickup Address */}
+              {/* 6. Pickup Address */}
               <div className="col-span-1 sm:col-span-2">
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Pickup Address <span className="text-rose-500 font-bold">*</span>
@@ -601,7 +609,7 @@ export default function CreateServiceView({ mode = "other_request" }) {
                 </div>
               </div>
 
-              {/* 10. Dropoff Address */}
+              {/* 7. Dropoff Address */}
               <div className="col-span-1 sm:col-span-2">
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Dropoff Address <span className="text-rose-500 font-bold">*</span>
@@ -621,7 +629,7 @@ export default function CreateServiceView({ mode = "other_request" }) {
                 </div>
               </div>
 
-              {/* 11. Pickup Latitude */}
+              {/* 8. Pickup Latitude */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Pickup Latitude <span className="text-rose-500 font-bold">*</span>
@@ -641,7 +649,7 @@ export default function CreateServiceView({ mode = "other_request" }) {
                 </div>
               </div>
 
-              {/* 10. Pickup Longitude */}
+              {/* 9. Pickup Longitude */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Pickup Longitude <span className="text-rose-500 font-bold">*</span>
@@ -661,7 +669,7 @@ export default function CreateServiceView({ mode = "other_request" }) {
                 </div>
               </div>
 
-              {/* 11. Dropoff Latitude */}
+              {/* 10. Dropoff Latitude */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Dropoff Latitude <span className="text-rose-500 font-bold">*</span>
@@ -681,7 +689,7 @@ export default function CreateServiceView({ mode = "other_request" }) {
                 </div>
               </div>
 
-              {/* 12. Dropoff Longitude */}
+              {/* 11. Dropoff Longitude */}
               <div>
                 <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
                   Dropoff Longitude <span className="text-rose-500 font-bold">*</span>
@@ -701,100 +709,249 @@ export default function CreateServiceView({ mode = "other_request" }) {
                 </div>
               </div>
             </>
+          ) : (
+            <>
+              {/* Other Request & Breakdown standard header fields */}
+              {/* 1. Customer Name */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Customer Name
+                </label>
+                <div className="w-full h-8 px-2 bg-slate-50 border border-slate-200/90 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                    <FaUserCheck />
+                  </div>
+                  <input
+                    type="text"
+                    value={customerName}
+                    disabled
+                    readOnly
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
+                  />
+                </div>
+              </div>
+
+              {/* 2. Customer ID */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Customer ID
+                </label>
+                <div className="w-full h-8 px-2 bg-slate-50 border border-slate-200/90 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                    <FaIdCard />
+                  </div>
+                  <input
+                    type="text"
+                    value={customerId}
+                    disabled
+                    readOnly
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-700 text-xs font-mono cursor-not-allowed select-none"
+                  />
+                </div>
+              </div>
+
+              {/* 3. Group */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Group
+                </label>
+                <div className="w-full h-8 px-2 bg-slate-50 border border-slate-200/90 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                    <FaBuilding />
+                  </div>
+                  <input
+                    type="text"
+                    value={group}
+                    disabled
+                    readOnly
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-700 text-xs cursor-not-allowed select-none"
+                  />
+                </div>
+              </div>
+
+              {/* 4. Branch Code */}
+              <div>
+                <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                  Branch Code
+                </label>
+                <div className="w-full h-8 px-2 bg-slate-50 border border-slate-200/90 rounded-lg shadow-2xs flex items-center transition-all">
+                  <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                    <FaCodeBranch />
+                  </div>
+                  <input
+                    type="text"
+                    value={branchCode}
+                    disabled
+                    readOnly
+                    className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-700 text-xs font-mono cursor-not-allowed select-none"
+                  />
+                </div>
+              </div>
+
+              {/* Breakdown specific fields in the same grid */}
+              {isBreakdown && (
+                <>
+                  {/* 5. Mobile Number */}
+                  <div className="col-span-1 sm:col-span-2 lg:col-span-1">
+                    <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                      Mobile Number <span className="text-rose-500 font-bold">*</span>
+                    </label>
+                    <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                      <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                        <FaPhoneAlt />
+                      </div>
+                      <span className="text-xs font-semibold text-gray-400 mr-1 select-none">+971</span>
+                      <input
+                        type="text"
+                        value={zofeurPhoneNo}
+                        onChange={(e) => setZofeurPhoneNo(e.target.value)}
+                        disabled={isSubmitting}
+                        placeholder="e.g. 504321353"
+                        className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 6. Chassis Number (VIN) */}
+                  <div className="col-span-1 sm:col-span-2 lg:col-span-2">
+                    <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                      Chassis Number (VIN) <span className="text-rose-500 font-bold">*</span>
+                    </label>
+                    <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                      <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                        <FaCar />
+                      </div>
+                      <input
+                        type="text"
+                        value={zofeurChassis}
+                        onChange={(e) => setZofeurChassis(e.target.value)}
+                        disabled={isSubmitting}
+                        placeholder="Enter chassis / VIN..."
+                        className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold font-mono text-gray-800 text-xs uppercase"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 7. Plate Number */}
+                  <div className="col-span-1 sm:col-span-2 lg:col-span-1">
+                    <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+                      Plate Number <span className="text-rose-500 font-bold">*</span>
+                    </label>
+                    <div className="w-full h-8 px-2 bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs flex items-center transition-all">
+                      <div className="w-5 h-5 rounded bg-blue-50/80 border border-blue-100 flex items-center justify-center text-blue-500 shrink-0 text-[10px] mr-1.5">
+                        <FaHashtag />
+                      </div>
+                      <input
+                        type="text"
+                        value={zofeurPlate}
+                        onChange={(e) => setZofeurPlate(e.target.value)}
+                        disabled={isSubmitting}
+                        placeholder="Enter plate number..."
+                        className="w-full h-full bg-transparent border-0 focus:outline-none font-semibold text-gray-800 text-xs uppercase"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
           )}
         </div>
 
-        {/* Reference Selection - Multi-Select Checkboxes */}
-        <div className="w-full bg-slate-50/60 p-3 rounded-xl border border-slate-200/90 flex flex-col gap-2">
-          <div className="flex items-center justify-between flex-wrap gap-2 pb-1.5 border-b border-slate-200/60">
-            <label className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5">
-              <FaListUl className="text-blue-500 text-[11px]" />
-              <span>Reference Types</span>
-              <span className="text-rose-500 font-bold">*</span>
-              <span className="text-[10px] font-normal text-gray-500">
-                (Select one or multiple)
-              </span>
-            </label>
+        {/* Reference Selection - Multi-Select Checkboxes (Hidden for Zofeur) */}
+        {!isZofeur && (
+          <div className="w-full bg-slate-50/60 p-3 rounded-xl border border-slate-200/90 flex flex-col gap-2">
+            <div className="flex items-center justify-between flex-wrap gap-2 pb-1.5 border-b border-slate-200/60">
+              <label className="text-[11px] font-bold text-gray-800 flex items-center gap-1.5">
+                <FaListUl className="text-blue-500 text-[11px]" />
+                <span>Reference Types</span>
+                <span className="text-rose-500 font-bold">*</span>
+                <span className="text-[10px] font-normal text-gray-500">
+                  (Select one or multiple)
+                </span>
+              </label>
 
-            <div className="flex items-center gap-2">
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all ${
-                  selectedReferences.length > 0
-                    ? "bg-blue-100 text-blue-800 border-blue-200"
-                    : "bg-gray-100 text-gray-500 border-gray-200"
-                }`}
-              >
-                {selectedReferences.length} Selected
-              </span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (
-                    selectedReferences.length ===
-                    activeReferences.length
-                  ) {
-                    setSelectedReferences([]);
-                  } else {
-                    setSelectedReferences(
-                      activeReferences.map((r) => r.type),
-                    );
-                  }
-                }}
-                disabled={isSubmitting}
-                className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer underline disabled:opacity-50"
-              >
-                {selectedReferences.length === activeReferences.length
-                  ? "Deselect All"
-                  : "Select All"}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-0.5">
-            {activeReferences.map((item) => {
-              const isChecked = selectedReferences.includes(item.type);
-              return (
-                <label
-                  key={item.type}
-                  className={`flex items-center gap-2.5 p-2 rounded-lg border transition-all cursor-pointer text-xs select-none ${
-                    isChecked
-                      ? "bg-blue-50/80 border-blue-400 text-blue-950 font-semibold shadow-2xs ring-1 ring-blue-300"
-                      : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 text-gray-700 font-medium"
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all ${
+                    selectedReferences.length > 0
+                      ? "bg-blue-100 text-blue-800 border-blue-200"
+                      : "bg-gray-100 text-gray-500 border-gray-200"
                   }`}
                 >
-                  <input
-                    type="checkbox"
-                    value={item.type}
-                    checked={isChecked}
-                    onChange={() => toggleReference(item.type)}
-                    disabled={isSubmitting}
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 cursor-pointer accent-blue-600 shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <span className="truncate block">{item.label}</span>
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-        </div>
+                  {selectedReferences.length} Selected
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      selectedReferences.length ===
+                      activeReferences.length
+                    ) {
+                      setSelectedReferences([]);
+                    } else {
+                      setSelectedReferences(
+                        activeReferences.map((r) => r.type),
+                      );
+                    }
+                  }}
+                  disabled={isSubmitting}
+                  className="text-[10px] text-blue-600 hover:text-blue-800 font-semibold cursor-pointer underline disabled:opacity-50"
+                >
+                  {selectedReferences.length === activeReferences.length
+                    ? "Deselect All"
+                    : "Select All"}
+                </button>
+              </div>
+            </div>
 
-        {/* 6. Notes Textarea (Small) */}
-        <div className="w-full">
-          <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
-            Notes <span className="text-rose-500 font-bold">*</span>
-          </label>
-          <div className="w-full bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs p-2 transition-all">
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              disabled={isSubmitting}
-              placeholder="Enter service request notes..."
-              rows={2}
-              className="w-full bg-transparent border-0 focus:outline-none text-gray-800 text-xs resize-y min-h-[50px]"
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 pt-0.5">
+              {activeReferences.map((item) => {
+                const isChecked = selectedReferences.includes(item.type);
+                return (
+                  <label
+                    key={item.type}
+                    className={`flex items-center gap-2.5 p-2 rounded-lg border transition-all cursor-pointer text-xs select-none ${
+                      isChecked
+                        ? "bg-blue-50/80 border-blue-400 text-blue-950 font-semibold shadow-2xs ring-1 ring-blue-300"
+                        : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 text-gray-700 font-medium"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      value={item.type}
+                      checked={isChecked}
+                      onChange={() => toggleReference(item.type)}
+                      disabled={isSubmitting}
+                      className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-gray-300 cursor-pointer accent-blue-600 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="truncate block">{item.label}</span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Notes Textarea (Hidden for Zofeur) */}
+        {!isZofeur && (
+          <div className="w-full">
+            <label className="text-[11px] font-bold text-gray-700 mb-0.5 flex items-center gap-1">
+              Notes <span className="text-rose-500 font-bold">*</span>
+            </label>
+            <div className="w-full bg-white border border-slate-200/90 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 rounded-lg shadow-2xs p-2 transition-all">
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                disabled={isSubmitting}
+                placeholder="Enter service request notes..."
+                rows={2}
+                className="w-full bg-transparent border-0 focus:outline-none text-gray-800 text-xs resize-y min-h-[50px]"
+              />
+            </div>
+          </div>
+        )}
 
         {/* Inline Success Message / Toast */}
         {successResult && (
@@ -890,36 +1047,35 @@ export default function CreateServiceView({ mode = "other_request" }) {
         {isProcessing && (
           <div className="p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-center gap-2 text-blue-800 text-xs font-semibold animate-pulse">
             <FaSpinner className="animate-spin text-blue-600 text-xs shrink-0" />
-            <span>Processing breakdown & dispatching ride...</span>
+            <span>
+              {isZofeur
+                ? "Processing Zofeur ride booking..."
+                : isBreakdown
+                  ? "Submitting breakdown request..."
+                  : "Submitting service request..."}
+            </span>
           </div>
         )}
 
         {/* Actions Bar (Submit to Center) */}
         <div className="flex items-center justify-center gap-3 pt-2 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={() => {
-              setNotes("");
-              setSelectedReferences([]);
-              setErrorMsg("");
-              setSuccessResult(null);
-              if (isBreakdown) {
-                setZofeurPickupAddress("");
-                setZofeurDropoffAddress("");
-                setZofeurPickupLat("");
-                setZofeurPickupLong("");
-                setZofeurDropoffLat("");
-                setZofeurDropoffLong("");
-                setZofeurBookingId(generateNewBookingId());
+          {!isZofeur && (
+            <button
+              type="button"
+              onClick={() => {
+                setNotes("");
+                setSelectedReferences([]);
+                setErrorMsg("");
+                setSuccessResult(null);
+              }}
+              disabled={
+                isSubmitting || (!notes && selectedReferences.length === 0 && !successResult)
               }
-            }}
-            disabled={
-              isSubmitting || (!notes && selectedReferences.length === 0 && !successResult)
-            }
-            className="px-4 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Clear Form
-          </button>
+              className="px-4 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Clear Form
+            </button>
+          )}
           <button
             type="submit"
             disabled={isSubmitting || isProcessing}

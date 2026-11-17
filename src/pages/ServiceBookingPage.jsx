@@ -43,8 +43,8 @@ export default function ServiceBookingPage() {
       params.set('group', group);
       window.history.replaceState(null, '', `/service?${params.toString()}`);
     }
-    if (search.toLowerCase().includes('salesnewlead') || search.toLowerCase().includes('newenquiry') || search.toLowerCase().includes('servicenewlead')) {
-      setActiveSubTab('New Enquiry');
+    if (search.toLowerCase().includes('salesnewlead') || search.toLowerCase().includes('newenquiry') || search.toLowerCase().includes('servicenewlead') || search.toLowerCase().includes('bookaservice')) {
+      setActiveSubTab('Book a service');
     }
   }, [group]);
 
@@ -56,9 +56,12 @@ export default function ServiceBookingPage() {
     switch (activeSubTab) {
       case 'Overview':
         return <ServiceOverviewView />;
+      case 'Book a service':
       case 'New Enquiry':
       case 'New Lead':
         return <SalesNewLeadView mode="service" onNavigateToEnquiries={() => setActiveSubTab('Overview')} />;
+      case 'Zofeur':
+        return <CreateServiceView mode="zofeur" />;
       case 'Other Request':
       case 'Create Service':
         return <CreateServiceView mode="other_request" />;
@@ -70,16 +73,16 @@ export default function ServiceBookingPage() {
         return <ServiceOpenBookingsView />;
       case 'Service History':
         return <ServiceHistoryView />;
-      case 'Warranty Claims':
-        return <ServiceWarrantyClaimsView />;
-      case 'Service Feedback':
-      case 'Customer Survey':
-        return <ServiceFeedbackView />;
+      case 'Retention':
       case 'Service Follow-up':
       case 'Service Follow Up':
       case 'Service Follow':
       case 'After-Sales':
-        return <SalesAfterSalesView title="Service Follow Up" mode="service" />;
+        return (
+          <div className="bg-white rounded-xl shadow-xs border border-slate-200/90 p-8 min-h-[350px] flex items-center justify-center">
+            {/* Empty for now as requested */}
+          </div>
+        );
       default:
         return <ServiceOverviewView />;
     }
