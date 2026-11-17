@@ -70,7 +70,7 @@ export default function BrandsModelsTab({ brands, onUpdateBrands }) {
 
     const updatedBrand = {
       ...currentBrand,
-      models: [...existingModels, clean]
+      models: [clean, ...existingModels]
     };
 
     const nextBrands = brands.map(b => b.id === currentBrand.id ? updatedBrand : b);

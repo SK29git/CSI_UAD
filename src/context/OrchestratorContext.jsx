@@ -74,14 +74,19 @@ export function OrchestratorProvider({ children }) {
           const data = await res.json();
           if (isMounted && data && typeof data === 'object') {
             setConfig(prev => {
-              // Only override if no local unsaved edits
-              return hasUnsavedChanges ? prev : { ...defaultConfig, ...data };
+              // Preserve any existing local edits in localStorage
+              const cached = localStorage.getItem(STORAGE_KEY_CONFIG);
+              if (cached) {
+                try {
+                  const parsed = JSON.parse(cached);
+                  return { ...defaultConfig, ...data, ...parsed };
+                } catch {}
+              }
+              return { ...defaultConfig, ...data };
             });
-            localStorage.setItem(STORAGE_KEY_CONFIG, JSON.stringify(data));
           }
         }
       } catch (err) {
-        // Fallback gracefully to bundled defaultConfig
         console.debug('Orchestrator server not reachable, using cached/default config.');
       }
     }
@@ -99,7 +104,7 @@ export function OrchestratorProvider({ children }) {
     }
   }, [config?.theme?.backgroundColor]);
 
-  // Update config in local state
+  // Update config in local state AND auto-persist to server disk
   const updateConfig = useCallback((updater) => {
     setConfig(prev => {
       const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
@@ -108,10 +113,23 @@ export function OrchestratorProvider({ children }) {
       } catch (e) {
         console.warn('Failed to cache config in localStorage', e);
       }
+
+      // Auto-save to disk in background so changes persist across refreshes
+      fetch('/orchestrator-api/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          config: next,
+          adminUser: activeAdmin || 'Admin'
+        })
+      }).catch(err => {
+        console.warn('[Orchestrator] Auto-save error (offline fallback active):', err.message);
+      });
+
       return next;
     });
     setHasUnsavedChanges(true);
-  }, []);
+  }, [activeAdmin]);
 
   // Save config draft locally & to disk
   const saveConfig = useCallback(async () => {

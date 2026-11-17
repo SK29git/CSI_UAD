@@ -49,16 +49,6 @@ export default function AdminHeader({
         {/* Right Actions & Admin Profile */}
         <div className="flex items-center gap-3">
           
-          {/* Back to Client App Link */}
-          <button
-            onClick={() => navigate('/home')}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-slate-300 hover:text-white transition-all text-xs font-semibold cursor-pointer"
-            title="Go to main application"
-          >
-            <span>Client App</span>
-            <FaExternalLinkAlt className="text-[10px] text-slate-400" />
-          </button>
-
           {/* Publish Button */}
           <button
             onClick={onOpenPublish}

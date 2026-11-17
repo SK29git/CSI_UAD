@@ -89,7 +89,7 @@ export default function ComplaintTaxonomyTab({ complaintTaxonomy, onUpdateTaxono
       ...hierarchy,
       [selectedDept]: {
         ...hierarchy[selectedDept],
-        [activeGroup]: [...existing, clean]
+        [activeGroup]: [clean, ...existing]
       }
     };
 
