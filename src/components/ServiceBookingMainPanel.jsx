@@ -222,7 +222,7 @@ export function AvailableDatesCalendar({
   );
 }
 
-export default function ServiceBookingMainPanel() {
+export default function ServiceBookingMainPanel({ onBookingSuccess }) {
   const {
     customer,
     agentId,
@@ -706,11 +706,15 @@ export default function ServiceBookingMainPanel() {
     try {
       const res = await createServiceBooking(payload);
       if (res && res.ok && res.data) {
+        const resultData = res.data.result?.data || res.data.result || res.data;
         setGeelyBookingResult({
           success: true,
-          data: res.data.result?.data || res.data.result || res.data,
+          data: resultData,
           submittedPayload: payload,
         });
+        if (typeof onBookingSuccess === "function") {
+          onBookingSuccess(resultData, payload);
+        }
       } else {
         setGeelyBookingError(
           res?.statusText ||

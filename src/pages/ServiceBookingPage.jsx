@@ -13,10 +13,28 @@ import SalesNewLeadView from '../components/SalesNewLeadView';
 // import ServiceActivityRightSidebar from '../components/ServiceActivityRightSidebar';
 import CustomerFormView from '../components/CustomerFormView';
 import { useCustomer } from '../context/CustomerContext';
+import { FaCalendarCheck, FaUserPlus, FaCheck } from 'react-icons/fa';
 
 export default function ServiceBookingPage() {
-  const { group, customerFormMode, closeCustomerForm } = useCustomer();
+  const { group, customerFormMode, closeCustomerForm, showToast } = useCustomer();
   const [activeSubTab, setActiveSubTab] = useState('Overview');
+  const [bookServiceStage, setBookServiceStage] = useState('booking'); // 'booking' | 'enquiry'
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [confirmedBookingData, setConfirmedBookingData] = useState(null);
+
+  const handleBookingConfirmed = (data, payload) => {
+    setBookingConfirmed(true);
+    setConfirmedBookingData({ data, payload });
+    // Directly route to New Enquiry stage upon API success
+    setBookServiceStage('enquiry');
+    if (showToast) {
+      showToast({
+        type: 'success',
+        title: 'Booking Confirmed',
+        message: 'Workshop booking confirmed successfully. Routed to New Enquiry.',
+      });
+    }
+  };
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -61,17 +79,104 @@ export default function ServiceBookingPage() {
       case 'New Lead':
       case 'Book Service':
         return (
-          <div className="flex flex-col gap-6 w-full pb-12">
-            {/* Top Section: Service Booking Panel */}
-            <ServiceBookingMainPanel />
+          <div className="flex flex-col gap-4 w-full pb-12">
+            {/* Chevron Stage Stepper (Pastel Colors) */}
+            <div className="w-full flex items-stretch rounded-2xl overflow-hidden shadow-2xs border border-slate-200/90 bg-slate-100/70 p-1 select-none text-xs">
+              {/* Segment 1: Service Booking */}
+              <button
+                type="button"
+                onClick={() => setBookServiceStage('booking')}
+                className={`relative flex-1 py-3 px-5 sm:px-8 text-left transition-all cursor-pointer flex items-center justify-between group rounded-xl ${
+                  bookServiceStage === 'booking'
+                    ? 'bg-gradient-to-r from-sky-100 via-blue-50 to-indigo-100/80 text-blue-950 z-10 shadow-2xs'
+                    : bookingConfirmed
+                      ? 'bg-emerald-50/90 hover:bg-emerald-100/70 text-emerald-950'
+                      : 'bg-white/80 hover:bg-white text-slate-600'
+                }`}
+                style={{
+                  clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%)',
+                }}
+              >
+                <div className="flex items-center gap-3 pr-4">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
+                    bookServiceStage === 'booking'
+                      ? 'bg-white text-blue-600 shadow-2xs border border-blue-200/80'
+                      : bookingConfirmed
+                        ? 'bg-emerald-100 text-emerald-700 border border-emerald-300/80 shadow-2xs'
+                        : 'bg-slate-100 text-slate-500 border border-slate-200/80 shadow-2xs'
+                  }`}>
+                    {bookingConfirmed ? <FaCheck className="text-emerald-700 text-xs" /> : <FaCalendarCheck className="text-xs" />}
+                  </div>
+                  <div>
+                    <div className="font-extrabold text-xs sm:text-sm tracking-wide leading-tight flex items-center gap-1.5">
+                      <span className={bookServiceStage === 'booking' ? 'text-blue-950' : bookingConfirmed ? 'text-emerald-950' : 'text-slate-700'}>
+                        Service Booking
+                      </span>
+                      {bookingConfirmed && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          Confirmed ✓
+                        </span>
+                      )}
+                    </div>
+                    <p className={`text-[11px] font-medium leading-tight mt-0.5 ${
+                      bookServiceStage === 'booking'
+                        ? 'text-blue-700/90'
+                        : bookingConfirmed
+                          ? 'text-emerald-700/90'
+                          : 'text-slate-400'
+                    }`}>
+                      Workshop Appointment Scheduling
+                    </p>
+                  </div>
+                </div>
+              </button>
 
-            {/* Bottom Section: Service New Enquiry */}
-            <div className="flex flex-col gap-3 pt-4 border-t border-slate-200/90">
+              {/* Segment 2: New Enquiry */}
+              <button
+                type="button"
+                onClick={() => setBookServiceStage('enquiry')}
+                className={`relative flex-1 py-3 pl-8 sm:pl-10 pr-5 sm:pr-8 text-left transition-all cursor-pointer flex items-center justify-between -ml-3.5 group rounded-xl ${
+                  bookServiceStage === 'enquiry'
+                    ? 'bg-gradient-to-r from-teal-100 via-emerald-50 to-cyan-50/90 text-teal-950 z-10 shadow-2xs'
+                    : 'bg-white/80 hover:bg-white text-slate-600'
+                }`}
+                style={{
+                  clipPath: 'polygon(16px 0, 100% 0, 100% 100%, 16px 100%, 0 50%)',
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
+                    bookServiceStage === 'enquiry'
+                      ? 'bg-white text-teal-700 shadow-2xs border border-teal-200/80'
+                      : 'bg-slate-100 text-slate-500 border border-slate-200/80 shadow-2xs'
+                  }`}>
+                    <FaUserPlus className="text-xs" />
+                  </div>
+                  <div>
+                    <div className={`font-extrabold text-xs sm:text-sm tracking-wide leading-tight ${
+                      bookServiceStage === 'enquiry' ? 'text-teal-950' : 'text-slate-700'
+                    }`}>
+                      New Enquiry
+                    </div>
+                    <p className={`text-[11px] font-medium leading-tight mt-0.5 ${
+                      bookServiceStage === 'enquiry' ? 'text-teal-700/90' : 'text-slate-400'
+                    }`}>
+                      Customer Service Lead Intake
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Active Stage Content View */}
+            {bookServiceStage === 'booking' ? (
+              <ServiceBookingMainPanel onBookingSuccess={handleBookingConfirmed} />
+            ) : (
               <SalesNewLeadView
                 mode="service"
                 onNavigateToEnquiries={() => setActiveSubTab('Overview')}
               />
-            </div>
+            )}
           </div>
         );
       case 'Zofeur':

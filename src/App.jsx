@@ -8,6 +8,7 @@ import FeedbackPage from './pages/FeedbackPage';
 import SalesPage from './pages/SalesPage';
 import IMEITrackerPage from './pages/IMEITrackerPage';
 import EventHistoryPage from './pages/EventHistoryPage';
+import MobileServiceBookingPage from './pages/MobileServiceBookingPage';
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/home" element={<HomePage />} />
           <Route path="/complaints" element={<ComplaintsDashboardPage />} />
+          <Route path="/mobile-view/service" element={<MobileServiceBookingPage />} />
           <Route path="/service" element={<ServiceBookingPage />} />
           <Route path="/service-booking" element={<ServiceBookingPage />} />
           <Route path="/feedback" element={<FeedbackPage />} />
