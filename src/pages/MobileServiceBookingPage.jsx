@@ -1,24 +1,20 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   findServiceCustomer,
   getServiceCustomerVehicles,
   getServiceVehicleDetails,
-  getServiceLocations,
-  getServiceRecommendedServices,
-  getServiceAdvisors,
   getAppointmentDates,
   getAppointmentTimes,
+  getServiceAdvisors,
   createServiceBooking,
 } from "../utils/api";
 import {
-  FaCar,
   FaUser,
   FaCalendarCheck,
   FaClock,
   FaMapMarkerAlt,
   FaWrench,
-  FaClipboardList,
   FaExclamationCircle,
   FaCheck,
   FaCalendarAlt,
@@ -29,15 +25,16 @@ import {
   FaMoon,
   FaChevronLeft,
   FaChevronRight,
-  FaSearch,
   FaCheckCircle,
-  FaRedo,
   FaTimes,
-  FaInfoCircle,
+  FaWhatsapp,
+  FaCarSide,
+  FaShieldAlt,
 } from "react-icons/fa";
 
 /**
- * Mobile-First Touch-Friendly Calendar Component
+ * Touch Calendar Component using Exact Color System:
+ * Primary/Selected: #87BFFF, Soft Blue: #E3F1FF, Card: #FFFFFF, Border: #D6E8FA, Text: #2B3655, Success: #42B978
  */
 function MobileTouchCalendar({
   availableDates = [],
@@ -48,7 +45,10 @@ function MobileTouchCalendar({
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
 
   const [currentYearMonth, setCurrentYearMonth] = useState(() => {
-    const seed = selectedDate || availableDates[0] || new Date().toISOString().split("T")[0];
+    const seed =
+      selectedDate ||
+      availableDates[0] ||
+      new Date().toISOString().split("T")[0];
     const [y, m] = seed.split("-").map(Number);
     return { year: y || 2026, month: m ? m - 1 : 10 };
   });
@@ -68,8 +68,18 @@ function MobileTouchCalendar({
   }, [selectedDate, availableDates]);
 
   const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   const handlePrevMonth = () => {
@@ -111,24 +121,24 @@ function MobileTouchCalendar({
   }, [currentYearMonth, availableSet, selectedDate]);
 
   return (
-    <div className="flex flex-col bg-slate-50/80 p-3 rounded-xl border border-slate-200">
+    <div className="flex flex-col bg-[#FFFFFF] p-3.5 sm:p-4 rounded-2xl border border-[#D6E8FA] shadow-[inset_0_1px_3px_rgba(255,255,255,0.9),0_6px_16px_rgba(23,43,77,0.03)]">
       {/* Month Navigation */}
-      <div className="flex items-center justify-between px-1 mb-2">
+      <div className="flex items-center justify-between px-1 mb-2.5">
         <button
           type="button"
           onClick={handlePrevMonth}
-          className="w-8 h-8 flex items-center justify-center hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-lg transition-colors cursor-pointer"
+          className="w-9 h-9 flex items-center justify-center bg-[#F0F7FF] hover:bg-[#E3F1FF] active:scale-95 text-[#2B3655] rounded-xl transition-all border border-[#D6E8FA] shadow-xs cursor-pointer"
           title="Previous Month"
         >
           <FaChevronLeft className="text-xs" />
         </button>
-        <div className="text-sm font-bold text-slate-800 tracking-wide">
+        <div className="text-sm font-black text-[#2B3655] tracking-wide">
           {monthNames[currentYearMonth.month]} {currentYearMonth.year}
         </div>
         <button
           type="button"
           onClick={handleNextMonth}
-          className="w-8 h-8 flex items-center justify-center hover:bg-slate-200 active:bg-slate-300 text-slate-700 rounded-lg transition-colors cursor-pointer"
+          className="w-9 h-9 flex items-center justify-center bg-[#F0F7FF] hover:bg-[#E3F1FF] active:scale-95 text-[#2B3655] rounded-xl transition-all border border-[#D6E8FA] shadow-xs cursor-pointer"
           title="Next Month"
         >
           <FaChevronRight className="text-xs" />
@@ -136,19 +146,19 @@ function MobileTouchCalendar({
       </div>
 
       {/* Weekday Headers */}
-      <div className="grid grid-cols-7 gap-1 text-center mb-1.5">
+      <div className="grid grid-cols-7 gap-1 sm:gap-1.5 text-center mb-1.5">
         {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((w) => (
-          <span key={w} className="text-[11px] font-bold text-slate-400">
+          <span key={w} className="text-[11px] font-bold text-[#2B3655]/50">
             {w}
           </span>
         ))}
       </div>
 
-      {/* Days Grid - Large touch target min-h-[38px] */}
-      <div className="grid grid-cols-7 gap-1 text-center">
+      {/* Days Grid */}
+      <div className="grid grid-cols-7 gap-1 sm:gap-1.5 text-center">
         {calendarDays.map((cell, idx) => {
           if (!cell.isCurrentMonth) {
-            return <div key={`empty-${idx}`} className="h-9" />;
+            return <div key={`empty-${idx}`} className="h-10 sm:h-11" />;
           }
 
           if (cell.isAvailable) {
@@ -157,16 +167,16 @@ function MobileTouchCalendar({
                 key={cell.dateStr}
                 type="button"
                 onClick={() => onSelectDate(cell.dateStr)}
-                className={`h-9 rounded-lg text-xs font-bold transition-all flex flex-col items-center justify-center relative cursor-pointer active:scale-95 ${
+                className={`h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-black transition-all flex flex-col items-center justify-center relative cursor-pointer active:scale-92 ${
                   cell.isSelected
-                    ? "bg-blue-600 text-white shadow-sm ring-2 ring-blue-300"
-                    : "bg-white hover:bg-blue-50 text-blue-900 border border-blue-200"
+                    ? "bg-[#87BFFF] text-[#2B3655] border border-[#87BFFF] shadow-[0_6px_14px_rgba(135,191,255,0.5),inset_0_2px_3px_rgba(255,255,255,0.6)] ring-2 ring-[#87BFFF]/50"
+                    : "bg-[#FFFFFF] hover:bg-[#E3F1FF] text-[#2B3655] border border-[#D6E8FA] shadow-[0_2px_5px_rgba(23,43,77,0.03),inset_0_1px_2px_rgba(255,255,255,0.9)] hover:scale-102"
                 }`}
               >
                 <span>{cell.day}</span>
                 <span
                   className={`w-1.5 h-1.5 rounded-full absolute bottom-1 ${
-                    cell.isSelected ? "bg-white" : "bg-emerald-500"
+                    cell.isSelected ? "bg-[#2B3655]" : "bg-[#42B978] shadow-2xs"
                   }`}
                 />
               </button>
@@ -176,7 +186,7 @@ function MobileTouchCalendar({
           return (
             <div
               key={cell.dateStr}
-              className="h-9 rounded-lg text-xs text-slate-300 flex items-center justify-center cursor-not-allowed select-none bg-slate-100/40"
+              className="h-10 sm:h-11 rounded-xl text-xs sm:text-sm text-[#2B3655]/30 flex items-center justify-center cursor-not-allowed select-none bg-[#F0F7FF]/50"
             >
               {cell.day}
             </div>
@@ -191,13 +201,17 @@ export default function MobileServiceBookingPage() {
   const [searchParams] = useSearchParams();
 
   // Read URL parameters
-  const paramMobile =
+  const paramMobile = (
     searchParams.get("mobilenumber") ||
     searchParams.get("mobile") ||
     searchParams.get("phone") ||
-    "";
+    ""
+  )
+    .replace(/\D/g, "")
+    .slice(0, 15);
   const paramGroup = searchParams.get("group") || "Geely";
-  const paramPlate = searchParams.get("plate") || searchParams.get("plateNo") || "";
+  const paramPlate =
+    searchParams.get("plate") || searchParams.get("plateNo") || "";
 
   // Core Form State
   const [phone, setPhone] = useState(paramMobile);
@@ -209,23 +223,14 @@ export default function MobileServiceBookingPage() {
   const [plateNo, setPlateNo] = useState(paramPlate);
   const [vehicleSearching, setVehicleSearching] = useState(false);
   const [vehicleData, setVehicleData] = useState(null);
-  const [vehicleId, setVehicleId] = useState(15);
+  const [vehicleId, setVehicleId] = useState(null);
   const [serviceMake, setServiceMake] = useState(paramGroup || "Geely");
 
-  // Dealership Location (ID 40 is standard default)
+  // Dealership Location ID (Main application: 40 & 240)
   const [locationId, setLocationId] = useState(40);
-  const [locations, setLocations] = useState([
-    { id: 40, name: "AGMC Sharjah Workshop (ID 40)" },
-    { id: 240, name: "AGMC Dubai Workshop (ID 240)" },
-  ]);
-  const [locationsLoading, setLocationsLoading] = useState(false);
 
-  // Service Product / Package (defaults to valid UUID required by backend)
-  const [selectedProductId, setSelectedProductId] = useState(
-    "07143ffd-184e-43b5-a8de-f68d63199baa"
-  );
-  const [servicesList, setServicesList] = useState([]);
-  const [servicesLoading, setServicesLoading] = useState(false);
+  // Standard Recommended Product ID (Periodic Maintenance)
+  const [selectedProductId] = useState("07143ffd-184e-43b5-a8de-f68d63199baa");
 
   // Appointment Dates
   const [availableDates, setAvailableDates] = useState([]);
@@ -248,68 +253,180 @@ export default function MobileServiceBookingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [bookingResult, setBookingResult] = useState(null);
   const [bookingError, setBookingError] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  // 1. Initial Load of Metadata (Locations & Services)
-  useEffect(() => {
-    let isMounted = true;
-    const fetchMetadata = async () => {
-      setLocationsLoading(true);
-      setServicesLoading(true);
-      try {
-        const [locRes, srvRes] = await Promise.allSettled([
-          getServiceLocations("workshop"),
-          getServiceRecommendedServices("workshop"),
-        ]);
+  // Auto-fetch Customer & Vehicle details based on phone
+  const autoFetchCustomerAndVehicles = async (mobileNumber) => {
+    if (!mobileNumber || !mobileNumber.trim()) return;
+    setCustomerSearching(true);
+    try {
+      const res = await findServiceCustomer(mobileNumber.trim());
+      if (res && res.ok && res.data?.result) {
+        const cust = Array.isArray(res.data.result)
+          ? res.data.result[0]
+          : res.data.result;
+        if (cust) {
+          setCustomerFound(cust);
+          const cId = cust.customerId || cust.id;
+          if (cId) {
+            setCustomerId(cId);
+            setVehicleSearching(true);
+            const vRes = await getServiceCustomerVehicles(cId);
+            if (vRes && vRes.ok && vRes.data?.result) {
+              const vList = Array.isArray(vRes.data.result)
+                ? vRes.data.result
+                : [vRes.data.result];
+              setCustomerVehicles(vList);
+              if (vList.length > 0) {
+                const firstV = vList[0].vehicle || vList[0];
+                const initialPlate = firstV.licensePlate || "";
+                if (initialPlate) setPlateNo(initialPlate);
+                if (firstV.vehicleId) setVehicleId(firstV.vehicleId);
+                if (firstV.make || firstV.brand)
+                  setServiceMake(firstV.make || firstV.brand);
 
-        if (isMounted) {
-          if (locRes.status === "fulfilled" && locRes.value?.ok) {
-            const rawLocs =
-              locRes.value.data?.data ||
-              locRes.value.data?.result ||
-              locRes.value.data ||
-              [];
-            if (Array.isArray(rawLocs) && rawLocs.length > 0) {
-              setLocations(
-                rawLocs.map((l) => ({
-                  id: l.dealershipLocationId || l.id || l.locationId,
-                  name: l.dealershipLocationName || l.locationName || l.name || `Location ${l.id}`,
-                }))
-              );
-            }
-          }
-
-          if (srvRes.status === "fulfilled" && srvRes.value?.ok) {
-            const rawSrv =
-              srvRes.value.data?.result ||
-              srvRes.value.data?.data ||
-              srvRes.value.data ||
-              [];
-            if (Array.isArray(rawSrv) && rawSrv.length > 0) {
-              setServicesList(rawSrv);
-              const firstId = rawSrv[0]?.serviceProductId || rawSrv[0]?.id;
-              if (firstId) {
-                setSelectedProductId(firstId);
+                if (initialPlate) {
+                  autoFetchVehicleSpecs(initialPlate);
+                }
+              } else {
+                setCustomerVehicles([]);
+                setPlateNo("");
+                setVehicleData(null);
+                setVehicleId(null);
               }
+            } else {
+              setCustomerVehicles([]);
+              setPlateNo("");
+              setVehicleData(null);
+              setVehicleId(null);
             }
+            setVehicleSearching(false);
           }
+        } else {
+          setCustomerFound(null);
+          setCustomerId("");
+          setCustomerVehicles([]);
+          setPlateNo("");
+          setVehicleData(null);
+          setVehicleId(null);
         }
-      } catch (err) {
-        console.warn("Failed to fetch initial locations or services:", err);
-      } finally {
-        if (isMounted) {
-          setLocationsLoading(false);
-          setServicesLoading(false);
-        }
+      } else {
+        setCustomerFound(null);
+        setCustomerId("");
+        setCustomerVehicles([]);
+        setPlateNo("");
+        setVehicleData(null);
+        setVehicleId(null);
       }
-    };
+    } catch (err) {
+      console.warn("Auto-fetch customer & vehicle details error:", err);
+      setCustomerFound(null);
+      setCustomerVehicles([]);
+      setVehicleData(null);
+    } finally {
+      setCustomerSearching(false);
+    }
+  };
 
-    fetchMetadata();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  // Auto-fetch Vehicle Specs from API - No hardcoded fallback
+  const autoFetchVehicleSpecs = async (plate) => {
+    const cleanPlate = (plate || "").trim();
+    if (!cleanPlate) {
+      setVehicleData(null);
+      return;
+    }
+    setVehicleSearching(true);
+    try {
+      const res = await getServiceVehicleDetails(cleanPlate);
+      const v = res?.data?.data || res?.data?.result;
+      if (res && res.ok && v && (v.vehicleMakeCode || v.vehicleModal || v.make || v.model)) {
+        setVehicleData(v);
+        if (v.sabVehicleId || v.vehicleId) {
+          setVehicleId(v.sabVehicleId || v.vehicleId);
+        }
+        if (v.vehicleMakeCode || v.make) {
+          setServiceMake(v.vehicleMakeCode || v.make);
+        }
+      } else {
+        // Not found in API - DO NOT show card or hardcode
+        setVehicleData(null);
+      }
+    } catch (err) {
+      console.warn("Auto-fetch vehicle specs error:", err);
+      setVehicleData(null);
+    } finally {
+      setVehicleSearching(false);
+    }
+  };
 
-  // 2. Fetch Advisors for selected location
+  // Debounce vehicle plate lookup - clear card immediately if plate changes or is invalid
+  const lastFetchedPlateRef = useRef("");
+
+  useEffect(() => {
+    const cleanPlate = plateNo.trim();
+    if (!cleanPlate) {
+      setVehicleData(null);
+      lastFetchedPlateRef.current = "";
+      return;
+    }
+
+    if (cleanPlate === lastFetchedPlateRef.current) return;
+
+    // Immediately clear stale vehicle card while typing a new plate
+    setVehicleData(null);
+
+    if (cleanPlate.length >= 3) {
+      const timer = setTimeout(() => {
+        lastFetchedPlateRef.current = cleanPlate;
+        autoFetchVehicleSpecs(cleanPlate);
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [plateNo]);
+
+  // Auto-fetch Customer & Vehicle details when phone changes, and clear old details immediately
+  const isFirstMount = useRef(true);
+  const lastFetchedPhoneRef = useRef("");
+
+  useEffect(() => {
+    const cleanDigits = phone.replace(/\D/g, "").slice(0, 15);
+
+    // Initial mount from URL query param
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      if (cleanDigits.length >= 8) {
+        lastFetchedPhoneRef.current = cleanDigits;
+        autoFetchCustomerAndVehicles(cleanDigits);
+      } else if (paramPlate) {
+        autoFetchVehicleSpecs(paramPlate);
+      }
+      return;
+    }
+
+    // When phone changes to a different number, clear old fetched details immediately
+    if (cleanDigits !== lastFetchedPhoneRef.current) {
+      setCustomerFound(null);
+      setCustomerId("");
+      setCustomerVehicles([]);
+      setPlateNo("");
+      setVehicleData(null);
+      setVehicleId(null);
+    }
+
+    // Auto-fetch details for the newly entered number once it reaches at least 8 digits
+    if (
+      cleanDigits.length >= 8 &&
+      cleanDigits !== lastFetchedPhoneRef.current
+    ) {
+      const timer = setTimeout(() => {
+        lastFetchedPhoneRef.current = cleanDigits;
+        autoFetchCustomerAndVehicles(cleanDigits);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [phone]);
+
+  // Fetch Advisors when locationId changes
   useEffect(() => {
     if (!locationId) return;
     getServiceAdvisors(locationId)
@@ -322,80 +439,7 @@ export default function MobileServiceBookingPage() {
       .catch((e) => console.warn("Advisors fetch failed:", e));
   }, [locationId]);
 
-  // 3. Auto-Lookup Customer when paramMobile is passed in URL
-  const lookupCustomer = async (mobileToSearch) => {
-    if (!mobileToSearch || !mobileToSearch.trim()) return;
-    setCustomerSearching(true);
-    setCustomerFound(null);
-    try {
-      const res = await findServiceCustomer(mobileToSearch.trim());
-      if (res && res.ok && res.data?.result) {
-        const cust = Array.isArray(res.data.result)
-          ? res.data.result[0]
-          : res.data.result;
-        if (cust) {
-          setCustomerFound(cust);
-          const cId = cust.customerId || cust.id;
-          if (cId) {
-            setCustomerId(cId);
-            // Fetch customer's vehicles automatically
-            const vRes = await getServiceCustomerVehicles(cId);
-            if (vRes && vRes.ok && vRes.data?.result) {
-              const vList = Array.isArray(vRes.data.result)
-                ? vRes.data.result
-                : [vRes.data.result];
-              setCustomerVehicles(vList);
-              if (vList.length > 0) {
-                const firstV = vList[0].vehicle || vList[0];
-                if (firstV.licensePlate) setPlateNo(firstV.licensePlate);
-                if (firstV.vehicleId) setVehicleId(firstV.vehicleId);
-                if (firstV.make || firstV.brand) setServiceMake(firstV.make || firstV.brand);
-                // Also trigger detailed specs
-                lookupVehicle(firstV.licensePlate);
-              }
-            }
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("Auto find customer error:", err);
-    } finally {
-      setCustomerSearching(false);
-    }
-  };
-
-  // Lookup Vehicle Details
-  const lookupVehicle = async (plateToSearch) => {
-    if (!plateToSearch || !plateToSearch.trim()) return;
-    setVehicleSearching(true);
-    try {
-      const res = await getServiceVehicleDetails(plateToSearch.trim());
-      if (res && res.ok && res.data?.data) {
-        setVehicleData(res.data.data);
-        if (res.data.data.sabVehicleId) {
-          setVehicleId(res.data.data.sabVehicleId);
-        }
-        if (res.data.data.vehicleMakeCode) {
-          setServiceMake(res.data.data.vehicleMakeCode);
-        }
-      }
-    } catch (err) {
-      console.warn("Lookup vehicle details error:", err);
-    } finally {
-      setVehicleSearching(false);
-    }
-  };
-
-  // Run initial URL parameter lookup once on mount
-  useEffect(() => {
-    if (paramMobile) {
-      lookupCustomer(paramMobile);
-    } else if (paramPlate) {
-      lookupVehicle(paramPlate);
-    }
-  }, []);
-
-  // 4. Fetch available appointment dates whenever location or service product changes
+  // Fetch Available Appointment Dates
   useEffect(() => {
     if (!locationId || !selectedProductId) return;
     let isMounted = true;
@@ -417,7 +461,9 @@ export default function MobileServiceBookingPage() {
               [];
           const normalized = rawDates
             .map((item) =>
-              typeof item === "string" ? item : item?.date || item?.appointmentDate
+              typeof item === "string"
+                ? item
+                : item?.date || item?.appointmentDate,
             )
             .filter(Boolean);
           if (Array.isArray(normalized) && normalized.length > 0) {
@@ -440,7 +486,7 @@ export default function MobileServiceBookingPage() {
     };
   }, [locationId, selectedProductId, serviceMake]);
 
-  // 5. Fetch available timeslots when selectedDate changes
+  // Fetch Available Time Slots
   useEffect(() => {
     if (!locationId || !selectedProductId || !selectedDate) return;
     let isMounted = true;
@@ -453,13 +499,13 @@ export default function MobileServiceBookingPage() {
           serviceProductIds: [selectedProductId],
         });
         if (isMounted && res && res.ok && res.data) {
-          const rawSlots = res.data.result?.timeSlots || res.data.timeSlots || [];
+          const rawSlots =
+            res.data.result?.timeSlots || res.data.timeSlots || [];
           if (Array.isArray(rawSlots) && rawSlots.length > 0) {
             setTimeSlots(rawSlots);
             const firstSlot = rawSlots[0]?.timeSlot || "10:15-10:30";
             setSelectedTimeSlot(firstSlot);
 
-            // Auto-select Morning/Afternoon/Evening tab based on hour
             const match = firstSlot.match(/^(\d{1,2}):/);
             const firstHour = match ? parseInt(match[1], 10) : 9;
             if (firstHour >= 16) setActivePeriodTab("Evening");
@@ -512,11 +558,13 @@ export default function MobileServiceBookingPage() {
     return categories;
   }, [timeSlots]);
 
-  // Form Submit Handler
+  // Submit Booking Handler
   const handleSubmitBooking = async (e) => {
     e.preventDefault();
     if (!plateNo.trim() || !selectedDate || !selectedTimeSlot) {
-      setBookingError("Please select an appointment date and time slot.");
+      setBookingError(
+        "Please select an appointment date and drop-off time slot.",
+      );
       return;
     }
 
@@ -534,23 +582,25 @@ export default function MobileServiceBookingPage() {
       mileageUnit: "KM",
       serviceProductIds: [selectedProductId],
       startDate: selectedDate,
-      vehicleId: Number(vehicleId) || 15,
+      vehicleId: vehicleId ? Number(vehicleId) : 0,
     };
 
     try {
       const res = await createServiceBooking(payload);
       if (res && res.ok && res.data) {
-        setBookingResult({
+        const resultInfo = {
           success: true,
           data: res.data.result?.data || res.data.result || res.data,
           submittedPayload: payload,
-        });
+        };
+        setBookingResult(resultInfo);
+        setShowSuccessModal(true);
       } else {
         setBookingError(
           res?.statusText ||
             res?.data?.msg ||
             res?.error ||
-            "Failed to create service booking"
+            "Failed to create service booking",
         );
       }
     } catch (err) {
@@ -561,594 +611,650 @@ export default function MobileServiceBookingPage() {
     }
   };
 
-  const handleResetBooking = () => {
-    setBookingResult(null);
-    setBookingError(null);
-    setSelectedTimeSlot("");
+  // Return to WhatsApp handler
+  const handleReturnToWhatsApp = () => {
+    const redirectUrl =
+      searchParams.get("return_url") || searchParams.get("redirect");
+    if (redirectUrl) {
+      window.location.href = redirectUrl;
+      return;
+    }
+
+    try {
+      window.location.href = "whatsapp://";
+      setTimeout(() => {
+        if (window.opener) {
+          window.close();
+        }
+      }, 1200);
+    } catch (e) {
+      window.location.href = "https://wa.me/";
+    }
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col justify-start items-center text-slate-800 font-sans selection:bg-blue-600 selection:text-white">
-      {/* Mobile Screen Container - constrained to standard phone width max-w-md (390px-440px) */}
-      <div className="w-full max-w-md bg-white min-h-screen shadow-lg flex flex-col relative pb-10">
-        
-        {/* App Top Bar */}
-        <header className="sticky top-0 z-40 bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white px-4 py-3.5 shadow-md flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center font-bold text-white shadow-xs">
-              <FaCalendarCheck className="text-lg" />
+    <div className="min-h-screen bg-[#F0F7FF] flex flex-col justify-start items-center text-[#2B3655] font-sans selection:bg-[#87BFFF] selection:text-[#2B3655] w-full relative overflow-x-hidden">
+      {/* Decorative Ambient Color Mesh using #87BFFF, #E3F1FF, #D6E8FA */}
+      <div className="pointer-events-none fixed -top-24 -left-20 w-80 h-80 rounded-full bg-[#87BFFF]/20 blur-3xl" />
+      <div className="pointer-events-none fixed top-1/3 -right-24 w-88 h-88 rounded-full bg-[#E3F1FF]/60 blur-3xl" />
+      <div className="pointer-events-none fixed bottom-10 left-10 w-80 h-80 rounded-full bg-[#D6E8FA]/50 blur-3xl" />
+
+      {/* Main Container - Full-width on mobile, max-w-2xl on tablets */}
+      <div className="w-full max-w-2xl min-h-screen flex flex-col relative pb-14 sm:my-3 sm:rounded-3xl bg-[#FFFFFF] shadow-[0_20px_50px_rgba(23,43,77,0.06)] sm:border sm:border-[#87BFFF]/45">
+        {/* Header Bar using Primary #87BFFF and Text #2B3655 */}
+        <header className="sticky top-0 z-40 bg-gradient-to-r from-[#87BFFF] via-[#9ecaff] to-[#87BFFF] text-[#2B3655] px-4 sm:px-6 py-4 shadow-[0_4px_20px_rgba(135,191,255,0.25)] flex items-center justify-between sm:rounded-t-3xl border-b border-[#D6E8FA]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/40 border border-white/60 flex items-center justify-center font-bold text-[#2B3655] shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),0_4px_10px_rgba(23,43,77,0.08)]">
+              <FaCalendarCheck className="text-xl" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-sm tracking-tight text-white">
+                <span className="font-black text-sm sm:text-base tracking-tight text-[#2B3655]">
                   AGMC Service Booking
                 </span>
-                <span className="text-[10px] font-bold bg-white/20 px-1.5 py-0.5 rounded text-white uppercase tracking-wider">
+                <span className="text-[10px] font-extrabold bg-white/45 px-2 py-0.5 rounded-full text-[#2B3655] uppercase tracking-wider border border-white/60 shadow-2xs">
                   {serviceMake}
                 </span>
               </div>
-              <p className="text-[11px] text-blue-100 font-medium">
-                Official Workshop Scheduling
-              </p>
             </div>
           </div>
-
-          {bookingResult && (
-            <button
-              onClick={handleResetBooking}
-              className="text-xs bg-white/15 hover:bg-white/25 active:scale-95 text-white font-bold px-2.5 py-1.5 rounded-lg transition-all flex items-center gap-1"
-            >
-              <FaRedo className="text-[10px]" />
-              <span>New</span>
-            </button>
-          )}
         </header>
 
         {/* Content Body */}
-        <main className="p-3.5 sm:p-4 space-y-4 flex-1">
-          
-          {/* SUCCESS SCREEN */}
-          {bookingResult && (
-            <div className="bg-gradient-to-b from-emerald-50 to-white rounded-2xl border border-emerald-200 p-5 shadow-sm space-y-4 animate-in fade-in zoom-in-95 duration-300">
-              <div className="text-center space-y-1.5">
-                <div className="w-14 h-14 bg-emerald-600 text-white rounded-2xl mx-auto flex items-center justify-center shadow-md shadow-emerald-500/30">
-                  <FaCheckCircle className="text-3xl" />
-                </div>
-                <h2 className="text-lg font-extrabold text-slate-900">
-                  Booking Confirmed!
-                </h2>
-                <p className="text-xs text-slate-500 font-medium">
-                  Your service appointment has been successfully scheduled with AGMC.
-                </p>
-              </div>
-
-              {/* Digital Pass Card */}
-              <div className="bg-white rounded-xl border border-emerald-100 shadow-xs p-4 space-y-3">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                    Appointment Details
-                  </span>
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                    Active
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                      Date & Time
-                    </span>
-                    <span className="font-extrabold text-slate-900">
-                      {bookingResult.submittedPayload?.startDate}
-                    </span>
-                    <span className="block text-blue-600 font-bold text-[11px]">
-                      {bookingResult.submittedPayload?.dropOffTime}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                      Vehicle Plate
-                    </span>
-                    <span className="font-extrabold text-slate-900 font-mono">
-                      {bookingResult.submittedPayload?.licensePlateNo}
-                    </span>
-                    <span className="block text-[11px] text-slate-500">
-                      ID: #{bookingResult.submittedPayload?.vehicleId}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                      Location
-                    </span>
-                    <span className="font-bold text-slate-800">
-                      Workshop ID #{bookingResult.submittedPayload?.dealershipLocationId}
-                    </span>
-                  </div>
-
-                  {bookingResult.submittedPayload?.advisorId && (
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                        Service Advisor
-                      </span>
-                      <span className="font-bold text-slate-800">
-                        {bookingResult.submittedPayload.advisorId}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {customerFound?.name && (
-                  <div className="pt-2 border-t border-slate-100 text-xs">
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">
-                      Customer
-                    </span>
-                    <span className="font-bold text-slate-800">
-                      {customerFound.name} ({phone})
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={handleResetBooking}
-                className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 active:scale-98 text-white font-extrabold text-sm rounded-xl shadow-md shadow-emerald-700/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <FaRedo className="text-xs" />
-                <span>Book Another Service</span>
-              </button>
-            </div>
-          )}
-
-          {/* ERROR ALERT BANNER */}
+        <main className="p-4 sm:p-6 space-y-4 sm:space-y-5 flex-1 relative z-10">
+          {/* Error Notice Banner */}
           {bookingError && (
-            <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-xs text-rose-900 shadow-xs">
-              <FaExclamationCircle className="text-rose-600 text-sm mt-0.5 shrink-0" />
+            <div className="p-4 bg-rose-50/90 border border-rose-200 rounded-2xl flex items-start gap-3 text-xs text-rose-900 shadow-xs">
+              <FaExclamationCircle className="text-rose-600 text-base mt-0.5 shrink-0" />
               <div className="flex-1">
-                <span className="font-bold block">Booking Notice</span>
-                <span className="text-[11px] text-rose-700">{bookingError}</span>
+                <span className="font-extrabold block text-sm">
+                  Booking Notice
+                </span>
+                <span className="text-[11px] text-rose-700">
+                  {bookingError}
+                </span>
               </div>
               <button
                 type="button"
                 onClick={() => setBookingError(null)}
-                className="text-rose-400 hover:text-rose-700 p-0.5 font-bold"
+                className="text-rose-400 hover:text-rose-700 p-1 font-bold active:scale-90 transition-transform"
               >
                 <FaTimes />
               </button>
             </div>
           )}
 
-          {/* MAIN BOOKING FORM */}
-          {!bookingResult && (
-            <form onSubmit={handleSubmitBooking} className="space-y-4">
-              
-              {/* SECTION 1: Customer & Vehicle Information */}
-              <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                    <FaUser className="text-blue-600 text-xs" />
-                    <span>Customer & Vehicle</span>
+          {/* Form */}
+          <form
+            onSubmit={handleSubmitBooking}
+            className="space-y-4 sm:space-y-5"
+          >
+            {/* SECTION 1: Customer & Vehicle Information (Border: #87BFFF, Lighter Shade Inside Card) */}
+            <div className="bg-gradient-to-b from-[#F8FBFF] via-[#F2F8FF] to-[#EAF4FF] rounded-3xl border border-[#87BFFF]/75 p-4 sm:p-5 shadow-[0_10px_28px_rgba(135,191,255,0.16),inset_0_1px_3px_rgba(255,255,255,0.9)] space-y-3.5">
+              <div className="flex items-center justify-between border-b border-[#D6E8FA]/70 pb-2.5">
+                <span className="text-xs font-black text-[#2B3655] flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-[#E3F1FF] text-[#2B3655] flex items-center justify-center text-xs shadow-2xs">
+                    <FaUser />
+                  </div>
+                  <span>Customer & Vehicle</span>
+                </span>
+                {customerFound?.name?.trim() ? (
+                  <span className="text-[11px] font-bold text-[#2B3655] truncate max-w-[200px] bg-[#E3F1FF] px-2.5 py-0.5 rounded-full border border-[#D6E8FA]">
+                    {customerFound.name.trim()}
                   </span>
-                  {customerFound && (
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
-                      <FaCheck className="text-[8px]" /> Verified
-                    </span>
-                  )}
-                </div>
-
-                {/* Mobile Phone Number Input (Auto-prefilled from query parameter or editable) */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-700 flex justify-between">
-                    <span>Mobile Phone Number *</span>
-                    {customerSearching && (
-                      <span className="text-blue-600 font-normal flex items-center gap-1">
-                        <FaSpinner className="animate-spin text-[10px]" /> Checking...
-                      </span>
-                    )}
-                  </label>
-                  <div className="relative flex items-center">
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="e.g. 0543408597"
-                      required
-                      className="w-full h-10 px-3 pr-20 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl font-bold text-slate-900 text-base focus:outline-none transition-all placeholder:text-slate-400 placeholder:font-normal"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => lookupCustomer(phone)}
-                      disabled={customerSearching || !phone.trim()}
-                      className="absolute right-1.5 px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                    >
-                      <FaSearch className="text-[9px]" />
-                      <span>Verify</span>
-                    </button>
-                  </div>
-                  {customerFound && (
-                    <p className="text-[11px] text-emerald-800 font-semibold px-1 pt-0.5">
-                      {customerFound.name || "Customer Found"} {customerFound.reference ? `• Ref: ${customerFound.reference}` : ""}
-                    </p>
-                  )}
-                </div>
-
-                {/* Multiple Vehicles Selector (if customer has more than 1 vehicle registered) */}
-                {customerVehicles.length > 1 && (
-                  <div className="space-y-1 pt-1">
-                    <label className="text-[11px] font-bold text-slate-700">
-                      Select Customer Vehicle
-                    </label>
-                    <select
-                      value={plateNo}
-                      onChange={(e) => {
-                        const selectedPlate = e.target.value;
-                        setPlateNo(selectedPlate);
-                        const matchV = customerVehicles.find(
-                          (v) => (v.vehicle?.licensePlate || v.licensePlate) === selectedPlate
-                        );
-                        if (matchV) {
-                          const vObj = matchV.vehicle || matchV;
-                          if (vObj.vehicleId) setVehicleId(vObj.vehicleId);
-                          lookupVehicle(selectedPlate);
-                        }
-                      }}
-                      className="w-full h-10 px-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl font-bold text-slate-900 text-sm focus:outline-none"
-                    >
-                      {customerVehicles.map((item, idx) => {
-                        const v = item.vehicle || item;
-                        return (
-                          <option key={idx} value={v.licensePlate}>
-                            Plate: {v.licensePlate} ({v.make || "Geely"} {v.model || ""})
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-                )}
-
-                {/* Vehicle License Plate Input */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-700 flex justify-between">
-                    <span>Vehicle Plate Number *</span>
-                    {vehicleSearching && (
-                      <span className="text-blue-600 font-normal flex items-center gap-1">
-                        <FaSpinner className="animate-spin text-[10px]" /> Searching...
-                      </span>
-                    )}
-                  </label>
-                  <div className="relative flex items-center">
-                    <input
-                      type="text"
-                      value={plateNo}
-                      onChange={(e) => setPlateNo(e.target.value)}
-                      placeholder="e.g. 240153"
-                      required
-                      className="w-full h-10 px-3 pr-20 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl font-mono font-bold text-slate-900 text-base focus:outline-none transition-all placeholder:text-slate-400 placeholder:font-normal uppercase"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => lookupVehicle(plateNo)}
-                      disabled={vehicleSearching || !plateNo.trim()}
-                      className="absolute right-1.5 px-2.5 py-1.5 bg-slate-700 hover:bg-slate-800 active:scale-95 disabled:opacity-40 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                    >
-                      <FaSearch className="text-[9px]" />
-                      <span>Lookup</span>
-                    </button>
-                  </div>
-
-                  {/* Vehicle Details Card */}
-                  {vehicleData && (
-                    <div className="p-2.5 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1 text-xs mt-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="font-extrabold text-blue-900">
-                          {vehicleData.vehicleMakeCode} {vehicleData.vehicleModal} ({vehicleData.modalYear})
-                        </span>
-                        <span className="text-[10px] font-bold bg-blue-200/70 text-blue-900 px-1.5 py-0.5 rounded">
-                          ID: #{vehicleId}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-blue-700 font-mono truncate">
-                        VIN: {vehicleData.chassisNumber || "N/A"}
-                      </p>
-                    </div>
-                  )}
-                </div>
+                ) : null}
               </div>
 
-              {/* SECTION 2: Dealership Location & Service Package */}
-              <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                  <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                    <FaMapMarkerAlt className="text-blue-600 text-xs" />
-                    <span>Workshop & Service Package</span>
-                  </span>
-                </div>
+              {/* Mobile Phone Number (15-digit numeric restriction, Text: #2B3655, Focus: #87BFFF) */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-[#2B3655] flex justify-between">
+                  <span>Mobile Phone Number *</span>
+                  {customerSearching && (
+                    <span className="text-[#2B3655]/70 font-semibold flex items-center gap-1 text-[10px]">
+                      <FaSpinner className="animate-spin text-[10px]" />{" "}
+                      Fetching details...
+                    </span>
+                  )}
+                </label>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={15}
+                  value={phone}
+                  onChange={(e) => {
+                    const numericOnly = e.target.value
+                      .replace(/\D/g, "")
+                      .slice(0, 15);
+                    setPhone(numericOnly);
+                  }}
+                  placeholder="e.g. 0543408597"
+                  required
+                  className="w-full h-11 px-3.5 bg-[#FFFFFF] border border-[#D6E8FA] focus:border-[#87BFFF] focus:bg-white rounded-2xl font-bold text-[#2B3655] text-base focus:outline-none transition-all shadow-[inset_0_2px_4px_rgba(23,43,77,0.02)] focus:ring-4 focus:ring-[#87BFFF]/25 placeholder:text-[#2B3655]/40 placeholder:font-normal"
+                />
+              </div>
 
-                {/* Dealership Location */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-700">
-                    Dealership Workshop Location *
+              {/* Multi-Vehicle Picker if customer has more than 1 vehicle */}
+              {customerVehicles.length > 1 && (
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-[11px] font-bold text-[#2B3655]">
+                    Select Customer Vehicle
                   </label>
                   <select
-                    value={locationId}
-                    onChange={(e) => setLocationId(Number(e.target.value))}
-                    disabled={locationsLoading}
-                    className="w-full h-10 px-3 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl font-bold text-slate-900 text-sm focus:outline-none transition-all cursor-pointer"
+                    value={plateNo}
+                    onChange={(e) => {
+                      const selectedPlate = e.target.value;
+                      setPlateNo(selectedPlate);
+                      const matchV = customerVehicles.find(
+                        (v) =>
+                          (v.vehicle?.licensePlate || v.licensePlate) ===
+                          selectedPlate,
+                      );
+                      if (matchV) {
+                        const vObj = matchV.vehicle || matchV;
+                        if (vObj.vehicleId) setVehicleId(vObj.vehicleId);
+                        autoFetchVehicleSpecs(selectedPlate);
+                      }
+                    }}
+                    className="w-full h-11 px-3 bg-[#FFFFFF] border border-[#D6E8FA] focus:border-[#87BFFF] focus:bg-white rounded-2xl font-bold text-[#2B3655] text-sm focus:outline-none shadow-xs cursor-pointer"
                   >
-                    {locations.map((loc) => (
-                      <option key={loc.id} value={loc.id}>
-                        {loc.name}
-                      </option>
-                    ))}
+                    {customerVehicles.map((item, idx) => {
+                      const v = item.vehicle || item;
+                      return (
+                        <option key={idx} value={v.licensePlate}>
+                          Plate: {v.licensePlate} ({v.make || "Geely"}{" "}
+                          {v.model || ""})
+                        </option>
+                      );
+                    })}
                   </select>
                 </div>
+              )}
 
-                {/* Service Package (Pre-selected by default or selectable) */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-slate-700 flex justify-between">
-                    <span>Service Package (Pre-selected)</span>
-                    <span className="text-[10px] text-emerald-600 font-bold">Recommended</span>
-                  </label>
-                  {servicesList.length > 0 ? (
-                    <select
-                      value={selectedProductId}
-                      onChange={(e) => setSelectedProductId(e.target.value)}
-                      disabled={servicesLoading}
-                      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl font-bold text-slate-900 text-xs focus:outline-none cursor-pointer"
-                    >
-                      {servicesList.map((srv, idx) => {
-                        const pId = srv.serviceProductId || srv.id || `srv-${idx}`;
-                        const pName = srv.serviceProductName || srv.name || srv.description || "Periodic Maintenance";
-                        return (
-                          <option key={pId} value={pId}>
-                            {pName}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  ) : (
-                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs flex items-center justify-between">
-                      <span className="font-bold text-slate-800">
-                        Periodic Maintenance Service (Standard)
-                      </span>
-                      <FaCheck className="text-emerald-600 text-xs" />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* SECTION 3: Appointment Date Selection */}
-              <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                    <FaCalendarAlt className="text-blue-600 text-xs" />
-                    <span>Select Appointment Date *</span>
-                  </span>
-                  {datesLoading ? (
-                    <span className="text-[10px] text-blue-600 font-bold flex items-center gap-1">
-                      <FaSpinner className="animate-spin text-[10px]" /> Loading...
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                      {availableDates.length} Dates Available
+              {/* Vehicle License Plate */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-[#2B3655] flex justify-between">
+                  <span>Vehicle Plate Number *</span>
+                  {vehicleSearching && (
+                    <span className="text-[#2B3655]/70 font-semibold flex items-center gap-1 text-[10px]">
+                      <FaSpinner className="animate-spin text-[10px]" /> Loading
+                      vehicle...
                     </span>
                   )}
-                </div>
-
-                {/* Interactive Touch Calendar */}
-                <MobileTouchCalendar
-                  availableDates={availableDates}
-                  selectedDate={selectedDate}
-                  onSelectDate={(dt) => setSelectedDate(dt)}
-                  loading={datesLoading}
+                </label>
+                <input
+                  type="text"
+                  value={plateNo}
+                  onChange={(e) => {
+                    const newPlate = e.target.value;
+                    setPlateNo(newPlate);
+                    // Clear car card immediately when user modifies plate
+                    setVehicleData(null);
+                  }}
+                  placeholder="e.g. 26570-20-AD"
+                  required
+                  className="w-full h-11 px-3.5 bg-[#FFFFFF] border border-[#D6E8FA] focus:border-[#87BFFF] focus:bg-white rounded-2xl font-mono font-bold text-[#2B3655] text-base focus:outline-none transition-all shadow-[inset_0_2px_4px_rgba(23,43,77,0.02)] focus:ring-4 focus:ring-[#87BFFF]/25 placeholder:text-[#2B3655]/40 placeholder:font-normal uppercase"
                 />
-                <div className="text-[11px] font-bold text-slate-600 text-center pt-0.5">
-                  Selected Date: <span className="text-blue-700 font-extrabold">{selectedDate}</span>
-                </div>
+
+                {/* Vehicle Passport Card (Soft Blue #E3F1FF, Border #D6E8FA, Text #2B3655, Success #42B978) */}
+                {vehicleData && (
+                  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#E3F1FF] via-[#F0F7FF] to-[#E3F1FF] border border-[#D6E8FA] p-4 text-[#2B3655] shadow-[0_8px_20px_rgba(135,191,255,0.18),inset_0_1px_2px_rgba(255,255,255,0.9)] mt-2">
+                    <div className="flex items-center gap-3.5 relative z-10">
+                      {/* 3D Vehicle Avatar Badge with #87BFFF */}
+                      <div className="w-13 h-13 rounded-2xl bg-[#87BFFF] border border-white/80 flex items-center justify-center text-[#2B3655] shadow-[inset_0_2px_4px_rgba(255,255,255,0.6),0_6px_14px_rgba(135,191,255,0.35)] shrink-0">
+                        <FaCarSide className="text-2xl text-[#2B3655] drop-shadow-xs" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1 mb-0.5">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-[#42B978] flex items-center gap-1">
+                            <FaShieldAlt className="text-[10px]" />{" "}
+                            {vehicleData.vehicleMakeCode || serviceMake}{" "}
+                            Verified
+                          </span>
+                          <span className="text-[10px] font-black bg-[#FFFFFF] px-2 py-0.5 rounded-full border border-[#D6E8FA] text-[#2B3655] font-mono shadow-2xs">
+                            ID #{vehicleId}
+                          </span>
+                        </div>
+                        <h4 className="text-base font-black text-[#2B3655] tracking-tight truncate">
+                          {vehicleData.vehicleMakeCode}{" "}
+                          {vehicleData.vehicleModal}
+                        </h4>
+                        <p className="text-[11px] text-[#2B3655]/75 font-semibold">
+                          Model Year:{" "}
+                          <span className="font-black text-[#2B3655]">
+                            {vehicleData.modalYear || "Latest"}
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Chassis / VIN Row */}
+                    {vehicleData.chassisNumber && (
+                      <div className="mt-3 pt-2.5 border-t border-[#D6E8FA] flex items-center justify-between text-[11px] relative z-10">
+                        <span className="text-[#2B3655]/70 text-[10px] font-bold uppercase tracking-wider">
+                          Chassis / VIN
+                        </span>
+                        <span className="font-mono text-[#2B3655] font-black tracking-wider text-[11px] bg-[#FFFFFF] px-2.5 py-0.5 rounded-md border border-[#D6E8FA] shadow-2xs">
+                          {vehicleData.chassisNumber}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* SECTION 2: Dealership ID (Border: #87BFFF, Lighter Shade Inside Card) */}
+            <div className="bg-gradient-to-b from-[#F8FBFF] via-[#F2F8FF] to-[#EAF4FF] rounded-3xl border border-[#87BFFF]/75 p-4 sm:p-5 shadow-[0_10px_28px_rgba(135,191,255,0.16),inset_0_1px_3px_rgba(255,255,255,0.9)] space-y-3.5">
+              <div className="flex items-center justify-between border-b border-[#D6E8FA]/70 pb-2.5">
+                <span className="text-xs font-black text-[#2B3655] flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-[#E3F1FF] text-[#2B3655] flex items-center justify-center text-xs shadow-2xs">
+                    <FaMapMarkerAlt />
+                  </div>
+                  <span>Dealership Location</span>
+                </span>
+                <span className="text-[10px] font-black text-[#2B3655] bg-[#E3F1FF] px-2.5 py-0.5 rounded-full border border-[#D6E8FA]">
+                  Selected: #{locationId}
+                </span>
               </div>
 
-              {/* SECTION 4: Available Time Slots */}
-              <div className="bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                    <FaClock className="text-blue-600 text-xs" />
-                    <span>Select Drop-off Time *</span>
-                  </span>
-                  {timesLoading && (
-                    <span className="text-[10px] text-blue-600 font-bold flex items-center gap-1">
-                      <FaSpinner className="animate-spin text-[10px]" /> Loading slots...
-                    </span>
-                  )}
-                </div>
+              {/* 3D Tactile Buttons using Selected state: #87BFFF */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-[#2B3655]">
+                  Dealership Location ID *
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setLocationId(40)}
+                    className={`h-12 px-3 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
+                      locationId === 40
+                        ? "bg-[#87BFFF] text-[#2B3655] border border-[#87BFFF] shadow-[0_8px_18px_rgba(135,191,255,0.45),inset_0_2px_3px_rgba(255,255,255,0.5)] ring-2 ring-[#87BFFF]/50"
+                        : "bg-[#FFFFFF] hover:bg-[#E3F1FF]/60 text-[#2B3655] border border-[#D6E8FA] shadow-xs"
+                    }`}
+                  >
+                    <span>ID 40</span>
+                    {locationId === 40 && (
+                      <FaCheck className="text-xs text-[#2B3655]" />
+                    )}
+                  </button>
 
-                {/* Period Tabs: Morning / Afternoon / Evening */}
-                <div className="grid grid-cols-3 gap-1.5 bg-slate-100 p-1 rounded-xl">
-                  {[
-                    { id: "Morning", label: "Morning", icon: FaSun },
-                    { id: "Afternoon", label: "Afternoon", icon: FaCloudSun },
-                    { id: "Evening", label: "Evening", icon: FaMoon },
-                  ].map((tab) => {
-                    const Icon = tab.icon;
-                    const count = categorizedSlots[tab.id]?.length || 0;
-                    const isActive = activePeriodTab === tab.id;
+                  <button
+                    type="button"
+                    onClick={() => setLocationId(240)}
+                    className={`h-12 px-3 rounded-2xl text-sm font-black transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 ${
+                      locationId === 240
+                        ? "bg-[#87BFFF] text-[#2B3655] border border-[#87BFFF] shadow-[0_8px_18px_rgba(135,191,255,0.45),inset_0_2px_3px_rgba(255,255,255,0.5)] ring-2 ring-[#87BFFF]/50"
+                        : "bg-[#FFFFFF] hover:bg-[#E3F1FF]/60 text-[#2B3655] border border-[#D6E8FA] shadow-xs"
+                    }`}
+                  >
+                    <span>ID 240</span>
+                    {locationId === 240 && (
+                      <FaCheck className="text-xs text-[#2B3655]" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 3: Appointment Date Selection (Border: #87BFFF, Lighter Shade Inside Card) */}
+            <div className="bg-gradient-to-b from-[#F8FBFF] via-[#F2F8FF] to-[#EAF4FF] rounded-3xl border border-[#87BFFF]/75 p-4 sm:p-5 shadow-[0_10px_28px_rgba(135,191,255,0.16),inset_0_1px_3px_rgba(255,255,255,0.9)] space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-[#2B3655] flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-[#E3F1FF] text-[#2B3655] flex items-center justify-center text-xs shadow-2xs">
+                    <FaCalendarAlt />
+                  </div>
+                  <span>Appointment Date *</span>
+                </span>
+                {datesLoading ? (
+                  <span className="text-[10px] text-[#2B3655]/70 font-bold flex items-center gap-1">
+                    <FaSpinner className="animate-spin text-[10px]" />{" "}
+                    Loading...
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black text-[#2B3655] bg-[#E3F1FF] px-2.5 py-0.5 rounded-full border border-[#D6E8FA]">
+                    {availableDates.length} Dates Available
+                  </span>
+                )}
+              </div>
+
+              {/* Interactive Calendar */}
+              <MobileTouchCalendar
+                availableDates={availableDates}
+                selectedDate={selectedDate}
+                onSelectDate={(dt) => setSelectedDate(dt)}
+                loading={datesLoading}
+              />
+              <div className="text-[11px] font-bold text-[#2B3655]/80 text-center pt-0.5">
+                Selected Date:{" "}
+                <span className="text-[#2B3655] font-black bg-[#E3F1FF] px-2 py-0.5 rounded-md border border-[#D6E8FA]">
+                  {selectedDate}
+                </span>
+              </div>
+            </div>
+
+            {/* SECTION 4: Available Time Slots (Border: #87BFFF, Lighter Shade Inside Card) */}
+            <div className="bg-gradient-to-b from-[#F8FBFF] via-[#F2F8FF] to-[#EAF4FF] rounded-3xl border border-[#87BFFF]/75 p-4 sm:p-5 shadow-[0_10px_28px_rgba(135,191,255,0.16),inset_0_1px_3px_rgba(255,255,255,0.9)] space-y-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-[#2B3655] flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-[#E3F1FF] text-[#2B3655] flex items-center justify-center text-xs shadow-2xs">
+                    <FaClock />
+                  </div>
+                  <span>Drop-off Time *</span>
+                </span>
+                {timesLoading && (
+                  <span className="text-[10px] text-[#2B3655]/70 font-bold flex items-center gap-1">
+                    <FaSpinner className="animate-spin text-[10px]" /> Loading
+                    slots...
+                  </span>
+                )}
+              </div>
+
+              {/* Period Tabs: Morning / Afternoon / Evening (Soft Blue #E3F1FF background) */}
+              <div className="grid grid-cols-3 gap-1.5 bg-[#F0F7FF] p-1 rounded-2xl border border-[#D6E8FA]">
+                {[
+                  { id: "Morning", label: "Morning", icon: FaSun },
+                  { id: "Afternoon", label: "Afternoon", icon: FaCloudSun },
+                  { id: "Evening", label: "Evening", icon: FaMoon },
+                ].map((tab) => {
+                  const Icon = tab.icon;
+                  const count = categorizedSlots[tab.id]?.length || 0;
+                  const isActive = activePeriodTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActivePeriodTab(tab.id)}
+                      className={`py-2 px-1 rounded-xl text-xs font-black transition-all flex flex-col items-center gap-0.5 cursor-pointer active:scale-95 ${
+                        isActive
+                          ? "bg-[#FFFFFF] text-[#2B3655] border border-[#D6E8FA] shadow-xs"
+                          : "text-[#2B3655]/60 hover:text-[#2B3655]"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1">
+                        <Icon className="text-[11px]" />
+                        <span>{tab.label}</span>
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold ${isActive ? "text-[#2B3655]" : "text-[#2B3655]/40"}`}
+                      >
+                        ({count})
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Dynamic Slot Chips Grid using Selected state #87BFFF */}
+              {timesLoading ? (
+                <div className="py-8 flex flex-col items-center justify-center text-[#2B3655]/50 text-xs gap-2">
+                  <FaSpinner className="animate-spin text-lg text-[#87BFFF]" />
+                  <span>Fetching available slots for {selectedDate}...</span>
+                </div>
+              ) : categorizedSlots[activePeriodTab]?.length > 0 ? (
+                <div className="grid grid-cols-2 min-[380px]:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-2.5">
+                  {categorizedSlots[activePeriodTab].map((slot, sIdx) => {
+                    const slotStr =
+                      typeof slot === "string" ? slot : slot?.timeSlot || "";
+                    const isSelected = selectedTimeSlot === slotStr;
                     return (
                       <button
-                        key={tab.id}
+                        key={sIdx}
                         type="button"
-                        onClick={() => setActivePeriodTab(tab.id)}
-                        className={`py-2 px-1 rounded-lg text-xs font-bold transition-all flex flex-col items-center gap-0.5 cursor-pointer ${
-                          isActive
-                            ? "bg-white text-blue-700 shadow-xs"
-                            : "text-slate-500 hover:text-slate-800"
+                        onClick={() => {
+                          setSelectedTimeSlot(slotStr);
+                          if (slot.advisorId) {
+                            setAdvisorId(String(slot.advisorId));
+                          }
+                        }}
+                        className={`min-h-[44px] h-11 px-2.5 py-1.5 rounded-2xl text-xs font-black transition-all flex items-center justify-center gap-1.5 border cursor-pointer active:scale-95 ${
+                          isSelected
+                            ? "bg-[#87BFFF] text-[#2B3655] border-[#87BFFF] shadow-[0_6px_16px_rgba(135,191,255,0.45),inset_0_2px_3px_rgba(255,255,255,0.5)] ring-2 ring-[#87BFFF]/50"
+                            : "bg-[#FFFFFF] hover:bg-[#E3F1FF]/60 text-[#2B3655] border-[#D6E8FA] shadow-xs"
                         }`}
                       >
-                        <div className="flex items-center gap-1">
-                          <Icon className="text-[11px]" />
-                          <span>{tab.label}</span>
-                        </div>
-                        <span className={`text-[10px] font-normal ${isActive ? "text-blue-600" : "text-slate-400"}`}>
-                          ({count})
+                        <span className="font-mono text-[11px] sm:text-xs truncate">
+                          {slotStr}
                         </span>
+                        {isSelected && (
+                          <FaCheck className="text-[10px] shrink-0 text-[#2B3655]" />
+                        )}
                       </button>
                     );
                   })}
                 </div>
-
-                {/* Slot Chips Grid - touch target min-h-[44px] */}
-                {timesLoading ? (
-                  <div className="py-8 flex flex-col items-center justify-center text-slate-400 text-xs gap-2">
-                    <FaSpinner className="animate-spin text-lg text-blue-600" />
-                    <span>Fetching available slots for {selectedDate}...</span>
-                  </div>
-                ) : categorizedSlots[activePeriodTab]?.length > 0 ? (
-                  <div className="grid grid-cols-2 gap-2">
-                    {categorizedSlots[activePeriodTab].map((slot, sIdx) => {
-                      const slotStr = typeof slot === "string" ? slot : slot?.timeSlot || "";
-                      const isSelected = selectedTimeSlot === slotStr;
-                      return (
-                        <button
-                          key={sIdx}
-                          type="button"
-                          onClick={() => {
-                            setSelectedTimeSlot(slotStr);
-                            if (slot.advisorId) {
-                              setAdvisorId(String(slot.advisorId));
-                            }
-                          }}
-                          className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-between border cursor-pointer active:scale-95 ${
-                            isSelected
-                              ? "bg-blue-600 text-white border-blue-600 shadow-sm ring-2 ring-blue-300"
-                              : "bg-slate-50 hover:bg-blue-50 text-slate-800 border-slate-200"
-                          }`}
-                        >
-                          <span className="font-mono">{slotStr}</span>
-                          {isSelected && <FaCheck className="text-xs" />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="py-6 text-center text-slate-400 text-xs">
-                    No {activePeriodTab.toLowerCase()} slots available for this date.
-                  </div>
-                )}
-              </div>
-
-              {/* SECTION 5: Additional Optional Details (Current Mileage, Advisor, Notes) */}
-              <details className="group bg-white rounded-xl border border-slate-200 p-3.5 shadow-2xs">
-                <summary className="text-xs font-extrabold text-slate-700 flex items-center justify-between cursor-pointer select-none">
-                  <span className="flex items-center gap-1.5">
-                    <FaWrench className="text-slate-400 text-xs" />
-                    <span>Additional Details (Optional)</span>
-                  </span>
-                  <span className="text-[10px] text-blue-600 font-bold group-open:rotate-180 transition-transform">
-                    ▼
-                  </span>
-                </summary>
-
-                <div className="space-y-3 pt-3 mt-2 border-t border-slate-100">
-                  {/* Mileage (Optional) */}
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 flex justify-between">
-                      <span>Current Mileage (KM)</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Optional</span>
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="1000"
-                      value={mileage}
-                      onChange={(e) => setMileage(e.target.value)}
-                      placeholder="e.g. 5000"
-                      className="w-full h-10 px-3 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl font-bold text-slate-900 text-base focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Service Advisor (Optional) */}
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 flex justify-between">
-                      <span>Service Advisor</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Optional</span>
-                    </label>
-                    {advisors.length > 0 ? (
-                      <select
-                        value={advisorId}
-                        onChange={(e) => setAdvisorId(e.target.value)}
-                        className="w-full h-10 px-3 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl font-bold text-slate-900 text-xs focus:outline-none"
-                      >
-                        <option value="">Any Available Advisor (Auto-assign)</option>
-                        {advisors.map((adv, aIdx) => (
-                          <option key={aIdx} value={adv.id || adv.advisorId}>
-                            {adv.name || adv.advisorName || `Advisor #${adv.id}`}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        value={advisorId}
-                        onChange={(e) => setAdvisorId(e.target.value)}
-                        placeholder="e.g. 4031 (or leave blank)"
-                        className="w-full h-10 px-3 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl font-semibold text-slate-900 text-base focus:outline-none"
-                      />
-                    )}
-                  </div>
-
-                  {/* Customer Notes (Optional) */}
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-bold text-slate-700 flex justify-between">
-                      <span>Customer Notes</span>
-                      <span className="text-[10px] text-slate-400 font-normal">Optional</span>
-                    </label>
-                    <textarea
-                      rows="2"
-                      value={customerNotes}
-                      onChange={(e) => setCustomerNotes(e.target.value)}
-                      placeholder="Any specific requests or observations..."
-                      className="w-full p-2.5 bg-slate-50 border border-slate-200 focus:border-blue-500 focus:bg-white rounded-xl font-medium text-slate-900 text-xs focus:outline-none resize-none"
-                    />
-                  </div>
+              ) : (
+                <div className="py-6 text-center text-[#2B3655]/50 text-xs">
+                  No {activePeriodTab.toLowerCase()} slots available for this
+                  date.
                 </div>
-              </details>
+              )}
+            </div>
 
-              {/* SUBMIT BUTTON - Large touch-friendly target */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  disabled={
-                    submitting ||
-                    !plateNo.trim() ||
-                    !selectedDate ||
-                    !selectedTimeSlot
-                  }
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 active:scale-98 text-white font-extrabold text-sm rounded-xl shadow-md shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <>
-                      <FaSpinner className="animate-spin text-base" />
-                      <span>Confirming Service Booking...</span>
-                    </>
+            {/* SECTION 5: Additional Optional Details (Border: #87BFFF, Lighter Shade Inside Card) */}
+            <details className="group bg-gradient-to-b from-[#F8FBFF] via-[#F2F8FF] to-[#EAF4FF] rounded-3xl border border-[#87BFFF]/75 p-4 sm:p-5 shadow-[0_10px_28px_rgba(135,191,255,0.16),inset_0_1px_3px_rgba(255,255,255,0.9)]">
+              <summary className="text-xs font-black text-[#2B3655] flex items-center justify-between cursor-pointer select-none">
+                <span className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-[#E3F1FF] text-[#2B3655] flex items-center justify-center text-xs shadow-2xs">
+                    <FaWrench />
+                  </div>
+                  <span>Additional Details (Optional)</span>
+                </span>
+                <span className="text-[10px] text-[#2B3655] font-bold group-open:rotate-180 transition-transform">
+                  ▼
+                </span>
+              </summary>
+
+              <div className="space-y-3.5 pt-3.5 mt-2 border-t border-[#D6E8FA]">
+                {/* Mileage (Optional) */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[#2B3655] flex justify-between">
+                    <span>Current Mileage (KM)</span>
+                    <span className="text-[10px] text-[#2B3655]/40 font-normal">
+                      Optional
+                    </span>
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={mileage}
+                    onChange={(e) => setMileage(e.target.value)}
+                    placeholder="e.g. 5000"
+                    className="w-full h-11 px-3.5 bg-[#FFFFFF] border border-[#D6E8FA] focus:border-[#87BFFF] focus:bg-white rounded-2xl font-bold text-[#2B3655] text-base focus:outline-none shadow-[inset_0_2px_4px_rgba(23,43,77,0.02)]"
+                  />
+                </div>
+
+                {/* Service Advisor (Optional) */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[#2B3655] flex justify-between">
+                    <span>Service Advisor</span>
+                    <span className="text-[10px] text-[#2B3655]/40 font-normal">
+                      Optional
+                    </span>
+                  </label>
+                  {advisors.length > 0 ? (
+                    <select
+                      value={advisorId}
+                      onChange={(e) => setAdvisorId(e.target.value)}
+                      className="w-full h-11 px-3 bg-[#FFFFFF] border border-[#D6E8FA] focus:border-[#87BFFF] focus:bg-white rounded-2xl font-bold text-[#2B3655] text-xs focus:outline-none shadow-xs"
+                    >
+                      <option value="">
+                        Any Available Advisor (Auto-assign)
+                      </option>
+                      {advisors.map((adv, aIdx) => (
+                        <option key={aIdx} value={adv.id || adv.advisorId}>
+                          {adv.name || adv.advisorName || `Advisor #${adv.id}`}
+                        </option>
+                      ))}
+                    </select>
                   ) : (
-                    <>
-                      <FaPaperPlane className="text-sm" />
-                      <span>Confirm & Book Service</span>
-                    </>
+                    <input
+                      type="text"
+                      value={advisorId}
+                      onChange={(e) => setAdvisorId(e.target.value)}
+                      placeholder="e.g. 4031 (or leave blank)"
+                      className="w-full h-11 px-3.5 bg-[#FFFFFF] border border-[#D6E8FA] focus:border-[#87BFFF] focus:bg-white rounded-2xl font-semibold text-[#2B3655] text-base focus:outline-none shadow-xs"
+                    />
                   )}
-                </button>
+                </div>
+
+                {/* Customer Notes (Optional) */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-[#2B3655] flex justify-between">
+                    <span>Customer Notes</span>
+                    <span className="text-[10px] text-[#2B3655]/40 font-normal">
+                      Optional
+                    </span>
+                  </label>
+                  <textarea
+                    rows="2"
+                    value={customerNotes}
+                    onChange={(e) => setCustomerNotes(e.target.value)}
+                    placeholder="Any specific requests or observations..."
+                    className="w-full p-3 bg-[#FFFFFF] border border-[#D6E8FA] focus:border-[#87BFFF] focus:bg-white rounded-2xl font-medium text-[#2B3655] text-xs focus:outline-none shadow-[inset_0_2px_4px_rgba(23,43,77,0.02)] resize-none"
+                  />
+                </div>
               </div>
+            </details>
 
-            </form>
-          )}
-
+            {/* Primary Submit Button using Primary #87BFFF and Text #2B3655 */}
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={
+                  submitting ||
+                  !plateNo.trim() ||
+                  !selectedDate ||
+                  !selectedTimeSlot
+                }
+                className="w-full h-13 bg-gradient-to-r from-[#87BFFF] via-[#94c6ff] to-[#87BFFF] hover:brightness-105 active:scale-97 text-[#2B3655] font-black text-sm sm:text-base rounded-2xl shadow-[0_12px_28px_-6px_rgba(135,191,255,0.55),inset_0_2px_4px_rgba(255,255,255,0.6)] flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-50 border border-[#87BFFF]"
+              >
+                {submitting ? (
+                  <>
+                    <FaSpinner className="animate-spin text-lg text-[#2B3655]" />
+                    <span>Confirming Service Booking...</span>
+                  </>
+                ) : (
+                  <>
+                    <FaPaperPlane className="text-base text-[#2B3655]" />
+                    <span>Confirm & Book Service</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
         </main>
 
         {/* Minimal Footer */}
-        <footer className="px-4 py-3 text-center text-[10px] text-slate-400 border-t border-slate-100 bg-slate-50/50">
-          Powered by AGMC Direct Workshop Management System
+        <footer className="px-4 py-3.5 text-center text-[10px] font-semibold text-[#2B3655]/60 border-t border-[#D6E8FA] bg-[#FFFFFF] sm:rounded-b-3xl">
+          Powered by CS Infocomm
         </footer>
 
+        {/* SUCCESS CONFIRMATION MODAL (Card: #FFFFFF, Border: #D6E8FA, Success: #42B978) */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2B3655]/40 backdrop-blur-md p-4 animate-in fade-in duration-200">
+            <div className="bg-[#FFFFFF] w-full max-w-sm rounded-3xl p-6 shadow-[0_25px_60px_-15px_rgba(23,43,77,0.25)] space-y-4 border border-[#D6E8FA] animate-in zoom-in-95 duration-200">
+              {/* Header Icon & Title */}
+              <div className="text-center space-y-2 pt-1">
+                <div className="w-16 h-16 bg-[#42B978] text-white rounded-3xl mx-auto flex items-center justify-center shadow-[0_10px_25px_rgba(66,185,120,0.35),inset_0_2px_4px_rgba(255,255,255,0.5)]">
+                  <FaCheckCircle className="text-3xl" />
+                </div>
+                <h3 className="text-xl font-black text-[#2B3655] tracking-tight">
+                  Booking Confirmed!
+                </h3>
+                <p className="text-xs text-[#2B3655]/70 font-medium">
+                  Your AGMC service booking has been successfully scheduled.
+                </p>
+              </div>
+
+              {/* Booking Summary Pass (Border: #87BFFF, Lighter Shade Inside Card) */}
+              <div className="bg-gradient-to-b from-[#F8FBFF] to-[#EAF4FF] rounded-2xl p-4 border border-[#87BFFF]/60 space-y-3 text-xs shadow-xs">
+                <div className="flex justify-between items-center pb-2 border-b border-[#D6E8FA]">
+                  <span className="text-[10px] uppercase font-black tracking-wider text-[#2B3655]/60">
+                    Appointment Details
+                  </span>
+                  <span className="text-[10px] font-black text-[#42B978] bg-[#42B978]/15 px-2.5 py-0.5 rounded-full border border-[#42B978]/30 shadow-2xs">
+                    CONFIRMED
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[10px] text-[#2B3655]/60 font-bold block uppercase">
+                      Date
+                    </span>
+                    <span className="font-extrabold text-[#2B3655] text-xs">
+                      {bookingResult?.submittedPayload?.startDate}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-[#2B3655]/60 font-bold block uppercase">
+                      Drop-off Time
+                    </span>
+                    <span className="font-black text-[#2B3655] text-xs font-mono">
+                      {bookingResult?.submittedPayload?.dropOffTime}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-[#2B3655]/60 font-bold block uppercase">
+                      Vehicle Plate
+                    </span>
+                    <span className="font-extrabold text-[#2B3655] font-mono text-xs">
+                      {bookingResult?.submittedPayload?.licensePlateNo}
+                    </span>
+                  </div>
+
+                  <div>
+                    <span className="text-[10px] text-[#2B3655]/60 font-bold block uppercase">
+                      Dealership ID
+                    </span>
+                    <span className="font-extrabold text-[#2B3655] text-xs">
+                      #{bookingResult?.submittedPayload?.dealershipLocationId}
+                    </span>
+                  </div>
+                </div>
+
+                {customerFound?.name?.trim() ? (
+                  <div className="pt-2.5 border-t border-[#D6E8FA]">
+                    <span className="text-[10px] text-[#2B3655]/60 font-bold block uppercase">
+                      Customer
+                    </span>
+                    <span className="font-bold text-[#2B3655] text-xs truncate block">
+                      {customerFound.name.trim()} ({phone})
+                    </span>
+                  </div>
+                ) : null}
+              </div>
+
+              {/* Action Buttons: Return to WhatsApp (Success: #42B978) & Book Another */}
+              <div className="space-y-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={handleReturnToWhatsApp}
+                  className="w-full py-3.5 bg-[#42B978] hover:bg-[#37a368] active:scale-97 text-white font-black text-sm rounded-2xl shadow-[0_10px_24px_-4px_rgba(66,185,120,0.45),inset_0_2px_4px_rgba(255,255,255,0.4)] flex items-center justify-center gap-2 cursor-pointer transition-all border border-[#42B978]"
+                >
+                  <FaWhatsapp className="text-xl" />
+                  <span>Return to WhatsApp</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    setSelectedTimeSlot("");
+                  }}
+                  className="w-full py-2.5 bg-[#FFFFFF] hover:bg-[#F0F7FF] active:scale-98 text-[#2B3655] font-bold text-xs rounded-xl transition-all cursor-pointer border border-[#D6E8FA] shadow-2xs"
+                >
+                  Book Another Appointment
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
