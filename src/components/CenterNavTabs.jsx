@@ -183,7 +183,7 @@ export default function CenterNavTabs({
       case "Resolve Complaint":
         return <FaCheckCircle className="text-xs" />;
       case "Book Service":
-      case "Book a service":
+      case "Book  service":
         return <FaWrench className="text-xs" />;
       case "Zofeur":
         return <FaCarSide className="text-xs" />;
@@ -223,41 +223,16 @@ export default function CenterNavTabs({
     { id: "Resolve Complaint", label: "Resolve Complaint" },
   ];
 
-  const currentGroup = (
-    (typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("group") ||
-        new URLSearchParams(window.location.search).get("brand") ||
-        new URLSearchParams(window.location.search).get("keyloopGroup")
-      : "") ||
-    contextGroup ||
-    customer?.keyloopGroup ||
-    customer?.make ||
-    customer?.vehicleMake ||
-    ""
-  ).toLowerCase().trim();
-  const isGeely = currentGroup.includes("geely");
-
-  const serviceSubTabs = React.useMemo(() => {
-    const tabs = [
-      { id: "Overview", label: "Overview" },
-      { id: "Book a service", label: "Book a service" },
-      { id: "Zofeur", label: "Zofeur" },
-      { id: "Other Request", label: "Other Request" },
-      { id: "Breakdown", label: "Breakdown" },
-    ];
-
-    if (isGeely) {
-      tabs.push({ id: "Book Service", label: "Book Service" });
-    }
-
-    tabs.push(
-      { id: "Open Bookings", label: "Open Bookings" },
-      { id: "Service History", label: "Service History" },
-      { id: "Retention", label: "Retention" }
-    );
-
-    return tabs;
-  }, [isGeely]);
+  const serviceSubTabs = [
+    { id: "Overview", label: "Overview" },
+    { id: "Book  service", label: "Book  service" },
+    { id: "Zofeur", label: "Zofeur" },
+    { id: "Other Request", label: "Other Request" },
+    { id: "Breakdown", label: "Breakdown" },
+    { id: "Open Bookings", label: "Open Bookings" },
+    { id: "Service History", label: "Service History" },
+    { id: "Retention", label: "Retention" },
+  ];
 
   const feedbackSubTabs = [
     { id: "Overview", label: "Overview" },
@@ -272,7 +247,6 @@ export default function CenterNavTabs({
     { id: "Enquiries", label: "Enquiries" },
     { id: "Test Drive", label: "Test Drive" },
     { id: "Vehicle Orders", label: "Vehicle Orders" },
-    { id: "Customer Segments", label: "Customer Segments" },
     { id: "Sales Follow-up", label: "Sales Follow" },
   ];
 
@@ -295,7 +269,8 @@ export default function CenterNavTabs({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-xs border border-slate-200/90 px-3.5 py-2 sm:px-5 mb-2.5 flex flex-col gap-1.5 transition-all">
+    <div className="sticky top-0 z-[60] bg-[#f3f4f6] pt-1 sm:pt-2 pb-2 -mt-1 sm:-mt-2 transition-all">
+      <div className="bg-white rounded-xl shadow-xs border border-slate-200/90 px-3.5 py-2 sm:px-5 flex flex-col gap-1.5 transition-all">
       {/* ROW 1: Module Switcher Tabs */}
       <div className="flex items-center justify-center gap-4 sm:gap-7 lg:gap-8 text-xs border-b border-slate-100 pb-1.5 w-full flex-wrap">
         <button
@@ -441,5 +416,6 @@ export default function CenterNavTabs({
         </div>
       )}
     </div>
+  </div>
   );
 }

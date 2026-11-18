@@ -1117,7 +1117,7 @@ export default function EventHistoryView({
 
         return (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 backdrop-blur-md animate-fade-in"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 backdrop-blur-md animate-fade-in"
             onClick={() => setExpandedOneEventId(null)}
           >
             <div

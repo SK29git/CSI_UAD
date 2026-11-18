@@ -1381,14 +1381,20 @@ export default function SalesNewLeadView({
   return (
     <div className="flex flex-col gap-2.5">
       {/* Top Two Tabs Inside New Enquiry */}
-      <div className="bg-white rounded-xl px-3.5 py-2 shadow-xs border border-slate-200/90 flex items-center justify-between gap-2 flex-wrap">
+      <div className={`rounded-xl px-3.5 py-2 shadow-xs border flex items-center justify-between gap-2 flex-wrap ${
+        isService
+          ? "bg-gradient-to-r from-teal-50/70 via-emerald-50/40 to-white border-teal-200/90"
+          : "bg-white border-slate-200/90"
+      }`}>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setInnerTab("enquiry")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               innerTab === "enquiry"
-                ? "bg-blue-600 text-white shadow-xs"
+                ? isService
+                  ? "bg-gradient-to-r from-teal-600 to-emerald-600 text-white shadow-xs"
+                  : "bg-blue-600 text-white shadow-xs"
                 : "bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80"
             }`}
           >
@@ -1422,14 +1428,20 @@ export default function SalesNewLeadView({
       {innerTab === "salesTask" ? (
         <SalesCreateTaskView />
       ) : (
-        <div className="bg-white rounded-xl p-2.5 sm:p-3 shadow-xs border border-slate-200/90 flex flex-col gap-2 text-xs transition-all">
+        <div className={`rounded-2xl p-4 sm:p-5 shadow-sm border flex flex-col gap-3 text-xs transition-all relative overflow-hidden ${
+          isService
+            ? "bg-white border-teal-200/90 before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-gradient-to-r before:from-teal-600 before:via-emerald-600 before:to-cyan-500"
+            : "bg-white border-slate-200/90"
+        }`}>
       {/* Top Header Card */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
         {/* Left: Icon, Title, Subtitle & Switch Tab Pill */}
         <div className="flex items-center gap-2 flex-wrap">
           {activeTab === "lead" ? (
             <>
-              <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs shadow-xs shrink-0">
+              <div className={`w-8 h-8 rounded-xl text-white flex items-center justify-center text-xs shadow-xs shrink-0 ${
+                isService ? "bg-gradient-to-br from-teal-600 to-emerald-700 shadow-teal-500/20" : "bg-blue-600"
+              }`}>
                 <FaUserPlus />
               </div>
               <div>
@@ -1498,7 +1510,11 @@ export default function SalesNewLeadView({
               </>
             )}
           </span>
-          <div className="w-6 h-6 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 shadow-2xs shrink-0">
+          <div className={`w-6 h-6 rounded-full flex items-center justify-center shadow-2xs shrink-0 ${
+            isService
+              ? "bg-teal-50 border border-teal-200/90 text-teal-600"
+              : "bg-blue-50 border border-blue-100 text-blue-500"
+          }`}>
             <FaCar className="text-[10px]" />
           </div>
         </div>
@@ -1796,7 +1812,11 @@ export default function SalesNewLeadView({
               <button
                 type="submit"
                 disabled={submittingLead}
-                className="h-8.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-xs hover:shadow transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-50 shrink-0"
+                className={`h-9 px-5 font-bold text-xs rounded-xl shadow-xs hover:shadow-md transition-all flex items-center gap-1.5 cursor-pointer active:scale-[0.98] disabled:opacity-50 shrink-0 text-white ${
+                  isService
+                    ? "bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 hover:from-teal-700 hover:to-emerald-700 shadow-teal-500/20"
+                    : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
+                }`}
               >
                 {submittingLead ? (
                   <>

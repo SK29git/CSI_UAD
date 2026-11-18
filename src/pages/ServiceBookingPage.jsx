@@ -44,7 +44,7 @@ export default function ServiceBookingPage() {
       window.history.replaceState(null, '', `/service?${params.toString()}`);
     }
     if (search.toLowerCase().includes('salesnewlead') || search.toLowerCase().includes('newenquiry') || search.toLowerCase().includes('servicenewlead') || search.toLowerCase().includes('bookaservice')) {
-      setActiveSubTab('Book a service');
+      setActiveSubTab('Book  service');
     }
   }, [group]);
 
@@ -56,10 +56,24 @@ export default function ServiceBookingPage() {
     switch (activeSubTab) {
       case 'Overview':
         return <ServiceOverviewView />;
-      case 'Book a service':
+      case 'Book  service':
       case 'New Enquiry':
       case 'New Lead':
-        return <SalesNewLeadView mode="service" onNavigateToEnquiries={() => setActiveSubTab('Overview')} />;
+      case 'Book Service':
+        return (
+          <div className="flex flex-col gap-6 w-full pb-12">
+            {/* Top Section: Service Booking Panel */}
+            <ServiceBookingMainPanel />
+
+            {/* Bottom Section: Service New Enquiry */}
+            <div className="flex flex-col gap-3 pt-4 border-t border-slate-200/90">
+              <SalesNewLeadView
+                mode="service"
+                onNavigateToEnquiries={() => setActiveSubTab('Overview')}
+              />
+            </div>
+          </div>
+        );
       case 'Zofeur':
         return <CreateServiceView mode="zofeur" />;
       case 'Other Request':
@@ -67,22 +81,17 @@ export default function ServiceBookingPage() {
         return <CreateServiceView mode="other_request" />;
       case 'Breakdown':
         return <CreateServiceView mode="breakdown" />;
-      case 'Book Service':
-        return <ServiceBookingMainPanel />;
       case 'Open Bookings':
         return <ServiceOpenBookingsView />;
       case 'Service History':
         return <ServiceHistoryView />;
       case 'Retention':
+        return <SalesAfterSalesView title="Retention & Cohort" mode="service" initialTab="RetentionAlerts" retentionOnly={true} />;
       case 'Service Follow-up':
       case 'Service Follow Up':
       case 'Service Follow':
       case 'After-Sales':
-        return (
-          <div className="bg-white rounded-xl shadow-xs border border-slate-200/90 p-8 min-h-[350px] flex items-center justify-center">
-            {/* Empty for now as requested */}
-          </div>
-        );
+        return <SalesAfterSalesView title="Service Follow Up" mode="service" />;
       default:
         return <ServiceOverviewView />;
     }
@@ -96,7 +105,7 @@ export default function ServiceBookingPage() {
         {/* LEFT COLUMN: Customer Profile */}
         <aside className={`
           flex-shrink-0 sticky top-2 sm:top-5 z-30 transition-all duration-300
-          ${!isLeftCollapsed ? 'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-50 max-md:bg-white max-md:p-3 max-md:shadow-2xl max-md:overflow-y-auto max-md:w-[320px]' : ''}
+          ${!isLeftCollapsed ? 'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-[100] max-md:bg-white max-md:p-3 max-md:shadow-2xl max-md:overflow-y-auto max-md:w-[320px]' : ''}
         `}>
           {!isLeftCollapsed && (
             <div className="md:hidden flex justify-between items-center pb-2 mb-2 border-b border-gray-100">
@@ -119,7 +128,7 @@ export default function ServiceBookingPage() {
         {!isLeftCollapsed && (
           <div 
             onClick={() => setIsLeftCollapsed(true)} 
-            className="md:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-xs"
+            className="md:hidden fixed inset-0 bg-black/40 z-[90] backdrop-blur-xs"
           />
         )}
 

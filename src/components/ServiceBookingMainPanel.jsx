@@ -1315,19 +1315,19 @@ export default function ServiceBookingMainPanel() {
                 )}
 
                 {/* Universal Service Booking Form Card */}
-                <div className="bg-white rounded-xl shadow-xs border border-gray-200 overflow-hidden">
-                  <div className="bg-slate-100/80 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <div className="bg-white rounded-2xl shadow-sm border border-blue-200/90 overflow-hidden relative transition-all before:absolute before:top-0 before:left-0 before:right-0 before:h-1 before:bg-gradient-to-r before:from-blue-600 before:via-indigo-600 before:to-sky-500">
+                  <div className="bg-gradient-to-r from-blue-50/90 via-indigo-50/40 to-white px-5 sm:px-6 py-3.5 border-b border-blue-100 flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-lg bg-blue-600 text-white shadow-xs flex items-center justify-center font-bold">
-                        <FaCalendarCheck className="text-lg" />
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-xs flex items-center justify-center font-bold">
+                        <FaCalendarCheck className="text-base" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
-                          <h2 className="font-extrabold text-gray-900 text-sm leading-tight">
+                          <h2 className="font-extrabold text-slate-900 text-sm sm:text-base leading-tight">
                             AGMC Service Booking
                           </h2>
                         </div>
-                        <p className="text-[11px] font-semibold text-gray-500 mt-0.5">
+                        <p className="text-[11px] font-semibold text-slate-500 mt-0.5">
                           Direct Workshop Management System • Automated
                           Appointment Scheduling
                         </p>
@@ -1337,12 +1337,12 @@ export default function ServiceBookingMainPanel() {
 
                   <form
                     onSubmit={handleSubmitGeelyBooking}
-                    className="p-3.5 sm:p-4 space-y-3 text-xs bg-slate-50/40"
+                    className="p-4 sm:p-5 space-y-3.5 text-xs bg-gradient-to-b from-slate-50/40 via-white to-white"
                   >
                     {/* ROW 1: Customer Phone, Vehicle License Plate No, Dealership ID (1 row, 3 column grid) */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                       {/* Customer Phone */}
-                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 hover:border-blue-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 shadow-2xs space-y-1 transition-all">
                         <label className="text-[11px] font-extrabold text-gray-800 flex items-center justify-between">
                           <span className="flex items-center gap-1.5">
                             <FaUser className="text-blue-600 text-xs" />{" "}
@@ -1362,7 +1362,7 @@ export default function ServiceBookingMainPanel() {
                           onChange={(e) => setGeelyPhone(e.target.value)}
                           placeholder="e.g. 0543408597"
                           required
-                          className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                          className="w-full h-8 px-2 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-blue-500 rounded-lg font-bold text-gray-900 focus:outline-none transition-all text-xs"
                         />
                         {geelyCustomerFound && (
                           <div className="text-[10px] text-gray-500 font-medium pt-1 border-t border-gray-100 flex items-center justify-between">
@@ -1378,7 +1378,7 @@ export default function ServiceBookingMainPanel() {
                       </div>
 
                       {/* License Plate */}
-                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 hover:border-blue-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 shadow-2xs space-y-1 transition-all">
                         <label className="text-[11px] font-extrabold text-gray-800 flex items-center justify-between">
                           <span className="flex items-center gap-1.5">
                             <FaCar className="text-blue-600 text-xs" /> Vehicle
@@ -1398,7 +1398,7 @@ export default function ServiceBookingMainPanel() {
                           onChange={(e) => setGeelyPlateNo(e.target.value)}
                           placeholder="e.g. 240153"
                           required
-                          className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-mono font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs uppercase"
+                          className="w-full h-8 px-2 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-blue-500 rounded-lg font-mono font-bold text-gray-900 focus:outline-none transition-all text-xs uppercase"
                         />
                         {geelyVehicleData && (
                           <div className="text-[10px] text-gray-500 font-medium pt-1 border-t border-gray-100 flex items-center justify-between">
@@ -1415,7 +1415,7 @@ export default function ServiceBookingMainPanel() {
                       </div>
 
                       {/* Dealership ID (40 or 240) */}
-                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 hover:border-blue-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 shadow-2xs space-y-1 transition-all">
                         <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
                           <FaMapMarkerAlt className="text-blue-600 text-xs" />{" "}
                           Dealership ID{" "}
@@ -1427,7 +1427,7 @@ export default function ServiceBookingMainPanel() {
                             setGeelyLocationId(Number(e.target.value))
                           }
                           disabled={geelyLocationsLoading}
-                          className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs cursor-pointer"
+                          className="w-full h-8 px-2 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-blue-500 rounded-lg font-bold text-gray-900 focus:outline-none transition-all text-xs cursor-pointer"
                         >
                           <option value="40">40</option>
                           <option value="240">240</option>
@@ -1435,31 +1435,12 @@ export default function ServiceBookingMainPanel() {
                       </div>
                     </div>
 
-                    {/* Commented Recommended Service Package as requested (product ID 07143ffd-184e-43b5-a8de-f68d63199baa passed directly to API) */}
-                    {/*
-                  <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
-                    <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                      <FaWrench className="text-blue-600 text-xs" /> Recommended Service Package <span className="text-rose-500 font-bold">*</span>
-                    </label>
-                    <select
-                      value={geelySelectedProductId}
-                      onChange={(e) => setGeelySelectedProductId(e.target.value)}
-                      disabled={geelyServicesLoading}
-                      className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
-                    >
-                      <option value="07143ffd-184e-43b5-a8de-f68d63199baa">Periodic Maintenance: 5,000 KM</option>
-                      <option value="6dc62a95-a90c-49a8-a967-49be58de3e86">Periodic Maintenance: 12,000 KM</option>
-                      <option value="8c202060-c231-4d55-be89-3771fad1acfb">Periodic Maintenance: 20,000 KM</option>
-                    </select>
-                  </div>
-                  */}
-
-                    {/* ROW 2: Mileage, Service Advisor, Customer Notes (Taken above date and time) */}
+                    {/* ROW 2: Mileage, Service Advisor, Customer Notes */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
                       {/* Mileage */}
-                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 hover:border-blue-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 shadow-2xs space-y-1 transition-all">
                         <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                          <FaClock className="text-gray-400 text-xs" /> Current
+                          <FaClock className="text-blue-600 text-xs" /> Current
                           Mileage (KM){" "}
                           <span className="text-rose-500 font-bold">*</span>
                         </label>
@@ -1471,14 +1452,14 @@ export default function ServiceBookingMainPanel() {
                           onChange={(e) => setGeelyMileage(e.target.value)}
                           placeholder="e.g. 5000"
                           required
-                          className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-bold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                          className="w-full h-8 px-2 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-blue-500 rounded-lg font-bold text-gray-900 focus:outline-none transition-all text-xs"
                         />
                       </div>
 
                       {/* Service Advisor (GET /api/service/advisors) */}
-                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 hover:border-blue-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 shadow-2xs space-y-1 transition-all">
                         <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                          <FaUser className="text-gray-400 text-xs" /> Service
+                          <FaUser className="text-blue-600 text-xs" /> Service
                           Advisor (Optional)
                         </label>
                         <input
@@ -1486,14 +1467,14 @@ export default function ServiceBookingMainPanel() {
                           value={geelyAdvisorId}
                           onChange={(e) => setGeelyAdvisorId(e.target.value)}
                           placeholder="e.g. 4031 (or auto)"
-                          className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                          className="w-full h-8 px-2 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-blue-500 rounded-lg font-semibold text-gray-900 focus:outline-none transition-all text-xs"
                         />
                       </div>
 
                       {/* Customer Notes */}
-                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1">
+                      <div className="bg-white p-2.5 rounded-xl border border-slate-200/90 hover:border-blue-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100/70 shadow-2xs space-y-1 transition-all">
                         <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
-                          <FaClipboardList className="text-gray-400 text-xs" />{" "}
+                          <FaClipboardList className="text-blue-600 text-xs" />{" "}
                           Customer Notes (Optional)
                         </label>
                         <input
@@ -1503,15 +1484,15 @@ export default function ServiceBookingMainPanel() {
                             setGeelyCustomerNotes(e.target.value)
                           }
                           placeholder="e.g. Regular 5,000 KM service"
-                          className="w-full p-2 bg-gray-50 border border-gray-300 rounded-md font-semibold text-gray-900 focus:bg-white focus:outline-none focus:border-blue-600 transition-all text-xs"
+                          className="w-full h-8 px-2 bg-slate-50/70 hover:bg-white focus:bg-white border border-slate-200 focus:border-blue-500 rounded-lg font-semibold text-gray-900 focus:outline-none transition-all text-xs"
                         />
                       </div>
                     </div>
 
                     {/* ROW 3: Real-Time Appointment Date & Timeslots */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {/* Appointment Date (POST /api/service/appointment-dates) */}
-                      <div className="bg-white p-2.5 rounded-lg border border-gray-300 shadow-2xs space-y-1.5">
+                      <div className="bg-white p-3 sm:p-3.5 rounded-xl border border-blue-200/90 shadow-2xs space-y-2">
                         <div className="flex items-center justify-between">
                           <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
                             <FaCalendarAlt className="text-blue-600 text-xs" />{" "}
@@ -1540,7 +1521,7 @@ export default function ServiceBookingMainPanel() {
                       </div>
 
                       {/* Appointment Timeslots (POST /api/service/appointment-time) */}
-                      <div className="bg-white p-3 rounded-lg border border-gray-300 shadow-2xs space-y-1.5 flex flex-col justify-between">
+                      <div className="bg-white p-3 sm:p-3.5 rounded-xl border border-blue-200/90 shadow-2xs space-y-2 flex flex-col justify-between">
                         <div>
                           <div className="flex items-center justify-between mb-1">
                             <label className="text-[11px] font-extrabold text-gray-800 flex items-center gap-1.5">
@@ -1720,7 +1701,7 @@ export default function ServiceBookingMainPanel() {
                           !geelySelectedDate ||
                           !geelySelectedTimeSlot
                         }
-                        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 min-w-[220px]"
+                        className="px-7 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 active:scale-98 text-white font-extrabold text-xs rounded-xl shadow-md shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 min-w-[240px]"
                       >
                         {geelySubmitting ? (
                           <>

@@ -43,7 +43,12 @@ const BRANCH_OPTIONS = [
   { code: "99", name: "99 - Head Office" },
 ];
 
-export default function SalesAfterSalesView({ title, mode = "sales" }) {
+export default function SalesAfterSalesView({
+  title,
+  mode = "sales",
+  initialTab = "CustomerVehicles",
+  retentionOnly = false,
+}) {
   const {
     customer,
     vehicles: contextVehicles = [],
@@ -64,7 +69,17 @@ export default function SalesAfterSalesView({ title, mode = "sales" }) {
   const cleanMobile = getFullMobileNumber(customer, contextMobile);
 
   // Tabs: 'CustomerVehicles' | 'ServiceBookings' | 'RetentionAlerts'
-  const [activeTab, setActiveTab] = useState("CustomerVehicles");
+  const [activeTab, setActiveTab] = useState(
+    retentionOnly ? "RetentionAlerts" : initialTab || "CustomerVehicles"
+  );
+
+  useEffect(() => {
+    if (retentionOnly) {
+      setActiveTab("RetentionAlerts");
+    } else if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [retentionOnly, initialTab]);
   const [vehiclesList, setVehiclesList] = useState([]);
   const [selectedVehicleForPackages, setSelectedVehicleForPackages] =
     useState(null);
@@ -388,7 +403,7 @@ export default function SalesAfterSalesView({ title, mode = "sales" }) {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-gray-100">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold shadow-xs">
-            <FaWrench className="text-lg" />
+            {retentionOnly ? <FaBell className="text-lg" /> : <FaWrench className="text-lg" />}
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -407,55 +422,57 @@ export default function SalesAfterSalesView({ title, mode = "sales" }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* WIP / Booking Lookup Search Bar */}
-          <form
-            onSubmit={handleLookupWipSubmit}
-            className="flex items-center gap-1.5"
-          >
-            <div className="relative">
-              <FaSearch className="absolute left-2.5 top-2.5 text-gray-400 text-[10px]" />
-              <input
-                type="text"
-                value={searchWipInput}
-                onChange={(e) => setSearchWipInput(e.target.value)}
-                placeholder="WIP / Booking #..."
-                className="pl-7 pr-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs w-40 focus:outline-none focus:border-teal-500 font-mono"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!searchWipInput.trim() || actionLoading}
-              className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs cursor-pointer flex items-center gap-1 transition-colors"
+        {!retentionOnly && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* WIP / Booking Lookup Search Bar */}
+            <form
+              onSubmit={handleLookupWipSubmit}
+              className="flex items-center gap-1.5"
             >
-              {actionLoading ? (
-                <FaSpinner className="animate-spin text-xs" />
-              ) : (
-                "Lookup"
-              )}
+              <div className="relative">
+                <FaSearch className="absolute left-2.5 top-2.5 text-gray-400 text-[10px]" />
+                <input
+                  type="text"
+                  value={searchWipInput}
+                  onChange={(e) => setSearchWipInput(e.target.value)}
+                  placeholder="WIP / Booking #..."
+                  className="pl-7 pr-2 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs w-40 focus:outline-none focus:border-teal-500 font-mono"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={!searchWipInput.trim() || actionLoading}
+                className="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white rounded-lg font-bold text-xs cursor-pointer flex items-center gap-1 transition-colors"
+              >
+                {actionLoading ? (
+                  <FaSpinner className="animate-spin text-xs" />
+                ) : (
+                  "Lookup"
+                )}
+              </button>
+            </form>
+
+            <button
+              onClick={fetchCustomerAfterSalesData}
+              className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 cursor-pointer flex items-center gap-1.5 font-medium text-xs transition-colors"
+              title="Refresh Data"
+            >
+              <FaRedo className={`text-xs ${loading ? "animate-spin" : ""}`} />
+              <span>Refresh</span>
             </button>
-          </form>
 
-          <button
-            onClick={fetchCustomerAfterSalesData}
-            className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-600 cursor-pointer flex items-center gap-1.5 font-medium text-xs transition-colors"
-            title="Refresh Data"
-          >
-            <FaRedo className={`text-xs ${loading ? "animate-spin" : ""}`} />
-            <span>Refresh</span>
-          </button>
-
-          {/* Primary Create Sales Follow-Up Action Button */}
-          <button
-            type="button"
-            onClick={() => handleOpenFollowUp()}
-            className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs cursor-pointer flex items-center gap-1.5 transition-colors shadow-2xs"
-            title="Create Sales / Advisor Follow-Up in Keyloop"
-          >
-            <FaCalendarPlus className="text-xs" />
-            <span>Create Follow-Up</span>
-          </button>
-        </div>
+            {/* Primary Create Sales Follow-Up Action Button */}
+            <button
+              type="button"
+              onClick={() => handleOpenFollowUp()}
+              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs cursor-pointer flex items-center gap-1.5 transition-colors shadow-2xs"
+              title="Create Sales / Advisor Follow-Up in Keyloop"
+            >
+              <FaCalendarPlus className="text-xs" />
+              <span>Create Follow-Up</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* SALES FOLLOW-UP STATUS INDICATOR */}
@@ -492,73 +509,75 @@ export default function SalesAfterSalesView({ title, mode = "sales" }) {
         </div>
       )}
 
-      {/* Tabs Selector */}
-      <div className="flex items-center gap-2 border-b border-gray-100 pb-2 flex-wrap">
-        <button
-          onClick={() => setActiveTab("CustomerVehicles")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 ${
-            activeTab === "CustomerVehicles"
-              ? "bg-teal-600 text-white shadow-2xs"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}
-        >
-          <FaCar className="text-xs" />
-          <span>Customer Vehicles & Contracts</span>
-          <span
-            className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+      {/* Tabs Selector (Hidden in Retention-only mode) */}
+      {!retentionOnly && (
+        <div className="flex items-center gap-2 border-b border-gray-100 pb-2 flex-wrap">
+          <button
+            onClick={() => setActiveTab("CustomerVehicles")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 ${
               activeTab === "CustomerVehicles"
-                ? "bg-white/30 text-white"
-                : "bg-teal-100 text-teal-800"
+                ? "bg-teal-600 text-white shadow-2xs"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            {vehiclesList.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("ServiceBookings")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 ${
-            activeTab === "ServiceBookings"
-              ? "bg-teal-600 text-white shadow-2xs"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}
-        >
-          <FaWrench className="text-xs" />
-          <span>Open Service Bookings & WIPs</span>
-          <span
-            className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-              activeTab === "ServiceBookings"
-                ? "bg-white/30 text-white"
-                : "bg-teal-100 text-teal-800"
-            }`}
-          >
-            {bookingsList.length}
-          </span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("RetentionAlerts")}
-          className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 ${
-            activeTab === "RetentionAlerts"
-              ? "bg-teal-600 text-white shadow-2xs"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-          }`}
-        >
-          <FaBell className="text-xs" />
-          <span>Retention & Cohort Alerts</span>
-          <span
-            className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
-              totalAlertsCount > 0
-                ? activeTab === "RetentionAlerts"
+            <FaCar className="text-xs" />
+            <span>Customer Vehicles & Contracts</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                activeTab === "CustomerVehicles"
                   ? "bg-white/30 text-white"
-                  : "bg-amber-100 text-amber-900 border border-amber-300"
-                : "bg-gray-200 text-gray-600"
+                  : "bg-teal-100 text-teal-800"
+              }`}
+            >
+              {vehiclesList.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("ServiceBookings")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 ${
+              activeTab === "ServiceBookings"
+                ? "bg-teal-600 text-white shadow-2xs"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            {totalAlertsCount}
-          </span>
-        </button>
-      </div>
+            <FaWrench className="text-xs" />
+            <span>Open Service Bookings & WIPs</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                activeTab === "ServiceBookings"
+                  ? "bg-white/30 text-white"
+                  : "bg-teal-100 text-teal-800"
+              }`}
+            >
+              {bookingsList.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("RetentionAlerts")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors flex items-center gap-1.5 ${
+              activeTab === "RetentionAlerts"
+                ? "bg-teal-600 text-white shadow-2xs"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            <FaBell className="text-xs" />
+            <span>Retention & Cohort Alerts</span>
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                totalAlertsCount > 0
+                  ? activeTab === "RetentionAlerts"
+                    ? "bg-white/30 text-white"
+                    : "bg-amber-100 text-amber-900 border border-amber-300"
+                  : "bg-gray-200 text-gray-600"
+              }`}
+            >
+              {totalAlertsCount}
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Action API Output Result Card (shown when a WIP is inspected or looked up) */}
       {actionOutput && (
@@ -1167,7 +1186,7 @@ export default function SalesAfterSalesView({ title, mode = "sales" }) {
 
       {/* SALES FOLLOW-UP RPA MODAL (POST /api/intake/cases -> CREATE_SALES_FOLLOW_UP) */}
       {showFollowUpModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh]">
             {/* Modal Header */}
             <div className="bg-gradient-to-r from-blue-600 to-indigo-700 px-5 py-3.5 text-white flex items-center justify-between">
