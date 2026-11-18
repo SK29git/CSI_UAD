@@ -612,24 +612,11 @@ export default function MobileServiceBookingPage() {
   };
 
   // Return to WhatsApp handler
-  const handleReturnToWhatsApp = () => {
+  const handleReturnToWhatsApp = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     const redirectUrl =
       searchParams.get("return_url") || searchParams.get("redirect");
-    if (redirectUrl) {
-      window.location.href = redirectUrl;
-      return;
-    }
-
-    try {
-      window.location.href = "whatsapp://";
-      setTimeout(() => {
-        if (window.opener) {
-          window.close();
-        }
-      }, 1200);
-    } catch (e) {
-      window.location.href = "https://wa.me/";
-    }
+    window.location.href = redirectUrl || "https://wa.me/97180043359";
   };
 
   return (
@@ -1232,14 +1219,18 @@ export default function MobileServiceBookingPage() {
 
               {/* Action Buttons: Return to WhatsApp (Success: #42B978) & Book Another */}
               <div className="space-y-2.5 pt-1">
-                <button
-                  type="button"
+                <a
+                  href={
+                    searchParams.get("return_url") ||
+                    searchParams.get("redirect") ||
+                    "https://wa.me/97180043359"
+                  }
                   onClick={handleReturnToWhatsApp}
                   className="w-full py-3.5 bg-[#42B978] hover:bg-[#37a368] active:scale-97 text-white font-black text-sm rounded-2xl shadow-[0_10px_24px_-4px_rgba(66,185,120,0.45),inset_0_2px_4px_rgba(255,255,255,0.4)] flex items-center justify-center gap-2 cursor-pointer transition-all border border-[#42B978]"
                 >
                   <FaWhatsapp className="text-xl" />
                   <span>Return to WhatsApp</span>
-                </button>
+                </a>
 
                 <button
                   type="button"
