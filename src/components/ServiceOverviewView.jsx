@@ -55,6 +55,7 @@ export default function ServiceOverviewView() {
   const [warrantyData, setWarrantyData] = useState(null);
   const [contractData, setContractData] = useState(null);
   const [serviceEligibilityData, setServiceEligibilityData] = useState(null);
+  const [tradeInEligibilityData, setTradeInEligibilityData] = useState(null);
   const [activeBooking, setActiveBooking] = useState(null);
   const [bookingBatteryId, setBookingBatteryId] = useState("");
   const [loadingOverviewApis, setLoadingOverviewApis] = useState(false);
@@ -158,6 +159,7 @@ export default function ServiceOverviewView() {
     setWarrantyData(null);
     setContractData(null);
     setServiceEligibilityData(null);
+    setTradeInEligibilityData(null);
     setActiveBooking(null);
     setBookingBatteryId("");
 
@@ -339,6 +341,26 @@ export default function ServiceOverviewView() {
             })
             .catch(() => {});
         }
+      });
+
+    // H. Trade-In Eligibility API: GET /api/v1/vehicles/{group}/{vin}/trade-in-eligibility
+    apiFetch(`/api/v1/vehicles/${group}/${vin}/trade-in-eligibility`)
+      .then((res) => {
+        if (
+          res &&
+          res.ok &&
+          res.data &&
+          typeof res.data === "object" &&
+          (res.data.eligible !== undefined || res.data.vin)
+        ) {
+          setTradeInEligibilityData(res.data);
+        } else {
+          setTradeInEligibilityData(null);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch trade-in eligibility:", err);
+        setTradeInEligibilityData(null);
       });
   };
 
@@ -782,6 +804,166 @@ export default function ServiceOverviewView() {
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Trade-In Eligibility Card - Hidden if response is not available */}
+        {tradeInEligibilityData && (
+          <div className="bg-white p-4 sm:p-5 rounded-xl border border-gray-200 shadow-2xs flex flex-col gap-3">
+            {/* Header */}
+            <div className="flex flex-wrap items-center justify-between pb-2.5 border-b border-gray-100 gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-xs font-bold border border-indigo-200 shadow-2xs">
+                  <FaExchangeAlt />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-xs sm:text-sm leading-tight">
+                    Trade-In Eligibility
+                  </h3>
+                  
+                </div>
+              </div>
+              <div>
+                <span
+                  className={`font-bold text-[11px] px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5 border shadow-2xs ${
+                    tradeInEligibilityData.eligible
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                      : "bg-amber-100 text-amber-800 border-amber-300"
+                  }`}
+                >
+                  {tradeInEligibilityData.eligible ? (
+                    <FaCheckCircle className="text-[10px]" />
+                  ) : (
+                    <FaExclamationCircle className="text-[10px]" />
+                  )}
+                  {tradeInEligibilityData.eligible ? "Eligible" : "Not Eligible"}
+                </span>
+              </div>
+            </div>
+
+            {/* Grid of Exact Values */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-1">
+              {/* 1. VIN */}
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">
+                  VIN
+                </span>
+                <span
+                  className="font-mono font-bold text-gray-900 text-xs truncate block"
+                  title={tradeInEligibilityData.vin || vin}
+                >
+                  {tradeInEligibilityData.vin || vin || "-"}
+                </span>
+              </div>
+
+              {/* 2. Keyloop Group */}
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">
+                  Group
+                </span>
+                <span className="font-bold text-gray-900 text-xs">
+                  {tradeInEligibilityData.keyloopGroup || group || "-"}
+                </span>
+              </div>
+
+              {/* 3. Current Mileage */}
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">
+                  Mileage
+                </span>
+                <span className="font-bold text-gray-900 text-xs">
+                  {tradeInEligibilityData.mileageKm !== undefined &&
+                  tradeInEligibilityData.mileageKm !== null
+                    ? `${Number(tradeInEligibilityData.mileageKm).toLocaleString()} KM`
+                    : "-"}
+                </span>
+              </div>
+
+              {/* 4. Registration Date */}
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">
+                  Registration Date
+                </span>
+                <span className="font-bold text-gray-900 text-xs flex items-center gap-1">
+                  <FaCalendarAlt className="text-blue-500 text-[10px]" />
+                  {tradeInEligibilityData.registrationDate
+                    ? String(tradeInEligibilityData.registrationDate).split("T")[0]
+                    : "-"}
+                </span>
+              </div>
+
+              {/* 5. Vehicle Age */}
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">
+                  Vehicle Age
+                </span>
+                <span className="font-bold text-gray-900 text-xs">
+                  {tradeInEligibilityData.vehicleAgeYears !== undefined &&
+                  tradeInEligibilityData.vehicleAgeYears !== null
+                    ? `${tradeInEligibilityData.vehicleAgeYears} Years`
+                    : "-"}
+                </span>
+              </div>
+
+              {/* 6. Min Age Required */}
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">
+                  Min Vehicle Age                 </span>
+                <span className="font-bold text-gray-900 text-xs">
+                  {tradeInEligibilityData.minVehicleAgeYears !== undefined &&
+                  tradeInEligibilityData.minVehicleAgeYears !== null
+                    ? `${tradeInEligibilityData.minVehicleAgeYears} Years`
+                    : "-"}
+                </span>
+              </div>
+
+              {/* 7. Odometer Threshold */}
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">
+                  Odometer Threshold
+                </span>
+                <span className="font-bold text-gray-900 text-xs">
+                  {tradeInEligibilityData.odometerThresholdKm !== undefined &&
+                  tradeInEligibilityData.odometerThresholdKm !== null
+                    ? `${Number(tradeInEligibilityData.odometerThresholdKm).toLocaleString()} KM`
+                    : "-"}
+                </span>
+              </div>
+
+              {/* 8. Eligibility Flag */}
+              <div>
+                <span className="text-gray-400 block text-[10px] uppercase font-semibold">
+                  Eligibility
+                </span>
+                <span
+                  className={`font-mono font-bold text-xs ${
+                    tradeInEligibilityData.eligible
+                      ? "text-emerald-700"
+                      : "text-amber-700"
+                  }`}
+                >
+                  {String(tradeInEligibilityData.eligible)}
+                </span>
+              </div>
+            </div>
+
+            {/* Reason Box */}
+            {tradeInEligibilityData.reason && (
+              <div
+                className={`p-2.5 sm:p-3 rounded-lg border flex items-start gap-2.5 text-xs ${
+                  tradeInEligibilityData.eligible
+                    ? "bg-emerald-50/70 border-emerald-200 text-emerald-950"
+                    : "bg-amber-50/70 border-amber-200 text-amber-950"
+                }`}
+              >
+                <span className="font-bold text-[10px] uppercase tracking-wide shrink-0 mt-0.5 px-1.5 py-0.5 rounded bg-white/80 border border-current">
+                  Reason
+                </span>
+                <p className="font-semibold text-xs leading-relaxed">
+                  {tradeInEligibilityData.reason}
+                </p>
               </div>
             )}
           </div>
