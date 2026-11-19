@@ -1019,8 +1019,16 @@ export async function getOtolinkToken(forceRefresh = false) {
     const urls = [
       `/api/leads/generate-token/${encodeURIComponent(tenant)}`,
       `/otolink-api/api/leads/generate-token/${encodeURIComponent(tenant)}`,
-      `${OTOLINK_API_BASE_URL}/api/leads/generate-token/${encodeURIComponent(tenant)}`,
     ];
+    if (
+      typeof window === "undefined" ||
+      (window.location.hostname !== "localhost" &&
+        window.location.hostname !== "127.0.0.1")
+    ) {
+      urls.push(
+        `${OTOLINK_API_BASE_URL}/api/leads/generate-token/${encodeURIComponent(tenant)}`,
+      );
+    }
 
     for (const url of urls) {
       try {
@@ -1203,7 +1211,19 @@ export async function otolinkServiceFetch(path, options = {}) {
     console.warn("Prefixed proxy otolinkServiceFetch failed, trying direct URL:", err);
   }
 
-  // 3. Direct fetch fallback to https://mt-otolink-api-stage.otolink.app
+  // 3. Direct fetch fallback to https://mt-otolink-api-stage.otolink.app (skip in localhost browser to prevent CORS hang)
+  if (
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1")
+  ) {
+    return {
+      ok: false,
+      status: 404,
+      error: "Otolink endpoint unreachable via local proxy",
+    };
+  }
+
   try {
     const res = await fetch(directUrl, {
       ...options,

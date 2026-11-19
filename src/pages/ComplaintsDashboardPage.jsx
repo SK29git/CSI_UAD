@@ -12,11 +12,23 @@ import AssignComplaintView from '../components/AssignComplaintView';
 import ResolveComplaintView from '../components/ResolveComplaintView';
 import CustomerFormView from '../components/CustomerFormView';
 import { useCustomer } from '../context/CustomerContext';
+import { FaPlusCircle, FaCheck, FaExternalLinkAlt, FaRedo } from 'react-icons/fa';
 
 export default function ComplaintsDashboardPage() {
   const navigate = useNavigate();
   const { group, customerFormMode, closeCustomerForm } = useCustomer();
   const [activeTab, setActiveTab] = useState('Overview');
+  const [complaintStage, setComplaintStage] = useState('complaint'); // 'complaint' | 'cxpulse'
+  const [complaintCreated, setComplaintCreated] = useState(false);
+  const [lastComplaintResult, setLastComplaintResult] = useState(null);
+  const [iframeKey, setIframeKey] = useState(0);
+
+  const handleComplaintSuccess = (resultData) => {
+    setComplaintCreated(true);
+    setLastComplaintResult(resultData);
+    // Directly route to CXPulse Portal stage upon API success
+    setComplaintStage('cxpulse');
+  };
   const [mobileLeftSidebarOpen, setMobileLeftSidebarOpen] = useState(false);
   const [isLeftCollapsed, setIsLeftCollapsed] = useState(() => {
     if (typeof window !== 'undefined') {
@@ -64,7 +76,181 @@ export default function ComplaintsDashboardPage() {
       case 'Overview':
         return <OverviewView />;
       case 'Create Complaint':
-        return <CreateComplaintView />;
+        return (
+          <div className="flex flex-col gap-4 w-full pb-12">
+            {/* Chevron Stage Stepper (Pastel Colors) */}
+            <div className="w-full flex items-stretch rounded-2xl overflow-hidden shadow-2xs border border-slate-200/90 bg-slate-100/70 p-1 select-none text-xs">
+              {/* Segment 1: Create Complaint */}
+              <button
+                type="button"
+                onClick={() => setComplaintStage('complaint')}
+                className={`relative flex-1 py-3 px-5 sm:px-8 text-left transition-all cursor-pointer flex items-center justify-between group rounded-xl ${
+                  complaintStage === 'complaint'
+                    ? 'bg-gradient-to-r from-sky-100 via-blue-50 to-indigo-100/80 text-blue-950 z-10 shadow-2xs'
+                    : complaintCreated
+                      ? 'bg-emerald-50/90 hover:bg-emerald-100/70 text-emerald-950'
+                      : 'bg-white/80 hover:bg-white text-slate-600'
+                }`}
+                style={{
+                  clipPath: 'polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%)',
+                }}
+              >
+                <div className="flex items-center gap-3 pr-4">
+                  <div
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
+                      complaintStage === 'complaint'
+                        ? 'bg-white text-blue-600 shadow-2xs border border-blue-200/80'
+                        : complaintCreated
+                          ? 'bg-emerald-100 text-emerald-700 border border-emerald-300/80 shadow-2xs'
+                          : 'bg-slate-100 text-slate-500 border border-slate-200/80 shadow-2xs'
+                    }`}
+                  >
+                    {complaintCreated ? <FaCheck className="text-emerald-700 text-xs" /> : <FaPlusCircle className="text-xs" />}
+                  </div>
+                  <div>
+                    <div className="font-extrabold text-xs sm:text-sm tracking-wide leading-tight flex items-center gap-1.5">
+                      <span
+                        className={
+                          complaintStage === 'complaint'
+                            ? 'text-blue-950'
+                            : complaintCreated
+                              ? 'text-emerald-950'
+                              : 'text-slate-700'
+                        }
+                      >
+                        Create Complaint
+                      </span>
+                      {complaintCreated && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          Logged ✓
+                        </span>
+                      )}
+                    </div>
+                    <p
+                      className={`text-[11px] font-medium leading-tight mt-0.5 ${
+                        complaintStage === 'complaint'
+                          ? 'text-blue-700/90'
+                          : complaintCreated
+                            ? 'text-emerald-700/90'
+                            : 'text-slate-400'
+                      }`}
+                    >
+                      Customer Grievance & Ticket Logging
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Segment 2: CXPulse Portal */}
+              <button
+                type="button"
+                onClick={() => setComplaintStage('cxpulse')}
+                className={`relative flex-1 py-3 pl-8 sm:pl-10 pr-5 sm:pr-8 text-left transition-all cursor-pointer flex items-center justify-between -ml-3.5 group rounded-xl ${
+                  complaintStage === 'cxpulse'
+                    ? 'bg-gradient-to-r from-teal-100 via-emerald-50 to-cyan-50/90 text-teal-950 z-10 shadow-2xs'
+                    : 'bg-white/80 hover:bg-white text-slate-600'
+                }`}
+                style={{
+                  clipPath: 'polygon(16px 0, 100% 0, 100% 100%, 16px 100%, 0 50%)',
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-bold shrink-0 transition-all ${
+                      complaintStage === 'cxpulse'
+                        ? 'bg-white text-teal-700 shadow-2xs border border-teal-200/80'
+                        : 'bg-slate-100 text-slate-500 border border-slate-200/80 shadow-2xs'
+                    }`}
+                  >
+                    <FaExternalLinkAlt className="text-xs" />
+                  </div>
+                  <div>
+                    <div
+                      className={`font-extrabold text-xs sm:text-sm tracking-wide leading-tight ${
+                        complaintStage === 'cxpulse' ? 'text-teal-950' : 'text-slate-700'
+                      }`}
+                    >
+                      CXPulse Portal
+                    </div>
+                    <p
+                      className={`text-[11px] font-medium leading-tight mt-0.5 ${
+                        complaintStage === 'cxpulse' ? 'text-teal-700/90' : 'text-slate-400'
+                      }`}
+                    >
+                      AGMC CXPulse Ticket Management
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            {/* Active Stage Content View */}
+            {complaintStage === 'complaint' ? (
+              <CreateComplaintView onComplaintSuccess={handleComplaintSuccess} />
+            ) : (
+              <div className="flex flex-col gap-3 w-full animate-fadeIn">
+                {/* CXPulse Header Toolbar */}
+                <div className="bg-white rounded-xl border border-slate-200/90 p-3 shadow-2xs flex flex-wrap items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 shrink-0 shadow-2xs font-bold text-xs">
+                      CX
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 font-bold text-slate-800 text-xs sm:text-sm">
+                        <span>AGMC CXPulse Portal</span>
+                        {lastComplaintResult?.returnedRef && (
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Ref: {lastComplaintResult.returnedRef}
+                          </span>
+                        )}
+                        {lastComplaintResult?.cxTicketId && (
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                            Ticket: {lastComplaintResult.cxTicketId}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-500 font-mono mt-0.5">
+                        https://cxpulse.agmcgroup.ae/login
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIframeKey((prev) => prev + 1)}
+                      className="px-3 py-1.5 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                      title="Reload Portal"
+                    >
+                      <FaRedo className="text-[11px] text-slate-500" />
+                      <span>Refresh</span>
+                    </button>
+                    <a
+                      href="https://cxpulse.agmcgroup.ae/login"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3.5 py-1.5 text-xs font-bold text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 rounded-lg shadow-2xs shadow-teal-500/20 transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <FaExternalLinkAlt className="text-[11px]" />
+                      <span>Open in New Tab</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Embedded Iframe Container */}
+                <div className="w-full bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden h-[780px]">
+                  <iframe
+                    key={iframeKey}
+                    src="https://cxpulse.agmcgroup.ae/login"
+                    title="AGMC CXPulse Portal"
+                    className="w-full h-full border-0"
+                    allow="clipboard-write; fullscreen"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        );
       case 'Open Complaints':
         return <OpenComplaintsView />;
       case 'Recovery Actions':

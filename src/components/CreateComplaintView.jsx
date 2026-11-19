@@ -34,7 +34,7 @@ import {
   FaUserTie,
 } from "react-icons/fa";
 
-export default function CreateComplaintView() {
+export default function CreateComplaintView({ onComplaintSuccess }) {
   const {
     customer,
     getFormattedName,
@@ -300,6 +300,15 @@ export default function CreateComplaintView() {
           keyloopStatus,
           assignedTo: selectedUser?.name || null,
         });
+        if (typeof onComplaintSuccess === "function") {
+          onComplaintSuccess({
+            res,
+            details,
+            returnedRef,
+            cxTicketId,
+            keyloopStatus,
+          });
+        }
         // Clear complaint description and externalRef
         setComplaint("");
         setExternalRef("");
