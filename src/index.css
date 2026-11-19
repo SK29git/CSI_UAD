@@ -19,6 +19,73 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Typography Design System */
+:root {
+  /* Typography */
+  --font-xs: 11px;
+  --font-sm: 12px;
+  --font-md: 14px;
+  --font-base: 15px;
+  --font-lg: 16px;
+  --font-xl: 20px;
+  --font-2xl: 21px;
+
+  /* Font weights */
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Theme Inks */
+  --ink-primary: #000000;
+  --ink-secondary: #64748b;
+}
+
+/* Scoped Mobile Service View Typography */
+.mobile-service-container h1 {
+  font-size: var(--font-2xl);
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.mobile-service-container h2 {
+  font-size: 13px;
+  font-weight: var(--weight-semibold);
+  color: var(--ink-secondary);
+}
+
+.mobile-service-container button {
+  font-family: inherit;
+  font-size: var(--font-lg);
+  font-weight: var(--weight-semibold);
+}
+
+/* Responsive button & element adaptations */
+.mobile-service-container .pill-btn {
+  font-size: var(--font-sm) !important;
+  font-weight: var(--weight-semibold) !important;
+}
+
+.mobile-service-container .slot-btn {
+  font-size: clamp(12px, 3.2vw, var(--font-md)) !important;
+  font-weight: var(--weight-semibold) !important;
+}
+
+.mobile-service-container .calendar-day-btn {
+  font-size: var(--font-sm) !important;
+  font-weight: var(--weight-semibold) !important;
+}
+
+.mobile-service-container .date-card-btn {
+  font-family: inherit;
+}
+
+@media (max-width: 480px) {
+  .mobile-service-container h1 {
+    font-size: clamp(18px, 5.5vw, var(--font-2xl));
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

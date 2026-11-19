@@ -24,6 +24,9 @@ import {
   FaGlobe,
   FaChevronLeft,
   FaChevronRight,
+  FaSun,
+  FaCloudSun,
+  FaMoon,
 } from "react-icons/fa";
 
 // Generate upcoming available calendar dates (14 working days)
@@ -108,12 +111,13 @@ const translations = {
     quickDates: "Quick Dates",
     fullCalendar: "Calendar View",
     available: "Available",
-    timeLabel: "Select Drop-off Time",
+    timeLabel: "Drop-off Time",
     morning: "Morning",
     afternoon: "Afternoon",
     evening: "Evening",
     loadingSlots: "Loading available slots...",
     noSlots: "No available slots for this date. Please pick another date above.",
+    noCategorySlots: (cat) => `No ${cat.toLowerCase()} slots available for this date. Please pick another tab or date above.`,
     additionalPreferences: "Additional Preferences (Optional)",
     serviceAdvisor: "Service Advisor",
     anyAdvisor: "Any Available Advisor (Auto-assign)",
@@ -174,12 +178,13 @@ const translations = {
     quickDates: "مواعيد سريعة",
     fullCalendar: "عرض التقويم",
     available: "متاح",
-    timeLabel: "اختر وقت التسليم",
+    timeLabel: "وقت التسليم",
     morning: "الصباح",
     afternoon: "بعد الظهر",
     evening: "المساء",
     loadingSlots: "جاري تحميل الأوقات المتاحة...",
     noSlots: "لا توجد مواعيد متاحة في هذا التاريخ. يرجى اختيار تاريخ آخر أعلاه.",
+    noCategorySlots: (cat) => `لا توجد مواعيد متاحة في فترة ${cat} لهذا اليوم. يرجى اختيار تبويب آخر أو تاريخ آخر أعلاه.`,
     additionalPreferences: "خيارات إضافية (اختياري)",
     serviceAdvisor: "مستشار الخدمة",
     anyAdvisor: "أي مستشار متاح (تعيين تلقائي)",
@@ -302,7 +307,7 @@ function InteractiveTouchCalendar({
         <button
           type="button"
           onClick={handlePrevMonth}
-          className="w-9 h-9 flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:scale-95 text-black rounded-xl transition-all border border-gray-200 cursor-pointer"
+          className="pill-btn w-9 h-9 flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:scale-95 text-black rounded-xl transition-all border border-gray-200 cursor-pointer"
           title="Previous Month"
         >
           <FaChevronLeft className="text-xs" />
@@ -315,7 +320,7 @@ function InteractiveTouchCalendar({
         <button
           type="button"
           onClick={handleNextMonth}
-          className="w-9 h-9 flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:scale-95 text-black rounded-xl transition-all border border-gray-200 cursor-pointer"
+          className="pill-btn w-9 h-9 flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:scale-95 text-black rounded-xl transition-all border border-gray-200 cursor-pointer"
           title="Next Month"
         >
           <FaChevronRight className="text-xs" />
@@ -344,7 +349,7 @@ function InteractiveTouchCalendar({
                 key={cell.dateStr}
                 type="button"
                 onClick={() => onSelectDate(cell.dateStr)}
-                className={`h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-bold transition-all flex flex-col items-center justify-center relative cursor-pointer active:scale-95 ${
+                className={`calendar-day-btn h-10 sm:h-11 rounded-xl text-xs sm:text-sm font-bold transition-all flex flex-col items-center justify-center relative cursor-pointer active:scale-95 ${
                   cell.isSelected
                     ? "bg-black text-white border-2 border-black shadow-xs ring-2 ring-black/10"
                     : "bg-white hover:bg-gray-50 text-black border border-gray-200"
@@ -430,6 +435,7 @@ export default function MobileServiceBookingPage() {
   const [timeSlots, setTimeSlots] = useState(FALLBACK_SLOTS);
   const [timesLoading, setTimesLoading] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState("08:00-08:15");
+  const [activeTimeTab, setActiveTimeTab] = useState("Morning");
 
   // Optional Fields
   const [mileage, setMileage] = useState("");
@@ -842,6 +848,36 @@ export default function MobileServiceBookingPage() {
     return categories;
   }, [timeSlots]);
 
+  // Auto-sync activeTimeTab when slots change or when selectedTimeSlot is set
+  useEffect(() => {
+    if (selectedTimeSlot) {
+      const match = selectedTimeSlot.match(/^(\d{1,2}):/);
+      if (match) {
+        const hour = parseInt(match[1], 10);
+        if (hour < 12) {
+          setActiveTimeTab("Morning");
+          return;
+        } else if (hour < 17) {
+          setActiveTimeTab("Afternoon");
+          return;
+        } else {
+          setActiveTimeTab("Evening");
+          return;
+        }
+      }
+    }
+
+    if (
+      categorizedSlots[activeTimeTab]?.length === 0 &&
+      timeSlots.length > 0
+    ) {
+      if (categorizedSlots.Morning.length > 0) setActiveTimeTab("Morning");
+      else if (categorizedSlots.Afternoon.length > 0)
+        setActiveTimeTab("Afternoon");
+      else if (categorizedSlots.Evening.length > 0) setActiveTimeTab("Evening");
+    }
+  }, [timeSlots, selectedTimeSlot]);
+
   // Submit Booking Handler
   const handleSubmitBooking = async (e) => {
     e.preventDefault();
@@ -1067,7 +1103,7 @@ export default function MobileServiceBookingPage() {
   return (
     <div
       dir={isRTL ? "rtl" : "ltr"}
-      className="min-h-screen bg-[#F9FAFB] text-black font-sans flex flex-col justify-between py-4 px-3 sm:px-6"
+      className="mobile-service-container min-h-screen bg-[#F9FAFB] text-black font-sans flex flex-col justify-between py-4 px-3 sm:px-6"
     >
       {/* MAIN CONTAINER: Clean Black & White Container */}
       <div className="w-full max-w-lg mx-auto bg-white rounded-3xl border border-gray-200 shadow-sm p-4 sm:p-6 flex-1 flex flex-col justify-between space-y-4">
@@ -1079,10 +1115,12 @@ export default function MobileServiceBookingPage() {
 
             {/* Centered Brand Title & Geely Logo */}
             <div className="flex items-center gap-3 sm:gap-3.5">
-              <span className="text-2xl sm:text-3xl font-black text-black tracking-tight">
-                {t.brandTitle}
-              </span>
-              <span className="h-7 sm:h-8 w-[1.5px] bg-gray-300" />
+              <img
+                src="/agmc-logo.png"
+                alt="AGMC"
+                className="h-6 sm:h-7.5 w-auto object-contain"
+              />
+              <span className="h-6 sm:h-7 w-[1.5px] bg-gray-300" />
               <img
                 src="/geely-logo.png"
                 alt="Geely"
@@ -1095,7 +1133,7 @@ export default function MobileServiceBookingPage() {
               <button
                 type="button"
                 onClick={() => setLang(lang === "en" ? "ar" : "en")}
-                className="px-3 py-1 rounded-full border border-gray-200 bg-white hover:bg-gray-50 active:scale-95 text-black text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                className="pill-btn px-3 py-1 rounded-full border border-gray-200 bg-white hover:bg-gray-50 active:scale-95 text-black transition-all shadow-2xs cursor-pointer"
               >
                 {t.langBtn}
               </button>
@@ -1104,7 +1142,7 @@ export default function MobileServiceBookingPage() {
 
           {/* SUB-HEADER: "Book your service" */}
           <div className="pt-0.5">
-            <h1 className="text-xl sm:text-2xl font-bold text-black tracking-tight">
+            <h1 className="text-black tracking-tight">
               {t.title}
             </h1>
           </div>
@@ -1128,10 +1166,10 @@ export default function MobileServiceBookingPage() {
             {/* SECTION 1: CUSTOMER GREETING & VEHICLE CARD (Matching Reference Image) */}
             <div className="bg-gray-100/75 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-gray-200/80 space-y-3">
               <div>
-                <h2 className="text-base sm:text-lg font-bold text-black">
+                <h2>
                   {t.greeting(customerFirstName)}
                 </h2>
-                <p className="text-xs text-gray-500 font-medium mt-0.5">
+                <p className="mt-0.5" style={{ fontSize: "var(--font-xs)", color: "var(--ink-secondary)", fontWeight: "var(--weight-normal)" }}>
                   {t.greetingSubtitle}
                 </p>
               </div>
@@ -1145,16 +1183,16 @@ export default function MobileServiceBookingPage() {
 
                 {/* Vehicle Details */}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-black text-sm sm:text-base truncate">
+                  <h3 style={{ fontSize: "var(--font-base)", fontWeight: "var(--weight-bold)" }} className="text-black truncate">
                     {vehicleDisplayName || (customerVehicles.length > 0 ? "Geely COOLRAY" : "Geely Vehicle")}
                   </h3>
 
                   <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className="px-2 py-0.5 border border-black rounded-md font-mono font-bold text-xs text-black tracking-wider bg-white">
+                    <span className="px-2 py-0.5 border border-black rounded-md font-mono text-black tracking-wider bg-white" style={{ fontSize: "var(--font-xs)", fontWeight: "var(--weight-bold)" }}>
                       Dubai {plateNo || "—"}
                     </span>
                     {mileage && Number(mileage) > 0 ? (
-                      <span className="text-xs text-gray-500 font-medium">
+                      <span style={{ fontSize: "var(--font-xs)", color: "var(--ink-secondary)", fontWeight: "var(--weight-medium)" }}>
                         {Number(mileage).toLocaleString()} km
                       </span>
                     ) : null}
@@ -1207,7 +1245,7 @@ export default function MobileServiceBookingPage() {
 
             {/* BRANCH SELECTION (Dealership location IDs 40 & 240 described) */}
             <div ref={dealershipRef} className="space-y-2 pt-1">
-              <label className="text-xs sm:text-sm font-bold text-black flex items-center">
+              <label className="flex items-center text-black" style={{ fontSize: "var(--font-sm)", fontWeight: "var(--weight-semibold)" }}>
                 <span>{t.branch}</span>
                 <span className="text-red-500 font-bold ml-1">*</span>
               </label>
@@ -1238,10 +1276,10 @@ export default function MobileServiceBookingPage() {
                       }`}
                     >
                       <div className="space-y-0.5">
-                        <h4 className="font-bold text-black text-sm sm:text-base">
+                        <h4 className="text-black" style={{ fontSize: "var(--font-base)", fontWeight: "var(--weight-bold)" }}>
                           {branch.name}
                         </h4>
-                        <p className="text-xs text-gray-500 font-medium">
+                        <p style={{ fontSize: "var(--font-xs)", color: "var(--ink-secondary)", fontWeight: "var(--weight-normal)" }}>
                           {branch.desc}
                         </p>
                       </div>
@@ -1266,7 +1304,7 @@ export default function MobileServiceBookingPage() {
               className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs space-y-3.5"
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-black flex items-center gap-1.5">
+                <h3 className="flex items-center gap-1.5 text-black" style={{ fontSize: "var(--font-sm)", fontWeight: "var(--weight-semibold)" }}>
                   <FaCalendarAlt className="text-gray-400 text-xs" />
                   <span>
                     {t.dateLabel}
@@ -1286,7 +1324,7 @@ export default function MobileServiceBookingPage() {
                 <button
                   type="button"
                   onClick={() => setCalendarViewMode("quick")}
-                  className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  className={`pill-btn flex-1 py-1.5 px-2 rounded-lg transition-all cursor-pointer ${
                     calendarViewMode === "quick"
                       ? "bg-white text-black shadow-xs"
                       : "text-gray-500 hover:text-black"
@@ -1297,7 +1335,7 @@ export default function MobileServiceBookingPage() {
                 <button
                   type="button"
                   onClick={() => setCalendarViewMode("full")}
-                  className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  className={`pill-btn flex-1 py-1.5 px-2 rounded-lg transition-all cursor-pointer ${
                     calendarViewMode === "full"
                       ? "bg-white text-black shadow-xs"
                       : "text-gray-500 hover:text-black"
@@ -1336,26 +1374,27 @@ export default function MobileServiceBookingPage() {
                             key={dateStr}
                             type="button"
                             onClick={() => handleSelectDate(dateStr)}
-                            className={`min-w-[62px] sm:min-w-[68px] py-3 px-2 rounded-2xl flex flex-col items-center justify-between text-center transition-all cursor-pointer shrink-0 active:scale-95 ${
+                            className={`date-card-btn min-w-[62px] sm:min-w-[68px] py-3 px-2 rounded-2xl flex flex-col items-center justify-between text-center transition-all cursor-pointer shrink-0 active:scale-95 ${
                               isSelected
                                 ? "bg-black text-white border-2 border-black shadow-xs"
                                 : "bg-white border border-gray-200 hover:border-gray-400 text-black shadow-2xs"
                             }`}
                           >
                             <span
-                              className={`text-[11px] font-semibold ${
-                                isSelected ? "text-gray-300" : "text-gray-400"
-                              }`}
+                              style={{ fontSize: "var(--font-xs)", fontWeight: "var(--weight-semibold)" }}
+                              className={isSelected ? "text-gray-300" : "text-gray-400"}
                             >
                               {dayName}
                             </span>
-                            <span className="text-lg my-0.5 font-bold leading-tight">
+                            <span
+                              style={{ fontSize: "var(--font-xl)", fontWeight: "var(--weight-bold)" }}
+                              className="my-0.5 leading-tight"
+                            >
                               {d}
                             </span>
                             <span
-                              className={`text-[10px] font-bold ${
-                                isSelected ? "text-emerald-400" : "text-emerald-600"
-                              }`}
+                              style={{ fontSize: "var(--font-xs)", fontWeight: "var(--weight-bold)" }}
+                              className={isSelected ? "text-emerald-400" : "text-emerald-600"}
                             >
                               {t.available}
                             </span>
@@ -1388,19 +1427,29 @@ export default function MobileServiceBookingPage() {
               )}
             </div>
 
-            {/* SECTION 3: TIME SELECTOR (Morning / Afternoon 3-column AM/PM pills) */}
+            {/* SECTION 3: TIME SELECTOR (Morning / Afternoon / Evening Tabs - Image 2) */}
             <div
               ref={timeRef}
-              className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs space-y-4"
+              className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs space-y-3.5"
             >
+              {/* Header with light blue clock badge & Drop-off Time * */}
               <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-black flex items-center gap-1.5">
-                  <FaClock className="text-gray-400 text-xs" />
-                  <span>
-                    {t.timeLabel}
-                    <span className="text-red-500 font-bold ml-1">*</span>
-                  </span>
-                </h3>
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <FaClock className="text-xs" />
+                  </div>
+                  <h3
+                    className="flex items-center gap-1 text-slate-900"
+                    style={{
+                      fontSize: "var(--font-sm)",
+                      fontWeight: "var(--weight-bold)",
+                    }}
+                  >
+                    <span>{t.timeLabel}</span>
+                    <span className="text-red-500 font-bold ml-0.5">*</span>
+                  </h3>
+                </div>
+
                 {timesLoading && (
                   <span className="text-[10px] text-gray-400 font-semibold flex items-center gap-1">
                     <FaSpinner className="animate-spin text-[10px]" /> Loading slots...
@@ -1408,112 +1457,113 @@ export default function MobileServiceBookingPage() {
                 )}
               </div>
 
+              {/* MORNING / AFTERNOON / EVENING TABS CONTAINER (Image 2) */}
+              <div className="bg-[#F0F5FA] border border-blue-100/70 p-1 rounded-2xl flex items-center gap-1">
+                {[
+                  {
+                    key: "Morning",
+                    label: t.morning,
+                    icon: FaSun,
+                    count: categorizedSlots.Morning.length,
+                  },
+                  {
+                    key: "Afternoon",
+                    label: t.afternoon,
+                    icon: FaCloudSun,
+                    count: categorizedSlots.Afternoon.length,
+                  },
+                  {
+                    key: "Evening",
+                    label: t.evening,
+                    icon: FaMoon,
+                    count: categorizedSlots.Evening.length,
+                  },
+                ].map((tab) => {
+                  const isActive = activeTimeTab === tab.key;
+                  const IconComp = tab.icon;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setActiveTimeTab(tab.key)}
+                      className={`flex-1 py-2 sm:py-2.5 px-2 rounded-xl transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 active:scale-97 ${
+                        isActive
+                          ? "bg-white border-2 border-black shadow-xs text-black"
+                          : "bg-transparent border border-transparent text-slate-500 hover:text-slate-800 hover:bg-white/50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        <IconComp
+                          className={`text-xs ${
+                            isActive ? "text-black" : "text-slate-400"
+                          }`}
+                        />
+                        <span
+                          style={{
+                            fontSize: "var(--font-sm)",
+                            fontWeight: isActive
+                              ? "var(--weight-bold)"
+                              : "var(--weight-semibold)",
+                          }}
+                        >
+                          {tab.label}
+                        </span>
+                      </div>
+                      <span
+                        style={{
+                          fontSize: "var(--font-xs)",
+                          fontWeight: isActive
+                            ? "var(--weight-bold)"
+                            : "var(--weight-normal)",
+                        }}
+                        className={isActive ? "text-black" : "text-slate-400"}
+                      >
+                        ({tab.count})
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* SLOTS INSIDE THE SELECTED TAB */}
               {timesLoading ? (
                 <div className="py-8 text-center text-xs text-gray-400 font-semibold flex items-center justify-center gap-2">
                   <FaSpinner className="animate-spin text-sm text-black" />
                   <span>{t.loadingSlots}</span>
                 </div>
-              ) : timeSlots.length === 0 ? (
+              ) : categorizedSlots[activeTimeTab].length === 0 ? (
                 <div className="py-6 text-center text-xs font-medium text-gray-500 bg-gray-50 rounded-xl p-4 border border-gray-200">
-                  {t.noSlots}
+                  {t.noCategorySlots(
+                    activeTimeTab === "Morning"
+                      ? t.morning
+                      : activeTimeTab === "Afternoon"
+                      ? t.afternoon
+                      : t.evening,
+                  )}
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {/* MORNING SLOTS */}
-                  {categorizedSlots.Morning.length > 0 && (
-                    <div className="space-y-2">
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">
-                        {t.morning}
-                      </span>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
-                        {categorizedSlots.Morning.map((slot, sIdx) => {
-                          const slotRaw =
-                            typeof slot === "string" ? slot : slot.timeSlot;
-                          const isSelected = selectedTimeSlot === slotRaw;
-                          const displayTime = formatSlotDisplay(slotRaw);
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5 pt-1">
+                  {categorizedSlots[activeTimeTab].map((slot, sIdx) => {
+                    const slotRaw =
+                      typeof slot === "string" ? slot : slot.timeSlot;
+                    const isSelected = selectedTimeSlot === slotRaw;
+                    const displayTime = formatSlotDisplay(slotRaw);
 
-                          return (
-                            <button
-                              key={`m-${sIdx}`}
-                              type="button"
-                              onClick={() => handleSelectTimeSlot(slotRaw)}
-                              className={`py-3 px-2 rounded-xl text-xs sm:text-sm text-center transition-all cursor-pointer font-bold active:scale-95 ${
-                                isSelected
-                                  ? "bg-black text-white border-2 border-black shadow-xs ring-2 ring-black/10"
-                                  : "bg-white border border-gray-200 hover:border-gray-400 text-black shadow-2xs"
-                              }`}
-                            >
-                              {displayTime}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* AFTERNOON SLOTS */}
-                  {categorizedSlots.Afternoon.length > 0 && (
-                    <div className="space-y-2">
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">
-                        {t.afternoon}
-                      </span>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
-                        {categorizedSlots.Afternoon.map((slot, sIdx) => {
-                          const slotRaw =
-                            typeof slot === "string" ? slot : slot.timeSlot;
-                          const isSelected = selectedTimeSlot === slotRaw;
-                          const displayTime = formatSlotDisplay(slotRaw);
-
-                          return (
-                            <button
-                              key={`a-${sIdx}`}
-                              type="button"
-                              onClick={() => handleSelectTimeSlot(slotRaw)}
-                              className={`py-3 px-2 rounded-xl text-xs sm:text-sm text-center transition-all cursor-pointer font-bold active:scale-95 ${
-                                isSelected
-                                  ? "bg-black text-white border-2 border-black shadow-xs ring-2 ring-black/10"
-                                  : "bg-white border border-gray-200 hover:border-gray-400 text-black shadow-2xs"
-                              }`}
-                            >
-                              {displayTime}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* EVENING SLOTS (IF PRESENT) */}
-                  {categorizedSlots.Evening.length > 0 && (
-                    <div className="space-y-2">
-                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">
-                        {t.evening}
-                      </span>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
-                        {categorizedSlots.Evening.map((slot, sIdx) => {
-                          const slotRaw =
-                            typeof slot === "string" ? slot : slot.timeSlot;
-                          const isSelected = selectedTimeSlot === slotRaw;
-                          const displayTime = formatSlotDisplay(slotRaw);
-
-                          return (
-                            <button
-                              key={`e-${sIdx}`}
-                              type="button"
-                              onClick={() => handleSelectTimeSlot(slotRaw)}
-                              className={`py-3 px-2 rounded-xl text-xs sm:text-sm text-center transition-all cursor-pointer font-bold active:scale-95 ${
-                                isSelected
-                                  ? "bg-black text-white border-2 border-black shadow-xs ring-2 ring-black/10"
-                                  : "bg-white border border-gray-200 hover:border-gray-400 text-black shadow-2xs"
-                              }`}
-                            >
-                              {displayTime}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                    return (
+                      <button
+                        key={`${activeTimeTab}-${sIdx}`}
+                        type="button"
+                        onClick={() => handleSelectTimeSlot(slotRaw)}
+                        className={`slot-btn py-3 px-2 rounded-xl text-center transition-all cursor-pointer active:scale-95 ${
+                          isSelected
+                            ? "bg-black text-white border-2 border-black shadow-xs ring-2 ring-black/10"
+                            : "bg-white border border-gray-200 hover:border-gray-400 text-black shadow-2xs"
+                        }`}
+                      >
+                        {displayTime}
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1523,7 +1573,8 @@ export default function MobileServiceBookingPage() {
               <button
                 type="button"
                 onClick={() => setShowTechnicianNotes((prev) => !prev)}
-                className="text-[#2563EB] hover:text-[#1D4ED8] text-xs sm:text-sm font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                style={{ fontSize: "var(--font-sm)", fontWeight: "var(--weight-semibold)" }}
+                className="text-[#2563EB] hover:text-[#1D4ED8] flex items-center gap-1 cursor-pointer transition-colors"
               >
                 <span>
                   {showTechnicianNotes
@@ -1555,7 +1606,7 @@ export default function MobileServiceBookingPage() {
                   !selectedDate ||
                   !selectedTimeSlot
                 }
-                className="w-full py-4 px-6 bg-black hover:bg-gray-800 active:scale-[0.98] text-white font-bold text-base rounded-2xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40"
+                className="w-full py-4 px-6 bg-black hover:bg-gray-800 active:scale-[0.98] text-white rounded-2xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40"
               >
                 {submitting ? (
                   <>
@@ -1663,7 +1714,8 @@ export default function MobileServiceBookingPage() {
                     "https://wa.me/97180043359"
                   }
                   onClick={handleReturnToWhatsApp}
-                  className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 active:scale-97 text-white font-bold text-sm rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer transition-all border border-emerald-500 text-center"
+                  style={{ fontSize: "var(--font-lg)", fontWeight: "var(--weight-semibold)" }}
+                  className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 active:scale-97 text-white rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 cursor-pointer transition-all border border-emerald-500 text-center"
                 >
                   <FaWhatsapp className="text-xl" />
                   <span>{t.returnToWhatsApp}</span>
@@ -1675,7 +1727,7 @@ export default function MobileServiceBookingPage() {
                     setShowSuccessModal(false);
                     setSelectedTimeSlot("");
                   }}
-                  className="w-full py-2.5 bg-white hover:bg-gray-50 active:scale-98 text-gray-800 font-bold text-xs rounded-xl transition-all cursor-pointer border border-gray-200"
+                  className="pill-btn w-full py-2.5 bg-white hover:bg-gray-50 active:scale-98 text-gray-800 rounded-xl transition-all cursor-pointer border border-gray-200"
                 >
                   {t.bookAnother}
                 </button>
