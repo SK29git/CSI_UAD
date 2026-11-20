@@ -313,7 +313,7 @@ function InteractiveTouchCalendar({
           <FaChevronLeft className="text-xs" />
         </button>
 
-        <div className="text-sm font-bold text-black tracking-wide">
+        <div className="text-base font-bold text-black tracking-wide">
           {t.monthNames[currentYearMonth.month]} {currentYearMonth.year}
         </div>
 
@@ -330,7 +330,7 @@ function InteractiveTouchCalendar({
       {/* Weekday Headers */}
       <div className="grid grid-cols-7 gap-1 sm:gap-1.5 text-center">
         {t.weekdays.map((w) => (
-          <span key={w} className="text-[11px] font-semibold text-gray-400">
+          <span key={w} className="text-xs font-semibold text-gray-500">
             {w}
           </span>
         ))}
@@ -1142,7 +1142,7 @@ export default function MobileServiceBookingPage() {
 
           {/* SUB-HEADER: "Book your service" */}
           <div className="pt-0.5">
-            <h1 className="text-black tracking-tight">
+            <h1 className="text-black tracking-tight" style={{ fontSize: "26px", fontWeight: "700", lineHeight: "1.25" }}>
               {t.title}
             </h1>
           </div>
@@ -1166,10 +1166,10 @@ export default function MobileServiceBookingPage() {
             {/* SECTION 1: CUSTOMER GREETING & VEHICLE CARD (Matching Reference Image) */}
             <div className="bg-gray-100/75 rounded-2xl sm:rounded-3xl p-4 sm:p-5 border border-gray-200/80 space-y-3">
               <div>
-                <h2>
+                <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#111827", lineHeight: "1.35" }}>
                   {t.greeting(customerFirstName)}
                 </h2>
-                <p className="mt-0.5" style={{ fontSize: "var(--font-xs)", color: "var(--ink-secondary)", fontWeight: "var(--weight-normal)" }}>
+                <p className="mt-1" style={{ fontSize: "15px", color: "var(--ink-secondary)", fontWeight: "400", lineHeight: "1.45" }}>
                   {t.greetingSubtitle}
                 </p>
               </div>
@@ -1177,22 +1177,22 @@ export default function MobileServiceBookingPage() {
               {/* READ-ONLY VEHICLE CARD */}
               <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-200/90 p-3.5 sm:p-4 flex items-start sm:items-center gap-3.5 shadow-2xs">
                 {/* Clean Car Icon Box */}
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-700 text-lg sm:text-xl shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-700 text-xl shrink-0">
                   <FaCarSide />
                 </div>
 
                 {/* Vehicle Details */}
                 <div className="flex-1 min-w-0">
-                  <h3 style={{ fontSize: "var(--font-base)", fontWeight: "var(--weight-bold)" }} className="text-black truncate">
+                  <h3 style={{ fontSize: "18px", fontWeight: "700" }} className="text-black truncate tracking-tight">
                     {vehicleDisplayName || (customerVehicles.length > 0 ? "Geely COOLRAY" : "Geely Vehicle")}
                   </h3>
 
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    <span className="px-2 py-0.5 border border-black rounded-md font-mono text-black tracking-wider bg-white" style={{ fontSize: "var(--font-xs)", fontWeight: "var(--weight-bold)" }}>
+                  <div className="flex items-center gap-2.5 mt-1.5 flex-wrap">
+                    <span className="px-2.5 py-0.5 border border-black rounded-lg font-mono text-black tracking-wider bg-white" style={{ fontSize: "14px", fontWeight: "700" }}>
                       Dubai {plateNo || "—"}
                     </span>
                     {mileage && Number(mileage) > 0 ? (
-                      <span style={{ fontSize: "var(--font-xs)", color: "var(--ink-secondary)", fontWeight: "var(--weight-medium)" }}>
+                      <span style={{ fontSize: "14.5px", color: "var(--ink-secondary)", fontWeight: "500" }}>
                         {Number(mileage).toLocaleString()} km
                       </span>
                     ) : null}
@@ -1200,7 +1200,7 @@ export default function MobileServiceBookingPage() {
 
                   {/* Option B: Only display service package/warranty badge if present in API */}
                   {servicePackageInfo && (
-                    <div className="mt-2 inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60">
+                    <div className="mt-2.5 inline-flex items-center px-3 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/60" style={{ fontSize: "13px", fontWeight: "600" }}>
                       {servicePackageInfo}
                     </div>
                   )}
@@ -1245,7 +1245,7 @@ export default function MobileServiceBookingPage() {
 
             {/* BRANCH SELECTION (Dealership location IDs 40 & 240 described) */}
             <div ref={dealershipRef} className="space-y-2 pt-1">
-              <label className="flex items-center text-black" style={{ fontSize: "var(--font-sm)", fontWeight: "var(--weight-semibold)" }}>
+              <label className="flex items-center text-black" style={{ fontSize: "16px", fontWeight: "700" }}>
                 <span>{t.branch}</span>
                 <span className="text-red-500 font-bold ml-1">*</span>
               </label>
@@ -1276,10 +1276,10 @@ export default function MobileServiceBookingPage() {
                       }`}
                     >
                       <div className="space-y-0.5">
-                        <h4 className="text-black" style={{ fontSize: "var(--font-base)", fontWeight: "var(--weight-bold)" }}>
+                        <h4 className="text-black" style={{ fontSize: "17px", fontWeight: "700" }}>
                           {branch.name}
                         </h4>
-                        <p style={{ fontSize: "var(--font-xs)", color: "var(--ink-secondary)", fontWeight: "var(--weight-normal)" }}>
+                        <p style={{ fontSize: "14px", color: "var(--ink-secondary)", fontWeight: "400" }}>
                           {branch.desc}
                         </p>
                       </div>
@@ -1304,8 +1304,8 @@ export default function MobileServiceBookingPage() {
               className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 shadow-xs space-y-3.5"
             >
               <div className="flex items-center justify-between">
-                <h3 className="flex items-center gap-1.5 text-black" style={{ fontSize: "var(--font-sm)", fontWeight: "var(--weight-semibold)" }}>
-                  <FaCalendarAlt className="text-gray-400 text-xs" />
+                <h3 className="flex items-center gap-2 text-black" style={{ fontSize: "16px", fontWeight: "700" }}>
+                  <FaCalendarAlt className="text-gray-400 text-sm" />
                   <span>
                     {t.dateLabel}
                     <span className="text-red-500 font-bold ml-1">*</span>
@@ -1313,8 +1313,8 @@ export default function MobileServiceBookingPage() {
                 </h3>
 
                 {datesLoading && (
-                  <span className="text-[10px] text-gray-400 font-semibold flex items-center gap-1">
-                    <FaSpinner className="animate-spin text-[10px]" /> Loading...
+                  <span className="text-xs text-gray-400 font-semibold flex items-center gap-1">
+                    <FaSpinner className="animate-spin text-xs" /> Loading...
                   </span>
                 )}
               </div>
@@ -1324,10 +1324,11 @@ export default function MobileServiceBookingPage() {
                 <button
                   type="button"
                   onClick={() => setCalendarViewMode("quick")}
-                  className={`pill-btn flex-1 py-1.5 px-2 rounded-lg transition-all cursor-pointer ${
+                  style={{ fontSize: "14px", fontWeight: "600" }}
+                  className={`pill-btn flex-1 py-2 px-2.5 rounded-lg transition-all cursor-pointer ${
                     calendarViewMode === "quick"
-                      ? "bg-white text-black shadow-xs"
-                      : "text-gray-500 hover:text-black"
+                      ? "bg-white text-black shadow-xs font-bold"
+                      : "text-gray-500 hover:text-black font-semibold"
                   }`}
                 >
                   {t.quickDates}
@@ -1335,10 +1336,11 @@ export default function MobileServiceBookingPage() {
                 <button
                   type="button"
                   onClick={() => setCalendarViewMode("full")}
-                  className={`pill-btn flex-1 py-1.5 px-2 rounded-lg transition-all cursor-pointer ${
+                  style={{ fontSize: "14px", fontWeight: "600" }}
+                  className={`pill-btn flex-1 py-2 px-2.5 rounded-lg transition-all cursor-pointer ${
                     calendarViewMode === "full"
-                      ? "bg-white text-black shadow-xs"
-                      : "text-gray-500 hover:text-black"
+                      ? "bg-white text-black shadow-xs font-bold"
+                      : "text-gray-500 hover:text-black font-semibold"
                   }`}
                 >
                   {t.fullCalendar}
@@ -1374,26 +1376,26 @@ export default function MobileServiceBookingPage() {
                             key={dateStr}
                             type="button"
                             onClick={() => handleSelectDate(dateStr)}
-                            className={`date-card-btn min-w-[62px] sm:min-w-[68px] py-3 px-2 rounded-2xl flex flex-col items-center justify-between text-center transition-all cursor-pointer shrink-0 active:scale-95 ${
+                            className={`date-card-btn min-w-[64px] sm:min-w-[70px] py-3.5 px-2 rounded-2xl flex flex-col items-center justify-between text-center transition-all cursor-pointer shrink-0 active:scale-95 ${
                               isSelected
                                 ? "bg-black text-white border-2 border-black shadow-xs"
                                 : "bg-white border border-gray-200 hover:border-gray-400 text-black shadow-2xs"
                             }`}
                           >
                             <span
-                              style={{ fontSize: "var(--font-xs)", fontWeight: "var(--weight-semibold)" }}
+                              style={{ fontSize: "13px", fontWeight: "600" }}
                               className={isSelected ? "text-gray-300" : "text-gray-400"}
                             >
                               {dayName}
                             </span>
                             <span
-                              style={{ fontSize: "var(--font-xl)", fontWeight: "var(--weight-bold)" }}
+                              style={{ fontSize: "24px", fontWeight: "700" }}
                               className="my-0.5 leading-tight"
                             >
                               {d}
                             </span>
                             <span
-                              style={{ fontSize: "var(--font-xs)", fontWeight: "var(--weight-bold)" }}
+                              style={{ fontSize: "12px", fontWeight: "700" }}
                               className={isSelected ? "text-emerald-400" : "text-emerald-600"}
                             >
                               {t.available}
@@ -1435,14 +1437,14 @@ export default function MobileServiceBookingPage() {
               {/* Header with light blue clock badge & Drop-off Time * */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-                    <FaClock className="text-xs" />
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <FaClock className="text-sm" />
                   </div>
                   <h3
                     className="flex items-center gap-1 text-slate-900"
                     style={{
-                      fontSize: "var(--font-sm)",
-                      fontWeight: "var(--weight-bold)",
+                      fontSize: "16px",
+                      fontWeight: "700",
                     }}
                   >
                     <span>{t.timeLabel}</span>
@@ -1451,14 +1453,14 @@ export default function MobileServiceBookingPage() {
                 </div>
 
                 {timesLoading && (
-                  <span className="text-[10px] text-gray-400 font-semibold flex items-center gap-1">
-                    <FaSpinner className="animate-spin text-[10px]" /> Loading slots...
+                  <span className="text-xs text-gray-400 font-semibold flex items-center gap-1">
+                    <FaSpinner className="animate-spin text-xs" /> Loading slots...
                   </span>
                 )}
               </div>
 
               {/* MORNING / AFTERNOON / EVENING TABS CONTAINER (Image 2) */}
-              <div className="bg-[#F0F5FA] border border-blue-100/70 p-1 rounded-2xl flex items-center gap-1">
+              <div className="bg-[#F0F5FA] border border-blue-100/70 p-1.5 rounded-2xl flex items-center gap-1.5">
                 {[
                   {
                     key: "Morning",
@@ -1500,10 +1502,8 @@ export default function MobileServiceBookingPage() {
                         />
                         <span
                           style={{
-                            fontSize: "var(--font-sm)",
-                            fontWeight: isActive
-                              ? "var(--weight-bold)"
-                              : "var(--weight-semibold)",
+                            fontSize: "15px",
+                            fontWeight: isActive ? "700" : "600",
                           }}
                         >
                           {tab.label}
@@ -1511,10 +1511,8 @@ export default function MobileServiceBookingPage() {
                       </div>
                       <span
                         style={{
-                          fontSize: "var(--font-xs)",
-                          fontWeight: isActive
-                            ? "var(--weight-bold)"
-                            : "var(--weight-normal)",
+                          fontSize: "13px",
+                          fontWeight: isActive ? "700" : "500",
                         }}
                         className={isActive ? "text-black" : "text-slate-400"}
                       >
@@ -1532,7 +1530,7 @@ export default function MobileServiceBookingPage() {
                   <span>{t.loadingSlots}</span>
                 </div>
               ) : categorizedSlots[activeTimeTab].length === 0 ? (
-                <div className="py-6 text-center text-xs font-medium text-gray-500 bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <div className="py-6 text-center text-sm font-medium text-gray-500 bg-gray-50 rounded-xl p-4 border border-gray-200">
                   {t.noCategorySlots(
                     activeTimeTab === "Morning"
                       ? t.morning
@@ -1554,6 +1552,7 @@ export default function MobileServiceBookingPage() {
                         key={`${activeTimeTab}-${sIdx}`}
                         type="button"
                         onClick={() => handleSelectTimeSlot(slotRaw)}
+                        style={{ fontSize: "14.5px", fontWeight: "700" }}
                         className={`slot-btn py-3 px-2 rounded-xl text-center transition-all cursor-pointer active:scale-95 ${
                           isSelected
                             ? "bg-black text-white border-2 border-black shadow-xs ring-2 ring-black/10"
@@ -1573,7 +1572,7 @@ export default function MobileServiceBookingPage() {
               <button
                 type="button"
                 onClick={() => setShowTechnicianNotes((prev) => !prev)}
-                style={{ fontSize: "var(--font-sm)", fontWeight: "var(--weight-semibold)" }}
+                style={{ fontSize: "15px", fontWeight: "600" }}
                 className="text-[#2563EB] hover:text-[#1D4ED8] flex items-center gap-1 cursor-pointer transition-colors"
               >
                 <span>
@@ -1590,7 +1589,8 @@ export default function MobileServiceBookingPage() {
                     value={customerNotes}
                     onChange={(e) => setCustomerNotes(e.target.value)}
                     placeholder={t.technicianNotesPlaceholder}
-                    className="w-full p-3.5 bg-gray-50 border border-gray-200 focus:border-black focus:bg-white rounded-xl font-medium text-black text-xs sm:text-sm focus:outline-none resize-none transition-all placeholder:text-gray-400"
+                    style={{ fontSize: "14.5px" }}
+                    className="w-full p-3.5 bg-gray-50 border border-gray-200 focus:border-black focus:bg-white rounded-xl font-medium text-black focus:outline-none resize-none transition-all placeholder:text-gray-400"
                   />
                 </div>
               )}
@@ -1606,6 +1606,7 @@ export default function MobileServiceBookingPage() {
                   !selectedDate ||
                   !selectedTimeSlot
                 }
+                style={{ fontSize: "17px", fontWeight: "700" }}
                 className="w-full py-4 px-6 bg-black hover:bg-gray-800 active:scale-[0.98] text-white rounded-2xl shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40"
               >
                 {submitting ? (
